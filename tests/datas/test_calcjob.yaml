@@ -1,0 +1,37 @@
+name: test_calcjob
+description: 'This is a test to run worktree using yaml file.'
+metadata:
+  version: scinode@0.1.0
+  platform: scinode
+  worker_name: localhost
+nodes:
+  - identifier: AiiDAInt
+    name: int1
+    properties:
+      value: 3
+  - identifier: AiiDACode
+    name: code1
+    properties:
+      value: "add@localhost"
+  - identifier: AiiDAArithmeticAdd
+    name: add1
+    properties:
+      x: 2
+    inputs:
+    - to_socket: code
+      from_node: code1
+      from_socket: 0
+    - to_socket: y
+      from_node: int1
+      from_socket: 0
+  - identifier: AiiDAArithmeticAdd
+    name: add2
+    properties:
+      x: 4
+    inputs:
+    - to_socket: code
+      from_node: code1
+      from_socket: 0
+    - to_socket: y
+      from_node: add1
+      from_socket: 0

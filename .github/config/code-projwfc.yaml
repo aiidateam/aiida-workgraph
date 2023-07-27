@@ -1,0 +1,7 @@
+---
+label: projwfc-7.2
+description: Quantum ESPRESSO projwfc.x
+default_calc_job_plugin: quantumespresso.projwfc
+computer: localhost
+prepend_text: ' '
+append_text: ' '

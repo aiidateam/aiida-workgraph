@@ -1,0 +1,7 @@
+---
+label: dos-7.2
+description: Quantum ESPRESSO dos.x
+default_calc_job_plugin: quantumespresso.dos
+computer: localhost
+prepend_text: ' '
+append_text: ' '

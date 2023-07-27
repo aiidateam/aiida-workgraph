@@ -1,0 +1,7 @@
+---
+label: add
+description: Arithmetic add
+default_calc_job_plugin: core.arithmetic.add
+computer: localhost
+prepend_text: ' '
+append_text: ' '
