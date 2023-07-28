@@ -54,6 +54,12 @@ class WorkTree(scinode.core.nodetree.NodeTree):
         if wait:
             self.wait(timeout=timeout)
 
+    def to_dict(self):
+        ntdata = super().to_dict()
+        for node in self.nodes:
+            ntdata["nodes"][node.name]["to_ctx"] = getattr(node, "to_ctx", [])
+        return ntdata
+
     def wait(self, timeout=50):
         """
         Periodically checks and waits for the AiiDA worktree process to finish until a given timeout.

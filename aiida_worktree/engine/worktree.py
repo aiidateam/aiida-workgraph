@@ -447,6 +447,7 @@ class WorkTree(Process, metaclass=Protect):
                             node["results"] = node["process"].outputs
                             # self.ctx.new_data[name] = node["results"]
                         self.ctx.nodes[name]["state"] = "FINISHED"
+                        self.node_to_ctx(name)
                         print(f"Node: {name} finished.")
                     elif state == "EXCEPTED":
                         node["state"] = state
@@ -501,6 +502,7 @@ class WorkTree(Process, metaclass=Protect):
                 node["results"] = {node["outputs"][0]["name"]: results}
                 self.ctx.input_nodes[name] = results
                 self.ctx.nodes[name]["state"] = "FINISHED"
+                self.node_to_ctx(name)
                 # ValueError: attempted to add an input link after the process node was already stored.
                 # self.node.base.links.add_incoming(results, "INPUT_WORK", name)
             elif node["metadata"]["node_type"] == "data":
@@ -510,6 +512,7 @@ class WorkTree(Process, metaclass=Protect):
                 node["process"] = results
                 self.ctx.new_data[name] = results
                 self.ctx.nodes[name]["state"] = "FINISHED"
+                self.node_to_ctx(name)
             elif node["metadata"]["node_type"] in ["calcfunction", "workfunction"]:
                 print("node  type: calcfunction/workfunction.")
                 kwargs.setdefault("metadata", {})
@@ -523,6 +526,7 @@ class WorkTree(Process, metaclass=Protect):
                     # print("results: ", results)
                     node["process"] = process
                     self.ctx.nodes[name]["state"] = "FINISHED"
+                    self.node_to_ctx(name)
                 except Exception as e:
                     print(e)
                     self.report(e)
@@ -560,11 +564,14 @@ class WorkTree(Process, metaclass=Protect):
                 # self.ctx.nodes[name]["group_outputs"] = executor.group_outputs
                 self.ctx.nodes[name]["state"] = "RUNNING"
                 return self.to_context(process=process)
-            elif node["metadata"]["node_type"] in ["Control"]:
+            elif node["metadata"]["node_type"].upper() in ["CONTROL"]:
                 if node["metadata"]["identifier"] == "ToCtx":
                     self.ctx[args[0]] = args[1]
                     results = None
                 elif node["metadata"]["identifier"] == "FromCtx":
+                    results = {"result": self.ctx[args[0]]}
+                elif node["metadata"]["identifier"] == "AiiDAWhile":
+                    self.reset_node(node["name"])
                     results = {"result": self.ctx[args[0]]}
                 node["results"] = results
                 # print("results: ", results)
@@ -587,6 +594,7 @@ class WorkTree(Process, metaclass=Protect):
                     node["results"][node["outputs"][0]["name"]] = results
                 self.ctx.input_nodes[name] = results
                 self.ctx.nodes[name]["state"] = "FINISHED"
+                self.node_to_ctx(name)
                 # print("result from node: ", node["results"])
             else:
                 print("node  type: unknown.")
@@ -653,6 +661,11 @@ class WorkTree(Process, metaclass=Protect):
             return self.ctx[name]
         else:
             return value
+
+    def node_to_ctx(self, name):
+        items = self.ctx.nodes[name]["to_ctx"]
+        for item in items:
+            self.ctx[item[1]] = self.ctx.nodes[name]["results"][item[0]]
 
     def check_node_state(self, name):
         """Check node states.
