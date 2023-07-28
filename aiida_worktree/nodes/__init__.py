@@ -1,4 +1,4 @@
-from .builtin import AiiDAGather
+from .builtin import AiiDAGather, AiiDAToCtx, AiiDAFromCtx
 from .test import (
     AiiDAInt,
     AiiDAFloat,
@@ -24,6 +24,8 @@ from .qe import (
 
 node_list = [
     AiiDAGather,
+    AiiDAToCtx,
+    AiiDAFromCtx,
     AiiDAInt,
     AiiDAFloat,
     AiiDAString,

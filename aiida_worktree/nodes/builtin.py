@@ -25,5 +25,50 @@ class AiiDAGather(Node):
         }
 
 
+class AiiDAToCtx(Node):
+    """AiiDAToCtx"""
+
+    identifier = "ToCtx"
+    name = "ToCtx"
+    node_type = "Control"
+    catalog = "AiiDA"
+    args = ["key", "value"]
+
+    def create_sockets(self):
+        self.inputs.clear()
+        self.outputs.clear()
+        self.inputs.new("General", "key")
+        self.inputs.new("General", "value")
+        self.outputs.new("General", "result")
+
+    def get_executor(self):
+        return {
+            "path": "builtins",
+            "name": "setattr",
+        }
+
+
+class AiiDAFromCtx(Node):
+    """AiiDAFromCtx"""
+
+    identifier = "FromCtx"
+    name = "FromCtx"
+    node_type = "Control"
+    catalog = "AiiDA"
+    args = ["key"]
+
+    def create_sockets(self):
+        self.inputs.clear()
+        self.outputs.clear()
+        self.inputs.new("General", "key")
+        self.outputs.new("General", "result")
+
+    def get_executor(self):
+        return {
+            "path": "builtins",
+            "name": "getattr",
+        }
+
+
 if __name__ == "__main__":
-    print(gather_node)
+    print()

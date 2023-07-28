@@ -560,6 +560,16 @@ class WorkTree(Process, metaclass=Protect):
                 # self.ctx.nodes[name]["group_outputs"] = executor.group_outputs
                 self.ctx.nodes[name]["state"] = "RUNNING"
                 return self.to_context(process=process)
+            elif node["metadata"]["node_type"] in ["Control"]:
+                if node["metadata"]["identifier"] == "ToCtx":
+                    self.ctx[args[0]] = args[1]
+                    results = None
+                elif node["metadata"]["identifier"] == "FromCtx":
+                    results = {"result": self.ctx[args[0]]}
+                node["results"] = results
+                # print("results: ", results)
+                node["process"] = None
+                self.ctx.nodes[name]["state"] = "FINISHED"
             elif node["metadata"]["node_type"] in ["Normal"]:
                 print("node  type: Normal.")
                 # normal function does not have a process
@@ -593,7 +603,9 @@ class WorkTree(Process, metaclass=Protect):
         for input in node["inputs"]:
             # print(f"input: {input['name']}")
             if len(input["links"]) == 0:
-                inputs[input["name"]] = properties[input["name"]]["value"]
+                inputs[input["name"]] = self.update_ctx_variable(
+                    properties[input["name"]]["value"]
+                )
             elif len(input["links"]) == 1:
                 link = input["links"][0]
                 if self.ctx.nodes[link["from_node"]]["results"] is None:
@@ -613,18 +625,34 @@ class WorkTree(Process, metaclass=Protect):
                             link["from_socket"]
                         ]
                 inputs[input["name"]] = value
-
         for name in node["metadata"].get("args", []):
             if name in inputs:
                 args.append(inputs[name])
             else:
-                args.append(properties[name]["value"])
+                value = self.update_ctx_variable(properties[name]["value"])
+                args.append(value)
         for name in node["metadata"].get("kwargs", []):
             if name in inputs:
                 kwargs[name] = inputs[name]
             else:
-                kwargs[name] = properties[name]["value"]
+                value = self.update_ctx_variable(properties[name]["value"])
+                kwargs[name] = value
         return args, kwargs
+
+    def update_ctx_variable(self, value):
+        # replace context variables
+        """Get value from context."""
+        if (
+            isinstance(value, str)
+            and value.strip().startswith("{{")
+            and value.strip().endswith("}}")
+        ):
+            name = value[2:-2].strip()
+            if name not in self.ctx:
+                raise ValueError(f"Context variable {name} not found.")
+            return self.ctx[name]
+        else:
+            return value
 
     def check_node_state(self, name):
         """Check node states.

@@ -22,6 +22,12 @@ class AiiDAIntProperty(NodeProperty, SerializeJson):
             self._value = value
             if self.update is not None:
                 self.update()
+        elif (
+            isinstance(value, str)
+            and value.rstrip().startswith("{{")
+            and value.endswith("}}")
+        ):
+            self._value = value
         else:
             raise Exception("{} is not a integer.".format(value))
 
@@ -45,6 +51,12 @@ class AiiDAFloatProperty(NodeProperty, SerializeJson):
             self._value = value
             if self.update is not None:
                 self.update()
+        elif (
+            isinstance(value, str)
+            and value.rstrip().startswith("{{")
+            and value.endswith("}}")
+        ):
+            self._value = value
         else:
             raise Exception("{} is not a float.".format(value))
 
@@ -68,6 +80,12 @@ class AiiDABoolProperty(NodeProperty, SerializeJson):
             self._value = value
             if self.update is not None:
                 self.update()
+        elif (
+            isinstance(value, str)
+            and value.rstrip().startswith("{{")
+            and value.endswith("}}")
+        ):
+            self._value = value
         else:
             raise Exception("{} is not a bool.".format(value))
 
@@ -90,6 +108,12 @@ class AiiDAStringProperty(NodeProperty, SerializeJson):
             self._value = value
             if self.update is not None:
                 self.update()
+        elif (
+            isinstance(value, str)
+            and value.rstrip().startswith("{{")
+            and value.endswith("}}")
+        ):
+            self._value = value
         else:
             raise Exception("{} is not a string.".format(value))
 
@@ -108,10 +132,16 @@ class AiiDADictProperty(NodeProperty, SerializeJson):
             self._value = orm.Dict(value)
             if self.update is not None:
                 self.update()
-        if isinstance(value, orm.Dict):
+        elif isinstance(value, orm.Dict):
             self._value = value
             if self.update is not None:
                 self.update()
+        elif (
+            isinstance(value, str)
+            and value.rstrip().startswith("{{")
+            and value.endswith("}}")
+        ):
+            self._value = value
         else:
             raise Exception("{} is not a dict.".format(value))
 
