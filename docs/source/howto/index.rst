@@ -10,3 +10,4 @@ This section contains a collection of HowTos for various topics.
 
    if
    for_gather
+   while

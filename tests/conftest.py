@@ -1,7 +1,7 @@
 import pytest
 from aiida_worktree import node, WorkTree
 from aiida.engine import calcfunction, workfunction
-from aiida.orm import Float, Int
+from aiida.orm import Float, Int, Bool
 
 
 @pytest.fixture
@@ -100,6 +100,19 @@ def decorated_sqrt():
         return sqrt(x)
 
     return mysqrt
+
+
+@pytest.fixture
+def decorated_compare():
+    """Generate a decorated node for test."""
+
+    # define compare node
+    @node()
+    @calcfunction
+    def compare(x, y):
+        return Bool(x < y)
+
+    return compare
 
 
 @pytest.fixture

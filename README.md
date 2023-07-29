@@ -19,8 +19,8 @@ Here is a detailed comparison between the ``WorkTree`` with two AiiDA built-in w
 | Implementation           | Easy                   | ``Difficult``          | Easy                   |
 | Dynamic                  | ``No``                 | ``No``                 | Yes                    |
 | Ready to Use             | Yes                    | ``No``,Need PYTHONPATH | Yes                    |
-| Flow Control             | All                    | `if`, `while`          | `if`                   |
 | Subprocesses Handling    | ``No``                 | Launches & waits       | Launches & waits       |
+| Flow Control             | All                    | `if`, `while`          | `if`, `while`          |
 | Termination              | ``Hard exit``          | ExitCode               | ExitCode               |
 | Capabilities             | Calls calcs and works  | Calls any process      | Calls any process      |
 | Data Passing             | Direct passing         | Context dictionary     | Link                   |

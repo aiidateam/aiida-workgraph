@@ -15,28 +15,28 @@ Create and launch worktree
 .. code-block:: python
 
     from aiida_worktree import WorkTree
-    nt = WorkTree(name="my_first_worktree")
+    wt = WorkTree(name="my_first_worktree")
 
 - Add nodes by using the node identifier.
 
 .. code-block:: python
 
-    float1 = nt.nodes.new("AiiDAFloat", name = "float1")
-    float2 = nt.nodes.new("AiiDAFloat", name = "float2")
-    sumdiff1 = nt.nodes.new("AiiDASumDiff", name = "sumdiff1")
+    float1 = wt.nodes.new("AiiDAFloat", name = "float1")
+    float2 = wt.nodes.new("AiiDAFloat", name = "float2")
+    sumdiff1 = wt.nodes.new("AiiDASumDiff", name = "sumdiff1")
 
 - Add link between nodes:
 
 .. code-block:: python
 
-    nt.links.new(float1.outputs[0], sumdiff1.inputs[0])
-    nt.links.new(float2.outputs[0], sumdiff1.inputs[1])
+    wt.links.new(float1.outputs[0], sumdiff1.inputs[0])
+    wt.links.new(float2.outputs[0], sumdiff1.inputs[1])
 
 - Submit the worktree:
 
 .. code-block:: python
 
-    nt.submit()
+    wt.submit()
 
 
 Execute order
