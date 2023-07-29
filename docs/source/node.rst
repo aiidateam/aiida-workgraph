@@ -25,7 +25,7 @@ Then, one can use the node by using its identifier.
 
 .. code:: python
 
-   nt.nodes.new(add.identifier)
+   wt.nodes.new(add.identifier)
 
 Register
 --------
@@ -37,7 +37,7 @@ Register a already existing `calcfunction`,  `workfunction`, `calcjob`, `Workcha
    ndata = {"path": "aiida.calculations.arithmetic.add.ArithmeticAddCalculation"}
    add = register_node(ndata)
    # use the node
-   nt.nodes.new(add.identifier)
+   wt.nodes.new(add.identifier)
 
 
 Define a Node
@@ -73,4 +73,4 @@ Then, one can use the node by using its identifier.
 
 .. code:: python
 
-   nt.nodes.new("MyAdd")
+   wt.nodes.new("MyAdd")

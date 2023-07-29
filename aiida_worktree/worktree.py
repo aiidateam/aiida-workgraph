@@ -23,6 +23,10 @@ class WorkTree(scinode.core.nodetree.NodeTree):
             **kwargs: Additional keyword arguments to be passed to the NodeTree class.
         """
         super().__init__(name, **kwargs)
+        self.ctx = {}
+        self.starts = []
+        self.is_while = False
+        self.conditions = []
 
     def run(self):
         """
@@ -58,6 +62,10 @@ class WorkTree(scinode.core.nodetree.NodeTree):
         ntdata = super().to_dict()
         for node in self.nodes:
             ntdata["nodes"][node.name]["to_ctx"] = getattr(node, "to_ctx", [])
+        ntdata["ctx"] = self.ctx
+        ntdata["starts"] = self.starts
+        ntdata["is_while"] = self.is_while
+        ntdata["conditions"] = self.conditions
         return ntdata
 
     def wait(self, timeout=50):

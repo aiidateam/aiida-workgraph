@@ -386,6 +386,7 @@ class WorkTree(Process, metaclass=Protect):
 
         # ntdata = jsonref.JsonRef.replace_refs(tntdata, loader = JsonYamlLoader())
         build_node_link(ntdata)
+        self.init_ctx(ntdata["ctx"])
         self.ctx.nodes = ntdata["nodes"]
         self.ctx.links = ntdata["links"]
         self.ctx.ctrl_links = ntdata["ctrl_links"]
@@ -400,9 +401,23 @@ class WorkTree(Process, metaclass=Protect):
         self.ctx.connectivity = nc.build_connectivity()
         self.ctx.msgs = []
         self.node.set_process_label(f"WorkTree: {self.ctx.worktree['name']}")
+        # while worktree
+        if self.ctx.worktree["is_while"]:
+            should_run = self.check_while_conditions()
+            if not should_run:
+                self.set_node_state(self.ctx.nodes.keys(), "SKIPPED")
+
+    def init_ctx(self, datas):
+        for key, value in datas.items():
+            self.ctx[key] = value
 
     def launch_worktree(self):
+        print("launch_worktree: ")
         self.report("Lanch worktree.")
+        if len(self.ctx.worktree["starts"]) > 0:
+            self.run_nodes(self.ctx.worktree["starts"])
+            self.ctx.worktree["starts"] = []
+            return
         node_to_run = []
         for name, node in self.ctx.nodes.items():
             # update node state
@@ -416,7 +431,9 @@ class WorkTree(Process, metaclass=Protect):
         self.run_nodes(node_to_run)
 
     def is_worktree_finished(self):
-        flag = True
+        """Check if the worktree is finished.
+        For `while` worktree, we need check its conditions"""
+        is_finished = True
         # print("is_worktree_finished:")
         for name, node in self.ctx.nodes.items():
             print(name, node["state"])
@@ -460,8 +477,27 @@ class WorkTree(Process, metaclass=Protect):
                         )
                         print(f"Node: {name} failed.")
             if node["state"] in ["RUNNING", "CREATED", "READY"]:
-                flag = False
-        return flag
+                is_finished = False
+        if is_finished:
+            if self.ctx.worktree["is_while"]:
+                should_run = self.check_while_conditions()
+                is_finished = not should_run
+        return is_finished
+
+    def check_while_conditions(self):
+        print("Is a while worktree")
+        condition_nodes = [c[0] for c in self.ctx.worktree["conditions"]]
+        self.run_nodes(condition_nodes)
+        conditions = [
+            self.ctx.nodes[c[0]]["results"][c[1]]
+            for c in self.ctx.worktree["conditions"]
+        ]
+        print("conditions: ", conditions)
+        should_run = False not in conditions
+        if should_run:
+            self.reset()
+            self.set_node_state(condition_nodes, "SKIPPED")
+        return should_run
 
     def run_nodes(self, names):
         """Run node
@@ -564,19 +600,6 @@ class WorkTree(Process, metaclass=Protect):
                 # self.ctx.nodes[name]["group_outputs"] = executor.group_outputs
                 self.ctx.nodes[name]["state"] = "RUNNING"
                 return self.to_context(process=process)
-            elif node["metadata"]["node_type"].upper() in ["CONTROL"]:
-                if node["metadata"]["identifier"] == "ToCtx":
-                    self.ctx[args[0]] = args[1]
-                    results = None
-                elif node["metadata"]["identifier"] == "FromCtx":
-                    results = {"result": self.ctx[args[0]]}
-                elif node["metadata"]["identifier"] == "AiiDAWhile":
-                    self.reset_node(node["name"])
-                    results = {"result": self.ctx[args[0]]}
-                node["results"] = results
-                # print("results: ", results)
-                node["process"] = None
-                self.ctx.nodes[name]["state"] = "FINISHED"
             elif node["metadata"]["node_type"] in ["Normal"]:
                 print("node  type: Normal.")
                 # normal function does not have a process
@@ -727,6 +750,9 @@ class WorkTree(Process, metaclass=Protect):
     #         node = outgoing.get_node_by_label(output[0])
     #         outputs[output[2]] = getattr(node.outputs, output[1])
     #     return outputs
+    def reset(self):
+        print("Reset")
+        self.set_node_state(self.ctx.nodes.keys(), "CREATED")
 
     def set_node_state(self, names, value):
         """Set node state"""
@@ -736,11 +762,17 @@ class WorkTree(Process, metaclass=Protect):
     def finalize(self):
         """"""
         # expose group outputs
+        print("finalize")
         group_outputs = {}
         print("group outputs: ", self.ctx.worktree["metadata"]["group_outputs"])
         for output in self.ctx.worktree["metadata"]["group_outputs"]:
             print("output: ", output)
-            group_outputs[output[2]] = self.ctx.nodes[output[0]]["results"][output[1]]
+            if output[0] == "ctx":
+                group_outputs[output[2]] = self.ctx[output[1]]
+            else:
+                group_outputs[output[2]] = self.ctx.nodes[output[0]]["results"][
+                    output[1]
+                ]
         self.out("group_outputs", group_outputs)
         self.out("new_data", self.ctx.new_data)
         self.report("Finalize")
