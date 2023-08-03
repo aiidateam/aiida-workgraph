@@ -65,6 +65,17 @@ def nt_workchain():
 
 
 @pytest.fixture
+def decorated_normal_add():
+    """Generate a decorated node for test."""
+
+    @node()
+    def add(x, y):
+        return x + y
+
+    return add
+
+
+@pytest.fixture
 def decorated_add():
     """Generate a decorated node for test."""
 

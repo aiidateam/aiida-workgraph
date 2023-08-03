@@ -9,5 +9,6 @@ This section contains a collection of HowTos for various topics.
    :caption: Contents:
 
    if
-   for_gather
+   parallel
+   for
    while

@@ -99,14 +99,17 @@ def decorator_node(
         }
         #
         # Get the args and kwargs of the function
-        args, kwargs, _inputs = generate_input_sockets(func, inputs, properties)
+        args, kwargs, var_args, var_kwargs, _inputs = generate_input_sockets(
+            func, inputs, properties
+        )
         # I don't know why isinstance(func.node_class, CalcFunctionNode) is False
         # print("func: ", func)
         # print("node_class: ", func.node_class)
-        if func.node_class is CalcFunctionNode:
-            node_type = "calcfunction"
-        elif func.node_class is WorkFunctionNode:
-            node_type = "workfunction"
+        if hasattr(func, "node_class"):
+            if func.node_class is CalcFunctionNode:
+                node_type = "calcfunction"
+            elif func.node_class is WorkFunctionNode:
+                node_type = "workfunction"
         else:
             node_type = "Normal"
         ndata = {
@@ -114,6 +117,8 @@ def decorator_node(
             "node_type": node_type,
             "args": args,
             "kwargs": kwargs,
+            "var_args": var_args,
+            "var_kwargs": var_kwargs,
             "properties": properties,
             "inputs": _inputs,
             "outputs": outputs,
@@ -167,7 +172,9 @@ def decorator_node_group(
             "is_pickle": True,
         }
         # Get the args and kwargs of the function
-        args, kwargs, _inputs = generate_input_sockets(func, inputs, properties)
+        args, kwargs, var_args, var_kwargs, _inputs = generate_input_sockets(
+            func, inputs, properties
+        )
         # nt = func()
         # inputs = [[nt.nodes[input[0]].inputs[input[1]].identifier, input[2]] for input in group_inputs]
         # outputs = [[nt.nodes[output[0]].outputs[output[1]].identifier, output[2]] for output in group_outputs]
@@ -180,6 +187,8 @@ def decorator_node_group(
             "identifier": identifier,
             "args": args,
             "kwargs": kwargs,
+            "var_args": var_args,
+            "var_kwargs": var_kwargs,
             "node_type": node_type,
             "properties": properties,
             "inputs": _inputs,

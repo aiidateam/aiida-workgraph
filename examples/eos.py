@@ -19,21 +19,16 @@ def scale_structure(structure, scale):
     return StructureData(ase=atoms)
 
 
-# set link limit to a large value so that it can gather the result.
-@node(
-    inputs=[["General", "datas", {"link_limit": 100}]],
-    outputs=[["General", "eos"]],
-)
+@node()
 @calcfunction
-def eos(datas):
+# because this is a calcfunction, and the input datas are dynamic, we need use **datas.
+def eos(**datas):
     from ase.eos import EquationOfState
-    from aiida.orm import load_node
 
     volumes = []
     energies = []
-    for data in datas:
+    for _key, data in datas.items():
         # it only gather the uuid of the data, so we need to load it.
-        data = load_node(data)
         volumes.append(data.dict.volume)
         energies.append(data.dict.energy)
         unit = data.dict.energy_units
@@ -42,8 +37,6 @@ def eos(datas):
     v0, e0, B = eos.fit()
     eos = Dict(
         {
-            "volumes": volumes,
-            "energies": energies,
             "unit": unit,
             "v0": v0,
             "e0": e0,
@@ -87,15 +80,16 @@ metadata = {
     }
 }
 
-nt = WorkTree("eos")
+wt = WorkTree("eos")
 # structure node
-structure1 = nt.nodes.new("AiiDANode", "si", value=si)
-eos1 = nt.nodes.new(eos, name="eos")
-# pw node
+structure1 = wt.nodes.new("AiiDANode", "si", value=si)
+# get the result of each pw node from the context
+eos1 = wt.nodes.new(eos, name="eos", datas="{{pw_result}}")
+# create pw node for each scale
 scales = [0.95, 1.0, 1.05]
 for i in range(len(scales)):
-    pw1 = nt.nodes.new(pw_node, name=f"pw1_{i}")
-    scale1 = nt.nodes.new(scale_structure, name=f"scale_{i}", scale=scales[i])
+    pw1 = wt.nodes.new(pw_node, name=f"pw1_{i}")
+    scale1 = wt.nodes.new(scale_structure, name=f"scale_{i}", scale=scales[i])
     pw1.set(
         {
             "code": code,
@@ -105,8 +99,9 @@ for i in range(len(scales)):
             "metadata": metadata,
         }
     )
-    nt.links.new(structure1.outputs[0], scale1.inputs["structure"])
-    nt.links.new(scale1.outputs[0], pw1.inputs["structure"])
-    nt.links.new(pw1.outputs["output_parameters"], eos1.inputs[0])
-nt.submit(wait=True, timeout=300)
+    pw1.to_ctx = [["output_parameters", f"pw_result.s_{i}"]]
+    wt.links.new(structure1.outputs[0], scale1.inputs["structure"])
+    wt.links.new(scale1.outputs[0], pw1.inputs["structure"])
+    wt.ctrl_links.new(pw1.ctrl_outputs[0], eos1.ctrl_inputs[0])
+wt.submit(wait=True, timeout=300)
 print("eos: ", eos1.node.outputs.eos.get_dict())

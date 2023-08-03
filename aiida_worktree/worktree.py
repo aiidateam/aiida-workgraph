@@ -26,6 +26,8 @@ class WorkTree(scinode.core.nodetree.NodeTree):
         self.ctx = {}
         self.starts = []
         self.is_while = False
+        self.is_for = False
+        self.sequence = []
         self.conditions = []
 
     def run(self):
@@ -62,10 +64,13 @@ class WorkTree(scinode.core.nodetree.NodeTree):
         ntdata = super().to_dict()
         for node in self.nodes:
             ntdata["nodes"][node.name]["to_ctx"] = getattr(node, "to_ctx", [])
+        self.ctx["sequence"] = self.sequence
         ntdata["ctx"] = self.ctx
         ntdata["starts"] = self.starts
         ntdata["is_while"] = self.is_while
+        ntdata["is_for"] = self.is_for
         ntdata["conditions"] = self.conditions
+
         return ntdata
 
     def wait(self, timeout=50):

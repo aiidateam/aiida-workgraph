@@ -50,6 +50,6 @@ setup(
         ],
     },
     package_data={},
-    python_requires=">=3.6",
+    python_requires=">=3.8",
     test_suite="setup.test_suite",
 )

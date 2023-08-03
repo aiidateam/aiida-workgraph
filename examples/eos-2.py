@@ -1,47 +1,34 @@
-from aiida import load_profile
+from aiida import load_profile, orm
 from aiida_worktree import build_node, WorkTree, node
-from aiida.orm import (
-    Dict,
-    KpointsData,
-    StructureData,
-    load_code,
-    load_group,
-    List,
-    load_node,
-)
 from ase.build import bulk
 from aiida.engine import calcfunction
 
 load_profile()
 
 
-@node()
+@node(outputs=[["General", "structures"]])
 @calcfunction
 def scale_structure(structure, scales):
-
     atoms = structure.get_ase()
-    structures = []
-    for scale in scales:
+    structures = {}
+    for i in range(len(scales)):
         atoms1 = atoms.copy()
-        atoms1.set_cell(atoms.cell * scale, scale_atoms=True)
-        structure = StructureData(ase=atoms1).store()
-        structures.append(structure.uuid)
-    return List(list=structures)
+        atoms1.set_cell(atoms.cell * scales[i], scale_atoms=True)
+        structure = orm.StructureData(ase=atoms1)
+        structures[f"s_{i}"] = structure
+    return {"structures": structures}
 
 
-# the structure_uuids is used to generate the worktree dynamically.
-@node.group(outputs=[["gather1", "result", "result"]])
-def all_scf(structure_uuids, code, parameters, kpoints, pseudos, metadata):
+# Output result from context
+@node.group(outputs=[["ctx", "result", "result"]])
+def all_scf(structures, code, parameters, kpoints, pseudos, metadata):
     # register node
     ndata = {"path": "aiida_quantumespresso.calculations.pw.PwCalculation"}
     pw_node = build_node(ndata)
-
     nt = WorkTree("all_scf")
-    gather1 = nt.nodes.new("AiiDAGather", name="gather1")
     # pw node
-    for i in range(len(structure_uuids)):
-        structure = load_node(structure_uuids[i])
-        pw1 = nt.nodes.new(pw_node, name=f"pw1_{i}")
+    for key, structure in structures.items():
+        pw1 = nt.nodes.new(pw_node, name=f"pw1_{key}")
         pw1.set(
             {
                 "code": code,
@@ -52,32 +39,27 @@ def all_scf(structure_uuids, code, parameters, kpoints, pseudos, metadata):
                 "structure": structure,
             }
         )
-        nt.links.new(pw1.outputs["output_parameters"], gather1.inputs[0])
+        pw1.to_ctx = [["output_parameters", f"result.{key}"]]
     return nt
 
 
-# set link limit to a large value so that it can gather the result.
 @node()
 @calcfunction
-def eos(datas):
+# because this is a calcfunction, and the input datas are dynamic, we need use **datas.
+def eos(**datas):
     from ase.eos import EquationOfState
-    from aiida.orm import load_node
 
     volumes = []
     energies = []
-    for data in datas:
-        # it only gather the uuid of the data, so we need to load it.
-        data = load_node(data)
+    for _key, data in datas.items():
         volumes.append(data.dict.volume)
         energies.append(data.dict.energy)
         unit = data.dict.energy_units
     #
     eos = EquationOfState(volumes, energies)
     v0, e0, B = eos.fit()
-    eos = Dict(
+    eos = orm.Dict(
         {
-            "volumes": volumes,
-            "energies": energies,
             "unit": unit,
             "v0": v0,
             "e0": e0,
@@ -89,10 +71,10 @@ def eos(datas):
 
 # ===================================================
 # create input structure node
-si = StructureData(ase=bulk("Si"))
+si = orm.StructureData(ase=bulk("Si"))
 # create the PW node
-code = load_code("pw-7.2@localhost")
-paras = Dict(
+code = orm.load_code("pw-7.2@localhost")
+paras = orm.Dict(
     {
         "CONTROL": {
             "calculation": "scf",
@@ -106,10 +88,10 @@ paras = Dict(
         },
     }
 )
-kpoints = KpointsData()
+kpoints = orm.KpointsData()
 kpoints.set_kpoints_mesh([2, 2, 2])
 # Load the pseudopotential family.
-pseudo_family = load_group("SSSP/1.2/PBEsol/efficiency")
+pseudo_family = orm.load_group("SSSP/1.2/PBEsol/efficiency")
 pseudos = pseudo_family.get_pseudos(structure=si)
 #
 metadata = {
@@ -136,7 +118,6 @@ all_scf1.set(
     }
 )
 eos1 = nt.nodes.new(eos, name="eos1")
-nt.links.new(scale_structure1.outputs["result"], all_scf1.inputs["structure_uuids"])
+nt.links.new(scale_structure1.outputs["structures"], all_scf1.inputs["structures"])
 nt.links.new(all_scf1.outputs["result"], eos1.inputs["datas"])
-
 nt.submit(wait=True, timeout=300)

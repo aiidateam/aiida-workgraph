@@ -4,6 +4,23 @@ from utils import wait_nt
 aiida.load_profile()
 
 
+def test_args():
+    from aiida_worktree import node
+    from aiida.engine import calcfunction
+
+    @node()
+    @calcfunction
+    def test(a, b=1, **c):
+        print(a, b, c)
+
+    #
+    n = test.node()
+    assert n.args == []
+    assert n.kwargs == ["a", "b"]
+    assert n.var_args is None
+    assert n.var_kwargs == "c"
+
+
 def test_decorator_calcfunction(decorated_add):
     """Run simple calcfunction."""
     from aiida_worktree import WorkTree
