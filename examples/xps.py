@@ -1,17 +1,18 @@
 from aiida_worktree import build_node, WorkTree, node
 from aiida import orm
 from aiida.engine import calcfunction
-from aiida.orm import Kind, Site, StructureData, KpointsData, load_node
+from aiida.orm import Kind, Site, StructureData, KpointsData
 from aiida import load_profile
 
 load_profile()
 
 
-@node()
+@node(outputs=[["General", "structures"], ["General", "site_info"]])
 @calcfunction
 def get_marked_structures(structure, atoms_list, marker="X"):
     """"""
-    site_info = [{"uuid": structure.uuid, "symbol": "ground"}]
+    structures = {}
+    site_info = {}
 
     for data in atoms_list.get_list():
         index, orbital = data
@@ -31,39 +32,47 @@ def get_marked_structures(structure, atoms_list, marker="X"):
                     marked_structure.append_kind(kinds[site.kind_name])
                 new_site = Site(kind_name=site.kind_name, position=site.position)
                 marked_structure.append_site(new_site)
-        marked_structure.store()
-        site_info.append(
-            {
-                "uuid": marked_structure.uuid,
-                "index": index,
-                "symbol": symbol,
-                "orbital": orbital,
-                "peak": f"{symbol}_{orbital}",
-                "label": f"{symbol}_{index}",
-            }
-        )
+        label = f"{symbol}_{index}"
+        structures[label] = marked_structure
+        site_info[label] = {
+            "index": index,
+            "symbol": symbol,
+            "orbital": orbital,
+            "peak": f"{symbol}_{orbital}",
+        }
 
-    return orm.List(site_info)
+    return {"structures": structures, "site_info": orm.Dict(site_info)}
 
 
 # the structures is used to generate the worktree dynamically.
-@node.group(outputs=[["gather1", "result", "result"]])
-def run_scf(site_info, code, parameters, kpoints, pseudos, xps_pseudos, metadata):
+@node.group(outputs=[["ctx", "scf", "result"]])
+def run_scf(
+    structure,
+    marked_structures,
+    site_info,
+    code,
+    parameters,
+    kpoints,
+    pseudos,
+    xps_pseudos,
+    metadata,
+):
+    from aiida_worktree import WorkTree
+
     # register node
     ndata = {"path": "aiida_quantumespresso.calculations.pw.PwCalculation"}
     pw_node = build_node(ndata)
     #
-    nt = WorkTree("run_scf")
-    gather1 = nt.nodes.new("AiiDAGather", name="gather1")
-    site_info = site_info.get_list()
-    for site in site_info:
+    wt = WorkTree("run_scf")
+    site_info = site_info.get_dict()
+    for site in site_info.values():
         element = site["symbol"]
         if element == "ground":
             continue
         pseudos[element] = xps_pseudos[f"{element}_gs"]
     # ground state
-    structure_ground = load_node(site_info[0]["uuid"])
-    pw_ground = nt.nodes.new(pw_node, name=f"ground")
+    structure = structure
+    pw_ground = wt.nodes.new(pw_node, name="ground")
     pw_ground.set(
         {
             "code": code,
@@ -71,18 +80,18 @@ def run_scf(site_info, code, parameters, kpoints, pseudos, xps_pseudos, metadata
             "kpoints": kpoints,
             "pseudos": pseudos,
             "metadata": metadata,
-            "structure": structure_ground,
+            "structure": structure,
         }
     )
-    nt.links.new(pw_ground.outputs["output_parameters"], gather1.inputs[0])
+    pw_ground.to_ctx = [["output_parameters", "scf.ground"]]
     # excited state node
-    for data in site_info[1:]:
-        structure = load_node(data["uuid"])
+    for key, data in site_info.items():
+        structure = marked_structures[key]
         pseudos1 = pseudos.copy()
         pseudos1["X"] = xps_pseudos[data["peak"]]
         # remove pseudo of non-exist element
         pseudos1 = {kind.name: pseudos1[kind.name] for kind in structure.kinds}
-        pw_excited = nt.nodes.new(pw_node, name=f"pw_excited_{data['label']}")
+        pw_excited = wt.nodes.new(pw_node, name=f"pw_excited_{key}")
         pw_excited.set(
             {
                 "code": code,
@@ -93,28 +102,26 @@ def run_scf(site_info, code, parameters, kpoints, pseudos, xps_pseudos, metadata
                 "structure": structure,
             }
         )
-        nt.links.new(pw_excited.outputs["output_parameters"], gather1.inputs[0])
-    return nt
+        pw_excited.to_ctx = [["output_parameters", f"scf.{key}"]]
+    return wt
 
 
 # set link limit to a large value so that it can gather the result.
 @node()
 @calcfunction
-def get_spectra(pw_outputs, site_info, correction_energies={}, orbital="1s"):
-    from aiida.orm import load_node
+def get_spectra(site_info, correction_energies={}, orbital="1s", **pw_outputs):
 
     binding_energies = {}
     correction_energies = correction_energies.get_dict()
-    ground = load_node(pw_outputs[0])
-    n = len(pw_outputs)
-    for i in range(1, n):
+    ground = pw_outputs["ground"]
+    for key, data in site_info.items():
         # it only gather the uuid of the data, so we need to load it.
-        data = load_node(pw_outputs[i])
-        peak = site_info[i]["peak"]
-        label = f'{site_info[i]["label"]}_{site_info[i]["orbital"]}'
+        peak = data["peak"]
+        pw_output = pw_outputs[key]
+        label = f'{key}_{data["orbital"]}'
         corr = correction_energies.get(peak, {})
         binding_energies[label] = (
-            data.dict.energy
+            pw_output.dict.energy
             - ground.dict.energy
             + corr.get("core", 0)
             - corr.get("exp", 0)
@@ -134,16 +141,16 @@ def xps(
     metadata,
     correction_energies={},
 ):
-    nt = WorkTree("xps")
-    marked_structure1 = nt.nodes.new(
+    wt = WorkTree("xps")
+    marked_structure1 = wt.nodes.new(
         get_marked_structures,
-        name="marked_structure1",
         structure=structure,
         atoms_list=atoms_list,
     )
-    run_scf1 = nt.nodes.new(run_scf, name="run_scf1")
+    run_scf1 = wt.nodes.new(run_scf, name="run_scf1")
     run_scf1.set(
         {
+            "structure": structure,
             "code": code,
             "parameters": parameters,
             "kpoints": kpoints,
@@ -152,13 +159,18 @@ def xps(
             "metadata": metadata,
         }
     )
-    get_spectra1 = nt.nodes.new(
+    get_spectra1 = wt.nodes.new(
         get_spectra, name="get_spectra1", correction_energies=correction_energies
     )
-    nt.links.new(marked_structure1.outputs[0], run_scf1.inputs["site_info"])
-    nt.links.new(run_scf1.outputs["result"], get_spectra1.inputs["pw_outputs"])
-    nt.links.new(marked_structure1.outputs[0], get_spectra1.inputs["site_info"])
-    return nt
+    wt.links.new(
+        marked_structure1.outputs["structures"], run_scf1.inputs["marked_structures"]
+    )
+    wt.links.new(marked_structure1.outputs["site_info"], run_scf1.inputs["site_info"])
+    wt.links.new(run_scf1.outputs["result"], get_spectra1.inputs["pw_outputs"])
+    wt.links.new(
+        marked_structure1.outputs["site_info"], get_spectra1.inputs["site_info"]
+    )
+    return wt
 
 
 # ===============================================================================
@@ -211,8 +223,8 @@ metadata = {
     }
 }
 # ===============================================================================
-nt = WorkTree("xps_test")
-xps1 = nt.nodes.new(xps, name="xps")
+wt = WorkTree("xps_test")
+xps1 = wt.nodes.new(xps, name="xps")
 xps1.set(
     {
         "structure": mol,
@@ -226,4 +238,4 @@ xps1.set(
         "correction_energies": correction_energies,
     }
 )
-nt.submit(wait=True, timeout=300)
+wt.submit(wait=True, timeout=300)

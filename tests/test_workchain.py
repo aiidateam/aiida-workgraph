@@ -3,13 +3,13 @@ import aiida
 aiida.load_profile()
 
 
-def test_workchain(nt_workchain):
+def test_workchain(wt_workchain):
     """Submit simple calcjob."""
-    nt = nt_workchain
-    nt.name = "test_workchain"
-    nt.submit(wait=True, timeout=100)
+    wt = wt_workchain
+    wt.name = "test_workchain"
+    wt.submit(wait=True, timeout=100)
     # print("results: ", results[])
-    assert nt.nodes["multiply_add2"].node.outputs.result == 17
+    assert wt.nodes["multiply_add2"].node.outputs.result == 17
 
 
 def test_build_workchain_inputs_outputs(build_workchain):
@@ -26,23 +26,23 @@ def test_build_workchain(build_workchain):
     from aiida_worktree import WorkTree
 
     code = load_code("add@localhost")
-    nt = WorkTree(name="test_debug_math")
-    code1 = nt.nodes.new("AiiDACode", "code1", value=code.pk)
-    multiply_add1 = nt.nodes.new(
+    wt = WorkTree(name="test_debug_math")
+    code1 = wt.nodes.new("AiiDACode", "code1", value=code.pk)
+    multiply_add1 = wt.nodes.new(
         build_workchain,
         "multiply_add1",
         x=Int(4).store(),
         y=Int(2).store(),
         z=Int(3).store(),
     )
-    multiply_add2 = nt.nodes.new(
+    multiply_add2 = wt.nodes.new(
         build_workchain,
         "multiply_add2",
         x=Int(2).store(),
         y=Int(3).store(),
     )
-    nt.links.new(code1.outputs[0], multiply_add1.inputs["code"])
-    nt.links.new(code1.outputs[0], multiply_add2.inputs["code"])
-    nt.links.new(multiply_add1.outputs[0], multiply_add2.inputs["z"])
-    nt.submit(wait=True, timeout=100)
-    assert nt.nodes["multiply_add2"].node.outputs.result == 17
+    wt.links.new(code1.outputs[0], multiply_add1.inputs["code"])
+    wt.links.new(code1.outputs[0], multiply_add2.inputs["code"])
+    wt.links.new(multiply_add1.outputs[0], multiply_add2.inputs["z"])
+    wt.submit(wait=True, timeout=100)
+    assert wt.nodes["multiply_add2"].node.outputs.result == 17

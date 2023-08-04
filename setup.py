@@ -36,6 +36,7 @@ setup(
         "aiida-pseudo",
         "aiida-quantumespresso",
         "pytest",
+        "pytest-cov",
         "pre-commit",
     ],
     entry_points={
@@ -50,6 +51,6 @@ setup(
         ],
     },
     package_data={},
-    python_requires=">=3.6",
+    python_requires=">=3.8",
     test_suite="setup.test_suite",
 )

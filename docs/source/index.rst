@@ -4,7 +4,7 @@ Welcome to AiiDA WorkTree's documentation!
 
 Provides the third workflow component: ``WorkTree``, to design flexible node-based workflows using AiiDA.
 
-In AiiDA, there are two workflow components: `workfunction` and `WorkChain`. Workfunction is easy to implement but it does not support automatic checkpointing, which is important for long-running calculations. Workchain supports automatic checkpointing but it is difficult to implement and also not as flexible as the `workfunction`. AiiDA-Nodetree provides the third component: `WorkTree`. It is easy to implement and supports automatic checkpointing. It is also flexible and can be used to design complex workflows.
+In AiiDA, there are two workflow components: `workfunction` and `WorkChain`. Workfunction is easy to implement but it does not support automatic checkpointing, which is important for long-running calculations. Workchain supports automatic checkpointing but it is difficult to implement and also not as flexible as the `workfunction`. AiiDA-WorkTree provides the third component: `WorkTree`. It is easy to implement and supports automatic checkpointing. It is also flexible and can be used to design complex workflows.
 
 
 Here is a detailed comparison between the ``WorkTree`` with two AiiDA built-in workflow components.
@@ -24,21 +24,21 @@ Here is a detailed comparison between the ``WorkTree`` with two AiiDA built-in w
 +--------------------------+------------------------+------------------------+------------------------+
 | Dynamic                  | ``No``                 | ``No``                 | Yes                    |
 +--------------------------+------------------------+------------------------+------------------------+
-| Ready to Use             | Yes                    | ``No``,Need PYTHONPATH | Yes                    |
+| Ready to Use             | Yes                    | ``Need PYTHONPATH``    | Yes                    |
 +--------------------------+------------------------+------------------------+------------------------+
 | Subprocesses Handling    | ``No``                 | Launches & waits       | Launches & waits       |
 +--------------------------+------------------------+------------------------+------------------------+
-| Flow Control             | All                    | `if`, `while`          | `if`, `while`          |
+| Flow Control             | All                    | `if`, `while`          | `if`, `while`, `match` |
 +--------------------------+------------------------+------------------------+------------------------+
 | Termination              | ``Hard exit``          | ExitCode               | ExitCode               |
 +--------------------------+------------------------+------------------------+------------------------+
 | Capabilities             | Calls calcs and works  | Calls any process      | Calls any process      |
 +--------------------------+------------------------+------------------------+------------------------+
-| Data Passing             | Direct passing         | Context dictionary     | Link                   |
+| Data Passing             | Direct passing         | Context                | Link & Context         |
 +--------------------------+------------------------+------------------------+------------------------+
-| Output Recording         | Limited support        | out & validates        | out                    |
+| Output Recording         | Limited support        | Out & validates        | Out                    |
 +--------------------------+------------------------+------------------------+------------------------+
-| Port Exposing            | Limited support        | Supports automatic     | Limited support        |
+| Port Exposing            | Limited support        | Manual & automatic     | Manual                 |
 +--------------------------+------------------------+------------------------+------------------------+
 
 .. toctree::
@@ -49,8 +49,7 @@ Here is a detailed comparison between the ``WorkTree`` with two AiiDA built-in w
    installation
    tutorial/index
    howto/index
-   node
-   worktree
+   concept/index
 
 
 
