@@ -63,7 +63,7 @@ def run_scf(
     ndata = {"path": "aiida_quantumespresso.calculations.pw.PwCalculation"}
     pw_node = build_node(ndata)
     #
-    nt = WorkTree("run_scf")
+    wt = WorkTree("run_scf")
     site_info = site_info.get_dict()
     for site in site_info.values():
         element = site["symbol"]
@@ -72,7 +72,7 @@ def run_scf(
         pseudos[element] = xps_pseudos[f"{element}_gs"]
     # ground state
     structure = structure
-    pw_ground = nt.nodes.new(pw_node, name="ground")
+    pw_ground = wt.nodes.new(pw_node, name="ground")
     pw_ground.set(
         {
             "code": code,
@@ -91,7 +91,7 @@ def run_scf(
         pseudos1["X"] = xps_pseudos[data["peak"]]
         # remove pseudo of non-exist element
         pseudos1 = {kind.name: pseudos1[kind.name] for kind in structure.kinds}
-        pw_excited = nt.nodes.new(pw_node, name=f"pw_excited_{key}")
+        pw_excited = wt.nodes.new(pw_node, name=f"pw_excited_{key}")
         pw_excited.set(
             {
                 "code": code,
@@ -103,7 +103,7 @@ def run_scf(
             }
         )
         pw_excited.to_ctx = [["output_parameters", f"scf.{key}"]]
-    return nt
+    return wt
 
 
 # set link limit to a large value so that it can gather the result.
@@ -141,13 +141,13 @@ def xps(
     metadata,
     correction_energies={},
 ):
-    nt = WorkTree("xps")
-    marked_structure1 = nt.nodes.new(
+    wt = WorkTree("xps")
+    marked_structure1 = wt.nodes.new(
         get_marked_structures,
         structure=structure,
         atoms_list=atoms_list,
     )
-    run_scf1 = nt.nodes.new(run_scf, name="run_scf1")
+    run_scf1 = wt.nodes.new(run_scf, name="run_scf1")
     run_scf1.set(
         {
             "structure": structure,
@@ -159,18 +159,18 @@ def xps(
             "metadata": metadata,
         }
     )
-    get_spectra1 = nt.nodes.new(
+    get_spectra1 = wt.nodes.new(
         get_spectra, name="get_spectra1", correction_energies=correction_energies
     )
-    nt.links.new(
+    wt.links.new(
         marked_structure1.outputs["structures"], run_scf1.inputs["marked_structures"]
     )
-    nt.links.new(marked_structure1.outputs["site_info"], run_scf1.inputs["site_info"])
-    nt.links.new(run_scf1.outputs["result"], get_spectra1.inputs["pw_outputs"])
-    nt.links.new(
+    wt.links.new(marked_structure1.outputs["site_info"], run_scf1.inputs["site_info"])
+    wt.links.new(run_scf1.outputs["result"], get_spectra1.inputs["pw_outputs"])
+    wt.links.new(
         marked_structure1.outputs["site_info"], get_spectra1.inputs["site_info"]
     )
-    return nt
+    return wt
 
 
 # ===============================================================================
@@ -223,8 +223,8 @@ metadata = {
     }
 }
 # ===============================================================================
-nt = WorkTree("xps_test")
-xps1 = nt.nodes.new(xps, name="xps")
+wt = WorkTree("xps_test")
+xps1 = wt.nodes.new(xps, name="xps")
 xps1.set(
     {
         "structure": mol,
@@ -238,4 +238,4 @@ xps1.set(
         "correction_energies": correction_energies,
     }
 )
-nt.submit(wait=True, timeout=300)
+wt.submit(wait=True, timeout=300)

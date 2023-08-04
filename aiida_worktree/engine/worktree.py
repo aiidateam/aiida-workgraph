@@ -623,11 +623,11 @@ class WorkTree(Process, metaclass=Protect):
                 from aiida_worktree.utils import merge_properties
 
                 print("node  type: worktree.")
-                nt = self.run_executor(executor, args, kwargs, var_args, var_kwargs)
+                wt = self.run_executor(executor, args, kwargs, var_args, var_kwargs)
                 print("group outputs: ", executor.group_outputs)
-                nt.group_outputs = executor.group_outputs
-                nt.name = name
-                ntdata = nt.to_dict()
+                wt.group_outputs = executor.group_outputs
+                wt.name = name
+                ntdata = wt.to_dict()
                 # merge the kwargs
                 merge_properties(ntdata)
                 all = {"nt": ntdata, "metadata": {"call_link_label": name}}

@@ -36,6 +36,7 @@ setup(
         "aiida-pseudo",
         "aiida-quantumespresso",
         "pytest",
+        "pytest-cov",
         "pre-commit",
     ],
     entry_points={

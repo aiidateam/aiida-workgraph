@@ -73,11 +73,11 @@ x = Int(2.0)
 y = Int(3.0)
 z = Int(4.0)
 
-nt = WorkTree("test_add_multiply")
-nt.nodes.new(add, name="add1", x=x, y=y)
-nt.nodes.new(multiply, name="multiply1", y=z)
-nt.links.new(nt.nodes["add1"].outputs[0], nt.nodes["multiply1"].inputs["x"])
-nt.submit(wait=True)
+wt = WorkTree("test_add_multiply")
+wt.nodes.new(add, name="add1", x=x, y=y)
+wt.nodes.new(multiply, name="multiply1", y=z)
+wt.links.new(wt.nodes["add1"].outputs[0], wt.nodes["multiply1"].inputs["x"])
+wt.submit(wait=True)
 ```
 
 The node graph from the worktree process:
