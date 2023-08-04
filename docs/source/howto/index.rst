@@ -13,3 +13,4 @@ This section contains a collection of HowTos for various topics.
    for
    while
    ctx
+   wait

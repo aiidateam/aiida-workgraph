@@ -40,6 +40,19 @@ def create_data_node(executor, args, kwargs):
     return data_node
 
 
+def get_nested_dict(d, name):
+    """
+    name = "base.pw.parameters"
+    """
+    keys = name.split(".")
+    current = d
+    for key in keys:
+        if key not in current:
+            raise ValueError(f"Context variable {name} not found.")
+        current = current[key]
+    return current
+
+
 def update_nested_dict(d, key, value):
     """
     d = {"base": {"pw": {"parameters": 1}}

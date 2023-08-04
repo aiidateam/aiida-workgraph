@@ -9,8 +9,8 @@ def test_worktree_ctx(decorated_add):
     from aiida.orm import Float
 
     nt = WorkTree(name="test_worktree_ctx")
-    nt.ctx = {"x": Float(2)}
-    add1 = nt.nodes.new(decorated_add, "add1", x="{{x}}", y=Float(3).store())
+    nt.ctx = {"x": Float(2), "data.y": Float(3)}
+    add1 = nt.nodes.new(decorated_add, "add1", x="{{x}}", y="{{data.y}}")
     nt.submit(wait=True)
     assert add1.node.outputs.result.value == 5
 

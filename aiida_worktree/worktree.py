@@ -64,8 +64,12 @@ class WorkTree(scinode.core.nodetree.NodeTree):
         ntdata = super().to_dict()
         for node in self.nodes:
             ntdata["nodes"][node.name]["to_ctx"] = getattr(node, "to_ctx", [])
+            ntdata["nodes"][node.name]["wait"] = getattr(node, "wait", [])
         self.ctx["sequence"] = self.sequence
-        ntdata["ctx"] = self.ctx
+        # only alphanumeric and underscores are allowed
+        ntdata["ctx"] = {
+            key.replace(".", "__"): value for key, value in self.ctx.items()
+        }
         ntdata["starts"] = self.starts
         ntdata["is_while"] = self.is_while
         ntdata["is_for"] = self.is_for

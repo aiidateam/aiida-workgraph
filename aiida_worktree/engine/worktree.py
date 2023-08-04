@@ -417,6 +417,7 @@ class WorkTree(Process, metaclass=Protect):
 
         self.ctx["_count"] = 0
         for key, value in datas.items():
+            key = key.replace("__", ".")
             update_nested_dict(self.ctx, key, value)
 
     def launch_worktree(self):
@@ -726,6 +727,8 @@ class WorkTree(Process, metaclass=Protect):
 
     def update_ctx_variable(self, value):
         # replace context variables
+        from aiida_worktree.utils import get_nested_dict
+
         """Get value from context."""
         if (
             isinstance(value, str)
@@ -733,9 +736,7 @@ class WorkTree(Process, metaclass=Protect):
             and value.strip().endswith("}}")
         ):
             name = value[2:-2].strip()
-            if name not in self.ctx:
-                raise ValueError(f"Context variable {name} not found.")
-            return self.ctx[name]
+            return get_nested_dict(self.ctx, name)
         else:
             return value
 
@@ -771,23 +772,21 @@ class WorkTree(Process, metaclass=Protect):
         print(f"    Check parent state for node {name}")
         node = self.ctx.nodes[name]
         inputs = node.get("inputs", None)
-        entry_links = self.ctx.connectivity["ctrl_input_link"][name].get("entry", {})
-        # print("    entry_links: ", entry_links)
+        wait_nodes = self.ctx.nodes[name].get("wait", [])
+        # print("    wait_nodes: ", wait_nodes)
         ready = True
-        if inputs is None and entry_links == {}:
+        if inputs is None and len(wait_nodes) == 0:
             return ready
         else:
-            # check the control links first
-            for index in entry_links:
-                link = self.ctx.ctrl_links[index]
-                # print("    link: ", link)
-                if self.ctx.nodes[link["from_node"]]["state"] not in [
+            # check the wait node first
+            for node_name in wait_nodes:
+                if self.ctx.nodes[node_name]["state"] not in [
                     "FINISHED",
                     "SKIPPED",
                     "FAILED",
                 ]:
                     ready = False
-                    return ready, f"{name}, input entry control link is not FINISHED"
+                    return ready, f"Node {name} wait for {node_name}"
             for input in inputs:
                 # print("    input, ", input["from_node"], self.ctx.nodes[input["from_node"]]["state"])
                 for link in input["links"]:
@@ -833,6 +832,8 @@ class WorkTree(Process, metaclass=Protect):
 
     def finalize(self):
         """"""
+        from aiida_worktree.utils import get_nested_dict
+
         # expose group outputs
         print("finalize")
         group_outputs = {}
@@ -840,7 +841,7 @@ class WorkTree(Process, metaclass=Protect):
         for output in self.ctx.worktree["metadata"]["group_outputs"]:
             print("output: ", output)
             if output[0] == "ctx":
-                group_outputs[output[2]] = self.ctx[output[1]]
+                group_outputs[output[2]] = get_nested_dict(self.ctx, output[1])
             else:
                 group_outputs[output[2]] = self.ctx.nodes[output[0]]["results"][
                     output[1]
