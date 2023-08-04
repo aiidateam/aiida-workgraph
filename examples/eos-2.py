@@ -22,13 +22,15 @@ def scale_structure(structure, scales):
 # Output result from context
 @node.group(outputs=[["ctx", "result", "result"]])
 def all_scf(structures, code, parameters, kpoints, pseudos, metadata):
+    from aiida_worktree import WorkTree
+
     # register node
     ndata = {"path": "aiida_quantumespresso.calculations.pw.PwCalculation"}
     pw_node = build_node(ndata)
-    nt = WorkTree("all_scf")
+    wt = WorkTree("all_scf")
     # pw node
     for key, structure in structures.items():
-        pw1 = nt.nodes.new(pw_node, name=f"pw1_{key}")
+        pw1 = wt.nodes.new(pw_node, name=f"pw1_{key}")
         pw1.set(
             {
                 "code": code,
@@ -40,7 +42,7 @@ def all_scf(structures, code, parameters, kpoints, pseudos, metadata):
             }
         )
         pw1.to_ctx = [["output_parameters", f"result.{key}"]]
-    return nt
+    return wt
 
 
 @node()
@@ -103,11 +105,11 @@ metadata = {
     }
 }
 
-nt = WorkTree("eos")
-scale_structure1 = nt.nodes.new(
+wt = WorkTree("eos")
+scale_structure1 = wt.nodes.new(
     scale_structure, name="scale_structure1", structure=si, scales=[0.95, 1.0, 1.05]
 )
-all_scf1 = nt.nodes.new(all_scf, name="all_scf1")
+all_scf1 = wt.nodes.new(all_scf, name="all_scf1")
 all_scf1.set(
     {
         "code": code,
@@ -117,7 +119,7 @@ all_scf1.set(
         "metadata": metadata,
     }
 )
-eos1 = nt.nodes.new(eos, name="eos1")
-nt.links.new(scale_structure1.outputs["structures"], all_scf1.inputs["structures"])
-nt.links.new(all_scf1.outputs["result"], eos1.inputs["datas"])
-nt.submit(wait=True, timeout=300)
+eos1 = wt.nodes.new(eos, name="eos1")
+wt.links.new(scale_structure1.outputs["structures"], all_scf1.inputs["structures"])
+wt.links.new(all_scf1.outputs["result"], eos1.inputs["datas"])
+wt.submit(wait=True, timeout=300)

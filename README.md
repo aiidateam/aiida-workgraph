@@ -23,9 +23,9 @@ Here is a detailed comparison between the ``WorkTree`` with two AiiDA built-in w
 | Flow Control             | All                    | `if`, `while`          | `if`, `while`, `match` |
 | Termination              | ``Hard exit``          | ExitCode               | ExitCode               |
 | Capabilities             | Calls calcs and works  | Calls any process      | Calls any process      |
-| Data Passing             | Direct passing         | Context dictionary     | Link                   |
-| Output Recording         | Limited support        | out & validates        | out                    |
-| Port Exposing            | Limited support        | Supports automatic     | Limited support        |
+| Data Passing             | Direct passing         | Context                | Link & Context         |
+| Output Recording         | Limited support        | Out & validates        | Out                    |
+| Port Exposing            | Limited support        | Manual & automatic     | Manual                 |
 
 
 

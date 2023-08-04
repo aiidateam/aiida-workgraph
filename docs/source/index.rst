@@ -34,11 +34,11 @@ Here is a detailed comparison between the ``WorkTree`` with two AiiDA built-in w
 +--------------------------+------------------------+------------------------+------------------------+
 | Capabilities             | Calls calcs and works  | Calls any process      | Calls any process      |
 +--------------------------+------------------------+------------------------+------------------------+
-| Data Passing             | Direct passing         | Context dictionary     | Link                   |
+| Data Passing             | Direct passing         | Context                | Link & Context         |
 +--------------------------+------------------------+------------------------+------------------------+
-| Output Recording         | Limited support        | out & validates        | out                    |
+| Output Recording         | Limited support        | Out & validates        | Out                    |
 +--------------------------+------------------------+------------------------+------------------------+
-| Port Exposing            | Limited support        | Supports automatic     | Limited support        |
+| Port Exposing            | Limited support        | Manual & automatic     | Manual                 |
 +--------------------------+------------------------+------------------------+------------------------+
 
 .. toctree::

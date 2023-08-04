@@ -413,9 +413,11 @@ class WorkTree(Process, metaclass=Protect):
                 self.set_node_state(self.ctx.nodes.keys(), "SKIPPED")
 
     def init_ctx(self, datas):
+        from aiida_worktree.utils import update_nested_dict
+
         self.ctx["_count"] = 0
         for key, value in datas.items():
-            self.ctx[key] = value
+            update_nested_dict(self.ctx, key, value)
 
     def launch_worktree(self):
         print("launch_worktree: ")
