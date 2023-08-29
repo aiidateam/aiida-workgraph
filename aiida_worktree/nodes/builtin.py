@@ -1,4 +1,4 @@
-from scinode.core.node import Node
+from aiida_worktree.node import Node
 from aiida_worktree.executors.builtin import GatherWorkChain
 
 

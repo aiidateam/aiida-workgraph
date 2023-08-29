@@ -1,12 +1,14 @@
-import scinode
+import node_graph
 import aiida
 
 
-class WorkTree(scinode.core.nodetree.NodeTree):
-    """
-    Represents a working tree for AiiDA's worktree engine. The class extends from scinode's NodeTree and provides
-    methods to run, submit tasks, wait for tasks to finish, and update the process status. It is used to handle
-    various states of a worktree process and provides convenient operations to interact with it.
+class WorkTree(node_graph.NodeGraph):
+    """Build a node-based workflow AiiDA's worktree engine.
+
+    The class extends from NodeGraph and provides methods to run,
+    submit tasks, wait for tasks to finish, and update the process status.
+    It is used to handle various states of a worktree process and provides
+    convenient operations to interact with it.
 
     Attributes:
         process (aiida.orm.ProcessNode): The process node that represents the process status and other details.
@@ -14,19 +16,19 @@ class WorkTree(scinode.core.nodetree.NodeTree):
         pk (int): The primary key of the process node.
     """
 
+    node_entry = "aiida_worktree.node"
+
     def __init__(self, name="WorkTree", **kwargs):
         """
         Initialize a WorkTree instance.
 
         Args:
             name (str, optional): The name of the WorkTree. Defaults to 'WorkTree'.
-            **kwargs: Additional keyword arguments to be passed to the NodeTree class.
+            **kwargs: Additional keyword arguments to be passed to the WorkTree class.
         """
         super().__init__(name, **kwargs)
         self.ctx = {}
-        self.starts = []
-        self.is_while = False
-        self.is_for = False
+        self.worktree_type = "NORMAL"
         self.sequence = []
         self.conditions = []
 
@@ -62,17 +64,12 @@ class WorkTree(scinode.core.nodetree.NodeTree):
 
     def to_dict(self):
         ntdata = super().to_dict()
-        for node in self.nodes:
-            ntdata["nodes"][node.name]["to_ctx"] = getattr(node, "to_ctx", [])
-            ntdata["nodes"][node.name]["wait"] = getattr(node, "wait", [])
         self.ctx["sequence"] = self.sequence
         # only alphanumeric and underscores are allowed
         ntdata["ctx"] = {
             key.replace(".", "__"): value for key, value in self.ctx.items()
         }
-        ntdata["starts"] = self.starts
-        ntdata["is_while"] = self.is_while
-        ntdata["is_for"] = self.is_for
+        ntdata["worktree_type"] = self.worktree_type
         ntdata["conditions"] = self.conditions
 
         return ntdata

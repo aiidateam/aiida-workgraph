@@ -6,11 +6,11 @@ load_profile()
 
 def test_for(decorated_add, decorated_multiply):
     # Create a WorkTree will loop the a sequence
-    @node.group(outputs=[["ctx", "total", "result"]])
+    @node.group(outputs=[["ctx.total", "result"]])
     def add_multiply_for(sequence):
         wt = WorkTree("add_multiply_for")
         # tell the engine that this is a `for` worktree
-        wt.is_for = True
+        wt.worktree_type = "FOR"
         # the sequence to be iter
         wt.sequence = sequence
         # set a context variable before running.

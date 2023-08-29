@@ -31,7 +31,7 @@ setup(
     install_requires=[
         "numpy",
         "aiida-core",
-        "scinode",
+        "node_graph",
         "cloudpickle",
         "aiida-pseudo",
         "aiida-quantumespresso",
@@ -43,11 +43,14 @@ setup(
         "aiida.node": [
             "process.workflow.worktree = aiida_worktree.orm.worktree:WorkTreeNode",
         ],
-        "scinode_node": [
+        "aiida_worktree.node": [
             "aiida = aiida_worktree.nodes:node_list",
         ],
-        "scinode_property": [
+        "aiida_worktree.property": [
             "aiida = aiida_worktree.properties.built_in:property_list",
+        ],
+        "aiida_worktree.socket": [
+            "aiida = aiida_worktree.sockets.built_in:socket_list",
         ],
     },
     package_data={},

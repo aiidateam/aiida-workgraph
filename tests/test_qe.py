@@ -39,6 +39,7 @@ def test_structure(wt_structure_si):
     """Run simple calcfunction."""
     wt = wt_structure_si
     wt.name = "test_structure"
+    print(wt.to_dict())
     wt.submit(wait=True)
     assert len(wt_structure_si.nodes["structure1"].node.get_ase()) == 2
 

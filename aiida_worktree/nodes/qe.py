@@ -1,4 +1,5 @@
-from scinode.core.node import Node
+from aiida_worktree.node import Node
+from aiida import orm
 
 
 class AiiDAKpoint(Node):
@@ -10,8 +11,8 @@ class AiiDAKpoint(Node):
     kwargs = ["mesh", "offset"]
 
     def create_properties(self):
-        self.properties.new("IntVector", "mesh", default=[1, 1, 1], size=3)
-        self.properties.new("IntVector", "offset", default=[0, 0, 0], size=3)
+        self.properties.new("AiiDAIntVector", "mesh", default=[1, 1, 1], size=3)
+        self.properties.new("AiiDAIntVector", "offset", default=[0, 0, 0], size=3)
 
     def create_sockets(self):
         self.outputs.new("General", "Kpoint")
@@ -59,7 +60,7 @@ class AiiDAPWPseudo(Node):
 
     def create_properties(self):
         self.properties.new(
-            "String", "psuedo_familay", default="SSSP/1.2/PBEsol/efficiency"
+            "AiiDAString", "psuedo_familay", default="SSSP/1.2/PBEsol/efficiency"
         )
 
     def create_sockets(self):

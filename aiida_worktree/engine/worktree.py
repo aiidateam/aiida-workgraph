@@ -265,7 +265,7 @@ class WorkTree(Process, metaclass=Protect):
         result: t.Any = None
 
         try:
-            self.launch_worktree()
+            self.run_worktree()
         except _PropagateReturn as exception:
             finished, result = True, exception.exit_code
         else:
@@ -367,7 +367,7 @@ class WorkTree(Process, metaclass=Protect):
             self.resume()
 
     def setup(self):
-        from scinode.utils.nt_analysis import ConnectivityAnalysis
+        from node_graph.analysis import ConnectivityAnalysis
         from aiida_worktree.utils import build_node_link
 
         self.ctx.new_data = dict()
@@ -402,12 +402,12 @@ class WorkTree(Process, metaclass=Protect):
         self.ctx.msgs = []
         self.node.set_process_label(f"WorkTree: {self.ctx.worktree['name']}")
         # while worktree
-        if self.ctx.worktree["is_while"]:
+        if self.ctx.worktree["worktree_type"].upper() == "WHILE":
             should_run = self.check_while_conditions()
             if not should_run:
                 self.set_node_state(self.ctx.nodes.keys(), "SKIPPED")
         # for worktree
-        if self.ctx.worktree["is_for"]:
+        if self.ctx.worktree["worktree_type"].upper() == "FOR":
             should_run = self.check_for_conditions()
             if not should_run:
                 self.set_node_state(self.ctx.nodes.keys(), "SKIPPED")
@@ -420,13 +420,9 @@ class WorkTree(Process, metaclass=Protect):
             key = key.replace("__", ".")
             update_nested_dict(self.ctx, key, value)
 
-    def launch_worktree(self):
-        print("launch_worktree: ")
+    def run_worktree(self):
+        print("run_worktree: ")
         self.report("Lanch worktree.")
-        if len(self.ctx.worktree["starts"]) > 0:
-            self.run_nodes(self.ctx.worktree["starts"])
-            self.ctx.worktree["starts"] = []
-            return
         node_to_run = []
         for name, node in self.ctx.nodes.items():
             # update node state
@@ -488,10 +484,10 @@ class WorkTree(Process, metaclass=Protect):
             if node["state"] in ["RUNNING", "CREATED", "READY"]:
                 is_finished = False
         if is_finished:
-            if self.ctx.worktree["is_while"]:
+            if self.ctx.worktree["worktree_type"].upper() == "WHILE":
                 should_run = self.check_while_conditions()
                 is_finished = not should_run
-            if self.ctx.worktree["is_for"]:
+            if self.ctx.worktree["worktree_type"].upper() == "FOR":
                 should_run = self.check_for_conditions()
                 is_finished = not should_run
         return is_finished
@@ -743,6 +739,7 @@ class WorkTree(Process, metaclass=Protect):
     def node_to_ctx(self, name):
         from aiida_worktree.utils import update_nested_dict
 
+        print("node to ctx: ", name)
         items = self.ctx.nodes[name]["to_ctx"]
         for item in items:
             update_nested_dict(
@@ -835,23 +832,23 @@ class WorkTree(Process, metaclass=Protect):
         from aiida_worktree.utils import get_nested_dict
 
         # expose group outputs
-        print("finalize")
         group_outputs = {}
         print("group outputs: ", self.ctx.worktree["metadata"]["group_outputs"])
         for output in self.ctx.worktree["metadata"]["group_outputs"]:
             print("output: ", output)
-            if output[0] == "ctx":
-                group_outputs[output[2]] = get_nested_dict(self.ctx, output[1])
+            node_name, socket_name = output[0].split(".")
+            if node_name == "ctx":
+                group_outputs[output[1]] = get_nested_dict(self.ctx, socket_name)
             else:
-                group_outputs[output[2]] = self.ctx.nodes[output[0]]["results"][
+                group_outputs[output[1]] = self.ctx.nodes[node_name]["results"][
                     output[1]
                 ]
         self.out("group_outputs", group_outputs)
         self.out("new_data", self.ctx.new_data)
         self.report("Finalize")
-        print(f"Finalize worktree {self.ctx.worktree['name']}")
         for name, node in self.ctx.nodes.items():
             if node["state"] == "FAILED":
                 print(f"    Node {name} failed.")
                 return self.exit_codes.NODE_FAILED
+        print(f"Finalize worktree {self.ctx.worktree['name']}\n")
         # check if all nodes are finished with nonzero exit code
