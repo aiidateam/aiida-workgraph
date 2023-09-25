@@ -38,10 +38,12 @@ class WorkTree(node_graph.NodeGraph):
         the process and then calls the update method to update the state of the process.
         """
         from aiida_worktree.engine.worktree import WorkTree
+        from aiida.orm.utils.serialize import serialize
 
         ntdata = self.to_dict()
         all = {"nt": ntdata}
         _result, self.process = aiida.engine.run_get_node(WorkTree, **all)
+        self.process.base.extras.set("nt", serialize(ntdata))
         self.update()
 
     def submit(self, wait=False, timeout=60):
@@ -54,11 +56,14 @@ class WorkTree(node_graph.NodeGraph):
         """
         from aiida_worktree.engine.worktree import WorkTree
         from aiida_worktree.utils import merge_properties
+        from aiida.orm.utils.serialize import serialize
 
         ntdata = self.to_dict()
         merge_properties(ntdata)
         all = {"nt": ntdata}
         self.process = aiida.engine.submit(WorkTree, **all)
+        #
+        self.process.base.extras.set("nt", serialize(ntdata))
         if wait:
             self.wait(timeout=timeout)
 
@@ -120,3 +125,20 @@ class WorkTree(node_graph.NodeGraph):
                     self.nodes[label].state = "FINISHED"
                     self.nodes[label].node = node
                     self.nodes[label].pk = node.pk
+
+    @classmethod
+    def load(cls, pk):
+        """
+        Load the process node with the given primary key.
+
+        Args:
+            pk (int): The primary key of the process node.
+        """
+        from aiida.orm.utils.serialize import deserialize_unsafe
+
+        process = aiida.orm.load_node(pk)
+        wtdata = deserialize_unsafe(process.base.extras.get("nt"))
+        wt = cls.from_dict(wtdata)
+        wt.process = process
+        wt.update()
+        return wt

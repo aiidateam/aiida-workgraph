@@ -38,6 +38,16 @@ Create and launch worktree
 
     wt.submit()
 
+Load worktree from the AiiDA process
+=====================================
+WorkTree save its data as a extra attribute into its process, so that one can rebuild the WorkTree from the process.
+
+
+.. code-block:: python
+
+    from aiida_worktree import WorkTree
+    # pk is the process id of a WorkTree
+    WorkTree.load(pk)
 
 Execute order
 ===============
