@@ -392,10 +392,6 @@ class WorkTree(Process, metaclass=Protect):
         self.ctx.ctrl_links = ntdata["ctrl_links"]
         self.ctx.worktree = ntdata
         print("init")
-        # init
-        for _name, node in self.ctx.nodes.items():
-            node["state"] = "CREATED"
-            node["process"] = None
         #
         nc = ConnectivityAnalysis(ntdata)
         self.ctx.connectivity = nc.build_connectivity()
@@ -411,6 +407,8 @@ class WorkTree(Process, metaclass=Protect):
             should_run = self.check_for_conditions()
             if not should_run:
                 self.set_node_state(self.ctx.nodes.keys(), "SKIPPED")
+        # init node results
+        self.set_node_results()
 
     def init_ctx(self, datas):
         from aiida_worktree.utils import update_nested_dict
@@ -419,6 +417,46 @@ class WorkTree(Process, metaclass=Protect):
         for key, value in datas.items():
             key = key.replace("__", ".")
             update_nested_dict(self.ctx, key, value)
+
+    def set_node_results(self):
+        for _, node in self.ctx.nodes.items():
+            if node.get("process"):
+                if isinstance(node["process"], str):
+                    node["process"] = orm.load_node(node["process"])
+                self.set_node_result(node)
+            self.set_node_result(node)
+
+    def set_node_result(self, node):
+        name = node["name"]
+        print(f"set node result: {name}")
+        if node.get("process"):
+            print(f"set node result: {name} process")
+            state = node["process"].process_state.value.upper()
+            if state == "FINISHED":
+                node["state"] = state
+                if node["metadata"]["node_type"] == "worktree":
+                    # expose the outputs of nodetree
+                    node["results"] = getattr(
+                        node["process"].outputs, "group_outputs", None
+                    )
+                    # self.ctx.new_data[name] = outputs
+                else:
+                    node["results"] = node["process"].outputs
+                    # self.ctx.new_data[name] = node["results"]
+                self.ctx.nodes[name]["state"] = "FINISHED"
+                self.node_to_ctx(name)
+                print(f"Node: {name} finished.")
+            elif state == "EXCEPTED":
+                node["state"] = state
+                node["results"] = node["process"].outputs
+                # self.ctx.new_data[name] = node["results"]
+                self.ctx.nodes[name]["state"] = "FAILED"
+                # set child state to FAILED
+                self.set_node_state(self.ctx.connectivity["child_node"][name], "FAILED")
+                print(f"Node: {name} failed.")
+        else:
+            print(f"set node result: None")
+            node["results"] = None
 
     def run_worktree(self):
         print("run_worktree: ")
@@ -454,33 +492,7 @@ class WorkTree(Process, metaclass=Protect):
                 ]
                 and node["state"] == "RUNNING"
             ):
-                if node.get("process"):
-                    state = node["process"].process_state.value.upper()
-                    print(node["name"], state)
-                    if state == "FINISHED":
-                        node["state"] = state
-                        if node["metadata"]["node_type"] == "worktree":
-                            # expose the outputs of nodetree
-                            node["results"] = getattr(
-                                node["process"].outputs, "group_outputs", None
-                            )
-                            # self.ctx.new_data[name] = outputs
-                        else:
-                            node["results"] = node["process"].outputs
-                            # self.ctx.new_data[name] = node["results"]
-                        self.ctx.nodes[name]["state"] = "FINISHED"
-                        self.node_to_ctx(name)
-                        print(f"Node: {name} finished.")
-                    elif state == "EXCEPTED":
-                        node["state"] = state
-                        node["results"] = node["process"].outputs
-                        # self.ctx.new_data[name] = node["results"]
-                        self.ctx.nodes[name]["state"] = "FAILED"
-                        # set child state to FAILED
-                        self.set_node_state(
-                            self.ctx.connectivity["child_node"][name], "FAILED"
-                        )
-                        print(f"Node: {name} failed.")
+                self.set_node_result(node)
             if node["state"] in ["RUNNING", "CREATED", "READY"]:
                 is_finished = False
         if is_finished:

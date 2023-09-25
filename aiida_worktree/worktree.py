@@ -109,13 +109,13 @@ class WorkTree(node_graph.NodeGraph):
         linked to the current process, and data nodes linked to the current process.
         """
         self.state = self.process.process_state.value.upper()
-        self.pk = self.process.pk
         outgoing = self.process.base.links.get_outgoing()
         for link in outgoing.all():
             node = link.node
             if isinstance(node, aiida.orm.ProcessNode) and getattr(
                 node, "process_state", False
             ):
+                self.nodes[link.link_label].process = node
                 self.nodes[link.link_label].state = node.process_state.value.upper()
                 self.nodes[link.link_label].node = node
                 self.nodes[link.link_label].pk = node.pk
@@ -125,6 +125,10 @@ class WorkTree(node_graph.NodeGraph):
                     self.nodes[label].state = "FINISHED"
                     self.nodes[label].node = node
                     self.nodes[label].pk = node.pk
+
+    @property
+    def pk(self):
+        return self.process.pk if self.process else None
 
     @classmethod
     def load(cls, pk):
