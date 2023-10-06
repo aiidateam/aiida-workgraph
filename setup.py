@@ -31,7 +31,7 @@ setup(
     install_requires=[
         "numpy",
         "aiida-core",
-        "node_graph",
+        "node-graph",
         "cloudpickle",
         "aiida-pseudo",
         "aiida-quantumespresso",
