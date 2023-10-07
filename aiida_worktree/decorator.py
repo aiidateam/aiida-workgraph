@@ -29,6 +29,7 @@ def build_node(ndata):
     """Register a node from a AiiDA component."""
     from node_graph.decorator import create_node
     from aiida_worktree.node import Node
+    import cloudpickle as pickle
 
     path, executor_name, = ndata.pop(
         "path"
@@ -56,6 +57,15 @@ def build_node(ndata):
     ndata["inputs"] = inputs
     ndata["outputs"] = outputs
     ndata["identifier"] = ndata.pop("identifier", ndata["executor"]["name"])
+    # TODO In order to reload the WorkTree from process, "is_pickle" should be True
+    # so I pickled the function here, but this is not necessary
+    # we need to update the node_graph to support the path and name of the function
+    executor = {
+        "executor": pickle.dumps(executor),
+        "type": "function",
+        "is_pickle": True,
+    }
+    ndata["executor"] = executor
     node = create_node(ndata)
     return node
 
@@ -98,10 +108,9 @@ def decorator_node(
         # use cloudpickle to serialize function
         executor = {
             "executor": pickle.dumps(func),
-            "type": executor_type,
+            "type": "function",
             "is_pickle": True,
         }
-        #
         # Get the args and kwargs of the function
         args, kwargs, var_args, var_kwargs, _inputs = generate_input_sockets(
             func, inputs, properties

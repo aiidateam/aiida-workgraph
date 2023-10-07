@@ -46,3 +46,6 @@ def test_build_workchain(build_workchain):
     wt.links.new(multiply_add1.outputs[0], multiply_add2.inputs["z"])
     wt.submit(wait=True, timeout=100)
     assert wt.nodes["multiply_add2"].node.outputs.result == 17
+    # reload wt
+    wt1 = WorkTree.load(wt.pk)
+    assert wt1.nodes["multiply_add2"].node.outputs.result == 17
