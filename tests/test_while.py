@@ -6,10 +6,10 @@ load_profile()
 
 def test_while(decorated_add, decorated_multiply, decorated_compare):
     # Create a WorkTree will repeat itself based on the conditions
-    @node.group(outputs=[["ctx", "n", "result"]])
+    @node.group(outputs=[["ctx.n", "result"]])
     def my_while(n, limit):
         wt = WorkTree("while_worktree")
-        wt.is_while = True
+        wt.worktree_type = "WHILE"
         wt.conditions = [["compare1", "result"]]
         wt.ctx = {"n": n}
         wt.nodes.new(decorated_compare, name="compare1", x="{{n}}", y=orm.Int(limit))

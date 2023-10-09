@@ -1,5 +1,5 @@
 from typing import Any
-from scinode.utils.node import get_executor
+from aiida_worktree.utils import get_executor
 from aiida.engine.processes.functions import calcfunction, workfunction
 from aiida.engine.processes.calcjobs import CalcJob
 from aiida.engine.processes.workchains import WorkChain
@@ -27,7 +27,9 @@ def add_input_recursive(inputs, port, prefix=None):
 
 def build_node(ndata):
     """Register a node from a AiiDA component."""
-    from scinode.utils.decorator import create_node
+    from node_graph.decorator import create_node
+    from aiida_worktree.node import Node
+    import cloudpickle as pickle
 
     path, executor_name, = ndata.pop(
         "path"
@@ -44,16 +46,26 @@ def build_node(ndata):
     inputs = []
     outputs = []
     spec = executor.spec()
-    for key, port in spec.inputs.ports.items():
+    for _key, port in spec.inputs.ports.items():
         add_input_recursive(inputs, port)
     kwargs = [input[1] for input in inputs]
-    for key, port in spec.outputs.ports.items():
+    for _key, port in spec.outputs.ports.items():
         outputs.append(["General", port.name])
     # print("kwargs: ", kwargs)
+    ndata["node_class"] = Node
     ndata["kwargs"] = kwargs
     ndata["inputs"] = inputs
     ndata["outputs"] = outputs
     ndata["identifier"] = ndata.pop("identifier", ndata["executor"]["name"])
+    # TODO In order to reload the WorkTree from process, "is_pickle" should be True
+    # so I pickled the function here, but this is not necessary
+    # we need to update the node_graph to support the path and name of the function
+    executor = {
+        "executor": pickle.dumps(executor),
+        "type": "function",
+        "is_pickle": True,
+    }
+    ndata["executor"] = executor
     node = create_node(ndata)
     return node
 
@@ -68,7 +80,7 @@ def decorator_node(
     catalog="Others",
     executor_type="function",
 ):
-    """Generate a decorator that register a function as a SciNode node.
+    """Generate a decorator that register a function as a node.
 
     Attributes:
         indentifier (str): node identifier
@@ -79,13 +91,15 @@ def decorator_node(
         inputs (list): node inputs
         outputs (list): node outputs
     """
+    from aiida_worktree.node import Node
+
     properties = properties or []
     inputs = inputs or []
     outputs = outputs or [["General", "result"]]
 
     def decorator(func):
         import cloudpickle as pickle
-        from scinode.utils.decorator import generate_input_sockets, create_node
+        from node_graph.decorator import generate_input_sockets, create_node
 
         nonlocal identifier
 
@@ -94,10 +108,9 @@ def decorator_node(
         # use cloudpickle to serialize function
         executor = {
             "executor": pickle.dumps(func),
-            "type": executor_type,
+            "type": "function",
             "is_pickle": True,
         }
-        #
         # Get the args and kwargs of the function
         args, kwargs, var_args, var_kwargs, _inputs = generate_input_sockets(
             func, inputs, properties
@@ -113,6 +126,7 @@ def decorator_node(
         else:
             node_type = "Normal"
         ndata = {
+            "node_class": Node,
             "identifier": identifier,
             "node_type": node_type,
             "args": args,
@@ -151,13 +165,15 @@ def decorator_node_group(
         inputs (list): node inputs
         outputs (list): node outputs
     """
+    from aiida_worktree.node import Node
+
     properties = properties or []
     inputs = inputs or []
     outputs = outputs or []
 
     def decorator(func):
         import cloudpickle as pickle
-        from scinode.utils.decorator import generate_input_sockets, create_node
+        from node_graph.decorator import generate_input_sockets, create_node
 
         nonlocal identifier, inputs, outputs
 
@@ -179,11 +195,12 @@ def decorator_node_group(
         # inputs = [[nt.nodes[input[0]].inputs[input[1]].identifier, input[2]] for input in group_inputs]
         # outputs = [[nt.nodes[output[0]].outputs[output[1]].identifier, output[2]] for output in group_outputs]
         # node_inputs = [["General", input[2]] for input in inputs]
-        node_outputs = [["General", output[2]] for output in outputs]
+        node_outputs = [["General", output[1]] for output in outputs]
         # print(node_inputs, node_outputs)
         #
         node_type = "worktree"
         ndata = {
+            "node_class": Node,
             "identifier": identifier,
             "args": args,
             "kwargs": kwargs,

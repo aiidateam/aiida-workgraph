@@ -1,4 +1,4 @@
-from scinode.core.node import Node
+from aiida_worktree.node import Node
 
 
 class AiiDAInt(Node):
@@ -16,7 +16,7 @@ class AiiDAInt(Node):
     def create_sockets(self):
         inp = self.inputs.new("General", "value", default=0.0)
         inp.add_property("AiiDAInt", default=1.0)
-        self.outputs.new("Int", "result")
+        self.outputs.new("AiiDAInt", "result")
 
     def get_executor(self):
         return {
@@ -35,11 +35,11 @@ class AiiDAFloat(Node):
     kwargs = ["t"]
 
     def create_properties(self):
-        self.properties.new("Float", "t", default=1.0)
+        self.properties.new("AiiDAFloat", "t", default=1.0)
 
     def create_sockets(self):
-        self.inputs.new("Float", "value", default=0.0)
-        self.outputs.new("Float", "result")
+        self.inputs.new("AiiDAFloat", "value", default=0.0)
+        self.outputs.new("AiiDAFloat", "result")
 
     def get_executor(self):
         return {
@@ -58,11 +58,11 @@ class AiiDAString(Node):
     kwargs = ["t"]
 
     def create_properties(self):
-        self.properties.new("Float", "t", default=1.0)
+        self.properties.new("AiiDAFloat", "t", default=1.0)
 
     def create_sockets(self):
-        self.inputs.new("String", "value", default="")
-        self.outputs.new("String", "result")
+        self.inputs.new("AiiDAString", "value", default="")
+        self.outputs.new("AiiDAString", "result")
 
     def get_executor(self):
         return {
@@ -173,16 +173,16 @@ class AiiDAAdd(Node):
     kwargs = ["t"]
 
     def create_properties(self):
-        self.properties.new("Float", "t", default=1.0)
+        self.properties.new("AiiDAFloat", "t", default=1.0)
 
     def create_sockets(self):
         self.inputs.clear()
         self.outputs.clear()
-        inp = self.inputs.new("Float", "x")
+        inp = self.inputs.new("AiiDAFloat", "x")
         inp.add_property("AiiDAFloat", "x", default=0.0)
-        inp = self.inputs.new("Float", "y")
+        inp = self.inputs.new("AiiDAFloat", "y")
         inp.add_property("AiiDAFloat", "y", default=0.0)
-        self.outputs.new("Float", "sum")
+        self.outputs.new("AiiDAFloat", "sum")
 
     def get_executor(self):
         return {
@@ -205,9 +205,9 @@ class AiiDAGreater(Node):
     def create_sockets(self):
         self.inputs.clear()
         self.outputs.clear()
-        self.inputs.new("Float", "x")
-        self.inputs.new("Float", "y")
-        self.outputs.new("Bool", "result")
+        self.inputs.new("AiiDAFloat", "x")
+        self.inputs.new("AiiDAFloat", "y")
+        self.outputs.new("AiiDABool", "result")
 
     def get_executor(self):
         return {
@@ -227,17 +227,17 @@ class AiiDASumDiff(Node):
     kwargs = ["t"]
 
     def create_properties(self):
-        self.properties.new("Float", "t", default=1.0)
+        self.properties.new("AiiDAFloat", "t", default=1.0)
 
     def create_sockets(self):
         self.inputs.clear()
         self.outputs.clear()
-        inp = self.inputs.new("Float", "x")
+        inp = self.inputs.new("AiiDAFloat", "x")
         inp.add_property("AiiDAFloat", "x", default=0.0)
-        inp = self.inputs.new("Float", "y")
+        inp = self.inputs.new("AiiDAFloat", "y")
         inp.add_property("AiiDAFloat", "y", default=0.0)
-        self.outputs.new("Float", "sum")
-        self.outputs.new("Float", "diff")
+        self.outputs.new("AiiDAFloat", "sum")
+        self.outputs.new("AiiDAFloat", "diff")
 
     def get_executor(self):
         return {
@@ -261,11 +261,11 @@ class AiiDAArithmeticAdd(Node):
         self.inputs.clear()
         self.outputs.clear()
         self.inputs.new("General", "code")
-        inp = self.inputs.new("Int", "x")
+        inp = self.inputs.new("AiiDAInt", "x")
         inp.add_property("AiiDAInt", "x", default=0.0)
-        inp = self.inputs.new("Int", "y")
+        inp = self.inputs.new("AiiDAInt", "y")
         inp.add_property("AiiDAInt", "y", default=0.0)
-        self.outputs.new("Int", "sum")
+        self.outputs.new("AiiDAInt", "sum")
 
     def get_executor(self):
         return {
@@ -289,13 +289,13 @@ class AiiDAArithmeticMultiplyAdd(Node):
         self.inputs.clear()
         self.outputs.clear()
         self.inputs.new("General", "code")
-        inp = self.inputs.new("Int", "x")
+        inp = self.inputs.new("AiiDAInt", "x")
         inp.add_property("AiiDAInt", "x", default=0.0)
-        inp = self.inputs.new("Int", "y")
+        inp = self.inputs.new("AiiDAInt", "y")
         inp.add_property("AiiDAInt", "y", default=0.0)
-        inp = self.inputs.new("Int", "z")
+        inp = self.inputs.new("AiiDAInt", "z")
         inp.add_property("AiiDAInt", "z", default=0.0)
-        self.outputs.new("Int", "result")
+        self.outputs.new("AiiDAInt", "result")
 
     def get_executor(self):
         return {
