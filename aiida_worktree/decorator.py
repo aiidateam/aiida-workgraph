@@ -27,9 +27,11 @@ def add_input_recursive(inputs, port, prefix=None):
 
 def build_node(ndata):
     """Register a node from a AiiDA component."""
+    from aiida.engine import calcfunction
     from node_graph.decorator import create_node
     from aiida_worktree.node import Node
     import cloudpickle as pickle
+    import inspect
 
     path, executor_name, = ndata.pop(
         "path"
@@ -37,12 +39,22 @@ def build_node(ndata):
     ndata["executor"] = {"path": path, "name": executor_name}
     executor, type = get_executor(ndata["executor"])
     # print(executor)
-    if issubclass(executor, CalcJob):
-        ndata["node_type"] = "calcjob"
-    elif issubclass(executor, WorkChain):
-        ndata["node_type"] = "workchain"
+    if inspect.isfunction(executor):
+        # calcfunction and workfunction
+        if getattr(executor, 'node_class', False):
+            if executor.node_class is CalcFunctionNode:
+                ndata["node_type"] = "calcfunction"
+            elif executor.node_class is WorkFunctionNode:
+                ndata["node_type"] = "workfunction"
+        else:
+            ndata["node_type"] = "normal"
     else:
-        ndata["node_type"] = "normal"
+        if issubclass(executor, CalcJob):
+            ndata["node_type"] = "calcjob"
+        elif issubclass(executor, WorkChain):
+            ndata["node_type"] = "workchain"
+        else:
+            ndata["node_type"] = "normal"
     inputs = []
     outputs = []
     spec = executor.spec()
@@ -51,6 +63,9 @@ def build_node(ndata):
     kwargs = [input[1] for input in inputs]
     for _key, port in spec.outputs.ports.items():
         outputs.append(["General", port.name])
+    if spec.inputs.dynamic:
+        ndata["var_kwargs"] = spec.inputs.dynamic
+        inputs.append(["General", spec.inputs.dynamic, {"property": ["General", {"default": {}}]}])
     # print("kwargs: ", kwargs)
     ndata["node_class"] = Node
     ndata["kwargs"] = kwargs
