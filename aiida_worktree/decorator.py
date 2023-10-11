@@ -41,7 +41,7 @@ def build_node(ndata):
     # print(executor)
     if inspect.isfunction(executor):
         # calcfunction and workfunction
-        if getattr(executor, 'node_class', False):
+        if getattr(executor, "node_class", False):
             if executor.node_class is CalcFunctionNode:
                 ndata["node_type"] = "calcfunction"
             elif executor.node_class is WorkFunctionNode:
@@ -65,7 +65,9 @@ def build_node(ndata):
         outputs.append(["General", port.name])
     if spec.inputs.dynamic:
         ndata["var_kwargs"] = spec.inputs.dynamic
-        inputs.append(["General", spec.inputs.dynamic, {"property": ["General", {"default": {}}]}])
+        inputs.append(
+            ["General", spec.inputs.dynamic, {"property": ["General", {"default": {}}]}]
+        )
     # print("kwargs: ", kwargs)
     ndata["node_class"] = Node
     ndata["kwargs"] = kwargs
