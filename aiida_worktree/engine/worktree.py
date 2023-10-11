@@ -738,15 +738,17 @@ class WorkTree(Process, metaclass=Protect):
         from aiida_worktree.utils import get_nested_dict
 
         """Get value from context."""
-        if (
+        if isinstance(value, dict):
+            for key, sub_value in value.items():
+                value[key] = self.update_ctx_variable(sub_value)
+        elif (
             isinstance(value, str)
             and value.strip().startswith("{{")
             and value.strip().endswith("}}")
         ):
             name = value[2:-2].strip()
             return get_nested_dict(self.ctx, name)
-        else:
-            return value
+        return value
 
     def node_to_ctx(self, name):
         from aiida_worktree.utils import update_nested_dict
