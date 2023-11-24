@@ -49,6 +49,7 @@ Here is a detailed comparison between the ``WorkTree`` with two AiiDA built-in w
    installation
    tutorial/index
    howto/index
+   blog
    concept/index
 
 

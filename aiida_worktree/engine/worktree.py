@@ -629,6 +629,7 @@ class WorkTree(Process, metaclass=Protect):
             elif node["metadata"]["node_type"] in ["worktree"]:
                 # process = run_get_node(executor, *args, **kwargs)
                 from aiida_worktree.utils import merge_properties
+                from aiida.orm.utils.serialize import serialize
 
                 print("node  type: worktree.")
                 wt = self.run_executor(executor, args, kwargs, var_args, var_kwargs)
@@ -641,6 +642,8 @@ class WorkTree(Process, metaclass=Protect):
                 all = {"nt": ntdata, "metadata": {"call_link_label": name}}
                 print("submit worktree: ")
                 process = self.submit(self.__class__, **all)
+                # save the ntdata to the process extras, so that we can load the worktree
+                process.base.extras.set("nt", serialize(ntdata))
                 node["process"] = process
                 # self.ctx.nodes[name]["group_outputs"] = executor.group_outputs
                 self.ctx.nodes[name]["state"] = "RUNNING"
