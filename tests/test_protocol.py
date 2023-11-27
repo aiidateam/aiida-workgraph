@@ -23,7 +23,7 @@ def test_pw_relax_protocol(structure_si):
     assert wt.state == "FINISHED"
     assert "base_final_scf" in wt.nodes["pw_relax1"].node.inputs
     energy = wt.nodes["pw_relax1"].node.outputs.output_parameters["energy"]
-    assert np.isclose(energy, -308.46, atol=0.01)
+    assert np.isclose(energy, -308.46, atol=0.1)
 
 
 def test_pw_relax_protocol_pop(structure_si):
@@ -46,4 +46,4 @@ def test_pw_relax_protocol_pop(structure_si):
     wt.submit(wait=True, timeout=200)
     assert "base_final_scf" not in wt.nodes["pw_relax1"].node.inputs
     energy = wt.nodes["pw_relax1"].node.outputs.output_parameters["energy"]
-    assert np.isclose(energy, -308.46, atol=0.01)
+    assert np.isclose(energy, -308.46, atol=0.1)

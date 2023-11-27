@@ -89,8 +89,5 @@ The node graph from the worktree process:
 - For the moment, I did not create a `WorkTreeNode` for the `WorkTree` process. I used the `WorkChainNode`, because AiiDA hard codes the `WorkChainNode` for the command (report), graph etc.
 
 
-## Bugs
-- the `report` does not work.
-
 ## License
 [MIT](http://opensource.org/licenses/MIT)
