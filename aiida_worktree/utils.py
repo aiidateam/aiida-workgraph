@@ -128,6 +128,16 @@ def build_node_link(ntdata):
         from_socket["links"].append(link)
 
 
+def get_dict_from_builder(builder):
+    """Transform builder to pure dict."""
+    from aiida.engine.processes.builder import ProcessBuilderNamespace
+
+    if isinstance(builder, ProcessBuilderNamespace):
+        return {k: get_dict_from_builder(v) for k, v in builder.items()}
+    else:
+        return builder
+
+
 if __name__ == "__main__":
     d = {
         "base": {

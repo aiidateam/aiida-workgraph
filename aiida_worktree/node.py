@@ -27,3 +27,12 @@ class Node(GraphNode):
         ndata["process"] = self.process.uuid if self.process else None
 
         return ndata
+
+    def set_from_protocol(self, *args, **kwargs):
+        """For node support protocol, set the node from protocol data."""
+        from aiida_worktree.utils import get_executor, get_dict_from_builder
+
+        executor = get_executor(self.get_executor())[0]
+        builder = executor.get_builder_from_protocol(*args, **kwargs)
+        data = get_dict_from_builder(builder)
+        self.set(data)
