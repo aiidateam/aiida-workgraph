@@ -38,9 +38,11 @@ class WorkTree(node_graph.NodeGraph):
         the process and then calls the update method to update the state of the process.
         """
         from aiida_worktree.engine.worktree import WorkTree
+        from aiida_worktree.utils import merge_properties
         from aiida.orm.utils.serialize import serialize
 
         ntdata = self.to_dict()
+        merge_properties(ntdata)
         all = {"nt": ntdata}
         _result, self.process = aiida.engine.run_get_node(WorkTree, **all)
         self.process.base.extras.set("nt", serialize(ntdata))

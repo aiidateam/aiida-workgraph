@@ -15,6 +15,9 @@ def add_input_recursive(inputs, port, prefix=None):
     else:
         port_name = f"{prefix}.{port.name}"
     if isinstance(port, PortNamespace):
+        # TODO the default value is {} could cause problem, because the address of the dict is the same,
+        # so if you change the value of one port, the value of all the ports of other nodes will be changed
+        # consider to use None as default value
         inputs.append(
             ["General", port_name, {"property": ["General", {"default": {}}]}]
         )

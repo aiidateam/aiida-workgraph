@@ -246,34 +246,6 @@ class AiiDASumDiff(Node):
         }
 
 
-class AiiDAArithmeticAdd(Node):
-
-    identifier: str = "AiiDAArithmeticAdd"
-    name = "AiiDAArithmeticAdd"
-    node_type = "calcjob"
-    catalog = "Test"
-    kwargs = ["code", "x", "y"]
-
-    def create_properties(self):
-        pass
-
-    def create_sockets(self):
-        self.inputs.clear()
-        self.outputs.clear()
-        self.inputs.new("General", "code")
-        inp = self.inputs.new("AiiDAInt", "x")
-        inp.add_property("AiiDAInt", "x", default=0.0)
-        inp = self.inputs.new("AiiDAInt", "y")
-        inp.add_property("AiiDAInt", "y", default=0.0)
-        self.outputs.new("AiiDAInt", "sum")
-
-    def get_executor(self):
-        return {
-            "path": "aiida.calculations.arithmetic.add",
-            "name": "ArithmeticAddCalculation",
-        }
-
-
 class AiiDAArithmeticMultiplyAdd(Node):
 
     identifier: str = "AiiDAArithmeticMultiplyAdd"

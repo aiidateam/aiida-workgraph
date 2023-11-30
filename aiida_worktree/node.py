@@ -16,14 +16,14 @@ class Node(GraphNode):
         Initialize a Node instance.
         """
         super().__init__(**kwargs)
-        self.to_ctx = []
-        self.wait = []
+        self.to_ctx = None
+        self.wait = None
         self.process = None
 
     def to_dict(self):
         ndata = super().to_dict()
-        ndata["to_ctx"] = self.to_ctx
-        ndata["wait"] = self.wait
+        ndata["to_ctx"] = [] if self.to_ctx is None else self.to_ctx
+        ndata["wait"] = [] if self.wait is None else self.wait
         ndata["process"] = self.process.uuid if self.process else None
 
         return ndata
