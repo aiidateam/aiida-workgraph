@@ -70,7 +70,7 @@ def test_pw_dos_projwfc(wt_structure_si):
     pw_relax1.set({"metadata": metadata})
     #
     pw_code = wt.nodes.new("AiiDACode", "pw_code")
-    pw_code.set({"value": "pw-7.2@localhost"})
+    pw_code.set({"value": "qe-7.2-pw@localhost"})
     #
     pw_parameters1 = wt.nodes.new("AiiDADict", "pw_parameters1")
     paras = {
@@ -92,13 +92,13 @@ def test_pw_dos_projwfc(wt_structure_si):
     #
     dos1 = wt.nodes.new("AiiDADos", "dos1")
     dos_code = wt.nodes.new("AiiDACode", "dos_code")
-    dos_code.set({"value": "dos-7.2@localhost"})
+    dos_code.set({"value": "qe-7.2-dos@localhost"})
     dos_parameters1 = wt.nodes.new("AiiDADict", "dos_parameters1")
     dos1.set({"metadata": metadata})
     #
     projwfc1 = wt.nodes.new("AiiDAProjwfc", "projwfc1")
     projwfc_code = wt.nodes.new("AiiDACode", "projwfc_code")
-    projwfc_code.set({"value": "projwfc-7.2@localhost"})
+    projwfc_code.set({"value": "qe-7.2-projwfc@localhost"})
     projwfc_parameters1 = wt.nodes.new("AiiDADict", "projwfc_parameters1")
     projwfc1.set({"metadata": metadata})
     #
@@ -141,7 +141,7 @@ def test_pw_relax_workchain(structure_si):
         return paras1
 
     #
-    code = load_code("pw-7.2@localhost")
+    code = load_code("qe-7.2-pw@localhost")
     paras = Dict(
         {
             "CONTROL": {

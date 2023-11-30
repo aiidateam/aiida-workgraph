@@ -27,7 +27,6 @@ def test_run_order(arithmetic_add):
     wt.links.new(adds[2].outputs["sum"], adds[5].inputs["x"])
     wt.links.new(adds[4].outputs["sum"], adds[5].inputs["y"])
     wt.submit(wait=True)
-    wt.process.pause()
     # get the report
     report = get_workchain_report(wt.process, "REPORT")
     lines = report.splitlines()
