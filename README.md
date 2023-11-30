@@ -15,6 +15,7 @@ Here is a detailed comparison between the ``WorkTree`` with two AiiDA built-in w
 | ------------------------ | ---------------------- | ---------------------- | ---------------------- |
 | Use Case                 | Short-running jobs     | Long-running jobs      | Long-running jobs      |
 | Checkpointing            | ``No``                 | Yes                    | Yes                    |
+| Execution order          | ``Sequential``         | ``Sequential``         | Directed Acyclic Graph |
 | Non-blocking             | ``No``                 | Yes                    | Yes                    |
 | Implementation           | Easy                   | ``Difficult``          | Easy                   |
 | Dynamic                  | ``No``                 | ``No``                 | Yes                    |
