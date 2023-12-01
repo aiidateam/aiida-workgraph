@@ -10,7 +10,6 @@ from .test import (
     AiiDAAdd,
     AiiDAGreater,
     AiiDASumDiff,
-    AiiDAArithmeticAdd,
     AiiDAArithmeticMultiplyAdd,
 )
 from .qe import (
@@ -36,7 +35,6 @@ node_list = [
     AiiDAAdd,
     AiiDAGreater,
     AiiDASumDiff,
-    AiiDAArithmeticAdd,
     AiiDAArithmeticMultiplyAdd,
     AiiDAKpoint,
     AiiDAPWPseudo,

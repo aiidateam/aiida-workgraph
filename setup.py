@@ -31,7 +31,7 @@ setup(
     install_requires=[
         "numpy",
         "aiida-core",
-        "node-graph",
+        "node-graph @ git+https://github.com/scinode/node-graph.git#egg=node-graph",
         "cloudpickle",
         "aiida-pseudo",
         "aiida-quantumespresso",

@@ -18,6 +18,8 @@ Here is a detailed comparison between the ``WorkTree`` with two AiiDA built-in w
 +--------------------------+------------------------+------------------------+------------------------+
 | Checkpointing            | ``No``                 | Yes                    | Yes                    |
 +--------------------------+------------------------+------------------------+------------------------+
+| Execution order          | ``Sequential``         | ``Sequential``         | Directed Acyclic Graph |
++--------------------------+------------------------+------------------------+------------------------+
 | Non-blocking             | ``No``                 | Yes                    | Yes                    |
 +--------------------------+------------------------+------------------------+------------------------+
 | Implementation           | Easy                   | ``Difficult``          | Easy                   |
@@ -49,6 +51,7 @@ Here is a detailed comparison between the ``WorkTree`` with two AiiDA built-in w
    installation
    tutorial/index
    howto/index
+   blog
    concept/index
 
 

@@ -55,12 +55,15 @@ def get_nested_dict(d, name):
 
 def update_nested_dict(d, key, value):
     """
-    d = {"base": {"pw": {"parameters": 1}}
+    d = {}
     key = "base.pw.parameters"
     value = 2
+    will give:
+    d = {"base": {"pw": {"parameters": 2}}
     """
     keys = key.split(".")
     current = d
+    current = {} if current is None else current
     for k in keys[:-1]:
         current = current.setdefault(k, {})
     current[keys[-1]] = value
@@ -78,7 +81,16 @@ def update_nested_dict_with_special_keys(d):
 
 
 def merge_properties(ntdata):
-    """Merge properties."""
+    """Merge sub properties to the root properties.
+    {
+        "base.pw.parameters": 2,
+        "base.pw.code": 1,
+    }
+    after merge:
+    {"base": {"pw": {"parameters": 2,
+                    "code": 1}}
+    So that no "." in the key name.
+    """
     for name, node in ntdata["nodes"].items():
         for key, prop in node["properties"].items():
             if "." in key and prop["value"] not in [None, {}]:
@@ -126,6 +138,16 @@ def build_node_link(ntdata):
         ][0]
         to_socket["links"].append(link)
         from_socket["links"].append(link)
+
+
+def get_dict_from_builder(builder):
+    """Transform builder to pure dict."""
+    from aiida.engine.processes.builder import ProcessBuilderNamespace
+
+    if isinstance(builder, ProcessBuilderNamespace):
+        return {k: get_dict_from_builder(v) for k, v in builder.items()}
+    else:
+        return builder
 
 
 if __name__ == "__main__":

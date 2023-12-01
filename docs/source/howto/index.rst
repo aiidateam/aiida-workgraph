@@ -15,3 +15,4 @@ This section contains a collection of HowTos for various topics.
    ctx
    wait
    continue_finished_worktree
+   protocol

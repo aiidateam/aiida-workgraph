@@ -1,7 +1,17 @@
 import pytest
-from aiida_worktree import node, WorkTree
+from aiida_worktree import node, WorkTree, build_node
 from aiida.engine import calcfunction, workfunction
 from aiida.orm import Float, Int, Bool
+
+
+@pytest.fixture
+def arithmetic_add():
+    """Generate a node for test."""
+
+    arithmetic_add = build_node(
+        {"path": "aiida.calculations.arithmetic.add.ArithmeticAddCalculation"}
+    )
+    return arithmetic_add
 
 
 @pytest.fixture
@@ -20,7 +30,7 @@ def wt_calcfunction():
 
 
 @pytest.fixture
-def wt_calcjob():
+def wt_calcjob(arithmetic_add):
     """A worktree with calcjob."""
     from aiida.orm import load_code
 
@@ -28,12 +38,12 @@ def wt_calcjob():
     wt = WorkTree(name="test_debug_math")
     int1 = wt.nodes.new("AiiDANode", "int1", value=Int(3).store())
     code1 = wt.nodes.new("AiiDACode", "code1", value=code.pk)
-    add1 = wt.nodes.new("AiiDAArithmeticAdd", "add1", x=Int(2).store())
-    add2 = wt.nodes.new("AiiDAArithmeticAdd", "add2", x=Int(4).store())
-    wt.links.new(code1.outputs[0], add1.inputs[0])
-    wt.links.new(int1.outputs[0], add1.inputs[2])
-    wt.links.new(code1.outputs[0], add2.inputs[0])
-    wt.links.new(add1.outputs[0], add2.inputs[2])
+    add1 = wt.nodes.new(arithmetic_add, "add1", x=Int(2).store())
+    add2 = wt.nodes.new(arithmetic_add, "add2", x=Int(4).store())
+    wt.links.new(code1.outputs[0], add1.inputs["code"])
+    wt.links.new(int1.outputs[0], add1.inputs["y"])
+    wt.links.new(code1.outputs[0], add2.inputs["code"])
+    wt.links.new(add1.outputs["sum"], add2.inputs["y"])
     return wt
 
 

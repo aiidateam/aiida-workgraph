@@ -130,6 +130,8 @@ class WorkTree(Process, metaclass=Protect):
         self.set_logger(self.node.logger)
 
         if self._awaitables:
+            # this is a new runner, so we need to re-register the callbacks
+            self.ctx._awaitable_actions = []
             self._action_awaitables()
 
     def _resolve_nested_context(self, key: str) -> tuple[AttributeDict, str]:
@@ -196,7 +198,6 @@ class WorkTree(Process, metaclass=Protect):
 
         :param awaitable: the awaitable to resolve
         """
-
         ctx, key = self._resolve_nested_context(awaitable.key)
 
         if awaitable.action == AwaitableAction.ASSIGN:
@@ -260,8 +261,10 @@ class WorkTree(Process, metaclass=Protect):
         If any awaitables were created, the process will enter in the Wait state,
         otherwise it will go to Continue.
         """
-
-        self._awaitables = []
+        # we will not remove the awaitables here,
+        # we resume the worktree in the callback function even
+        # there are some awaitables left
+        # self._awaitables = []
         result: t.Any = None
 
         try:
@@ -327,11 +330,15 @@ class WorkTree(Process, metaclass=Protect):
         call it when the target is completed
         """
         for awaitable in self._awaitables:
+            # if the waitable already has a callback, skip
+            if awaitable.pk in self.ctx._awaitable_actions:
+                continue
             if awaitable.target == AwaitableTarget.PROCESS:
                 callback = functools.partial(
                     self.call_soon, self._on_awaitable_finished, awaitable
                 )
                 self.runner.call_on_process_finish(awaitable.pk, callback)
+                self.ctx._awaitable_actions.append(awaitable.pk)
             else:
                 assert f"invalid awaitable target '{awaitable.target}'"
 
@@ -363,13 +370,22 @@ class WorkTree(Process, metaclass=Protect):
 
         self._resolve_awaitable(awaitable, value)
 
-        if self.state == ProcessState.WAITING and not self._awaitables:
+        # node finished, update the node state and result
+        # udpate the node state
+        self.update_node_state(awaitable.key)
+        # try to resume the worktree, if the worktree is already resumed
+        # by other awaitable, this will not work
+        try:
             self.resume()
+        except Exception as e:
+            print(e)
 
     def setup(self):
         from node_graph.analysis import ConnectivityAnalysis
         from aiida_worktree.utils import build_node_link
 
+        # track if the awaitable callback is added to the runner
+        self.ctx._awaitable_actions = []
         self.ctx.new_data = dict()
         self.ctx.input_nodes = dict()
         if "input_file" in self.inputs:
@@ -473,26 +489,28 @@ class WorkTree(Process, metaclass=Protect):
         print("node_to_run:", node_to_run)
         self.run_nodes(node_to_run)
 
+    def update_node_state(self, name):
+        """Update ndoe state if node is a Awaitable."""
+        node = self.ctx.nodes[name]
+        if (
+            node["metadata"]["node_type"]
+            in [
+                "calcfunction",
+                "workfunction",
+                "calcjob",
+                "workchain",
+                "worktree",
+            ]
+            and node["state"] == "RUNNING"
+        ):
+            self.set_node_result(node)
+
     def is_worktree_finished(self):
         """Check if the worktree is finished.
         For `while` worktree, we need check its conditions"""
         is_finished = True
-        # print("is_worktree_finished:")
         for name, node in self.ctx.nodes.items():
-            print(name, node["state"])
-            # if calc process, and has a process, check process state
-            if (
-                node["metadata"]["node_type"]
-                in [
-                    "calcfunction",
-                    "workfunction",
-                    "calcjob",
-                    "workchain",
-                    "worktree",
-                ]
-                and node["state"] == "RUNNING"
-            ):
-                self.set_node_result(node)
+            # self.update_node_state(name)
             if node["state"] in ["RUNNING", "CREATED", "READY"]:
                 is_finished = False
         if is_finished:
@@ -625,10 +643,11 @@ class WorkTree(Process, metaclass=Protect):
                 process = self.submit(executor, *args, **kwargs)
                 node["process"] = process
                 self.ctx.nodes[name]["state"] = "RUNNING"
-                self.to_context(process=process)
+                self.to_context(**{name: process})
             elif node["metadata"]["node_type"] in ["worktree"]:
                 # process = run_get_node(executor, *args, **kwargs)
                 from aiida_worktree.utils import merge_properties
+                from aiida.orm.utils.serialize import serialize
 
                 print("node  type: worktree.")
                 wt = self.run_executor(executor, args, kwargs, var_args, var_kwargs)
@@ -641,10 +660,12 @@ class WorkTree(Process, metaclass=Protect):
                 all = {"nt": ntdata, "metadata": {"call_link_label": name}}
                 print("submit worktree: ")
                 process = self.submit(self.__class__, **all)
+                # save the ntdata to the process extras, so that we can load the worktree
+                process.base.extras.set("nt", serialize(ntdata))
                 node["process"] = process
                 # self.ctx.nodes[name]["group_outputs"] = executor.group_outputs
                 self.ctx.nodes[name]["state"] = "RUNNING"
-                return self.to_context(process=process)
+                self.to_context(**{name: process})
             elif node["metadata"]["node_type"] in ["Normal"]:
                 print("node  type: Normal.")
                 # normal function does not have a process

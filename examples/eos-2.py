@@ -20,7 +20,7 @@ def scale_structure(structure, scales):
 
 
 # Output result from context
-@node.group(outputs=[["ctx", "result", "result"]])
+@node.group(outputs=[["ctx.result", "result"]])
 def all_scf(structures, code, parameters, kpoints, pseudos, metadata):
     from aiida_worktree import WorkTree
 
