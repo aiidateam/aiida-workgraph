@@ -1,0 +1,102 @@
+[build-system]
+requires = ["flit_core >=3.4,<4"]
+build-backend = "flit_core.buildapi"
+
+[project]
+name = "aiida-worktree"
+dynamic = ["version"]  # read from aiida_worktree/__init__.py
+description = "Design flexible node-based workflow for AiiDA calculation."
+authors = [{name = "Xing Wang", email = "xingwang1991@gmail.com"}]
+readme = "README.md"
+license = {file = "LICENSE"}
+classifiers = [
+    "Development Status :: 1 - Planning",
+    "Framework :: AiiDA",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: POSIX :: Linux",
+    "Operating System :: MacOS :: MacOS X",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering"
+]
+keywords = ["aiida", "workflows"]
+requires-python = ">=3.9"
+dependencies = [
+    "numpy~=1.21",
+    "node-graph @ git+https://github.com/scinode/node-graph.git#egg=node-graph",
+    "aiida-core~=2.3",
+    "cloudpickle",
+    "aiida-pseudo",
+    "aiida-quantumespresso",
+]
+
+[project.urls]
+Documentation = "https://aiida-worktree.readthedocs.io"
+Source = "https://github.com/superstart54/aiida-worktree"
+
+[project.optional-dependencies]
+docs = [
+    "sphinx_rtd_theme==1.2.2",
+    "sphinx~=7.2",
+    "sphinx-copybutton~=0.5.0",
+    "sphinx-design~=0.5.0",
+    "sphinx-notfound-page~=1.0",
+    "sphinxext-rediraffe~=0.2.4",
+    "sphinx-sqlalchemy~=0.2.0",
+    "sphinx-intl~=2.1.0",
+    "myst-nb~=1.0.0",
+]
+pre-commit = [
+    "pre-commit~=2.2",
+    "pylint~=2.17.4",
+]
+tests = [
+    "pytest~=7.0",
+    "pytest-cov~=2.7,<2.11",
+]
+
+[project.entry-points."aiida.node"]
+"process.workflow.worktree" = "aiida_worktree.orm.worktree:WorkTreeNode"
+
+[project.entry-points."aiida_worktree.node"]
+"aiida" = "aiida_worktree.nodes:node_list"
+
+[project.entry-points."aiida_worktree.property"]
+"aiida" = "aiida_worktree.properties.built_in:property_list"
+
+[project.entry-points."aiida_worktree.socket"]
+"aiida" = "aiida_worktree.sockets.built_in:socket_list"
+
+
+[tool.flit.sdist]
+exclude = [
+    "docs/",
+    "tests/",
+]
+
+
+[tool.pylint.format]
+max-line-length = 120
+
+[tool.pytest.ini_options]
+minversion = "7.0"
+xfail_strict = true
+addopts = "--benchmark-skip --durations=50 --strict-config --strict-markers -ra --cov-report xml --cov-append "
+testpaths = [
+    "tests",
+]
+filterwarnings = [
+    "ignore::DeprecationWarning:babel:",
+    "ignore::DeprecationWarning:frozendict:",
+    "ignore::DeprecationWarning:sqlalchemy:",
+    "ignore::DeprecationWarning:yaml:",
+    "ignore::DeprecationWarning:pymatgen:",
+    "ignore::DeprecationWarning:jsonbackend:",
+    "ignore::DeprecationWarning:pkg_resources:",
+    "ignore:Object of type .* not in session, .* operation along .* will not proceed:sqlalchemy.exc.SAWarning",
+    "ignore::pytest.PytestCollectionWarning",
+    "default::ResourceWarning",
+]
