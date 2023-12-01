@@ -80,23 +80,3 @@ exclude = [
 
 [tool.pylint.format]
 max-line-length = 120
-
-[tool.pytest.ini_options]
-minversion = "7.0"
-xfail_strict = true
-addopts = "--benchmark-skip --durations=50 --strict-config --strict-markers -ra --cov-report xml --cov-append "
-testpaths = [
-    "tests",
-]
-filterwarnings = [
-    "ignore::DeprecationWarning:babel:",
-    "ignore::DeprecationWarning:frozendict:",
-    "ignore::DeprecationWarning:sqlalchemy:",
-    "ignore::DeprecationWarning:yaml:",
-    "ignore::DeprecationWarning:pymatgen:",
-    "ignore::DeprecationWarning:jsonbackend:",
-    "ignore::DeprecationWarning:pkg_resources:",
-    "ignore:Object of type .* not in session, .* operation along .* will not proceed:sqlalchemy.exc.SAWarning",
-    "ignore::pytest.PytestCollectionWarning",
-    "default::ResourceWarning",
-]
