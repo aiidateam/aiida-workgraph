@@ -58,6 +58,12 @@ tests = [
     "pytest-cov~=2.7,<2.11",
 ]
 
+[project.scripts]
+worktree = "aiida_worktree.cli.cmd_worktree:worktree"
+
+[project.entry-points."aiida.cmdline"]
+"worktree" = "aiida_worktree.cli.cmd_worktree:worktree"
+
 [project.entry-points."aiida.node"]
 "process.workflow.worktree" = "aiida_worktree.orm.worktree:WorkTreeNode"
 

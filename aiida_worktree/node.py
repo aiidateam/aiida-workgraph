@@ -19,6 +19,7 @@ class Node(GraphNode):
         self.to_ctx = None
         self.wait = None
         self.process = None
+        self.pk = None
 
     def to_dict(self):
         ndata = super().to_dict()

@@ -148,3 +148,31 @@ class WorkTree(node_graph.NodeGraph):
         wt.process = process
         wt.update()
         return wt
+
+    def show(self):
+        """
+        Print the current state of the worktree process.
+        """
+        from tabulate import tabulate
+
+        table = []
+        self.update()
+        for node in self.nodes:
+            table.append([node.name, node.pk, node.state])
+        print("-" * 80)
+        print("WorkTree: {}, PK: {}, State: {}".format(self.name, self.pk, self.state))
+        print("-" * 80)
+        # show nodes
+        print("Nodes:")
+        print(tabulate(table, headers=["Name", "PK", "State"]))
+        print("-" * 80)
+
+    def pause_nodes(self, nodes):
+        """
+        Pause the given nodes
+        """
+
+    def play_nodes(self, nodes):
+        """
+        Play the given nodes
+        """
