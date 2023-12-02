@@ -16,3 +16,4 @@ This section contains a collection of HowTos for various topics.
    wait
    continue_finished_worktree
    protocol
+   cli

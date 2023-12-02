@@ -1,0 +1,88 @@
+[build-system]
+requires = ["flit_core >=3.4,<4"]
+build-backend = "flit_core.buildapi"
+
+[project]
+name = "aiida-worktree"
+dynamic = ["version"]  # read from aiida_worktree/__init__.py
+description = "Design flexible node-based workflow for AiiDA calculation."
+authors = [{name = "Xing Wang", email = "xingwang1991@gmail.com"}]
+readme = "README.md"
+license = {file = "LICENSE"}
+classifiers = [
+    "Development Status :: 1 - Planning",
+    "Framework :: AiiDA",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: POSIX :: Linux",
+    "Operating System :: MacOS :: MacOS X",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering"
+]
+keywords = ["aiida", "workflows"]
+requires-python = ">=3.9"
+dependencies = [
+    "numpy~=1.21",
+    "node-graph @ git+https://github.com/scinode/node-graph.git#egg=node-graph",
+    "aiida-core~=2.3",
+    "cloudpickle",
+    "aiida-pseudo",
+    "aiida-quantumespresso",
+]
+
+[project.urls]
+Documentation = "https://aiida-worktree.readthedocs.io"
+Source = "https://github.com/superstart54/aiida-worktree"
+
+[project.optional-dependencies]
+docs = [
+    "sphinx_rtd_theme",
+    "sphinx~=7.2",
+    "sphinx-copybutton~=0.5.0",
+    "sphinx-design~=0.5.0",
+    "sphinx-notfound-page~=1.0",
+    "sphinxext-rediraffe~=0.2.4",
+    "sphinx-intl~=2.1.0",
+    "myst-nb~=1.0.0",
+    "nbsphinx",
+]
+pre-commit = [
+    "pre-commit~=2.2",
+    "pylint~=2.17.4",
+]
+tests = [
+    "pytest~=7.0",
+    "pytest-cov~=2.7,<2.11",
+]
+
+[project.scripts]
+worktree = "aiida_worktree.cli.cmd_worktree:worktree"
+
+[project.entry-points."aiida.cmdline"]
+"worktree" = "aiida_worktree.cli.cmd_worktree:worktree"
+
+[project.entry-points."aiida.node"]
+"process.workflow.worktree" = "aiida_worktree.orm.worktree:WorkTreeNode"
+
+[project.entry-points."aiida_worktree.node"]
+"aiida" = "aiida_worktree.nodes:node_list"
+
+[project.entry-points."aiida_worktree.property"]
+"aiida" = "aiida_worktree.properties.built_in:property_list"
+
+[project.entry-points."aiida_worktree.socket"]
+"aiida" = "aiida_worktree.sockets.built_in:socket_list"
+
+
+[tool.flit.sdist]
+exclude = [
+    "docs/",
+    "tests/",
+]
+
+
+[tool.pylint.format]
+max-line-length = 120
