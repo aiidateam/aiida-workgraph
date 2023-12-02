@@ -1,4 +1,6 @@
 from node_graph.node import Node as GraphNode
+from aiida_worktree.properties import property_pool
+from aiida_worktree.sockets import socket_pool
 
 
 class Node(GraphNode):
@@ -8,8 +10,8 @@ class Node(GraphNode):
     attributes to it.
     """
 
-    socket_entry = "aiida_worktree.socket"
-    property_entry = "aiida_worktree.property"
+    property_pool = property_pool
+    socket_pool = socket_pool
 
     def __init__(self, **kwargs):
         """
@@ -37,3 +39,22 @@ class Node(GraphNode):
         builder = executor.get_builder_from_protocol(*args, **kwargs)
         data = get_dict_from_builder(builder)
         self.set(data)
+
+    @classmethod
+    def new(cls, identifier, name=None):
+        """Create a node from a identifier."""
+        from aiida_worktree.nodes import node_pool
+
+        return super().new(identifier, name=name, node_pool=node_pool)
+
+    @classmethod
+    def from_dict(cls, data, node_pool=None):
+        """Create a node from a dictionary."""
+        from aiida_worktree.nodes import node_pool
+
+        node = super().from_dict(data, node_pool=node_pool)
+        node.to_ctx = data.get("to_ctx", [])
+        node.wait = data.get("wait", [])
+        node.process = data.get("process", None)
+
+        return node

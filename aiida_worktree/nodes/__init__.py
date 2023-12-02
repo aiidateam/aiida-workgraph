@@ -1,3 +1,4 @@
+from node_graph.utils import get_entries
 from .builtin import AiiDAGather, AiiDAToCtx, AiiDAFromCtx
 from .test import (
     AiiDAInt,
@@ -43,3 +44,7 @@ node_list = [
     AiiDADos,
     AiiDAProjwfc,
 ]
+
+
+# should after node_list, otherwise circular import
+node_pool = get_entries(entry_point_name="aiida_worktree.node")
