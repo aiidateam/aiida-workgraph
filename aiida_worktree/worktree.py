@@ -1,5 +1,6 @@
 import node_graph
 import aiida
+from aiida_worktree.nodes import node_pool
 
 
 class WorkTree(node_graph.NodeGraph):
@@ -16,7 +17,7 @@ class WorkTree(node_graph.NodeGraph):
         pk (int): The primary key of the process node.
     """
 
-    node_entry = "aiida_worktree.node"
+    node_pool = node_pool
 
     def __init__(self, name="WorkTree", **kwargs):
         """
