@@ -22,8 +22,17 @@ def test_from_dict(wt_calcjob):
 
 
 def test_new_node(wt_calcjob, arithmetic_add):
-    """Export NodeGraph to dict."""
+    """Add new node."""
     wt = wt_calcjob
     n = len(wt.nodes)
     wt.nodes.new(arithmetic_add)
     assert len(wt.nodes) == n + 1
+
+
+def test_save_load(wt_calcjob):
+    """Save the worktree"""
+    wt = wt_calcjob
+    wt.save()
+    assert wt.process.process_state.value.upper() == "CREATED"
+    wt2 = WorkTree.load(wt.process.pk)
+    assert len(wt.nodes) == len(wt2.nodes)

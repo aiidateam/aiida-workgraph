@@ -74,7 +74,7 @@ class WorkTree(Process, metaclass=Protect):
     def define(cls, spec):
         super().define(spec)
         spec.input("input_file", valid_type=orm.SinglefileData, required=False)
-        spec.input_namespace("nt", dynamic=True, required=False)
+        spec.input_namespace("worktree", dynamic=True, required=False)
         spec.input_namespace("input_nodes", dynamic=True, required=False)
         spec.exit_code(2, "ERROR_SUBPROCESS", message="A subprocess has failed.")
 
@@ -388,28 +388,18 @@ class WorkTree(Process, metaclass=Protect):
         self.ctx._awaitable_actions = []
         self.ctx.new_data = dict()
         self.ctx.input_nodes = dict()
-        if "input_file" in self.inputs:
-            ext = splitext(self.inputs["input_file"].filename)[1]
-            with self.inputs["input_file"].open(mode="r") as f:
-                if ext == ".yaml":
-                    ntdata = yaml.safe_load(f)
-                else:
-                    raise Exception("Please use a yaml file.")
-        elif "nt" in self.inputs:
-            ntdata = self.inputs["nt"]
-        else:
-            raise Exception("Please set input!")
-
-        # ntdata = jsonref.JsonRef.replace_refs(tntdata, loader = JsonYamlLoader())
-        build_node_link(ntdata)
-        self.init_ctx(ntdata["ctx"])
-        self.ctx.nodes = ntdata["nodes"]
-        self.ctx.links = ntdata["links"]
-        self.ctx.ctrl_links = ntdata["ctrl_links"]
-        self.ctx.worktree = ntdata
+        # read the latest worktree data
+        wtdata = self.read_wtdata_from_base()
+        #
+        build_node_link(wtdata)
+        self.init_ctx(wtdata["ctx"])
+        self.ctx.nodes = wtdata["nodes"]
+        self.ctx.links = wtdata["links"]
+        self.ctx.ctrl_links = wtdata["ctrl_links"]
+        self.ctx.worktree = wtdata
         print("init")
         #
-        nc = ConnectivityAnalysis(ntdata)
+        nc = ConnectivityAnalysis(wtdata)
         self.ctx.connectivity = nc.build_connectivity()
         self.ctx.msgs = []
         self.node.set_process_label(f"WorkTree: {self.ctx.worktree['name']}")
@@ -425,6 +415,13 @@ class WorkTree(Process, metaclass=Protect):
                 self.set_node_state(self.ctx.nodes.keys(), "SKIPPED")
         # init node results
         self.set_node_results()
+
+    def read_wtdata_from_base(self):
+        """Read worktree data from base.extras."""
+        from aiida.orm.utils.serialize import deserialize_unsafe
+
+        wtdata = deserialize_unsafe(self.node.base.extras.get("worktree"))
+        return wtdata
 
     def init_ctx(self, datas):
         from aiida_worktree.utils import update_nested_dict
@@ -654,14 +651,14 @@ class WorkTree(Process, metaclass=Protect):
                 print("group outputs: ", executor.group_outputs)
                 wt.group_outputs = executor.group_outputs
                 wt.name = name
-                ntdata = wt.to_dict()
+                wtdata = wt.to_dict()
                 # merge the kwargs
-                merge_properties(ntdata)
-                all = {"nt": ntdata, "metadata": {"call_link_label": name}}
+                merge_properties(wtdata)
+                all = {"worktree": wtdata, "metadata": {"call_link_label": name}}
                 print("submit worktree: ")
                 process = self.submit(self.__class__, **all)
-                # save the ntdata to the process extras, so that we can load the worktree
-                process.base.extras.set("nt", serialize(ntdata))
+                # save the wtdata to the process extras, so that we can load the worktree
+                process.base.extras.set("worktree", serialize(wtdata))
                 node["process"] = process
                 # self.ctx.nodes[name]["group_outputs"] = executor.group_outputs
                 self.ctx.nodes[name]["state"] = "RUNNING"

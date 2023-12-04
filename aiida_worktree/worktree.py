@@ -1,6 +1,7 @@
 import node_graph
 import aiida
 from aiida_worktree.nodes import node_pool
+import time
 
 
 class WorkTree(node_graph.NodeGraph):
@@ -32,22 +33,35 @@ class WorkTree(node_graph.NodeGraph):
         self.worktree_type = "NORMAL"
         self.sequence = []
         self.conditions = []
+        self.process = None
 
     def run(self):
         """
         Run the AiiDA worktree process and update the process status. The method uses AiiDA's engine to run
         the process and then calls the update method to update the state of the process.
         """
-        from aiida_worktree.engine.worktree import WorkTree
+        from aiida_worktree.engine.worktree import WorkTree as WorkTreeEngine
         from aiida_worktree.utils import merge_properties
         from aiida.orm.utils.serialize import serialize
+        from aiida.manage import manager
 
-        ntdata = self.to_dict()
-        merge_properties(ntdata)
-        all = {"nt": ntdata}
-        _result, self.process = aiida.engine.run_get_node(WorkTree, **all)
-        self.process.base.extras.set("nt", serialize(ntdata))
+        # One can not run again if the process is alreay created. otherwise, a new process node will
+        # be created again.
+        if self.process is not None:
+            print("Your worktree is already created. Please use the submit() method.")
+            return
+        wtdata = self.to_dict()
+        merge_properties(wtdata)
+        inputs = {"worktree": wtdata}
+        # init a process
+        runner = manager.get_manager().get_runner()
+        process_inited = WorkTreeEngine(runner=runner, inputs=inputs)
+        self.process = process_inited.node
+        # save worktree data into process node
+        self.process.base.extras.set("worktree", serialize(wtdata))
+        result = aiida.engine.run(process_inited)
         self.update()
+        return result
 
     def submit(self, wait=False, timeout=60):
         """
@@ -57,30 +71,65 @@ class WorkTree(node_graph.NodeGraph):
             wait (bool, optional): If True, the function will wait until the process finishes. Defaults to False.
             timeout (int, optional): The maximum time in seconds to wait for the process to finish. Defaults to 60.
         """
-        from aiida_worktree.engine.worktree import WorkTree
-        from aiida_worktree.utils import merge_properties
-        from aiida.orm.utils.serialize import serialize
+        from aiida.engine.processes import control
 
-        ntdata = self.to_dict()
-        merge_properties(ntdata)
-        all = {"nt": ntdata}
-        self.process = aiida.engine.submit(WorkTree, **all)
-        #
-        self.process.base.extras.set("nt", serialize(ntdata))
+        self.save()
+        if self.process.process_state.value.upper() not in ["CREATED"]:
+            return "Error!!! The process has already been submitted and finished."
+        # TODO in case of "[ERROR] Process<3705> is unreachable."
+        control.play_processes([self.process])
         if wait:
             self.wait(timeout=timeout)
 
+    def save(self):
+        """Save the udpated worktree to the process
+        This is only used for a running worktree.
+        Save the AiiDA worktree process and update the process status.
+        """
+        from aiida_worktree.engine.worktree import WorkTree as WorkTreeEngine
+        from aiida_worktree.utils import merge_properties
+        from aiida.manage import manager
+
+        wtdata = self.to_dict()
+        merge_properties(wtdata)
+        inputs = {"worktree": wtdata}
+        runner = manager.get_manager().get_runner()
+        if self.process is None:
+            # init a process node
+            process_inited = WorkTreeEngine(runner=runner, inputs=inputs)
+            runner.persister.save_checkpoint(process_inited)
+            # return the future result
+            # future = runner.controller.continue_process(process_inited.pid)
+            self.process = process_inited.node
+            # start = time.time()
+            # while not future.done():
+            #     time.sleep(1)
+            #     if time.time() - start > 5:
+            #         print("Worktree dosen't save properly.")
+            #         return
+            # print(f"WorkTree node crated, PK: {self.process.pk}")
+        self.save_to_base(wtdata)
+        self.update()
+
+    def save_to_base(self, wtdata):
+        """Save new wtdata to base.extras.
+        It will first check the difference, and reset nodes if needed.
+        """
+        from aiida.orm.utils.serialize import serialize
+
+        self.process.base.extras.set("worktree", serialize(wtdata))
+
     def to_dict(self):
-        ntdata = super().to_dict()
+        wtdata = super().to_dict()
         self.ctx["sequence"] = self.sequence
         # only alphanumeric and underscores are allowed
-        ntdata["ctx"] = {
+        wtdata["ctx"] = {
             key.replace(".", "__"): value for key, value in self.ctx.items()
         }
-        ntdata["worktree_type"] = self.worktree_type
-        ntdata["conditions"] = self.conditions
+        wtdata["worktree_type"] = self.worktree_type
+        wtdata["conditions"] = self.conditions
 
-        return ntdata
+        return wtdata
 
     def wait(self, timeout=50):
         """
@@ -89,7 +138,6 @@ class WorkTree(node_graph.NodeGraph):
         Args:
             timeout (int): The maximum time in seconds to wait for the process to finish. Defaults to 50.
         """
-        import time
 
         start = time.time()
         self.update()
@@ -144,7 +192,7 @@ class WorkTree(node_graph.NodeGraph):
         from aiida.orm.utils.serialize import deserialize_unsafe
 
         process = aiida.orm.load_node(pk)
-        wtdata = deserialize_unsafe(process.base.extras.get("nt"))
+        wtdata = deserialize_unsafe(process.base.extras.get("worktree"))
         wt = cls.from_dict(wtdata)
         wt.process = process
         wt.update()
