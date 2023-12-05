@@ -268,7 +268,7 @@ class WorkTree(Process, metaclass=Protect):
         result: t.Any = None
 
         try:
-            self.run_worktree()
+            self.continue_worktree()
         except _PropagateReturn as exception:
             finished, result = True, exception.exit_code
         else:
@@ -381,8 +381,6 @@ class WorkTree(Process, metaclass=Protect):
             print(e)
 
     def setup(self):
-        from node_graph.analysis import ConnectivityAnalysis
-        from aiida_worktree.utils import build_node_link
 
         # track if the awaitable callback is added to the runner
         self.ctx._awaitable_actions = []
@@ -390,17 +388,8 @@ class WorkTree(Process, metaclass=Protect):
         self.ctx.input_nodes = dict()
         # read the latest worktree data
         wtdata = self.read_wtdata_from_base()
+        self.init_ctx(wtdata)
         #
-        build_node_link(wtdata)
-        self.init_ctx(wtdata["ctx"])
-        self.ctx.nodes = wtdata["nodes"]
-        self.ctx.links = wtdata["links"]
-        self.ctx.ctrl_links = wtdata["ctrl_links"]
-        self.ctx.worktree = wtdata
-        print("init")
-        #
-        nc = ConnectivityAnalysis(wtdata)
-        self.ctx.connectivity = nc.build_connectivity()
         self.ctx.msgs = []
         self.node.set_process_label(f"WorkTree: {self.ctx.worktree['name']}")
         # while worktree
@@ -416,6 +405,15 @@ class WorkTree(Process, metaclass=Protect):
         # init node results
         self.set_node_results()
 
+    def setup_ctx_worktree(self, wtdata):
+        """setup the worktree in the context."""
+        #
+        self.ctx.nodes = wtdata["nodes"]
+        self.ctx.links = wtdata["links"]
+        self.ctx.connectivity = wtdata["connectivity"]
+        self.ctx.ctrl_links = wtdata["ctrl_links"]
+        self.ctx.worktree = wtdata
+
     def read_wtdata_from_base(self):
         """Read worktree data from base.extras."""
         from aiida.orm.utils.serialize import deserialize_unsafe
@@ -423,13 +421,26 @@ class WorkTree(Process, metaclass=Protect):
         wtdata = deserialize_unsafe(self.node.base.extras.get("worktree"))
         return wtdata
 
-    def init_ctx(self, datas):
+    def update_worktree_from_base(self):
+        wtdata = self.read_wtdata_from_base()
+        for name, node in wtdata["nodes"].items():
+            print(f"update node: {name}", "state:", self.ctx.nodes[name]["state"])
+            node["state"] = self.ctx.nodes[name]["state"]
+            node["results"] = self.ctx.nodes[name]["results"]
+            node["process"] = self.ctx.nodes[name].get("process", None)
+        self.setup_ctx_worktree(wtdata)
+
+    def init_ctx(self, wtdata):
+        """Init the context from the worktree data."""
         from aiida_worktree.utils import update_nested_dict
 
+        # set up the context variables
         self.ctx["_count"] = 0
-        for key, value in datas.items():
+        for key, value in wtdata["ctx"].items():
             key = key.replace("__", ".")
             update_nested_dict(self.ctx, key, value)
+        # set up the worktree
+        self.setup_ctx_worktree(wtdata)
 
     def set_node_results(self):
         for _, node in self.ctx.nodes.items():
@@ -471,9 +482,38 @@ class WorkTree(Process, metaclass=Protect):
             print(f"set node result: None")
             node["results"] = None
 
-    def run_worktree(self):
-        print("run_worktree: ")
-        self.report("Lanch worktree.")
+    def apply_actions(self):
+        """Apply actions to the worktree."""
+        msgs = self.node.base.extras.get("worktree_msg", [])
+        for msg in msgs:
+            header, msg = msg.split(",")
+            if header == "node":
+                self.apply_node_actions(msg)
+            else:
+                self.report(f"Unknow message type {msg}")
+        self.node.base.extras.set("worktree_msg", [])
+
+    def apply_node_actions(self, msg):
+        """Apply node actions to the worktree."""
+        name, action = msg.split(":")
+        print("apply node actions: ", name, action)
+        if action == "RESET":
+            self.reset_node(name)
+
+    def reset_node(self, name):
+        """Reset node."""
+        self.ctx.nodes[name]["state"] = "CREATED"
+        # reset its child nodes
+        names = self.ctx.connectivity["child_node"][name]
+        for name in names:
+            self.ctx.nodes[name]["state"] = "CREATED"
+            self.ctx.nodes[name]["result"] = None
+            self.ctx.nodes[name]["process"] = None
+
+    def continue_worktree(self):
+        self.report("Continue worktree.")
+        self.update_worktree_from_base()
+        self.apply_actions()
         node_to_run = []
         for name, node in self.ctx.nodes.items():
             # update node state
@@ -651,14 +691,9 @@ class WorkTree(Process, metaclass=Protect):
                 print("group outputs: ", executor.group_outputs)
                 wt.group_outputs = executor.group_outputs
                 wt.name = name
-                wtdata = wt.to_dict()
-                # merge the kwargs
-                merge_properties(wtdata)
-                all = {"worktree": wtdata, "metadata": {"call_link_label": name}}
+                wt.save(metadata={"call_link_label": name})
                 print("submit worktree: ")
-                process = self.submit(self.__class__, **all)
-                # save the wtdata to the process extras, so that we can load the worktree
-                process.base.extras.set("worktree", serialize(wtdata))
+                process = self.submit(wt.process_inited)
                 node["process"] = process
                 # self.ctx.nodes[name]["group_outputs"] = executor.group_outputs
                 self.ctx.nodes[name]["state"] = "RUNNING"
@@ -769,6 +804,7 @@ class WorkTree(Process, metaclass=Protect):
         return value
 
     def node_to_ctx(self, name):
+        """Export node result to context."""
         from aiida_worktree.utils import update_nested_dict
 
         print("node to ctx: ", name)

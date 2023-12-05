@@ -1,7 +1,7 @@
 import pytest
 from aiida_worktree import node, WorkTree, build_node
 from aiida.engine import calcfunction, workfunction
-from aiida.orm import Float, Int, Bool
+from aiida.orm import Float, Int, Bool, load_code
 
 
 @pytest.fixture
@@ -32,7 +32,6 @@ def wt_calcfunction():
 @pytest.fixture
 def wt_calcjob(arithmetic_add):
     """A worktree with calcjob."""
-    from aiida.orm import load_code
 
     code = load_code("add@localhost")
     wt = WorkTree(name="test_debug_math")
@@ -40,17 +39,19 @@ def wt_calcjob(arithmetic_add):
     code1 = wt.nodes.new("AiiDACode", "code1", value=code.pk)
     add1 = wt.nodes.new(arithmetic_add, "add1", x=Int(2).store())
     add2 = wt.nodes.new(arithmetic_add, "add2", x=Int(4).store())
+    add3 = wt.nodes.new(arithmetic_add, "add3", x=Int(4).store())
     wt.links.new(code1.outputs[0], add1.inputs["code"])
     wt.links.new(int1.outputs[0], add1.inputs["y"])
     wt.links.new(code1.outputs[0], add2.inputs["code"])
     wt.links.new(add1.outputs["sum"], add2.inputs["y"])
+    wt.links.new(code1.outputs[0], add3.inputs["code"])
+    wt.links.new(add2.outputs["sum"], add3.inputs["y"])
     return wt
 
 
 @pytest.fixture
 def wt_workchain():
     """A worktree with workchain."""
-    from aiida.orm import load_code
 
     code = load_code("add@localhost")
     wt = WorkTree(name="test_debug_math")
@@ -207,4 +208,26 @@ def wt_structure_si():
         ],
     }
     structure1.set(data)
+    return wt
+
+
+@pytest.fixture
+def wt_engine(arithmetic_add):
+    """Use to test the engine."""
+    code = load_code("add@localhost")
+    x = Int(2)
+    wt = WorkTree(name="test_run_order")
+    adds = []
+    for i in range(6):
+        temp = wt.nodes.new(arithmetic_add, f"add{i}", x=x, y=Int(i), code=code)
+        if i == 0:
+            temp.set({"metadata.options.sleep": 15})
+        else:
+            temp.set({"metadata.options.sleep": 1})
+        adds.append(temp)
+    wt.links.new(adds[0].outputs["sum"], adds[2].inputs["x"])
+    wt.links.new(adds[1].outputs["sum"], adds[3].inputs["x"])
+    wt.links.new(adds[3].outputs["sum"], adds[4].inputs["x"])
+    wt.links.new(adds[2].outputs["sum"], adds[5].inputs["x"])
+    wt.links.new(adds[4].outputs["sum"], adds[5].inputs["y"])
     return wt

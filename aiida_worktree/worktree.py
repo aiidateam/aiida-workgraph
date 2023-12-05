@@ -34,6 +34,7 @@ class WorkTree(node_graph.NodeGraph):
         self.sequence = []
         self.conditions = []
         self.process = None
+        self.restart_process = None
 
     def run(self):
         """
@@ -58,12 +59,12 @@ class WorkTree(node_graph.NodeGraph):
         process_inited = WorkTreeEngine(runner=runner, inputs=inputs)
         self.process = process_inited.node
         # save worktree data into process node
-        self.process.base.extras.set("worktree", serialize(wtdata))
+        self.save_to_base(wtdata)
         result = aiida.engine.run(process_inited)
         self.update()
         return result
 
-    def submit(self, wait=False, timeout=60):
+    def submit(self, wait=False, timeout=60, restart=False, new=False):
         """
         Submit the AiiDA worktree process and optionally wait for it to finish.
 
@@ -74,7 +75,12 @@ class WorkTree(node_graph.NodeGraph):
         from aiida.manage import get_manager
 
         process_controller = get_manager().get_process_controller()
-
+        # a new submission
+        if new:
+            self.reset()
+        if restart:
+            self.restart_process = self.process
+            self.process = None
         self.save()
         if self.process.process_state.value.upper() not in ["CREATED"]:
             return "Error!!! The process has already been submitted and finished."
@@ -84,7 +90,7 @@ class WorkTree(node_graph.NodeGraph):
         if wait:
             self.wait(timeout=timeout)
 
-    def save(self):
+    def save(self, metadata=None):
         """Save the udpated worktree to the process
         This is only used for a running worktree.
         Save the AiiDA worktree process and update the process status.
@@ -94,12 +100,14 @@ class WorkTree(node_graph.NodeGraph):
 
         wtdata = self.to_dict()
         merge_properties(wtdata)
-        inputs = {"worktree": wtdata}
+        metadata = metadata or {}
+        inputs = {"worktree": wtdata, "metadata": metadata}
         if self.process is None:
             # init a process node
             process_inited = WorkTreeEngine(inputs=inputs)
             process_inited.runner.persister.save_checkpoint(process_inited)
             self.process = process_inited.node
+            self.process_inited = process_inited
             print(f"WorkTree node crated, PK: {self.process.pk}")
         self.save_to_base(wtdata)
         self.update()
@@ -108,9 +116,12 @@ class WorkTree(node_graph.NodeGraph):
         """Save new wtdata to base.extras.
         It will first check the difference, and reset nodes if needed.
         """
-        from aiida.orm.utils.serialize import serialize
+        from aiida_worktree.utils.analysis import WorkTreeSaver
 
-        self.process.base.extras.set("worktree", serialize(wtdata))
+        saver = WorkTreeSaver(
+            self.process, wtdata, restart_process=self.restart_process
+        )
+        saver.save()
 
     def to_dict(self):
         wtdata = super().to_dict()
@@ -156,6 +167,9 @@ class WorkTree(node_graph.NodeGraph):
         outgoing = self.process.base.links.get_outgoing()
         for link in outgoing.all():
             node = link.node
+            # the link is added in order
+            # so the restarted node will be the last one
+            # thus the node is correct
             if isinstance(node, aiida.orm.ProcessNode) and getattr(
                 node, "process_state", False
             ):
@@ -185,7 +199,11 @@ class WorkTree(node_graph.NodeGraph):
         from aiida.orm.utils.serialize import deserialize_unsafe
 
         process = aiida.orm.load_node(pk)
-        wtdata = deserialize_unsafe(process.base.extras.get("worktree"))
+        wtdata = process.base.extras.get("worktree", None)
+        if wtdata is None:
+            print("No worktree data found in the process node.")
+            return
+        wtdata = deserialize_unsafe(wtdata)
         wt = cls.from_dict(wtdata)
         wt.process = process
         wt.update()
@@ -209,6 +227,15 @@ class WorkTree(node_graph.NodeGraph):
         print(tabulate(table, headers=["Name", "PK", "State"]))
         print("-" * 80)
 
+    def pause(self):
+        """Pause the worktree."""
+        # from aiida.engine.processes import control
+        # try:
+        # control.pause_processes([self.process])
+        import os
+
+        os.system("verdi process pause {}".format(self.process.pk))
+
     def pause_nodes(self, nodes):
         """
         Pause the given nodes
@@ -218,3 +245,15 @@ class WorkTree(node_graph.NodeGraph):
         """
         Play the given nodes
         """
+
+    def reset(self):
+        """Reset the worktree."""
+        from aiida.engine.processes import control
+
+        self.process = None
+        for node in self.nodes:
+            node.reset()
+        self.sequence = []
+        self.conditions = []
+        self.ctx = {}
+        self.state = "CREATED"

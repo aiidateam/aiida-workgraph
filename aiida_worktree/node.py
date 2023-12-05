@@ -58,3 +58,7 @@ class Node(GraphNode):
         node.process = data.get("process", None)
 
         return node
+
+    def reset(self):
+        self.process = None
+        self.state = "CREATED"
