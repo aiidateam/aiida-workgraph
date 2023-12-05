@@ -407,7 +407,6 @@ class WorkTree(Process, metaclass=Protect):
 
     def setup_ctx_worktree(self, wtdata):
         """setup the worktree in the context."""
-        #
         self.ctx.nodes = wtdata["nodes"]
         self.ctx.links = wtdata["links"]
         self.ctx.connectivity = wtdata["connectivity"]
@@ -422,9 +421,9 @@ class WorkTree(Process, metaclass=Protect):
         return wtdata
 
     def update_worktree_from_base(self):
+        """Update the ctx from base.extras."""
         wtdata = self.read_wtdata_from_base()
         for name, node in wtdata["nodes"].items():
-            print(f"update node: {name}", "state:", self.ctx.nodes[name]["state"])
             node["state"] = self.ctx.nodes[name]["state"]
             node["results"] = self.ctx.nodes[name]["results"]
             node["process"] = self.ctx.nodes[name].get("process", None)
@@ -452,9 +451,9 @@ class WorkTree(Process, metaclass=Protect):
 
     def set_node_result(self, node):
         name = node["name"]
-        print(f"set node result: {name}")
+        # print(f"set node result: {name}")
         if node.get("process"):
-            print(f"set node result: {name} process")
+            # print(f"set node result: {name} process")
             state = node["process"].process_state.value.upper()
             if state == "FINISHED":
                 node["state"] = state
@@ -469,7 +468,7 @@ class WorkTree(Process, metaclass=Protect):
                     # self.ctx.new_data[name] = node["results"]
                 self.ctx.nodes[name]["state"] = "FINISHED"
                 self.node_to_ctx(name)
-                print(f"Node: {name} finished.")
+                self.report(f"Node: {name} finished.")
             elif state == "EXCEPTED":
                 node["state"] = state
                 node["results"] = node["process"].outputs
@@ -477,9 +476,8 @@ class WorkTree(Process, metaclass=Protect):
                 self.ctx.nodes[name]["state"] = "FAILED"
                 # set child state to FAILED
                 self.set_node_state(self.ctx.connectivity["child_node"][name], "FAILED")
-                print(f"Node: {name} failed.")
+                self.report(f"Node: {name} failed.")
         else:
-            print(f"set node result: None")
             node["results"] = None
 
     def apply_actions(self):
@@ -523,7 +521,7 @@ class WorkTree(Process, metaclass=Protect):
             if ready:
                 node_to_run.append(name)
         #
-        print("node_to_run:", node_to_run)
+        self.report("node_to_run: {}".format(",".join(node_to_run)))
         self.run_nodes(node_to_run)
 
     def update_node_state(self, name):
@@ -606,7 +604,6 @@ class WorkTree(Process, metaclass=Protect):
         for name in names:
             print("-" * 60)
             node = self.ctx.nodes[name]
-            print(f"\nRun node: {name}, type: {node['metadata']['node_type']}")
             self.report(f"Run node: {name}, type: {node['metadata']['node_type']}")
             # print("Run node: ", name)
             # print("executor: ", node["executor"])
@@ -615,9 +612,9 @@ class WorkTree(Process, metaclass=Protect):
             args, kwargs, var_args, var_kwargs = self.get_inputs(node)
             # update the port namespace
             kwargs = update_nested_dict_with_special_keys(kwargs)
-            print("args: ", args)
-            print("kwargs: ", kwargs)
-            print("var_kwargs: ", var_kwargs)
+            # print("args: ", args)
+            # print("kwargs: ", kwargs)
+            # print("var_kwargs: ", var_kwargs)
             # kwargs["meta.label"] = name
             # output must be a Data type or a mapping of {string: Data}
             node["results"] = {}
@@ -807,7 +804,6 @@ class WorkTree(Process, metaclass=Protect):
         """Export node result to context."""
         from aiida_worktree.utils import update_nested_dict
 
-        print("node to ctx: ", name)
         items = self.ctx.nodes[name]["to_ctx"]
         for item in items:
             update_nested_dict(
@@ -834,7 +830,6 @@ class WorkTree(Process, metaclass=Protect):
             pass
 
     def check_parent_state(self, name):
-        print(f"    Check parent state for node {name}")
         node = self.ctx.nodes[name]
         inputs = node.get("inputs", None)
         wait_nodes = self.ctx.nodes[name].get("wait", [])
@@ -860,9 +855,9 @@ class WorkTree(Process, metaclass=Protect):
                         "SKIPPED",
                         "FAILED",
                     ]:
-                        print(
-                            f"    {name}: Input node {link['from_node']}, {self.ctx.nodes[link['from_node']]['state']} ."
-                        )
+                        # print(
+                        #     f"    {name}: Input node {link['from_node']}, {self.ctx.nodes[link['from_node']]['state']} ."
+                        # )
                         ready = False
                         return (
                             ready,
