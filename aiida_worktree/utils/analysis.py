@@ -87,9 +87,9 @@ class WorkTreeSaver:
             )
 
     def append_message_to_queue(self, message):
-        queue = self.process.base.extras.get("worktree_msg", [])
+        queue = self.process.base.extras.get("worktree_queue", [])
         queue.append(message)
-        self.process.base.extras.set("worktree_msg", queue)
+        self.process.base.extras.set("worktree_queue", queue)
 
     def set_nodes_action(self, action):
         """Set node action."""

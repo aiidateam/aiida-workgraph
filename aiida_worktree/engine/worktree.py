@@ -481,15 +481,21 @@ class WorkTree(Process, metaclass=Protect):
             node["results"] = None
 
     def apply_actions(self):
-        """Apply actions to the worktree."""
-        msgs = self.node.base.extras.get("worktree_msg", [])
-        for msg in msgs:
+        """Apply actions to the worktree.
+        The actions are stored in the base.extras["worktree_queue"].
+        The index of the last applied action is stored in the base.extras["worktree_queue_index"].
+        """
+        msgs = self.node.base.extras.get("worktree_queue", [])
+        index = self.node.base.extras.get("worktree_queue_index", 0)
+        for msg in msgs[index:]:
             header, msg = msg.split(",")
             if header == "node":
                 self.apply_node_actions(msg)
             else:
                 self.report(f"Unknow message type {msg}")
-        self.node.base.extras.set("worktree_msg", [])
+            index += 1
+            self.report("Apply actions: {}".format(msg))
+            msgs = self.node.base.extras.set("worktree_queue_index", index)
 
     def apply_node_actions(self, msg):
         """Apply node actions to the worktree."""

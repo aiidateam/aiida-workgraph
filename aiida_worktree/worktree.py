@@ -65,27 +65,32 @@ class WorkTree(node_graph.NodeGraph):
         return result
 
     def submit(self, wait=False, timeout=60, restart=False, new=False):
-        """
-        Submit the AiiDA worktree process and optionally wait for it to finish.
-
+        """Submit the AiiDA worktree process and optionally wait for it to finish.
         Args:
-            wait (bool, optional): If True, the function will wait until the process finishes. Defaults to False.
-            timeout (int, optional): The maximum time in seconds to wait for the process to finish. Defaults to 60.
+            wait (bool): Wait for the process to finish.
+            timeout (int): The maximum time in seconds to wait for the process to finish. Defaults to 60.
+            restart (bool): Restart the process, it will check the modified nodes and reset them,
+                and then only re-run the modified nodes.
+            new (bool): Submit a new process.
         """
         from aiida.manage import get_manager
 
         process_controller = get_manager().get_process_controller()
-        # a new submission
-        if new:
+        # Create a new submission
+        if self.process is not None and new:
             self.reset()
+        # Create a restart submission
+        # save the current process node as restart_process
+        # so that the WorkTreeSaver can compare the difference, and reset the modified nodes
         if restart:
             self.restart_process = self.process
             self.process = None
+        # save the worktree to the process node
         self.save()
         if self.process.process_state.value.upper() not in ["CREATED"]:
             return "Error!!! The process has already been submitted and finished."
+        # launch the process, send the task to RabbitMA
         # TODO in case of "[ERROR] Process<3705> is unreachable."
-        # send the task to RabbitMA, return the future result
         process_controller.continue_process(self.process.pk)
         if wait:
             self.wait(timeout=timeout)

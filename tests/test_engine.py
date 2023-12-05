@@ -38,3 +38,5 @@ def test_reset_node(wt_engine):
     wt.wait()
     wt.update()
     assert wt.nodes["add5"].node.outputs.sum == 21
+    assert wt.process.base.extras.get("worktree_queue_index") == 1
+    assert len(wt.process.base.extras.get("worktree_queue")) == 1
