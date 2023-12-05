@@ -14,6 +14,7 @@ This section contains a collection of HowTos for various topics.
    while
    ctx
    wait
+   restart
    continue_finished_worktree
    protocol
    cli

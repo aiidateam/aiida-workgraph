@@ -1,31 +1,14 @@
 from aiida.cmdline.utils.common import get_workchain_report
 import aiida
+import time
 
 aiida.load_profile()
 
 
-def test_run_order(arithmetic_add):
+def test_run_order(wt_engine):
     """Test the order.
     Nodes should run in parallel and only depend on the input nodes."""
-    from aiida.orm import load_code, Int
-    from aiida_worktree import WorkTree
-
-    code = load_code("add@localhost")
-    x = Int(2)
-    wt = WorkTree(name="test_run_order")
-    adds = []
-    for i in range(6):
-        temp = wt.nodes.new(arithmetic_add, f"add{i}", x=x, y=Int(i), code=code)
-        if i == 0:
-            temp.set({"metadata.options.sleep": 15})
-        else:
-            temp.set({"metadata.options.sleep": 1})
-        adds.append(temp)
-    wt.links.new(adds[0].outputs["sum"], adds[2].inputs["x"])
-    wt.links.new(adds[1].outputs["sum"], adds[3].inputs["x"])
-    wt.links.new(adds[3].outputs["sum"], adds[4].inputs["x"])
-    wt.links.new(adds[2].outputs["sum"], adds[5].inputs["x"])
-    wt.links.new(adds[4].outputs["sum"], adds[5].inputs["y"])
+    wt = wt_engine
     wt.submit(wait=True)
     # get the report
     report = get_workchain_report(wt.process, "REPORT")
@@ -42,3 +25,18 @@ def test_run_order(arithmetic_add):
     # then add2
     # finally add5
     assert steps["add2"] > steps["add4"]
+
+
+def test_reset_node(wt_engine):
+    """Modify a node during the excution of a WorkTree."""
+    wt = wt_engine
+    wt.name = "test_reset"
+    wt.submit()
+    time.sleep(15)
+    wt.nodes["add3"].set({"y": aiida.orm.Int(10).store()})
+    wt.save()
+    wt.wait()
+    wt.update()
+    assert wt.nodes["add5"].node.outputs.sum == 21
+    assert wt.process.base.extras.get("worktree_queue_index") == 1
+    assert len(wt.process.base.extras.get("worktree_queue")) == 1
