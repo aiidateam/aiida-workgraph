@@ -54,13 +54,13 @@ def test_pause(wt_engine):
 
 def test_reset_message(wt_calcjob):
     """Modify a node and save the worktree.
-    This will add a message to the worktree_msg extra field."""
+    This will add a message to the worktree_queue extra field."""
     wt = wt_calcjob
     wt.submit()
     wt = WorkTree.load(wt.process.pk)
     wt.nodes["add2"].set({"y": orm.Int(10).store()})
     wt.save()
-    msgs = wt.process.base.extras.get("worktree_msg", [])
+    msgs = wt.process.base.extras.get("worktree_queue", [])
     assert len(msgs) == 1
 
 

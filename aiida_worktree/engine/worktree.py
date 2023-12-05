@@ -251,7 +251,6 @@ class WorkTree(Process, metaclass=Protect):
 
     @override
     def run(self) -> t.Any:
-        self.report("Run: ")
         self.setup()
         return self._do_step()
 
@@ -381,7 +380,6 @@ class WorkTree(Process, metaclass=Protect):
             print(e)
 
     def setup(self):
-
         # track if the awaitable callback is added to the runner
         self.ctx._awaitable_actions = []
         self.ctx.new_data = dict()
