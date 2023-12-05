@@ -71,13 +71,16 @@ class WorkTree(node_graph.NodeGraph):
             wait (bool, optional): If True, the function will wait until the process finishes. Defaults to False.
             timeout (int, optional): The maximum time in seconds to wait for the process to finish. Defaults to 60.
         """
-        from aiida.engine.processes import control
+        from aiida.manage import get_manager
+
+        process_controller = get_manager().get_process_controller()
 
         self.save()
         if self.process.process_state.value.upper() not in ["CREATED"]:
             return "Error!!! The process has already been submitted and finished."
         # TODO in case of "[ERROR] Process<3705> is unreachable."
-        control.play_processes([self.process])
+        # send the task to RabbitMA, return the future result
+        process_controller.continue_process(self.process.pk)
         if wait:
             self.wait(timeout=timeout)
 
@@ -88,26 +91,16 @@ class WorkTree(node_graph.NodeGraph):
         """
         from aiida_worktree.engine.worktree import WorkTree as WorkTreeEngine
         from aiida_worktree.utils import merge_properties
-        from aiida.manage import manager
 
         wtdata = self.to_dict()
         merge_properties(wtdata)
         inputs = {"worktree": wtdata}
-        runner = manager.get_manager().get_runner()
         if self.process is None:
             # init a process node
-            process_inited = WorkTreeEngine(runner=runner, inputs=inputs)
-            runner.persister.save_checkpoint(process_inited)
-            # return the future result
-            # future = runner.controller.continue_process(process_inited.pid)
+            process_inited = WorkTreeEngine(inputs=inputs)
+            process_inited.runner.persister.save_checkpoint(process_inited)
             self.process = process_inited.node
-            # start = time.time()
-            # while not future.done():
-            #     time.sleep(1)
-            #     if time.time() - start > 5:
-            #         print("Worktree dosen't save properly.")
-            #         return
-            # print(f"WorkTree node crated, PK: {self.process.pk}")
+            print(f"WorkTree node crated, PK: {self.process.pk}")
         self.save_to_base(wtdata)
         self.update()
 
