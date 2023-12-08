@@ -19,7 +19,7 @@ from aiida.orm.utils import load_node
 
 
 from aiida.engine.processes.exit_code import ExitCode
-from aiida.engine.processes.process import Process, ProcessState
+from aiida.engine.processes.process import Process
 
 from aiida.engine.processes.workchains.awaitable import (
     Awaitable,
@@ -29,9 +29,6 @@ from aiida.engine.processes.workchains.awaitable import (
 )
 from aiida.engine.processes.workchains.workchain import Protect, WorkChainSpec
 from aiida.engine import run_get_node
-
-from os.path import splitext
-import yaml
 
 
 if t.TYPE_CHECKING:
@@ -275,8 +272,10 @@ class WorkTree(Process, metaclass=Protect):
 
         # If the worktree is finished or the result is an ExitCode, we exit by returning
         if finished:
-            result = self.finalize()
-            return result
+            if isinstance(result, ExitCode):
+                return result
+            else:
+                return self.finalize()
 
         if self._awaitables:
             return Wait(self._do_step, "Waiting before next step")
@@ -684,8 +683,6 @@ class WorkTree(Process, metaclass=Protect):
                 self.to_context(**{name: process})
             elif node["metadata"]["node_type"] in ["worktree"]:
                 # process = run_get_node(executor, *args, **kwargs)
-                from aiida_worktree.utils import merge_properties
-                from aiida.orm.utils.serialize import serialize
 
                 print("node  type: worktree.")
                 wt = self.run_executor(executor, args, kwargs, var_args, var_kwargs)
@@ -859,9 +856,6 @@ class WorkTree(Process, metaclass=Protect):
                         "SKIPPED",
                         "FAILED",
                     ]:
-                        # print(
-                        #     f"    {name}: Input node {link['from_node']}, {self.ctx.nodes[link['from_node']]['state']} ."
-                        # )
                         ready = False
                         return (
                             ready,

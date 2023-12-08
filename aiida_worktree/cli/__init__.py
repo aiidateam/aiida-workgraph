@@ -3,3 +3,6 @@
 The commands need to be imported here for them to be registered with the top-level command group.
 """
 from aiida_worktree.cli import cmd_tree
+
+
+__all__ = ["cmd_tree"]

@@ -1,5 +1,4 @@
 from aiida_worktree.node import Node
-from aiida import orm
 
 
 class AiiDAKpoint(Node):
