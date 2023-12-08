@@ -8,10 +8,8 @@ def test_multiply_link():
 
     from aiida_worktree import node, WorkTree
     from aiida.orm import Float, load_node
-    from aiida.engine import calcfunction
 
-    @node()
-    @calcfunction
+    @node.calcfunction()
     def sum(inputs):
         total = 0
         for input in inputs:

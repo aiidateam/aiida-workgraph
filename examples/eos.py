@@ -2,7 +2,6 @@ from aiida import load_profile
 from aiida_worktree import build_node, WorkTree, node
 from aiida.orm import Dict, KpointsData, StructureData, load_code, load_group
 from ase.build import bulk
-from aiida.engine import calcfunction
 
 load_profile()
 
@@ -11,16 +10,14 @@ ndata = {"path": "aiida_quantumespresso.calculations.pw.PwCalculation"}
 pw_node = build_node(ndata)
 
 
-@node()
-@calcfunction
+@node.calcfunction()
 def scale_structure(structure, scale):
     atoms = structure.get_ase()
     atoms.set_cell(atoms.cell * scale, scale_atoms=True)
     return StructureData(ase=atoms)
 
 
-@node()
-@calcfunction
+@node.calcfunction()
 # because this is a calcfunction, and the input datas are dynamic, we need use **datas.
 def eos(**datas):
     from ase.eos import EquationOfState

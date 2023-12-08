@@ -1,6 +1,5 @@
 import pytest
 from aiida_worktree import node, WorkTree, build_node
-from aiida.engine import calcfunction, workfunction
 from aiida.orm import Float, Int, Bool, load_code
 
 
@@ -90,8 +89,7 @@ def decorated_normal_add():
 def decorated_add():
     """Generate a decorated node for test."""
 
-    @node()
-    @calcfunction
+    @node.calcfunction()
     def add(x, y):
         return x + y
 
@@ -102,8 +100,7 @@ def decorated_add():
 def decorated_multiply():
     """Generate a decorated node for test."""
 
-    @node()
-    @calcfunction
+    @node.calcfunction()
     def multiply(x, y):
         return x * y
 
@@ -114,8 +111,7 @@ def decorated_multiply():
 def decorated_sqrt():
     """Generate a decorated node for test."""
 
-    @node()
-    @calcfunction
+    @node.calcfunction()
     def mysqrt(x):
         from math import sqrt
 
@@ -129,8 +125,7 @@ def decorated_compare():
     """Generate a decorated node for test."""
 
     # define compare node
-    @node()
-    @calcfunction
+    @node.calcfunction()
     def compare(x, y):
         return Bool(x < y)
 
@@ -141,8 +136,7 @@ def decorated_compare():
 def decorated_add_multiply(decorated_add, decorated_multiply):
     """Generate a decorated node for test."""
 
-    @node()
-    @workfunction
+    @node.workfunction()
     def add_multiply(x, y, z):
         """Add two numbers and multiply it with a third."""
         addition = decorated_add(x, y)

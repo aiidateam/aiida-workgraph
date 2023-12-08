@@ -49,14 +49,12 @@ from aiida_worktree import node
 from aiida.engine import calcfunction
 
 # define add calcfunction node
-@node()
-@calcfunction
+@node.calcfunction()
 def add(x, y):
     return x + y
 
 # define multiply calcfunction node
-@node()
-@calcfunction
+@node.calcfunction()
 def multiply(x, y):
     return x*y
 

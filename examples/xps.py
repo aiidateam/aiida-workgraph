@@ -1,14 +1,13 @@
 from aiida_worktree import build_node, WorkTree, node
 from aiida import orm
-from aiida.engine import calcfunction
 from aiida.orm import Kind, Site, StructureData, KpointsData
 from aiida import load_profile
+from ase.build import molecule
 
 load_profile()
 
 
-@node(outputs=[["General", "structures"], ["General", "site_info"]])
-@calcfunction
+@node.calcfunction(outputs=[["General", "structures"], ["General", "site_info"]])
 def get_marked_structures(structure, atoms_list, marker="X"):
     """"""
     structures = {}
@@ -107,8 +106,7 @@ def run_scf(
 
 
 # set link limit to a large value so that it can gather the result.
-@node()
-@calcfunction
+@node.calcfunction()
 def get_spectra(site_info, correction_energies={}, orbital="1s", **pw_outputs):
 
     binding_energies = {}
@@ -181,9 +179,6 @@ def load_xps_pseudo(pseudo_group="xps_pseudo_demo"):
     pseudos = {node.label: node for node in pseudo_group.nodes}
     return pseudos, pseudo_group.base.extras.get("correction", {})
 
-
-from ase.build import molecule
-from aiida import orm
 
 # create input structure node
 mol = molecule("CH3CH2OH")
