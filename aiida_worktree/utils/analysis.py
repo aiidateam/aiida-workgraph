@@ -26,7 +26,6 @@ class WorkTreeSaver:
         """
         self.build_node_link()
         self.build_connectivity()
-        print("exist_in_db: {}".format(self.exist_in_db()))
         if self.exist_in_db() or self.restart_process is not None:
             new_nodes, modified_nodes, update_metadata = self.check_diff(
                 self.restart_process

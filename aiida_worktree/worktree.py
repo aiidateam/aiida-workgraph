@@ -43,7 +43,6 @@ class WorkTree(node_graph.NodeGraph):
         """
         from aiida_worktree.engine.worktree import WorkTree as WorkTreeEngine
         from aiida_worktree.utils import merge_properties
-        from aiida.orm.utils.serialize import serialize
         from aiida.manage import manager
 
         # One can not run again if the process is alreay created. otherwise, a new process node will
@@ -253,7 +252,6 @@ class WorkTree(node_graph.NodeGraph):
 
     def reset(self):
         """Reset the worktree."""
-        from aiida.engine.processes import control
 
         self.process = None
         for node in self.nodes:

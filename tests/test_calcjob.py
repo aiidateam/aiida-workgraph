@@ -1,5 +1,3 @@
-import time
-import numpy as np
 import aiida
 
 aiida.load_profile()

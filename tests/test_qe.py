@@ -126,15 +126,13 @@ def test_pw_dos_projwfc(wt_structure_si):
 def test_pw_relax_workchain(structure_si):
     """Run simple calcfunction."""
     from aiida_worktree import build_node, node, WorkTree
-    from aiida.engine import calcfunction
     from aiida.orm import Dict, KpointsData, load_code, load_group
 
     # register node
     ndata = {"path": "aiida_quantumespresso.workflows.pw.relax.PwRelaxWorkChain"}
     pw_relax_node = build_node(ndata)
-    #
-    @node()
-    @calcfunction
+
+    @node.calcfunction()
     def pw_parameters(paras, relax_type):
         paras1 = paras.clone()
         paras1["CONTROL"]["calculation"] = relax_type

@@ -1,6 +1,4 @@
-import time
-from aiida import engine, orm, load_profile
-from aiida.orm import load_code
+from aiida import load_profile
 
 load_profile()
 

@@ -33,7 +33,7 @@ Here is a detailed comparison between the ``WorkTree`` with two AiiDA built-in w
 ## Installation
 
 ```console
-    pip install --upgrade aiida-worktree
+    pip install git+https://github.com/superstar54/aiida-worktree
 ```
 
 
@@ -42,21 +42,18 @@ Check the [docs](https://aiida-worktree.readthedocs.io/en/latest/) and learn abo
 
 ## Examples
 
-Create nodes from `calcfunction`.
+Create calcfunction nodes:
 
 ```python
 from aiida_worktree import node
-from aiida.engine import calcfunction
 
 # define add calcfunction node
-@node()
-@calcfunction
+@node.calcfunction()
 def add(x, y):
     return x + y
 
 # define multiply calcfunction node
-@node()
-@calcfunction
+@node.calcfunction()
 def multiply(x, y):
     return x*y
 

@@ -5,10 +5,8 @@ aiida.load_profile()
 
 def test_args():
     from aiida_worktree import node
-    from aiida.engine import calcfunction
 
-    @node()
-    @calcfunction
+    @node.calcfunction()
     def test(a, b=1, **c):
         print(a, b, c)
 

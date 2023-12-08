@@ -1,13 +1,11 @@
 from aiida import load_profile, orm
 from aiida_worktree import build_node, WorkTree, node
 from ase.build import bulk
-from aiida.engine import calcfunction
 
 load_profile()
 
 
-@node(outputs=[["General", "structures"]])
-@calcfunction
+@node.calcfunction(outputs=[["General", "structures"]])
 def scale_structure(structure, scales):
     atoms = structure.get_ase()
     structures = {}
@@ -45,8 +43,7 @@ def all_scf(structures, code, parameters, kpoints, pseudos, metadata):
     return wt
 
 
-@node()
-@calcfunction
+@node.calcfunction()
 # because this is a calcfunction, and the input datas are dynamic, we need use **datas.
 def eos(**datas):
     from ase.eos import EquationOfState

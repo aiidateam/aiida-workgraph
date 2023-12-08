@@ -30,7 +30,6 @@ def add_input_recursive(inputs, port, prefix=None):
 
 def build_node(ndata):
     """Register a node from a AiiDA component."""
-    from aiida.engine import calcfunction
     from node_graph.decorator import create_node
     from aiida_worktree.node import Node
     import cloudpickle as pickle
@@ -250,20 +249,28 @@ class NodeDecoratorCollection:
 
     __call__: Any = node  # Alias '@node' to '@node.node'.
 
+    @staticmethod
+    def calcfunction(**kwargs):
+        def decorator(func):
+            # First, apply the calcfunction decorator
+            calcfunc_decorated = calcfunction(func)
+            # Then, apply node decorator
+            node_decorated = node(**kwargs)(calcfunc_decorated)
+
+            return node_decorated
+
+        return decorator
+
+    @staticmethod
+    def workfunction(**kwargs):
+        def decorator(func):
+            # First, apply the workfunction decorator
+            calcfunc_decorated = workfunction(func)
+            node_decorated = node(**kwargs)(calcfunc_decorated)
+
+            return node_decorated
+
+        return decorator
+
 
 node = NodeDecoratorCollection()
-
-if __name__ == "__main__":
-    from aiida.engine import calcfunction
-    from aiida_worktree.decorator import node
-
-    @node(
-        identifier="MyAdd",
-        outputs=[["General", "result"]],
-        executor_type="calcfunction",
-    )
-    @calcfunction
-    def myadd(x, y):
-        return x + y
-
-    print(myadd.node)
