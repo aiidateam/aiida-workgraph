@@ -12,6 +12,36 @@ import {
   ArrangeAppliers
 } from "rete-auto-arrange-plugin";
 
+// May move these interfaces to a separate file
+interface NodeInput {
+  name: string;
+  // Add other properties of NodeInput here if needed
+}
+
+interface NodeOutput {
+  name: string;
+  // Add other properties of NodeOutput here if needed
+}
+
+interface NodeData {
+  label: string;
+  inputs: NodeInput[];
+  outputs: NodeOutput[];
+}
+interface LinkData {
+  from_node: string;
+  from_socket: string;
+  to_node: string;
+  to_socket: string;
+  // Add other properties of LinkData here if needed
+}
+
+interface NodeMap {
+  [key: string]: Node; // Assuming `Node` is the correct type for the nodes in nodeMap
+}
+
+
+
 class Node extends ClassicPreset.Node {
   width = 180;
   height = 120;
@@ -21,18 +51,24 @@ class Connection<N extends Node> extends ClassicPreset.Connection<N, N> {}
 type Schemes = GetSchemes<Node, Connection<Node>>;
 type AreaExtra = ReactArea2D<Schemes>;
 
-function createNode(label: string, socket: ClassicPreset.Socket) {
-  const node = new Node(label);
+function createDynamicNode(nodeData: any) {
+  const node = new Node(nodeData.label);
 
-  node.addInput("port", new ClassicPreset.Input(socket));
-  node.addOutput("port", new ClassicPreset.Output(socket));
+  nodeData.inputs.forEach((input: NodeInput) => {
+    let socket = new ClassicPreset.Socket(input.name);
+    node.addInput(input.name, new ClassicPreset.Input(socket));
+  });
+
+  nodeData.outputs.forEach((output: NodeOutput) => {
+    let socket = new ClassicPreset.Socket(output.name);
+    node.addOutput(output.name, new ClassicPreset.Output(socket));
+  });
 
   return node;
 }
 
 export async function createEditor(container: HTMLElement, worktreeData: any) {
   container.innerHTML = ''
-  const socket = new ClassicPreset.Socket("socket");
 
   const editor = new NodeEditor<Schemes>();
   const area = new AreaPlugin<Schemes, AreaExtra>(container);
@@ -65,26 +101,22 @@ export async function createEditor(container: HTMLElement, worktreeData: any) {
 
   AreaExtensions.simpleNodesOrder(area);
 
-  const a = createNode("A", socket);
-  const b = createNode("B", socket);
-  const c = createNode("C", socket);
-  const d = createNode("D", socket);
-  const e = createNode("E", socket);
-  const f = createNode("F", socket);
-
-  await editor.addNode(a);
-  await editor.addNode(b);
-  await editor.addNode(c);
-  await editor.addNode(d);
-  await editor.addNode(e);
-  await editor.addNode(f);
-
-  await editor.addConnection(new Connection(a, "port", b, "port"));
-  await editor.addConnection(new Connection(b, "port", c, "port"));
-  await editor.addConnection(new Connection(a, "port", d, "port"));
-  await editor.addConnection(new Connection(d, "port", e, "port"));
-  await editor.addConnection(new Connection(e, "port", f, "port"));
-  await editor.addConnection(new Connection(c, "port", e, "port"));
+  // Adding nodes based on worktreeData
+  const nodeMap: NodeMap = {}; // To keep track of created nodes for linking
+  for (const nodeId in worktreeData.nodes) {
+    const nodeData = worktreeData.nodes[nodeId];
+    const node = createDynamicNode(nodeData);
+    await editor.addNode(node);
+    nodeMap[nodeId] = node; // Storing reference to the node
+  }
+  // Adding connections based on worktreeData
+  worktreeData.links.forEach(async (link: LinkData) => { // Specify the type of link here
+    const fromNode = nodeMap[link.from_node];
+    const toNode = nodeMap[link.to_node];
+    if (fromNode && toNode) {
+        await editor.addConnection(new Connection(fromNode, link.from_socket, toNode, link.to_socket));
+    }
+  });
 
   await arrange.layout({ applier });
 

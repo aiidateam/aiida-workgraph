@@ -34,7 +34,7 @@ async def read_worktree_data(search: str = Query(None)):
 
 @router.get("/worktree/{id}")
 async def read_worktree_item(id: int):
-    from .utils import worktree_to_json
+    from .utils import worktree_to_short_json
 
     try:
         node = orm.load_node(id)
@@ -45,7 +45,7 @@ async def read_worktree_item(id: int):
             print("No worktree data found in the node.")
             return
         wtdata = deserialize_unsafe(wtdata)
-        content = worktree_to_json(wtdata)
+        content = worktree_to_short_json(wtdata)
         return content
     except KeyError:
         raise HTTPException(status_code=404, detail=f"Worktree {id} not found")

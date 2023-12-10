@@ -1,5 +1,5 @@
-def worktree_to_json(wtdata):
-    """Export a worktree to a JSON serializable dictionary."""
+def worktree_to_short_json(wtdata):
+    """Export a worktree to a rete js editor data."""
     wtdata_short = {
         "name": wtdata["name"],
         "uuid": wtdata["uuid"],
@@ -9,12 +9,19 @@ def worktree_to_json(wtdata):
     }
     for name, node in wtdata["nodes"].items():
         wtdata_short["nodes"][name] = {
-            "name": node["name"],
-            "identifier": node["metadata"]["identifier"],
-            "node_type": node["metadata"]["node_type"],
-            "uuid": node["uuid"],
-            "state": node["state"],
-            "action": node["action"],
-            "inputs": node["inputs"],
+            "label": node["name"],
+            "inputs": [],
+            "outputs": [],
         }
+    for link in wtdata["links"]:
+        wtdata_short["nodes"][link["to_node"]]["inputs"].append(
+            {
+                "name": link["to_socket"],
+            }
+        )
+        wtdata_short["nodes"][link["from_node"]]["outputs"].append(
+            {
+                "name": link["from_socket"],
+            }
+        )
     return wtdata_short
