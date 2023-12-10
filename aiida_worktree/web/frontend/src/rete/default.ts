@@ -6,6 +6,13 @@ import {
   Presets as ConnectionPresets
 } from "rete-connection-plugin";
 import { ReactPlugin, Presets, ReactArea2D } from "rete-react-plugin";
+import { MinimapExtra, MinimapPlugin } from "rete-minimap-plugin";
+import {
+  ContextMenuPlugin,
+  Presets as ContextMenuPresets,
+  ContextMenuExtra
+} from "rete-context-menu-plugin";
+
 import {
   AutoArrangePlugin,
   Presets as ArrangePresets,
@@ -49,7 +56,8 @@ class Node extends ClassicPreset.Node {
 class Connection<N extends Node> extends ClassicPreset.Connection<N, N> {}
 
 type Schemes = GetSchemes<Node, Connection<Node>>;
-type AreaExtra = ReactArea2D<Schemes>;
+type AreaExtra = ReactArea2D<any> | MinimapExtra | ContextMenuExtra;
+
 
 function createDynamicNode(nodeData: any) {
   const node = new Node(nodeData.label);
@@ -73,14 +81,23 @@ export async function createEditor(container: HTMLElement, worktreeData: any) {
   const editor = new NodeEditor<Schemes>();
   const area = new AreaPlugin<Schemes, AreaExtra>(container);
   const connection = new ConnectionPlugin<Schemes, AreaExtra>();
-  const render = new ReactPlugin<Schemes, AreaExtra>({ createRoot });
+  const render = new ReactPlugin<Schemes, AreaExtra>();
   const arrange = new AutoArrangePlugin<Schemes>();
+  const contextMenu = new ContextMenuPlugin<Schemes>({
+    items: ContextMenuPresets.classic.setup([
+    ])
+  });
+  const minimap = new MinimapPlugin<Schemes>({
+    boundViewport: true
+  });
 
   AreaExtensions.selectableNodes(area, AreaExtensions.selector(), {
     accumulating: AreaExtensions.accumulateOnCtrl()
   });
 
   render.addPreset(Presets.classic.setup());
+  render.addPreset(Presets.contextMenu.setup());
+  render.addPreset(Presets.minimap.setup({ size: 200 }));
 
   connection.addPreset(ConnectionPresets.classic.setup());
 
@@ -98,6 +115,8 @@ export async function createEditor(container: HTMLElement, worktreeData: any) {
   area.use(connection);
   area.use(render);
   area.use(arrange);
+  area.use(contextMenu);
+  area.use(minimap);
 
   AreaExtensions.simpleNodesOrder(area);
 
