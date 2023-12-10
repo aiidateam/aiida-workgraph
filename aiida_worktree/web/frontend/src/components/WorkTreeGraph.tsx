@@ -1,10 +1,50 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams } from 'react-router-dom';
-import { useRete } from 'rete-react-plugin';
 import logo from '../logo.svg';
 import '../App.css';
 import '../rete.css';
 import { createEditor } from '../rete/default';
+
+/* Modify the useRete function to support passing worktree data to createEditor */
+export function useRete<T extends { destroy(): void }>(
+  create: (el: HTMLElement, data: any) => Promise<T>,
+  worktreeData: any
+) {
+  const [container, setContainer] = useState<null | HTMLElement>(null);
+  const editorRef = useRef<T>();
+  const [editor, setEditor] = useState<T | null>(null);
+  const ref = useRef(null);
+
+  useEffect(() => {
+    if (container) {
+      if (editorRef.current) {
+        editorRef.current.destroy();
+        container.innerHTML = '';
+      }
+      create(container, worktreeData).then((value) => {
+        editorRef.current = value;
+        setEditor(value);
+      });
+    }
+  }, [container, create, worktreeData]); // Add worktreeData as a dependency
+
+  useEffect(() => {
+    return () => {
+      if (editorRef.current) {
+        editorRef.current.destroy();
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    if (ref.current) {
+      setContainer(ref.current);
+    }
+  }, [ref.current]);
+
+  return [ref, editor] as const;
+}
+
 
 function WorkTreeGraph() {
   let { pk } = useParams();
@@ -30,11 +70,11 @@ function WorkTreeGraph() {
         <img src={logo} className="App-logo" alt="logo" style={{ animation: 'none' }} />
         <a
           className="App-link"
-          href="https://github.com/superstar54/aiida-worktree"
+          href="https://rete.js.org"
           target="_blank"
           rel="noopener noreferrer"
         >
-        Learn AiiDA-WorkTree
+          Learn Rete.js
         </a>
         <div ref={reteContainerRef} className="rete"></div>
       </header>

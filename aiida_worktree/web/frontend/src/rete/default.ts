@@ -31,6 +31,7 @@ function createNode(label: string, socket: ClassicPreset.Socket) {
 }
 
 export async function createEditor(container: HTMLElement, worktreeData: any) {
+  container.innerHTML = ''
   const socket = new ClassicPreset.Socket("socket");
 
   const editor = new NodeEditor<Schemes>();
