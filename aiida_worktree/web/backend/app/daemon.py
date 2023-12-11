@@ -22,7 +22,7 @@ class DaemonStatusModel(BaseModel):
     )
 
 
-@router.get("/daemon/status", response_model=DaemonStatusModel)
+@router.get("/api/daemon/status", response_model=DaemonStatusModel)
 @with_dbenv()
 async def get_daemon_status() -> DaemonStatusModel:
     """Return the daemon status."""
@@ -36,7 +36,7 @@ async def get_daemon_status() -> DaemonStatusModel:
     return DaemonStatusModel(running=True, num_workers=response["numprocesses"])
 
 
-@router.get("/daemon/worker")
+@router.get("/api/daemon/worker")
 @with_dbenv()
 async def get_daemon_worker():
     """Return the daemon status."""
@@ -50,7 +50,7 @@ async def get_daemon_worker():
     return response["info"]
 
 
-@router.post("/daemon/start", response_model=DaemonStatusModel)
+@router.post("/api/daemon/start", response_model=DaemonStatusModel)
 @with_dbenv()
 async def get_daemon_start() -> DaemonStatusModel:
     """Start the daemon."""
@@ -69,7 +69,7 @@ async def get_daemon_start() -> DaemonStatusModel:
     return DaemonStatusModel(running=True, num_workers=response["numprocesses"])
 
 
-@router.post("/daemon/stop", response_model=DaemonStatusModel)
+@router.post("/api/daemon/stop", response_model=DaemonStatusModel)
 @with_dbenv()
 async def get_daemon_stop() -> DaemonStatusModel:
     """Stop the daemon."""
@@ -86,7 +86,7 @@ async def get_daemon_stop() -> DaemonStatusModel:
     return DaemonStatusModel(running=False, num_workers=None)
 
 
-@router.post("/daemon/increase", response_model=DaemonStatusModel)
+@router.post("/api/daemon/increase", response_model=DaemonStatusModel)
 @with_dbenv()
 async def increase_daemon_worker() -> DaemonStatusModel:
     """increase the daemon worker."""
@@ -103,7 +103,7 @@ async def increase_daemon_worker() -> DaemonStatusModel:
     return DaemonStatusModel(running=False, num_workers=None)
 
 
-@router.post("/daemon/decrease", response_model=DaemonStatusModel)
+@router.post("/api/daemon/decrease", response_model=DaemonStatusModel)
 @with_dbenv()
 async def decrease_daemon_worker() -> DaemonStatusModel:
     """decrease the daemon worker."""

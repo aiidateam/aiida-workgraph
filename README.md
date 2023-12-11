@@ -86,6 +86,17 @@ The node graph from the worktree process:
 ## TODO
 - For the moment, I did not create a `WorkTreeNode` for the `WorkTree` process. I used the `WorkChainNode`, because AiiDA hard codes the `WorkChainNode` for the command (report), graph etc.
 
+## Build and publish
+Build package:
+```console
+pip install build
+python -m build
+```
+Upload to PyPI:
+```console
+pip install twine
+twine upload dist/*
+```
 
 ## License
 [MIT](http://opensource.org/licenses/MIT)

@@ -4,7 +4,7 @@ import click
 from aiida_worktree.cli.cmd_worktree import worktree
 from aiida.cmdline.params import arguments, options, types
 from aiida.cmdline.utils import decorators, echo
-from aiida.common.log import LOG_LEVELS, capture_logging
+from aiida.common.log import LOG_LEVELS
 from aiida.manage import get_manager
 from aiida_worktree.cli.query_worktree import WorkTreeQueryBuilder
 
@@ -274,21 +274,17 @@ def process_kill(processes, all_entries, timeout, wait):
     if all_entries:
         click.confirm("Are you sure you want to kill all processes?", abort=True)
 
-    with capture_logging() as stream:
-        try:
-            message = "Killed through `verdi process kill`"
-            control.kill_processes(
-                processes,
-                all_entries=all_entries,
-                timeout=timeout,
-                wait=wait,
-                message=message,
-            )
-        except control.ProcessTimeoutException as exception:
-            echo.echo_critical(f"{exception}\n{REPAIR_INSTRUCTIONS}")
-
-        if "unreachable" in stream.getvalue():
-            echo.echo_report(REPAIR_INSTRUCTIONS)
+    try:
+        message = "Killed through `verdi process kill`"
+        control.kill_processes(
+            processes,
+            all_entries=all_entries,
+            timeout=timeout,
+            wait=wait,
+            message=message,
+        )
+    except control.ProcessTimeoutException as exception:
+        echo.echo_critical(f"{exception}\n{REPAIR_INSTRUCTIONS}")
 
 
 @worktree_tree.command("pause")
@@ -307,21 +303,17 @@ def process_pause(processes, all_entries, timeout, wait):
             "cannot specify individual processes and the `--all` flag at the same time.",
         )
 
-    with capture_logging() as stream:
-        try:
-            message = "Paused through `verdi process pause`"
-            control.pause_processes(
-                processes,
-                all_entries=all_entries,
-                timeout=timeout,
-                wait=wait,
-                message=message,
-            )
-        except control.ProcessTimeoutException as exception:
-            echo.echo_critical(f"{exception}\n{REPAIR_INSTRUCTIONS}")
-
-        if "unreachable" in stream.getvalue():
-            echo.echo_report(REPAIR_INSTRUCTIONS)
+    try:
+        message = "Paused through `verdi process pause`"
+        control.pause_processes(
+            processes,
+            all_entries=all_entries,
+            timeout=timeout,
+            wait=wait,
+            message=message,
+        )
+    except control.ProcessTimeoutException as exception:
+        echo.echo_critical(f"{exception}\n{REPAIR_INSTRUCTIONS}")
 
 
 @worktree_tree.command("play")
@@ -340,16 +332,12 @@ def process_play(processes, all_entries, timeout, wait):
             "cannot specify individual processes and the `--all` flag at the same time.",
         )
 
-    with capture_logging() as stream:
-        try:
-            control.play_processes(
-                processes, all_entries=all_entries, timeout=timeout, wait=wait
-            )
-        except control.ProcessTimeoutException as exception:
-            echo.echo_critical(f"{exception}\n{REPAIR_INSTRUCTIONS}")
-
-        if "unreachable" in stream.getvalue():
-            echo.echo_report(REPAIR_INSTRUCTIONS)
+    try:
+        control.play_processes(
+            processes, all_entries=all_entries, timeout=timeout, wait=wait
+        )
+    except control.ProcessTimeoutException as exception:
+        echo.echo_critical(f"{exception}\n{REPAIR_INSTRUCTIONS}")
 
 
 @worktree_tree.command("watch")

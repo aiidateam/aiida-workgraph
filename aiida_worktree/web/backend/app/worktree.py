@@ -4,7 +4,7 @@ from aiida import orm
 router = APIRouter()
 
 
-@router.get("/worktree-data")
+@router.get("/api/worktree-data")
 async def read_worktree_data(search: str = Query(None)):
     from aiida_worktree.cli.query_worktree import WorkTreeQueryBuilder
 
@@ -32,7 +32,7 @@ async def read_worktree_data(search: str = Query(None)):
         raise HTTPException(status_code=404, detail=f"Worktree {id} not found")
 
 
-@router.get("/worktree/{id}")
+@router.get("/api/worktree/{id}")
 async def read_worktree_item(id: int):
     from .utils import worktree_to_short_json
 

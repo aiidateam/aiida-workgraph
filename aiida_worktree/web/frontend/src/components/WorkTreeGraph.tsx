@@ -63,7 +63,7 @@ function WorkTreeGraph() {
 
   // Fetch worktree data from the API
   useEffect(() => {
-    fetch(`http://localhost:8000/worktree/${pk}`)
+    fetch(`http://localhost:8000/api/worktree/${pk}`)
       .then(response => response.json())
       .then(data => setWorktreeData(data))
       .catch(error => console.error("Error fetching data:", error));

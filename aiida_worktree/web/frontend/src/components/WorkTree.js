@@ -11,7 +11,7 @@ function WorkTree() {
     const [searchQuery, setSearchQuery] = useState('');
 
     useEffect(() => {
-        fetch(`http://localhost:8000/worktree-data?search=${searchQuery}`)
+        fetch(`http://localhost:8000/api/worktree-data?search=${searchQuery}`)
             .then(response => response.json())
             .then(data => setData(data))
             .catch(error => console.error('Error fetching data: ', error));

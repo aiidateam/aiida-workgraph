@@ -6,7 +6,7 @@ function Settings() {
   const [workers, setWorkers] = useState([]);
 
   const fetchWorkers = () => {
-    fetch('http://localhost:8000/daemon/worker')
+    fetch('http://localhost:8000/api/daemon/worker')
       .then(response => response.json())
       .then(data => setWorkers(Object.values(data)))
       .catch(error => console.error('Failed to fetch workers:', error));
@@ -19,7 +19,7 @@ function Settings() {
   }, []);
 
   const handleDaemonControl = (action) => {
-    fetch(`http://localhost:8000/daemon/${action}`, { method: 'POST' })
+    fetch(`http://localhost:8000/api/daemon/${action}`, { method: 'POST' })
       .then(response => {
         if (!response.ok) {
           throw new Error(`Daemon operation failed: ${response.statusText}`);
@@ -34,7 +34,7 @@ function Settings() {
   };
 
   const adjustWorkers = (action) => {
-    fetch(`http://localhost:8000/daemon/${action}`, { method: 'POST' })
+    fetch(`http://localhost:8000/api/daemon/${action}`, { method: 'POST' })
       .then(response => {
         if (!response.ok) {
           throw new Error(`Failed to ${action} workers: ${response.statusText}`);
