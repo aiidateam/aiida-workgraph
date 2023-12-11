@@ -34,7 +34,8 @@ async def read_worktree_data(search: str = Query(None)):
 
 @router.get("/api/worktree/{id}")
 async def read_worktree_item(id: int):
-    from .utils import worktree_to_short_json
+    from .utils import worktree_to_short_json, get_node_summary
+    from aiida.cmdline.utils.common import get_workchain_report
 
     try:
         node = orm.load_node(id)
@@ -46,6 +47,10 @@ async def read_worktree_item(id: int):
             return
         wtdata = deserialize_unsafe(wtdata)
         content = worktree_to_short_json(wtdata)
+        summary = get_node_summary(node)
+        report = get_workchain_report(node, "REPORT")
+        content["summary"] = summary
+        content["logs"] = report.splitlines()
         return content
     except KeyError:
         raise HTTPException(status_code=404, detail=f"Worktree {id} not found")

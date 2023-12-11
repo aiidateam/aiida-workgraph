@@ -13,7 +13,6 @@ class WorkTreeQueryBuilder:
         "pk",
         "ctime",
         "process_label",
-        "cached",
         "state",
         "process_status",
     )
@@ -37,8 +36,6 @@ class WorkTreeQueryBuilder:
         "job_state",
         "scheduler_state",
         "exception",
-        "cached",
-        "cached_from",
     )
 
     def __init__(self, mapper=None):
