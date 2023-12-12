@@ -58,15 +58,14 @@ export function useRete<T extends { destroy(): void }>(
 
 
 
-
 function WorkTreeGraph() {
   const { pk } = useParams();
   const [worktreeData, setWorktreeData] = useState({ summary: [], nodes: {}, links: [], logs: [] });
-  const [animate, setAnimate] = useState(true);
   const [ref, editor] = useRete(createEditor, worktreeData);
   const [selectedNode, setSelectedNode] = useState({ metadata: [], executor: '' });
   const [showNodeDetails, setShowNodeDetails] = useState(false);
   const [worktreeHierarchy, setWorktreeHierarchy] = useState([]);
+
 
   // Fetch worktree data from the API
   useEffect(() => {
@@ -134,11 +133,7 @@ function WorkTreeGraph() {
         <EditorContainer>
           <WorktreeIndicator parentWorktrees={worktreeHierarchy} />
           <LayoutAction>
-            <label>
-              Animate
-              <Switch checked={animate} onChange={setAnimate} />
-            </label>
-            <Button onClick={() => editor?.layout(animate)}>Arrange</Button>
+            <Button onClick={() => editor?.layout(true)}>Arrange</Button>
           </LayoutAction>
           <div ref={ref} style={{ height: 'calc(100% - 2em)', width: '100%' }}></div>
           {showNodeDetails && (

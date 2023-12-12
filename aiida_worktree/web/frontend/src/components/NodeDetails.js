@@ -21,7 +21,7 @@ const NodeDetailsPanel = styled.div`
   right: 0;
   background-color: #fff;
   box-shadow: -2px 0 5px rgba(0, 0, 0, 0.1);
-  width: 300px;
+  width: 20%;
   height: 100%;
   padding: 20px;
   box-sizing: border-box;
@@ -40,6 +40,7 @@ const NodeDetailsTitle = styled.h3`
 `;
 
 const NodeDetailsTable = styled.div`
+  width: 100%;
   flex-grow: 1; /* Allow this section to take available space */
   overflow-y: auto; /* Make only this section scrollable if needed */
   margin-bottom: 1em;
@@ -52,7 +53,7 @@ const NodeDetailRow = styled.div`
 `;
 
 const NodeDetailProperty = styled.div`
-  width: 40%; /* Adjust for better alignment */
+  width: 50%; /* Adjust for better alignment */
   font-weight: bold;
   text-align: left;
   font-size: 0.9em;
@@ -60,7 +61,7 @@ const NodeDetailProperty = styled.div`
 `;
 
 const NodeDetailValue = styled.div`
-  width: 60%; /* Adjust accordingly */
+  width: 50%; /* Adjust accordingly */
   text-align: left;
   font-size: 0.8em;
   color: #666; /* Slightly lighter to differentiate from property */

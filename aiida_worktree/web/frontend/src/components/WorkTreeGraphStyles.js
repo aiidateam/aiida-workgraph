@@ -82,9 +82,9 @@ export const EditorContainer = styled.div`
 `;
 
 export const LayoutAction = styled.div`
-  position: absolute;
+  position: relative;
   top: 1em;
-  right: 1em;
+  left: 1em;
   display: flex;
   align-items: center;
   gap: 0.5em;
