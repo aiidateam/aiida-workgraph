@@ -81,7 +81,7 @@ def build_node(ndata):
     # we need to update the node_graph to support the path and name of the function
     executor = {
         "executor": pickle.dumps(executor),
-        "type": "function",
+        "type": ndata["node_type"],
         "is_pickle": True,
     }
     ndata["executor"] = executor

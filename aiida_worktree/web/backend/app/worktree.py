@@ -32,14 +32,35 @@ async def read_worktree_data(search: str = Query(None)):
         raise HTTPException(status_code=404, detail=f"Worktree {id} not found")
 
 
+@router.get("/api/worktree/{id}/{node_name}")
+async def read_worktree_node(id: int, node_name: str):
+    from .utils import node_to_short_json
+    from aiida.orm.utils.serialize import deserialize_unsafe
+
+    try:
+        node = orm.load_node(id)
+        wtdata = node.base.extras.get("worktree", None)
+        if wtdata is None:
+            print("No worktree data found in the node.")
+            return
+
+        wtdata = deserialize_unsafe(wtdata)
+        content = node_to_short_json(wtdata["nodes"][node_name])
+        return content
+    except KeyError:
+        raise HTTPException(
+            status_code=404, detail=f"Worktree {id}/{node_name} not found"
+        )
+
+
 @router.get("/api/worktree/{id}")
 async def read_worktree_item(id: int):
     from .utils import worktree_to_short_json, get_node_summary
     from aiida.cmdline.utils.common import get_workchain_report
+    from aiida.orm.utils.serialize import deserialize_unsafe
 
     try:
         node = orm.load_node(id)
-        from aiida.orm.utils.serialize import deserialize_unsafe
 
         wtdata = node.base.extras.get("worktree", None)
         if wtdata is None:

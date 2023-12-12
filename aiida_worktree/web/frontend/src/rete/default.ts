@@ -1,4 +1,3 @@
-import { createRoot } from "react-dom/client";
 import { NodeEditor, GetSchemes, ClassicPreset } from "rete";
 import { AreaPlugin, AreaExtensions } from "rete-area-plugin";
 import {
@@ -69,7 +68,9 @@ function createDynamicNode(nodeData: any) {
 
   nodeData.outputs.forEach((output: NodeOutput) => {
     let socket = new ClassicPreset.Socket(output.name);
-    node.addOutput(output.name, new ClassicPreset.Output(socket));
+    if (!node.outputs.hasOwnProperty(output.name)) {
+      node.addOutput(output.name, new ClassicPreset.Output(socket));
+    }
   });
 
   return node;
@@ -141,7 +142,10 @@ export async function createEditor(container: HTMLElement, worktreeData: any) {
 
   AreaExtensions.zoomAt(area, editor.getNodes());
 
+
   return {
+    editor: editor,
+    area: area,
     layout: async (animate: boolean) => {
       await arrange.layout({ applier: animate ? applier : undefined });
       AreaExtensions.zoomAt(area, editor.getNodes());

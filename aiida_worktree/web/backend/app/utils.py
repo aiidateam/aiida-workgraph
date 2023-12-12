@@ -28,6 +28,40 @@ def worktree_to_short_json(wtdata):
     return wtdata_short
 
 
+def is_function_and_get_source(obj):
+    import inspect
+
+    if callable(obj):
+        source_lines, _ = inspect.getsourcelines(obj)
+        source_code = "".join(source_lines)
+        return True, source_code
+    else:
+        return False, None
+
+
+def node_to_short_json(ndata):
+    """Export a node to a rete js node."""
+    from aiida_worktree.utils import get_executor
+
+    executor, _ = get_executor(ndata["executor"])
+    is_function, source_code = is_function_and_get_source(executor)
+    if is_function:
+        executor = source_code
+    else:
+        executor = str(executor)
+    ndata_short = {
+        "metadata": [
+            ["name", ndata["name"]],
+            ["node_type", ndata["metadata"]["node_type"]],
+            ["identifier", ndata["metadata"]["identifier"]],
+            ["uuid", ndata["uuid"]],
+            ["state", ndata["state"]],
+        ],
+        "executor": executor,
+    }
+    return ndata_short
+
+
 def get_node_summary(node):
     """ """
     from plumpy import ProcessState

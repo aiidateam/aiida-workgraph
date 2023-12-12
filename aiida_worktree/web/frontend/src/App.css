@@ -251,3 +251,12 @@
 .button-adjust:hover {
   border: 2px solid #e7e7e7;
 }
+
+/* style for node */
+.title {
+  background-color: #4CAF50; /* Change to your preferred color */
+  color: white; /* Color of the text inside the div */
+  border-radius: 10px 10px 0 0; /* Rounded corners for top-left and top-right */
+  padding: 10px; /* Optional: Adds some space inside the div */
+  text-align: center; /* Optional: Aligns the text to the center */
+}
