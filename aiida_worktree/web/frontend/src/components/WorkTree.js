@@ -1,6 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import ReactPaginate from 'react-paginate';
 import { Link } from 'react-router-dom';
+import { toast, ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
+import { FaPlay, FaPause, FaTrash } from 'react-icons/fa'; // Import icons from react-icons
+import './WorkTree.css'; // Import a custom CSS file for styling
+
 
 function WorkTree() {
     const [data, setData] = useState([]);
@@ -45,6 +50,75 @@ function WorkTree() {
         setCurrentPage(event.selected);
     };
 
+    // Function to handle pause click
+    const handlePauseClick = (item) => {
+        // Make an API request to pause the worktree item
+        fetch(`http://localhost:8000/api/worktree/pause/${item.pk}`, {
+            method: 'POST',
+        })
+        .then(response => response.json())
+        .then(data => {
+            // Show toast notification for success or error
+            if (data.message) {
+                toast.success(data.message);
+                // Refresh the table after pause (you may fetch the updated data here)
+                fetch(`http://localhost:8000/api/worktree-data?search=${searchQuery}`)
+                    .then(response => response.json())
+                    .then(data => setData(data))
+                    .catch(error => console.error('Error fetching data: ', error));
+            } else {
+                toast.error('Error pausing item');
+            }
+        })
+        .catch(error => console.error('Error pausing item: ', error));
+    };
+
+    // Function to handle play click
+    const handlePlayClick = (item) => {
+        // Make an API request to play the worktree item
+        fetch(`http://localhost:8000/api/worktree/play/${item.pk}`, {
+            method: 'POST',
+        })
+        .then(response => response.json())
+        .then(data => {
+            // Show toast notification for success or error
+            if (data.message) {
+                toast.success(data.message);
+                // Refresh the table after play (you may fetch the updated data here)
+                fetch(`http://localhost:8000/api/worktree-data?search=${searchQuery}`)
+                    .then(response => response.json())
+                    .then(data => setData(data))
+                    .catch(error => console.error('Error fetching data: ', error));
+            } else {
+                toast.error('Error playing item');
+            }
+        })
+        .catch(error => console.error('Error playing item: ', error));
+    };
+
+    // Function to handle delete click
+    const handleDeleteClick = (item) => {
+        // Make an API request to delete the worktree item
+        fetch(`http://localhost:8000/api/worktree/delete/${item.pk}`, {
+            method: 'DELETE',
+        })
+        .then(response => response.json())
+        .then(data => {
+            // Show toast notification for success or error
+            if (data.message) {
+                toast.success(data.message);
+                // Refresh the table after delete (you may fetch the updated data here)
+                fetch(`http://localhost:8000/api/worktree-data?search=${searchQuery}`)
+                    .then(response => response.json())
+                    .then(data => setData(data))
+                    .catch(error => console.error('Error fetching data: ', error));
+            } else {
+                toast.error('Error deleting item');
+            }
+        })
+        .catch(error => console.error('Error deleting item: ', error));
+    };
+
     return (
         <div>
             <h2>WorkTree</h2>
@@ -61,9 +135,10 @@ function WorkTree() {
                 <thead>
                     <tr>
                         <th onClick={() => sortData('pk')}>PK {renderSortIndicator('pk')}</th>
-                        <th onClick={() => sortData('ctime')}>Created</th>
+                        <th onClick={() => sortData('ctime')}>Created {renderSortIndicator('ctime')}</th>
                         <th>Process Label</th>
                         <th>State</th>
+                        <th>Actions</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -75,6 +150,11 @@ function WorkTree() {
                             <td>{item.ctime}</td>
                             <td>{item.process_label}</td>
                             <td>{item.state}</td>
+                            <td>
+                                <button onClick={() => handlePauseClick(item)} className="action-button pause-button"><FaPause /></button>
+                                <button onClick={() => handlePlayClick(item)} className="action-button play-button"><FaPlay /></button>
+                                <button onClick={() => handleDeleteClick(item)} className="action-button delete-button"><FaTrash /></button>
+                            </td>
                         </tr>
                     ))}
                 </tbody>
@@ -89,11 +169,11 @@ function WorkTree() {
                 onPageChange={handlePageClick}
                 containerClassName={'pagination'}
                 activeClassName={'active'}
-                // Additional styling classes
                 previousClassName={'previousButton'}
                 nextClassName={'nextButton'}
                 breakClassName={'pageBreak'}
             />
+            <ToastContainer autoClose={3000} />
         </div>
     );
 }

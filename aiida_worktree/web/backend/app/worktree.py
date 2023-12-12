@@ -79,3 +79,54 @@ async def read_worktree_item(id: int):
         return content
     except KeyError:
         raise HTTPException(status_code=404, detail=f"Worktree {id} not found")
+
+
+# Route for pausing a worktree item
+@router.post("/api/worktree/pause/{id}")
+async def pause_worktree_node(
+    id: int,
+):
+    from aiida.engine.processes.control import pause_processes
+
+    try:
+        # Perform the pause action here
+        node = orm.load_node(id)
+        pause_processes([node])
+        return {"message": f"Send message to pause worktree {id}"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# Route for playing a worktree item
+@router.post("/api/worktree/play/{id}")
+async def play_worktree_node(
+    id: int,
+):
+    from aiida.engine.processes.control import play_processes
+
+    try:
+        # Perform the play action here
+        node = orm.load_node(id)
+        play_processes([node])
+        return {"message": f"Send message to play worktree {id}"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# Route for deleting a worktree item
+@router.delete("/api/worktree/delete/{id}")
+async def delete_worktree_node(
+    id: int,
+):
+    from aiida.tools import delete_nodes
+
+    try:
+        # Perform the delete action here
+        _, was_deleted = delete_nodes([id], dry_run=False)
+
+        if was_deleted:
+            return {"message": f"Deleted worktree {id}"}
+        else:
+            return {"message": f"Failed to delete worktree {id}"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))

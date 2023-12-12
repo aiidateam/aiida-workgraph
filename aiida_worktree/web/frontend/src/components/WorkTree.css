@@ -1,0 +1,15 @@
+/* WorkTree.css */
+.action-button {
+    background-color: #007BFF; /* Set the background color */
+    color: #fff; /* Set the text color */
+    border: none;
+    border-radius: 1px;
+    cursor: pointer;
+    margin-right: 16px; /* Add some spacing between buttons */
+    padding: 4px 4px;
+    font-size: 10px; /* Adjust the font size */
+}
+
+.action-button:hover {
+    background-color: #0056b3; /* Change the background color on hover */
+}

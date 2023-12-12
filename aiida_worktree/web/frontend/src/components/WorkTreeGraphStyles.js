@@ -52,21 +52,26 @@ export const WorktreeInfo = styled.div`
   }
 
   .log-section {
-    background-color: #f9f9f9;
-    border: 1px solid #ddd;
-    padding: 1em;
-    overflow-y: auto;
-    max-height: 200px;
-    font-family: monospace;
-    white-space: pre-wrap;
-    font-size: 0.9em;
-    color: #444;
-    line-height: 1.4;
-    text-align: left; // Ensure text is left-aligned
-    display: flex;
-    flex-direction: column;
-    align-items: flex-start; // Aligns children (log entries) to the start (left)
-  }
+  background-color: #f9f9f9;
+  border: 1px solid #ddd;
+  padding: 1em;
+  overflow-x: auto; /* Add horizontal scrollbar */
+  overflow-y: auto; /* Add vertical scrollbar */
+  max-height: 200px;
+  font-family: monospace;
+  white-space: pre;
+  font-size: 0.9em;
+  color: #444;
+  line-height: 1.4;
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.log-content {
+  flex-grow: 1;
+}
 `;
 
 
