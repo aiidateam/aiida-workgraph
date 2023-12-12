@@ -97,7 +97,7 @@ function NodeDetails({ selectedNode, onClose, setShowNodeDetails }) {
 
   const handleWorktreeClick = () => {
     if (selectedNode.node_type === 'worktree') {
-      navigate(`/worktree/${selectedNode.pk}`); // Use the navigate function to navigate
+      navigate(`/worktree/${selectedNode.process.pk}`); // Use the navigate function to navigate
     }
   };
 

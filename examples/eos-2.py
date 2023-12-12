@@ -72,7 +72,7 @@ def eos(**datas):
 # create input structure node
 si = orm.StructureData(ase=bulk("Si"))
 # create the PW node
-code = orm.load_code("pw-7.2@localhost")
+code = orm.load_code("qe-7.2-pw@localhost")
 paras = orm.Dict(
     {
         "CONTROL": {

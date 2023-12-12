@@ -7,7 +7,7 @@ function WorkTree() {
     const [currentPage, setCurrentPage] = useState(0);
     const [itemsPerPage] = useState(15);
     const [sortField, setSortField] = useState("pk");
-    const [sortOrder, setSortOrder] = useState('asc'); // 'asc' or 'desc'
+    const [sortOrder, setSortOrder] = useState('desc'); // 'asc' or 'desc'
     const [searchQuery, setSearchQuery] = useState('');
 
     useEffect(() => {

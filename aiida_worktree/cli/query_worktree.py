@@ -169,7 +169,7 @@ class WorkTreeQueryBuilder:
         if order_by is not None:
             builder.order_by({"process": order_by})
         else:
-            builder.order_by({"process": {"ctime": "asc"}})
+            builder.order_by({"process": {"ctime": "desc"}})
 
         if limit is not None:
             builder.limit(limit)

@@ -182,8 +182,8 @@ def get_parent_worktrees(pk):
     return parent_worktrees
 
 
-def get_node_pk(pk, node_name):
-    """Get the pk of a node from the worktree data."""
+def get_node_latest(pk, node_name):
+    """Get the latest info of a node from the process."""
     import aiida
 
     process = aiida.orm.load_node(pk)
@@ -197,12 +197,23 @@ def get_node_pk(pk, node_name):
         if isinstance(node, aiida.orm.ProcessNode) and getattr(
             node, "process_state", False
         ):
-            nodes[link.link_label] = node.pk
+            nodes[link.link_label] = {
+                "pk": node.pk,
+                "state": node.process_state.value,
+                "ctime": node.ctime,
+                "mtime": node.mtime,
+            }
+
         elif isinstance(node, aiida.orm.Data):
             label = link.link_label.split("__", 1)[1]
             if label in nodes.keys():
-                nodes[label] = node.pk
-    return nodes[node_name]
+                nodes[label] = {
+                    "pk": node.pk,
+                    "state": "Stored" if node.is_stored else "Unstored",
+                    "ctime": nodes.ctime,
+                    "mtime": nodes.mtime,
+                }
+    return nodes.get(node_name)
 
 
 if __name__ == "__main__":

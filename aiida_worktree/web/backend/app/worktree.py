@@ -36,7 +36,6 @@ async def read_worktree_data(search: str = Query(None)):
 async def read_worktree_node(id: int, node_name: str):
     from .utils import node_to_short_json
     from aiida.orm.utils.serialize import deserialize_unsafe
-    from aiida_worktree.utils import get_node_pk
 
     try:
         node = orm.load_node(id)
@@ -46,9 +45,7 @@ async def read_worktree_node(id: int, node_name: str):
             return
 
         wtdata = deserialize_unsafe(wtdata)
-        content = node_to_short_json(wtdata["nodes"][node_name])
-        pk = get_node_pk(id, node_name)
-        content["pk"] = pk
+        content = node_to_short_json(id, wtdata["nodes"][node_name])
         return content
     except KeyError:
         raise HTTPException(
