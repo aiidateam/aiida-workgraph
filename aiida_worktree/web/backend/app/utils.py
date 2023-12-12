@@ -50,6 +50,7 @@ def node_to_short_json(ndata):
     else:
         executor = str(executor)
     ndata_short = {
+        "node_type": ndata["metadata"]["node_type"],
         "metadata": [
             ["name", ndata["name"]],
             ["node_type", ndata["metadata"]["node_type"]],

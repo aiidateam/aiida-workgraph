@@ -159,8 +159,8 @@ class WorkTree(Process, metaclass=Protect):
             #   would be an AttributeDict we can append things to it since the order of tasks is maintained.
             if type(ctx) != AttributeDict:  # pylint: disable=C0123
                 raise ValueError(
-                    f"Can not update the context for key `{key}`:"
-                    f' found instance of `{type(ctx)}` at `{".".join(ctx_path[:index+1])}`, expected AttributeDict'
+                    f"Can not update the context for key `{key}`: "
+                    f' found instance of `{type(ctx)}` at `{".".join(ctx_path[:index + 1])}`, expected AttributeDict'
                 )
 
         return ctx, ctx_path[-1]
@@ -211,7 +211,7 @@ class WorkTree(Process, metaclass=Protect):
                     break
             else:
                 raise AssertionError(
-                    f"Awaitable `{awaitable.pk} was not found in `ctx.{awaitable.key}`"
+                    f"Awaitable `{awaitable.pk} was not in `ctx.{awaitable.key}`"
                 )
         else:
             raise AssertionError(f"Unsupported awaitable action: {awaitable.action}")
@@ -689,6 +689,7 @@ class WorkTree(Process, metaclass=Protect):
                 print("group outputs: ", executor.group_outputs)
                 wt.group_outputs = executor.group_outputs
                 wt.name = name
+                wt.parent_uuid = self.node.uuid
                 wt.save(metadata={"call_link_label": name})
                 print("submit worktree: ")
                 process = self.submit(wt.process_inited)
@@ -822,10 +823,10 @@ class WorkTree(Process, metaclass=Protect):
             ready, output = self.check_parent_state(name)
             if ready:
                 # print(f"    Node {name} is ready to launch.")
-                self.ctx.msgs.append(f"node,{name}:action:LAUNCH")
+                self.ctx.msgs.append(f"node,{name}:action:LAUNCH")  # noqa E231
         elif self.ctx.nodes[name]["state"] in ["SCATTERED"]:
             state, action = self.check_scattered_state(name)
-            self.ctx.msgs.append(f"node,{name}:state:{state}")
+            self.ctx.msgs.append(f"node,{name}:state:{state}")  # noqa E231
         else:
             # print(f"    Node {name} is in state {self.ctx.nodes[name]['state']}")
             pass
