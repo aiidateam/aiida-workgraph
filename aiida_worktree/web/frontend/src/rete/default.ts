@@ -140,18 +140,18 @@ export async function createEditor(container: HTMLElement, worktreeData: any) {
     }
   });
 
-  await arrange.layout({ applier });
+  async function layout(animate: boolean) {
+    await arrange.layout({ applier: animate ? applier : undefined });
+    AreaExtensions.zoomAt(area, editor.getNodes());
+  };
 
-  AreaExtensions.zoomAt(area, editor.getNodes());
-
+  await layout(true)
+  console.log('Editor created')
 
   return {
     editor: editor,
     area: area,
-    layout: async (animate: boolean) => {
-      await arrange.layout({ applier: animate ? applier : undefined });
-      AreaExtensions.zoomAt(area, editor.getNodes());
-    },
+    layout: layout,
     destroy: () => area.destroy()
   };
 }

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo} from 'react';
 import { useParams } from 'react-router-dom';
 import '../App.css';
 import '../rete.css';
@@ -10,10 +10,13 @@ import WorkTreeLog from './WorkTreeLog';
 import NodeDetails from './NodeDetails';
 import {
   PageContainer,
-  WorktreeInfo,
   EditorContainer,
   LayoutAction,
+  TopMenu,
+  EditorWrapper,
 } from './WorkTreeGraphStyles'; // Import your styles
+
+
 
 
 /* Modify the useRete function to support passing worktree data to createEditor */
@@ -65,6 +68,7 @@ function WorkTreeGraph() {
   const [selectedNode, setSelectedNode] = useState({ metadata: [], executor: '' });
   const [showNodeDetails, setShowNodeDetails] = useState(false);
   const [worktreeHierarchy, setWorktreeHierarchy] = useState([]);
+  const [selectedView, setSelectedView] = useState('Editor'); // State to manage selected view
 
 
   // Fetch worktree data from the API
@@ -123,23 +127,33 @@ function WorkTreeGraph() {
     setShowNodeDetails(false);
   };
 
+  // Memoize the editor to prevent re-creation
+  const editorComponent = useMemo(() => (
+      <div ref={ref} style={{ height: 'calc(100% - 2em)', width: '100%' }}></div>
+  ), [worktreeHierarchy, editor, showNodeDetails, selectedNode]); // Specify dependencies
+
   return (
     <div className="App">
       <PageContainer>
-        <WorktreeInfo>
-          <WorktreeSummary summary={worktreeData.summary} />
-          <WorkTreeLog logs={worktreeData.logs} />
-        </WorktreeInfo>
-        <EditorContainer>
-          <WorktreeIndicator parentWorktrees={worktreeHierarchy} />
-          <LayoutAction>
-            <Button onClick={() => editor?.layout(true)}>Arrange</Button>
-          </LayoutAction>
-          <div ref={ref} style={{ height: 'calc(100% - 2em)', width: '100%' }}></div>
-          {showNodeDetails && (
-            <NodeDetails selectedNode={selectedNode} onClose={handleNodeDetailsClose} setShowNodeDetails={setShowNodeDetails} />
-          )}
-        </EditorContainer>
+        <TopMenu>
+          <Button onClick={() => setSelectedView('Editor')}>Editor</Button>
+          <Button onClick={() => setSelectedView('Summary')}>Summary</Button>
+          <Button onClick={() => setSelectedView('Log')}>Log</Button>
+        </TopMenu>
+          {selectedView === 'Summary' && <WorktreeSummary summary={worktreeData.summary} />}
+          {selectedView === 'Log' && <WorkTreeLog logs={worktreeData.logs} />}
+          <EditorWrapper visible={selectedView === 'Editor'}>
+            <EditorContainer>
+              <WorktreeIndicator parentWorktrees={worktreeHierarchy} />
+              <LayoutAction>
+                <Button onClick={() => editor?.layout(true)}>Arrange</Button>
+              </LayoutAction>
+              {showNodeDetails && (
+              <NodeDetails selectedNode={selectedNode} onClose={handleNodeDetailsClose} setShowNodeDetails={setShowNodeDetails} />
+            )}
+            </EditorContainer>
+            {editorComponent}
+          </EditorWrapper>
       </PageContainer>
     </div>
   );
