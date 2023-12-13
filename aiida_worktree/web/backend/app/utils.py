@@ -58,13 +58,13 @@ def node_to_short_json(worktree_pk, ndata):
         ],
         "executor": executor,
     }
-    process_info = get_processes_latest(worktree_pk)[ndata["name"]]
+    process_info = get_processes_latest(worktree_pk).get(ndata["name"], {})
     ndata_short["process"] = process_info
     if process_info is not None:
-        ndata_short["metadata"].append(["pk", process_info["pk"]])
-        ndata_short["metadata"].append(["state", process_info["state"]])
-        ndata_short["metadata"].append(["ctime", process_info["ctime"]])
-        ndata_short["metadata"].append(["mtime", process_info["mtime"]])
+        ndata_short["metadata"].append(["pk", process_info.get("pk")])
+        ndata_short["metadata"].append(["state", process_info.get("state")])
+        ndata_short["metadata"].append(["ctime", process_info.get("ctime")])
+        ndata_short["metadata"].append(["mtime", process_info.get("mtime")])
 
     return ndata_short
 

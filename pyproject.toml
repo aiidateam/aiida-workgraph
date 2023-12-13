@@ -59,6 +59,7 @@ tests = [
     "pytest~=7.0",
     "pytest-cov~=2.7,<2.11",
     "playwright",
+    "httpx",
 ]
 
 [project.scripts]
