@@ -4,7 +4,7 @@ import { Link } from 'react-router-dom';
 import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { FaPlay, FaPause, FaTrash } from 'react-icons/fa'; // Import icons from react-icons
-import './WorkTree.css'; // Import a custom CSS file for styling
+import './WorkTreeTable.css'; // Import a custom CSS file for styling
 
 
 function WorkTree() {

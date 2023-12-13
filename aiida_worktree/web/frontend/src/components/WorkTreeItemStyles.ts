@@ -3,8 +3,8 @@ import styled from "styled-components";
 export const PageContainer = styled.div`
   display: flex;
   flex-direction: column;
-  height: 100vh;
-  width: 100vw;
+  height: 95vh;
+  width: 95vw;
   background-color: #f4f4f4;
 `;
 

@@ -1,0 +1,78 @@
+
+/* Home page sidebar Menu */
+
+.sidebar {
+  width: 50px; /* Initial width */
+  height: 100vh;
+  background-color: #333;
+  padding-top: 20px;
+  position: fixed;
+  transition: width 0.3s;
+  overflow: hidden;
+}
+
+.sidebar:hover {
+  width: 200px; /* Expanded width */
+}
+
+.logo-container {
+  width: 50px; /* Logo container width */
+  text-align: center;
+}
+
+.sidebar img {
+  width: 30px; /* Adjust as per your logo's dimensions */
+  cursor: pointer;
+}
+
+.sidebar nav ul {
+  list-style-type: none;
+  padding: 0;
+  margin-top: 20px;
+}
+
+.sidebar nav ul li {
+  padding: 10px;
+}
+
+.sidebar:hover nav ul li {
+  opacity: 1;
+}
+
+.sidebar nav ul li a {
+  color: white;
+  text-decoration: none;
+}
+
+.content {
+  margin-left: 50px; /* Match the initial width of the sidebar */
+  padding: 20px;
+  transition: margin-left 0.3s;
+}
+
+.sidebar:hover ~ .content {
+  margin-left: 200px; /* Match the expanded width of the sidebar */
+}
+
+/* ... existing styles ... */
+
+.sidebar ul li a {
+  display: flex;
+  align-items: center;
+  color: white;
+  text-decoration: none;
+}
+
+.sidebar ul li a span {
+  margin-left: 10px;
+  display: none; /* Hide text labels by default */
+}
+
+.sidebar:hover ul li a span {
+  display: inline; /* Show text labels on hover */
+}
+
+/* Icon styles */
+.sidebar nav ul li a .fa-icon {
+  min-width: 20px; /* Ensure icons have space */
+}

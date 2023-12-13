@@ -14,7 +14,7 @@ import {
   LayoutAction,
   TopMenu,
   EditorWrapper,
-} from './WorkTreeGraphStyles'; // Import your styles
+} from './WorkTreeItemStyles'; // Import your styles
 
 
 
@@ -133,7 +133,6 @@ function WorkTreeGraph() {
   ), [worktreeHierarchy, editor, showNodeDetails, selectedNode]); // Specify dependencies
 
   return (
-    <div className="App">
       <PageContainer>
         <TopMenu>
           <Button onClick={() => setSelectedView('Editor')}>Editor</Button>
@@ -155,7 +154,6 @@ function WorkTreeGraph() {
             {editorComponent}
           </EditorWrapper>
       </PageContainer>
-    </div>
   );
 }
 
