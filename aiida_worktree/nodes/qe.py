@@ -79,7 +79,7 @@ class AiiDAPW(Node):
 
     identifier = "AiiDAPW"
     name = "PW"
-    node_type = "calcfunction"
+    node_type = "calcjob"
     catalog = "QE"
     args = []
     kwargs = ["kpoints", "parameters", "pseudos", "structure", "code", "metadata"]
@@ -111,7 +111,7 @@ class AiiDADos(Node):
 
     identifier = "AiiDADos"
     name = "Dos"
-    node_type = "calcfunction"
+    node_type = "calcjob"
     catalog = "QE"
     args = []
     kwargs = ["parent_folder", "code", "parameters", "metadata"]
@@ -140,7 +140,7 @@ class AiiDAProjwfc(Node):
 
     identifier = "AiiDAProjwfc"
     name = "Projwfc"
-    node_type = "calcfunction"
+    node_type = "calcjob"
     catalog = "QE"
     args = []
     kwargs = ["parent_folder", "code", "parameters", "metadata"]

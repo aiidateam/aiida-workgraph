@@ -200,14 +200,13 @@ class WorkTree(node_graph.NodeGraph):
         Args:
             pk (int): The primary key of the process node.
         """
-        from aiida.orm.utils.serialize import deserialize_unsafe
+        from aiida_worktree.utils import get_worktree_data
 
         process = aiida.orm.load_node(pk)
-        wtdata = process.base.extras.get("worktree", None)
+        wtdata = get_worktree_data(process)
         if wtdata is None:
             print("No worktree data found in the process node.")
             return
-        wtdata = deserialize_unsafe(wtdata)
         wt = cls.from_dict(wtdata)
         wt.process = process
         wt.update()

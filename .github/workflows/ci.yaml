@@ -73,14 +73,10 @@ jobs:
             run: sudo apt update && sudo apt install --no-install-recommends libfftw3-dev quantum-espresso
 
         -   name: Install Python dependencies
-            run: pip install -e .[pre-commit,tests]
-
-        -   name: Copy custom node file, add custom node path to sys path
             run: |
-                mkdir ~/.scinode
-                mkdir ~/.scinode/custom_node
-                export PYTHONPATH=~/.scinode/custom_node/:$PYTHONPATH
-                echo "PYTHONPATH=$PYTHONPATH" >> $GITHUB_ENV
+                pip install -e .[pre-commit,tests]
+                playwright install
+
         -   name: Create AiiDA profile
             run: verdi setup -n --config .github/config/profile.yaml
 
@@ -109,6 +105,19 @@ jobs:
 
         -   name: Start AiiDA daemon
             run: verdi daemon start 2
+
+        -   name: FastAPI
+            working-directory: aiida_worktree/web/backend
+            run: |
+                python main.py &
+
+        -   name: Install Dependencies, Start React Application
+            working-directory: aiida_worktree/web/frontend
+            run: |
+                npm install
+                # npm run build
+                npm run start &
+                sleep 5
 
         -   name: Run pytest
             env:

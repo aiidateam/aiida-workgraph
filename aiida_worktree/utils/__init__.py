@@ -150,6 +150,72 @@ def get_dict_from_builder(builder):
         return builder
 
 
+def get_worktree_data(process):
+    """Get the worktree data from the process node."""
+    from aiida.orm.utils.serialize import deserialize_unsafe
+    from aiida.orm import load_node
+
+    if isinstance(process, int):
+        process = load_node(process)
+    wtdata = process.base.extras.get("worktree", None)
+    if wtdata is None:
+        return
+    wtdata = deserialize_unsafe(wtdata)
+    return wtdata
+
+
+def get_parent_worktrees(pk):
+    """Get the list of parent worktrees.
+    Use aiida incoming links to find the parent worktrees.
+    the parent worktree is the worktree that has a link (type CALL_WORK) to the current worktree.
+    """
+    from aiida import orm
+    from aiida.common.links import LinkType
+
+    node = orm.load_node(pk)
+    parent_worktrees = [[node.process_label, node.pk]]
+    links = node.base.links.get_incoming(link_type=LinkType.CALL_WORK).all()
+    print(links)
+    if len(links) > 0:
+        parent_worktrees.extend(get_parent_worktrees(links[0].node.pk))
+    print(parent_worktrees)
+    return parent_worktrees
+
+
+def get_processes_latest(pk):
+    """Get the latest info of all nodes from the process."""
+    import aiida
+
+    process = aiida.orm.load_node(pk)
+    outgoing = process.base.links.get_outgoing()
+    nodes = {}
+    for link in outgoing.all():
+        node = link.node
+        # the link is added in order
+        # so the restarted node will be the last one
+        # thus the node is correct
+        if isinstance(node, aiida.orm.ProcessNode) and getattr(
+            node, "process_state", False
+        ):
+            nodes[link.link_label] = {
+                "pk": node.pk,
+                "state": node.process_state.value,
+                "ctime": node.ctime,
+                "mtime": node.mtime,
+            }
+
+        elif isinstance(node, aiida.orm.Data):
+            label = link.link_label.split("__", 1)[1]
+            if label in nodes.keys():
+                nodes[label] = {
+                    "pk": node.pk,
+                    "state": "Stored" if node.is_stored else "Unstored",
+                    "ctime": nodes.ctime,
+                    "mtime": nodes.mtime,
+                }
+    return nodes
+
+
 if __name__ == "__main__":
     d = {
         "base": {

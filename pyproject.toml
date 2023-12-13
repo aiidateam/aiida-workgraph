@@ -26,11 +26,13 @@ keywords = ["aiida", "workflows"]
 requires-python = ">=3.9"
 dependencies = [
     "numpy~=1.21",
-    "node-graph @ git+https://github.com/scinode/node-graph.git#egg=node-graph",
+    "node-graph",
     "aiida-core~=2.3",
     "cloudpickle",
     "aiida-pseudo",
     "aiida-quantumespresso",
+    "fastapi",
+    "uvicorn",
 ]
 
 [project.urls]
@@ -56,6 +58,8 @@ pre-commit = [
 tests = [
     "pytest~=7.0",
     "pytest-cov~=2.7,<2.11",
+    "playwright",
+    "httpx",
 ]
 
 [project.scripts]
@@ -81,6 +85,7 @@ worktree = "aiida_worktree.cli.cmd_worktree:worktree"
 exclude = [
     "docs/",
     "tests/",
+    "aiida_worktree/web/frontend/node_modules/",
 ]
 
 

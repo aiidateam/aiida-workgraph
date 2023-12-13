@@ -13,7 +13,6 @@ class WorkTreeQueryBuilder:
         "pk",
         "ctime",
         "process_label",
-        "cached",
         "state",
         "process_status",
     )
@@ -37,8 +36,6 @@ class WorkTreeQueryBuilder:
         "job_state",
         "scheduler_state",
         "exception",
-        "cached",
-        "cached_from",
     )
 
     def __init__(self, mapper=None):
@@ -172,7 +169,7 @@ class WorkTreeQueryBuilder:
         if order_by is not None:
             builder.order_by({"process": order_by})
         else:
-            builder.order_by({"process": {"ctime": "asc"}})
+            builder.order_by({"process": {"ctime": "desc"}})
 
         if limit is not None:
             builder.limit(limit)
