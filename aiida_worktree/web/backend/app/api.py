@@ -41,4 +41,7 @@ a request to the FastAPI server for /settings. Since this route isn't defined in
 backend_dir = Path(__file__).parent
 react_build_directory = backend_dir / "../../frontend/build"
 react_build_directory = os.getenv("REACT_BUILD_DIR", react_build_directory)
-app.mount("/", StaticFiles(directory=react_build_directory, html=True), name="static")
+if os.path.exists(react_build_directory):
+    app.mount(
+        "/", StaticFiles(directory=react_build_directory, html=True), name="static"
+    )
