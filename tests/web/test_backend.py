@@ -5,5 +5,9 @@ def test_root_route(client):
     assert response.json() == {"message": "Welcome to AiiDA-WorkTree."}
 
 
-# Add more test cases for your other routes and features
-# For example, testing authentication, database interactions, etc.
+# Sample test case for the root route
+def test_worktree_route(client, wt_calcfunction):
+    wt_calcfunction.submit(wait=True)
+    response = client.get("/api/worktree-data")
+    assert response.status_code == 200
+    assert len(response.json()) > 0

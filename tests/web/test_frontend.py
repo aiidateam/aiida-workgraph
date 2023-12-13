@@ -15,7 +15,8 @@ def test_homepage(page):
         pytest.fail("Element 'a[href='/wortre']' not found on the page")
 
 
-def test_worktree(page):
+def test_worktree(page, wt_calcfunction):
+    wt_calcfunction.submit(wait=True)
     page.goto("http://localhost:3000/worktree")
 
     # Check for the existence of a specific element on the page
@@ -38,6 +39,7 @@ def test_worktree(page):
     assert page.locator(".pagination").is_visible()
 
     # Verify the presence of at least one row in the table
+    page.wait_for_timeout(3000)
     assert page.locator("tr").count() >= 2  # Including header row
 
 
