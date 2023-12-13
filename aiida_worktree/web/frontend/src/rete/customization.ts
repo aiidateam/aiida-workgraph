@@ -12,12 +12,12 @@ import {
 } from 'rete-react-plugin';
 import { createRoot } from 'react-dom/client';
 
-import { CustomNode } from '../customization/CustomNode';
-import { StyledNode } from '../customization/StyledNode';
-import { CustomSocket } from '../customization/CustomSocket';
-import { CustomConnection } from '../customization/CustomConnection';
+import { CustomNode } from './customization/CustomNode';
+import { StyledNode } from './customization/StyledNode';
+import { CustomSocket } from './customization/CustomSocket';
+import { CustomConnection } from './customization/CustomConnection';
 
-import { addCustomBackground } from '../customization/custom-background';
+import { addCustomBackground } from './customization/custom-background';
 
 type Schemes = GetSchemes<
   ClassicPreset.Node,
