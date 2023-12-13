@@ -73,14 +73,10 @@ jobs:
             run: sudo apt update && sudo apt install --no-install-recommends libfftw3-dev quantum-espresso
 
         -   name: Install Python dependencies
-            run: pip install -e .[pre-commit,tests]
-
-        -   name: Copy custom node file, add custom node path to sys path
             run: |
-                mkdir ~/.scinode
-                mkdir ~/.scinode/custom_node
-                export PYTHONPATH=~/.scinode/custom_node/:$PYTHONPATH
-                echo "PYTHONPATH=$PYTHONPATH" >> $GITHUB_ENV
+                pip install -e .[pre-commit,tests]
+                playwright install
+
         -   name: Create AiiDA profile
             run: verdi setup -n --config .github/config/profile.yaml
 
