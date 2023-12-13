@@ -106,6 +106,18 @@ jobs:
         -   name: Start AiiDA daemon
             run: verdi daemon start 2
 
+        -   name: Install Dependencies
+            working-directory: aiida_worktree/web/frontend
+            run: npm install
+
+        -   name: Start React Application
+            working-directory: aiida_worktree/web/frontend
+            run: npm start
+            background: true
+
+        -   name: Wait for React App to Start
+            run: sleep 10
+
         -   name: Run pytest
             env:
                 AIIDA_WARN_v3: 1

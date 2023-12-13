@@ -3,14 +3,11 @@ import styled from "styled-components";
 
 
 export const WorktreeLogStyle = styled.div`
-  width: 50%;
   .log-section {
-  background-color: #fff;
   border: 1px solid #ddd;
   padding: 1em;
   overflow-x: auto; /* Add horizontal scrollbar */
   overflow-y: auto; /* Add vertical scrollbar */
-  max-height: 400px;
   font-family: monospace;
   white-space: pre;
   font-size: 1.2em;

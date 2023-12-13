@@ -2,10 +2,8 @@
 import styled from "styled-components";
 
 export const WorktreeInfoStyle = styled.div`
-  width: 50%;
   padding: 1em;
   overflow-y: auto;
-  background-color: #fff;
   box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
   box-sizing: border-box;
   display: flex;
