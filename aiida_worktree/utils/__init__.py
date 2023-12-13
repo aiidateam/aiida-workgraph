@@ -182,8 +182,8 @@ def get_parent_worktrees(pk):
     return parent_worktrees
 
 
-def get_node_latest(pk, node_name):
-    """Get the latest info of a node from the process."""
+def get_processes_latest(pk):
+    """Get the latest info of all nodes from the process."""
     import aiida
 
     process = aiida.orm.load_node(pk)
@@ -213,7 +213,7 @@ def get_node_latest(pk, node_name):
                     "ctime": nodes.ctime,
                     "mtime": nodes.mtime,
                 }
-    return nodes.get(node_name)
+    return nodes
 
 
 if __name__ == "__main__":

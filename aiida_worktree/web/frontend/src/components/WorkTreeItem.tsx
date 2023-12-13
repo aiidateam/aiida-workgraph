@@ -8,6 +8,7 @@ import WorktreeIndicator from './WorktreeIndicator'; // Import the WorktreeIndic
 import WorktreeSummary from './WorktreeSummary';
 import WorkTreeLog from './WorkTreeLog';
 import NodeDetails from './NodeDetails';
+import NodeDurationGraph from './WorkTreeDuration'
 import {
   PageContainer,
   EditorContainer,
@@ -63,7 +64,7 @@ export function useRete<T extends { destroy(): void }>(
 
 function WorkTreeGraph() {
   const { pk } = useParams();
-  const [worktreeData, setWorktreeData] = useState({ summary: [], nodes: {}, links: [], logs: [] });
+  const [worktreeData, setWorktreeData] = useState({ summary: [], nodes: {}, links: [], logs: [], processes_info: [] });
   const [ref, editor] = useRete(createEditor, worktreeData);
   const [selectedNode, setSelectedNode] = useState({ metadata: [], executor: '' });
   const [showNodeDetails, setShowNodeDetails] = useState(false);
@@ -132,15 +133,18 @@ function WorkTreeGraph() {
       <div ref={ref} style={{ height: 'calc(100% - 2em)', width: '100%' }}></div>
   ), [worktreeHierarchy, editor, showNodeDetails, selectedNode]); // Specify dependencies
 
+
   return (
       <PageContainer>
         <TopMenu>
           <Button onClick={() => setSelectedView('Editor')}>Editor</Button>
           <Button onClick={() => setSelectedView('Summary')}>Summary</Button>
           <Button onClick={() => setSelectedView('Log')}>Log</Button>
+          <Button onClick={() => setSelectedView('Time')}>Time</Button>
         </TopMenu>
           {selectedView === 'Summary' && <WorktreeSummary summary={worktreeData.summary} />}
           {selectedView === 'Log' && <WorkTreeLog logs={worktreeData.logs} />}
+          {selectedView === 'Time' && <NodeDurationGraph processesInfo={worktreeData.processes_info}/>}
           <EditorWrapper visible={selectedView === 'Editor'}>
             <EditorContainer>
               <WorktreeIndicator parentWorktrees={worktreeHierarchy} />

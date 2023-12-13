@@ -41,7 +41,7 @@ def is_function_and_get_source(obj):
 
 def node_to_short_json(worktree_pk, ndata):
     """Export a node to a rete js node."""
-    from aiida_worktree.utils import get_executor, get_node_latest
+    from aiida_worktree.utils import get_executor, get_processes_latest
 
     executor, _ = get_executor(ndata["executor"])
     is_function, source_code = is_function_and_get_source(executor)
@@ -58,7 +58,7 @@ def node_to_short_json(worktree_pk, ndata):
         ],
         "executor": executor,
     }
-    process_info = get_node_latest(worktree_pk, ndata["name"])
+    process_info = get_processes_latest(worktree_pk)[ndata["name"]]
     ndata_short["process"] = process_info
     if process_info is not None:
         ndata_short["metadata"].append(["pk", process_info["pk"]])

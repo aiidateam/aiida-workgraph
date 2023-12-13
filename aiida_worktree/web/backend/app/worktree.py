@@ -58,7 +58,7 @@ async def read_worktree_item(id: int):
     from .utils import worktree_to_short_json, get_node_summary
     from aiida.cmdline.utils.common import get_workchain_report
     from aiida.orm.utils.serialize import deserialize_unsafe
-    from aiida_worktree.utils import get_parent_worktrees
+    from aiida_worktree.utils import get_parent_worktrees, get_processes_latest
 
     try:
         node = orm.load_node(id)
@@ -73,9 +73,11 @@ async def read_worktree_item(id: int):
         report = get_workchain_report(node, "REPORT")
         parent_worktrees = get_parent_worktrees(id)
         parent_worktrees.reverse()
+        processes_info = get_processes_latest(id)
         content["summary"] = summary
         content["logs"] = report.splitlines()
         content["parent_worktrees"] = parent_worktrees
+        content["processes_info"] = processes_info
         return content
     except KeyError:
         raise HTTPException(status_code=404, detail=f"Worktree {id} not found")
