@@ -21,8 +21,8 @@ const NodeDetailsPanel = styled.div`
   right: 0;
   background-color: #fff;
   box-shadow: -2px 0 5px rgba(0, 0, 0, 0.1);
-  width: 20%;
-  height: 100%;
+  width: 25%;
+  height: 100vh;
   padding: 20px;
   box-sizing: border-box;
   display: flex;
@@ -87,9 +87,22 @@ const PythonCode = styled(SyntaxHighlighter)`
   font-family: monospace; /* Use a monospace font */
 `;
 
+const InputsCode = styled(SyntaxHighlighter)`
+  width: 100%;
+  max-width: 100%;
+  max-height: 300px;
+  overflow-x: auto;
+  white-space: pre;
+  margin-top: 10px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  padding: 10px;
+  background-color: #f7f7f7;
+  font-family: monospace;
+`;
 
 function NodeDetails({ selectedNode, onClose, setShowNodeDetails }) {
-  const navigate = useNavigate(); // Use the useNavigate hook
+  const navigate = useNavigate();
 
   const handleClose = () => {
     setShowNodeDetails(false);
@@ -98,7 +111,7 @@ function NodeDetails({ selectedNode, onClose, setShowNodeDetails }) {
 
   const handleWorktreeClick = () => {
     if (selectedNode.node_type === 'worktree') {
-      navigate(`/worktree/${selectedNode.process.pk}`); // Use the navigate function to navigate
+      navigate(`/worktree/${selectedNode.process.pk}`);
     }
   };
 
@@ -119,6 +132,20 @@ function NodeDetails({ selectedNode, onClose, setShowNodeDetails }) {
           ))}
         </NodeDetailsTable>
       )}
+      <div>
+        <strong>Inputs:</strong>
+      </div>
+      <InputsCode language="python" style={dark}>
+        {/* Display args and inputs here */}
+        {selectedNode.inputs}
+      </InputsCode>
+      <div>
+        <strong>Outputs:</strong>
+      </div>
+      <InputsCode language="python" style={dark}>
+        {/* Display args and inputs here */}
+        {selectedNode.outputs}
+      </InputsCode>
       <div>
         <strong>Executor:</strong>
       </div>

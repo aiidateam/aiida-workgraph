@@ -55,7 +55,12 @@ async def read_worktree_node(id: int, node_name: str):
 
 @router.get("/api/worktree/{id}")
 async def read_worktree_item(id: int):
-    from .utils import worktree_to_short_json, get_node_summary
+    from .utils import (
+        worktree_to_short_json,
+        get_node_summary,
+        get_node_inputs,
+        get_node_outputs,
+    )
     from aiida.cmdline.utils.common import get_workchain_report
     from aiida.orm.utils.serialize import deserialize_unsafe
     from aiida_worktree.utils import get_parent_worktrees, get_processes_latest
@@ -69,7 +74,11 @@ async def read_worktree_item(id: int):
             return
         wtdata = deserialize_unsafe(wtdata)
         content = worktree_to_short_json(wtdata)
-        summary = get_node_summary(node)
+        summary = {
+            "table": get_node_summary(node),
+            "inputs": get_node_inputs(id),
+            "outputs": get_node_outputs(id),
+        }
         report = get_workchain_report(node, "REPORT")
         parent_worktrees = get_parent_worktrees(id)
         parent_worktrees.reverse()

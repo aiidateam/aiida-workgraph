@@ -64,7 +64,7 @@ export function useRete<T extends { destroy(): void }>(
 
 function WorkTreeGraph() {
   const { pk } = useParams();
-  const [worktreeData, setWorktreeData] = useState({ summary: [], nodes: {}, links: [], logs: [], processes_info: [] });
+  const [worktreeData, setWorktreeData] = useState({ summary: {}, nodes: {}, links: [], logs: [], processes_info: [] });
   const [ref, editor] = useRete(createEditor, worktreeData);
   const [selectedNode, setSelectedNode] = useState({ metadata: [], executor: '' });
   const [showNodeDetails, setShowNodeDetails] = useState(false);
@@ -103,6 +103,7 @@ function WorkTreeGraph() {
             }
 
             const data = await response.json();
+            console.log(data);
             // Assuming data contains the details you need from the backend
             // Update your component state with the fetched data
             setSelectedNode(data);
