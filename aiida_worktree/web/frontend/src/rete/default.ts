@@ -146,7 +146,6 @@ export async function createEditor(container: HTMLElement, worktreeData: any) {
   };
 
   await layout(true)
-  console.log('Editor created')
 
   return {
     editor: editor,

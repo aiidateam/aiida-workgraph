@@ -179,6 +179,9 @@ function WorkTreeGraph() {
       };
 
       editor.area.addPipe(handleNodePick);
+      /* Add arrange node, maybe there is a better plance to add */
+      editor?.layout(true)
+
 
       // Cleanup function to remove the event listener
       // return () => {
@@ -195,6 +198,7 @@ function WorkTreeGraph() {
   const editorComponent = useMemo(() => (
       <div ref={ref} style={{ height: 'calc(100% - 2em)', width: '100%' }}></div>
   ), [worktreeHierarchy, editor, showNodeDetails, selectedNode]); // Specify dependencies
+
 
 
   return (
