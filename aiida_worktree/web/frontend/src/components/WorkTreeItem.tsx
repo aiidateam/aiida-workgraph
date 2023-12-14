@@ -63,7 +63,7 @@ export function useRete<T extends { destroy(): void }>(
 
 function WorkTreeGraph() {
   const { pk } = useParams();
-  const [worktreeData, setWorktreeData] = useState({ summary: {}, nodes: {}, links: [], logs: [], processes_info: [] });
+  const [worktreeData, setWorktreeData] = useState({ summary: {}, nodes: {}, links: [], logs: [], pk: [] });
   const [ref, editor] = useRete(createEditor, worktreeData);
   const [selectedNode, setSelectedNode] = useState({ metadata: [], executor: '' });
   const [showNodeDetails, setShowNodeDetails] = useState(false);
@@ -207,7 +207,7 @@ function WorkTreeGraph() {
         </TopMenu>
           {selectedView === 'Summary' && <WorktreeSummary summary={worktreeData.summary} />}
           {selectedView === 'Log' && <WorkTreeLog logs={worktreeData.logs} />}
-          {selectedView === 'Time' && <NodeDurationGraph processesInfo={worktreeData.processes_info}/>}
+          {selectedView === 'Time' && <NodeDurationGraph id={pk}/>}
           <EditorWrapper visible={selectedView === 'Editor'}>
           <WorktreeIndicator parentWorktrees={worktreeHierarchy} />
             <EditorContainer>
