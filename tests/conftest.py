@@ -90,7 +90,10 @@ def decorated_add():
     """Generate a decorated node for test."""
 
     @node.calcfunction()
-    def add(x, y):
+    def add(x, y, t=1):
+        import time
+
+        time.sleep(t.value)
         return x + y
 
     return add
@@ -101,7 +104,10 @@ def decorated_multiply():
     """Generate a decorated node for test."""
 
     @node.calcfunction()
-    def multiply(x, y):
+    def multiply(x, y, t=1):
+        import time
+
+        time.sleep(t.value)
         return x * y
 
     return multiply
