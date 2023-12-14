@@ -11,29 +11,28 @@ In AiiDA, there are two workflow components: `workfunction` and `WorkChain`. Wor
 Here is a detailed comparison between the ``WorkTree`` with two AiiDA built-in workflow components.
 
 
-| Aspect                   | WorkFunction           | WorkChain              | WorkTree               |
-| ------------------------ | ---------------------- | ---------------------- | ---------------------- |
-| Use Case                 | Short-running jobs     | Long-running jobs      | Long-running jobs      |
-| Checkpointing            | ``No``                 | Yes                    | Yes                    |
-| Execution order          | ``Sequential``         | ``Sequential``         | Directed Acyclic Graph |
-| Non-blocking             | ``No``                 | Yes                    | Yes                    |
-| Implementation           | Easy                   | ``Difficult``          | Easy                   |
-| Dynamic                  | ``No``                 | ``No``                 | Yes                    |
-| Ready to Use             | Yes                    | ``Need PYTHONPATH``    | Yes                    |
-| Subprocesses Handling    | ``No``                 | Launches & waits       | Launches & waits       |
-| Flow Control             | All                    | `if`, `while`          | `if`, `while`, `match` |
-| Termination              | ``Hard exit``          | ExitCode               | ExitCode               |
-| Capabilities             | Calls calcs and works  | Calls any process      | Calls any process      |
-| Data Passing             | Direct passing         | Context                | Link & Context         |
-| Output Recording         | Limited support        | Out & validates        | Out                    |
-| Port Exposing            | Limited support        | Manual & automatic     | Manual                 |
+| Aspect                   | WorkFunction           | WorkChain                     | WorkTree               |
+| ------------------------ | ---------------------- | ----------------------------- | ---------------------- |
+| Use Case                 | Short-running jobs     | Long-running jobs             | Long-running jobs      |
+| Checkpointing            | ``No``                 | Yes                           | Yes                    |
+| Execution order          | ``Sequential``         | ``Hybrid Sequential-Parallel``| Directed Acyclic Graph |
+| Non-blocking             | ``No``                 | Yes                           | Yes                    |
+| Implementation           | Easy                   | ``Difficult``                 | Easy                   |
+| Dynamic                  | ``No``                 | ``No``                        | Yes                    |
+| Ready to Use             | Yes                    | ``Need PYTHONPATH``           | Yes                    |
+| Subprocesses Handling    | ``No``                 | Launches & waits              | Launches & waits       |
+| Flow Control             | All                    | `if`, `while`                 | `if`, `while`, `match` |
+| Termination              | ``Hard exit``          | ExitCode                      | ExitCode               |
+| Data Passing             | Direct passing         | Context                       | Link & Context         |
+| Output Recording         | Limited support        | Out & validates               | Out                    |
+| Port Exposing            | Limited support        | Manual & automatic            | Manual                 |
 
 
 
 ## Installation
 
 ```console
-    pip install git+https://github.com/superstar54/aiida-worktree
+    pip install aiida-worktree
 ```
 
 
@@ -67,13 +66,10 @@ from aiida import load_profile
 from aiida.orm import Int
 load_profile()
 
-x = Int(2.0)
-y = Int(3.0)
-z = Int(4.0)
 
 wt = WorkTree("test_add_multiply")
-wt.nodes.new(add, name="add1", x=x, y=y)
-wt.nodes.new(multiply, name="multiply1", y=z)
+wt.nodes.new(add, name="add1", x=Int(2.0), y=Int(3.0))
+wt.nodes.new(multiply, name="multiply1", y=Int(4.0))
 wt.links.new(wt.nodes["add1"].outputs[0], wt.nodes["multiply1"].inputs["x"])
 wt.submit(wait=True)
 ```
@@ -83,10 +79,19 @@ The node graph from the worktree process:
 <img src="docs/source/_static/images/add_multiply.png"/>
 
 
-## TODO
-- For the moment, I did not create a `WorkTreeNode` for the `WorkTree` process. I used the `WorkChainNode`, because AiiDA hard codes the `WorkChainNode` for the command (report), graph etc.
+## Development
 
-## Build and publish
+### Pre-commit and Tests
+To contribute to this repository, please enable pre-commit so the code in commits are conform to the standards.
+```console
+pip install -e .[tests, pre-commit]
+pre-commit install
+```
+
+### Web app
+See the [README.md](https://github.com/superstar54/aiida-worktree/blob/main/aiida_worktree/web/README.md)
+
+### Build and publish
 Build package:
 ```console
 pip install build
