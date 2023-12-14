@@ -56,7 +56,7 @@ const NodeDurationGraph = ({ id }) => {
     const defaultTimeEnd = moment.max(items.map(item => item.end_time));
 
     // Define minimum and maximum zoom (in milliseconds)
-    const minZoom = 100000; // 1 second in milliseconds
+    const minZoom = 10000; // 1 second in milliseconds
     const maxZoom = 365.25 * 24 * 60 * 60 * 1000; // 1 year in milliseconds
 
     return (
