@@ -179,7 +179,7 @@ function WorkTreeGraph() {
       };
 
       editor.area.addPipe(handleNodePick);
-      /* Add arrange node, maybe there is a better plance to add this */
+      /* Add arrange node, maybe there is a better plance to add */
       editor?.layout(true)
 
 

@@ -74,7 +74,20 @@ wt.links.new(wt.nodes["add1"].outputs[0], wt.nodes["multiply1"].inputs["x"])
 wt.submit(wait=True)
 ```
 
-The node graph from the worktree process:
+Start the web app, open a terminal and run:
+```console
+worktree web start
+```
+
+Then visit the page http://127.0.0.1:8000/worktree, you should find a `first_workflow` Worktree, click the pk and view the WorkTree.
+
+<img src="docs/source/_static/images/first-workflow.png" />
+
+
+One can also generate the node graph from the process:
+```console
+verdi node generate pk
+```
 
 <img src="docs/source/_static/images/add_multiply.png"/>
 
