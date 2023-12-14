@@ -209,8 +209,8 @@ function WorkTreeGraph() {
           {selectedView === 'Log' && <WorkTreeLog logs={worktreeData.logs} />}
           {selectedView === 'Time' && <NodeDurationGraph processesInfo={worktreeData.processes_info}/>}
           <EditorWrapper visible={selectedView === 'Editor'}>
+          <WorktreeIndicator parentWorktrees={worktreeHierarchy} />
             <EditorContainer>
-              <WorktreeIndicator parentWorktrees={worktreeHierarchy} />
               <LayoutAction>
               <div>
                 <Switch
