@@ -92,6 +92,17 @@ async def read_worktree_item(id: int):
         raise HTTPException(status_code=404, detail=f"Worktree {id} not found")
 
 
+@router.get("/api/worktree-state/{id}")
+async def read_worktree_item_state(id: int):
+    from aiida_worktree.utils import get_processes_latest
+
+    try:
+        processes_info = get_processes_latest(id)
+        return processes_info
+    except KeyError:
+        raise HTTPException(status_code=404, detail=f"Worktree {id} not found")
+
+
 # Route for pausing a worktree item
 @router.post("/api/worktree/pause/{id}")
 async def pause_worktree_node(
