@@ -1,7 +1,10 @@
 // WorktreeSummary.js
 import styled from "styled-components";
+import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
+import { dark } from 'react-syntax-highlighter/dist/esm/styles/prism'; // Correct import for 'dark' style
 
 export const WorktreeInfoStyle = styled.div`
+  width: 50%;
   padding: 1em;
   overflow-y: auto;
   box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
@@ -43,7 +46,19 @@ export const WorktreeInfoStyle = styled.div`
     }
   }
   `;
-
+  export const InputsCode = styled(SyntaxHighlighter)`
+  width: 100%;
+  max-width: 100%;
+  max-height: 300px;
+  overflow-x: auto;
+  white-space: pre;
+  margin-top: 10px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  padding: 10px;
+  background-color: #f7f7f7;
+  font-family: monospace;
+`;
 
 function WorktreeSummary({ summary }) {
   return (
@@ -51,13 +66,27 @@ function WorktreeSummary({ summary }) {
     <div>
       <h2>Summary</h2>
       <div className="info-table">
-        {summary.map(([property, value]) => (
+        {summary.table.map(([property, value]) => (
           <div className="info-row" key={property}>
             <div className="property">{property}</div>
             <div className="value">{value}</div>
           </div>
         ))}
       </div>
+      <div>
+        <strong>Inputs:</strong>
+      </div>
+      <InputsCode language="python" style={dark}>
+        {/* Display args and inputs here */}
+        {summary.inputs}
+      </InputsCode>
+      <div>
+        <strong>Outputs:</strong>
+      </div>
+      <InputsCode language="python" style={dark}>
+        {/* Display args and inputs here */}
+        {summary.outputs}
+      </InputsCode>
     </div>
     </WorktreeInfoStyle>
   );

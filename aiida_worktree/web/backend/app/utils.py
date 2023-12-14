@@ -1,3 +1,6 @@
+from aiida.orm import load_node
+
+
 def worktree_to_short_json(wtdata):
     """Export a worktree to a rete js editor data."""
     wtdata_short = {
@@ -39,6 +42,42 @@ def is_function_and_get_source(obj):
         return False, None
 
 
+def get_node_inputs(pk):
+    from aiida.common.links import LinkType
+    from aiida.cmdline.utils.common import format_nested_links
+
+    if pk is None:
+        return ""
+
+    node = load_node(pk)
+    result = ""
+    nodes_input = node.base.links.get_incoming(
+        link_type=(LinkType.INPUT_CALC, LinkType.INPUT_WORK)
+    )
+    if nodes_input:
+        result += f"{format_nested_links(nodes_input.nested(), headers=['Inputs', 'PK', 'Type'])}"
+
+    return result
+
+
+def get_node_outputs(pk):
+    from aiida.common.links import LinkType
+    from aiida.cmdline.utils.common import format_nested_links
+
+    if pk is None:
+        return ""
+
+    node = load_node(pk)
+    result = ""
+    nodes_output = node.base.links.get_outgoing(
+        link_type=(LinkType.CREATE, LinkType.RETURN)
+    )
+    if nodes_output.all():
+        result += f"{format_nested_links(nodes_output.nested(), headers=['outputs', 'PK', 'Type'])}"
+
+    return result
+
+
 def node_to_short_json(worktree_pk, ndata):
     """Export a node to a rete js node."""
     from aiida_worktree.utils import get_executor, get_processes_latest
@@ -65,6 +104,11 @@ def node_to_short_json(worktree_pk, ndata):
         ndata_short["metadata"].append(["state", process_info.get("state")])
         ndata_short["metadata"].append(["ctime", process_info.get("ctime")])
         ndata_short["metadata"].append(["mtime", process_info.get("mtime")])
+        ndata_short["inputs"] = get_node_inputs(process_info.get("pk"))
+        ndata_short["outputs"] = get_node_outputs(process_info.get("pk"))
+    else:
+        ndata_short["inputs"] = ""
+        ndata_short["outputs"] = ""
 
     return ndata_short
 

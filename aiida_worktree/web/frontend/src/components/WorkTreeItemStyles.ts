@@ -36,10 +36,12 @@ export const EditorContainer = styled.div`
 
 export const LayoutAction = styled.div`
   position: relative;
+  display: flex;
+  flex-direction: column; /* Removed single quotes */
+  align-items: flex-start; /* Removed single quotes */
   top: 1em;
   left: 1em;
-  display: flex;
-  align-items: center;
+  align-items: left;
   gap: 0.5em;
   z-index: 10;
 `;

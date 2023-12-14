@@ -42,7 +42,7 @@ def test_decorator_node_group(decorated_add_multiply_group):
     from aiida_worktree import WorkTree
 
     wt = WorkTree("test_node_group")
-    add1 = wt.nodes.new("AiiDAAdd", "add1", x=2, y=3)
+    add1 = wt.nodes.new("AiiDAAdd", "add1", x=2, y=3, t=10)
     add_multiply1 = wt.nodes.new(
         decorated_add_multiply_group, "add_multiply1", y=3, z=4
     )
