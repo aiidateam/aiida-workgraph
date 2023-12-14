@@ -1,61 +1,77 @@
-import React, { useEffect, useRef } from 'react';
-import * as d3 from 'd3';
+import React, { useEffect, useState } from 'react';
+import Timeline from 'react-calendar-timeline';
+import 'react-calendar-timeline/lib/Timeline.css';
+import moment from 'moment';
 
-const NodeDurationGraph = ({ processesInfo }) => {
-    const d3Container = useRef(null);
+const NodeDurationGraph = ({ id }) => {
+    const [processesInfo, setProcessesInfo] = useState({});
+    const [groups, setGroups] = useState([]);
+    const [items, setItems] = useState([]);
+
+    // Function to fetch data from the backend
+    const fetchData = async () => {
+        console.log('fetchData', id);
+        try {
+            const response = await fetch(`http://localhost:8000/api/worktree-state/${id}`);
+            if (!response.ok) {
+                throw new Error('Network response was not ok');
+            }
+            const data = await response.json();
+            console.log(data);
+            setProcessesInfo(data);
+        } catch (error) {
+            console.error('Error fetching data:', error);
+        }
+    };
 
     useEffect(() => {
-        if (processesInfo && d3Container.current) {
-            // Clear the existing graph
-            d3.select(d3Container.current).selectAll("*").remove();
+        fetchData();
 
-            // Transform the data
-            const data = Object.entries(processesInfo).map(([name, { ctime, mtime }]) => [name, ctime, mtime]);
+        // Set up polling (optional)
+        const interval = setInterval(fetchData, 1000); // Adjust interval as needed
 
-            const margin = { top: 20, right: 30, bottom: 40, left: 90 };
-            const width = 960 - margin.left - margin.right;
-            const height = 250 - margin.top - margin.bottom;
+        return () => clearInterval(interval); // Clear interval on cleanup
+    }, [id]);
 
-            const svg = d3.select(d3Container.current)
-                .append("svg")
-                .attr("width", width + margin.left + margin.right)
-                .attr("height", height + margin.top + margin.bottom)
-                .append("g")
-                .attr("transform", `translate(${margin.left},${margin.top})`);
+    useEffect(() => {
+        // Transform the processesInfo into groups and items for the timeline
+        const newGroups = Object.keys(processesInfo).map((key, idx) => ({
+            id: idx,
+            title: key
+        }));
 
-            const x = d3.scaleTime()
-                .domain([d3.min(data, d => new Date(d[1])), d3.max(data, d => new Date(d[2]))])
-                .range([0, width]);
+        const newItems = Object.entries(processesInfo).map(([key, { ctime, mtime }], idx) => ({
+            id: idx,
+            group: idx,
+            title: key,
+            start_time: moment(ctime),
+            end_time: moment(mtime)
+        }));
 
-            svg.append("g")
-                .attr("transform", `translate(0,${height})`)
-                .call(d3.axisBottom(x))
-                .selectAll("text")
-                .style("font-size", "12px"); // Adjust X-axis label font size here
-
-            const y = d3.scaleBand()
-                .range([0, height])
-                .domain(data.map(d => d[0]))
-                .padding(0.2);
-
-            svg.append("g")
-                .call(d3.axisLeft(y))
-                .selectAll("text")
-                .style("font-size", "12px"); // Adjust Y-axis label font size here
-
-            svg.selectAll("myRect")
-                .data(data)
-                .join("rect")
-                .attr("x", d => x(new Date(d[1])))
-                .attr("y", d => y(d[0]))
-                .attr("width", d => x(new Date(d[2])) - x(new Date(d[1])))
-                .attr("height", y.bandwidth())
-                .attr("fill", "#69b3a2");
-        }
+        setGroups(newGroups);
+        setItems(newItems);
     }, [processesInfo]);
 
+    const defaultTimeStart = moment.min(items.map(item => item.start_time));
+    const defaultTimeEnd = moment.max(items.map(item => item.end_time));
+
+    // Define minimum and maximum zoom (in milliseconds)
+    const minZoom = 10000; // 1 second in milliseconds
+    const maxZoom = 365.25 * 24 * 60 * 60 * 1000; // 1 year in milliseconds
+
     return (
-        <div ref={d3Container} />
+        <Timeline
+            groups={groups}
+            items={items}
+            defaultTimeStart={defaultTimeStart}
+            defaultTimeEnd={defaultTimeEnd}
+            lineHeight={50}
+            minZoom={minZoom}
+            maxZoom={maxZoom}
+            canMove={false} // Set to false to prevent moving items
+            canChangeGroup={false} // Set to false to prevent changing groups
+            canResize={'both'} // Allow resizing items from both sides
+        />
     );
 };
 
