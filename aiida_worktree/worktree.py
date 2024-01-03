@@ -35,6 +35,7 @@ class WorkTree(node_graph.NodeGraph):
         self.conditions = []
         self.process = None
         self.restart_process = None
+        self.max_number_jobs = 1000000
 
     def run(self):
         """
@@ -136,6 +137,7 @@ class WorkTree(node_graph.NodeGraph):
         }
         wtdata["worktree_type"] = self.worktree_type
         wtdata["conditions"] = self.conditions
+        wtdata["max_number_jobs"] = self.max_number_jobs
 
         return wtdata
 
@@ -181,6 +183,8 @@ class WorkTree(node_graph.NodeGraph):
                 self.nodes[link.link_label].state = node.process_state.value.upper()
                 self.nodes[link.link_label].node = node
                 self.nodes[link.link_label].pk = node.pk
+                self.nodes[link.link_label].ctime = node.ctime
+                self.nodes[link.link_label].mtime = node.mtime
             elif isinstance(node, aiida.orm.Data):
                 label = link.link_label.split("__", 1)[1]
                 if label in self.nodes.keys():

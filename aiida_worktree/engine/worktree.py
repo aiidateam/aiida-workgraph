@@ -37,6 +37,9 @@ if t.TYPE_CHECKING:
 __all__ = "WorkTree"
 
 
+MAX_NUMBER_AWAITABLES_MSG = "The maximum number of subprocesses has been reached: {}. Cannot launch the job: {}."
+
+
 @auto_persist("_awaitables")
 class WorkTree(Process, metaclass=Protect):
     """The `WorkTree` class is used to construct workflows in AiiDA."""
@@ -431,6 +434,9 @@ class WorkTree(Process, metaclass=Protect):
         from aiida_worktree.utils import update_nested_dict
 
         # set up the context variables
+        self.ctx.max_number_awaitables = (
+            wtdata["max_number_jobs"] if wtdata["max_number_jobs"] else 1000000
+        )
         self.ctx["_count"] = 0
         for key, value in wtdata["ctx"].items():
             key = key.replace("__", ".")
@@ -524,7 +530,7 @@ class WorkTree(Process, metaclass=Protect):
             if ready:
                 node_to_run.append(name)
         #
-        self.report("node_to_run: {}".format(",".join(node_to_run)))
+        self.report("nodes ready to run: {}".format(",".join(node_to_run)))
         self.run_nodes(node_to_run)
 
     def update_node_state(self, name):
@@ -607,6 +613,14 @@ class WorkTree(Process, metaclass=Protect):
         for name in names:
             print("-" * 60)
             node = self.ctx.nodes[name]
+            if node["metadata"]["node_type"] in ["calcjob", "workchain", "worktree"]:
+                if len(self._awaitables) > self.ctx.max_number_awaitables:
+                    print(
+                        MAX_NUMBER_AWAITABLES_MSG.format(
+                            self.ctx.max_number_awaitables, name
+                        )
+                    )
+                    continue
             self.report(f"Run node: {name}, type: {node['metadata']['node_type']}")
             # print("Run node: ", name)
             # print("executor: ", node["executor"])
