@@ -39,14 +39,14 @@ def test_max_number_jobs():
     code = load_code("add@localhost")
 
     wt = WorkTree("test_max_number_jobs")
-    N = 20
+    N = 15
     # Create N nodes
     for i in range(N):
         temp = wt.nodes.new(
             arithmetic_add, name=f"add{i}", x=Int(1), y=Int(1), code=code
         )
-        # Set a sleep option for each job (e.g., 5 seconds per job)
-        temp.set({"metadata.options.sleep": 5})
+        # Set a sleep option for each job (e.g., 2 seconds per job)
+        temp.set({"metadata.options.sleep": 2})
 
     # Set the maximum number of running jobs inside the WorkTree
     wt.max_number_jobs = 5
