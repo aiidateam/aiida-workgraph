@@ -113,7 +113,7 @@ class WorkTree(node_graph.NodeGraph):
             process_inited.runner.persister.save_checkpoint(process_inited)
             self.process = process_inited.node
             self.process_inited = process_inited
-            print(f"WorkTree node crated, PK: {self.process.pk}")
+            print(f"WorkTree node created, PK: {self.process.pk}")
         self.save_to_base(wtdata)
         self.update()
 

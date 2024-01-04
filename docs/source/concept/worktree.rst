@@ -14,23 +14,28 @@ Create and launch worktree
 
 .. code-block:: python
 
-    from aiida_worktree import WorkTree
+    from aiida_worktree import WorkTree, node
     wt = WorkTree(name="my_first_worktree")
 
-- Add nodes by using the node identifier.
 
-.. code-block:: python
+Create and use `node`.
 
-    float1 = wt.nodes.new("AiiDAFloat", name = "float1")
-    float2 = wt.nodes.new("AiiDAFloat", name = "float2")
-    sumdiff1 = wt.nodes.new("AiiDASumDiff", name = "sumdiff1")
+.. code:: python
+
+    # define add calcfunction node
+    @node.calcfunction()
+    def add(x, y):
+       return x + y
+
+    add1 = wt.nodes.new(add, name="add1")
+    add2 = wt.nodes.new(add, name="add2")
+
 
 - Add link between nodes:
 
 .. code-block:: python
 
-    wt.links.new(float1.outputs[0], sumdiff1.inputs[0])
-    wt.links.new(float2.outputs[0], sumdiff1.inputs[1])
+    wt.links.new(add1.outputs[0], add2.inputs[0])
 
 - Submit the worktree:
 
@@ -55,6 +60,8 @@ The nodes will be executed when:
 
 - No input node
 - All input nodes finish.
+
+
 
 
 List of all Methods

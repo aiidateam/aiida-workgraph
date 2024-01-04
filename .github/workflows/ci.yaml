@@ -76,6 +76,7 @@ jobs:
             run: |
                 pip install -e .[pre-commit,tests]
                 playwright install
+                pip list
 
         -   name: Create AiiDA profile
             run: verdi setup -n --config .github/config/profile.yaml

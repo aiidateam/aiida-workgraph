@@ -12,7 +12,6 @@ Decorate any Python function using the `node` decorator. To use the power of Aii
 .. code:: python
 
    from aiida_worktree import node
-   from aiida.engine import calcfunction
 
    # define add calcfunction node
    @node.calcfunction()
