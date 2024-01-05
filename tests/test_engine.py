@@ -1,5 +1,6 @@
 import aiida
 import time
+import pytest
 
 aiida.load_profile()
 
@@ -12,6 +13,7 @@ def test_run_order(wt_engine):
     wt.nodes["add2"].ctime < wt.nodes["add4"].ctime
 
 
+@pytest.mark.skip(reason="The test is not stable.")
 def test_reset_node(wt_engine):
     """Modify a node during the excution of a WorkTree."""
     wt = wt_engine

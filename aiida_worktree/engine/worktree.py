@@ -628,7 +628,7 @@ class WorkTree(Process, metaclass=Protect):
             # print("executor: ", node["executor"])
             executor, _ = get_executor(node["executor"])
             print("executor: ", executor)
-            args, kwargs, var_args, var_kwargs = self.get_inputs(node)
+            args, kwargs, var_args, var_kwargs, args_dict = self.get_inputs(node)
             # update the port namespace
             kwargs = update_nested_dict_with_special_keys(kwargs)
             # print("args: ", args)
@@ -665,11 +665,12 @@ class WorkTree(Process, metaclass=Protect):
                 kwargs.setdefault("metadata", {})
                 kwargs["metadata"].update({"call_link_label": name})
                 try:
+                    # since aiida 2.5.0, we need to use args_dict to pass the args to the run_get_node
                     if var_kwargs is None:
-                        results, process = run_get_node(executor, *args, **kwargs)
+                        results, process = run_get_node(executor, **args_dict, **kwargs)
                     else:
                         results, process = run_get_node(
-                            executor, *args, **kwargs, **var_kwargs
+                            executor, *args_dict, **kwargs, **var_kwargs
                         )
                     # only one output
                     if isinstance(results, orm.Data):
@@ -742,6 +743,7 @@ class WorkTree(Process, metaclass=Protect):
     def get_inputs(self, node):
         """Get input based on the links."""
         args = []
+        args_dict = {}
         kwargs = {}
         var_args = None
         var_kwargs = None
@@ -776,9 +778,11 @@ class WorkTree(Process, metaclass=Protect):
         for name in node["metadata"].get("args", []):
             if name in inputs:
                 args.append(inputs[name])
+                args_dict[name] = inputs[name]
             else:
                 value = self.update_ctx_variable(properties[name]["value"])
                 args.append(value)
+                args_dict[name] = value
         for name in node["metadata"].get("kwargs", []):
             if name in inputs:
                 kwargs[name] = inputs[name]
@@ -799,7 +803,7 @@ class WorkTree(Process, metaclass=Protect):
             else:
                 value = self.update_ctx_variable(properties[name]["value"])
                 var_kwargs = value
-        return args, kwargs, var_args, var_kwargs
+        return args, kwargs, var_args, var_kwargs, args_dict
 
     def update_ctx_variable(self, value):
         # replace context variables

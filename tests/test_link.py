@@ -10,10 +10,10 @@ def test_multiply_link():
     from aiida.orm import Float, load_node
 
     @node.calcfunction()
-    def sum(inputs):
+    def sum(datas):
         total = 0
-        for input in inputs:
-            total += load_node(input).value
+        for data in datas:
+            total += load_node(data).value
         return Float(total)
 
     wt = WorkTree(name="test_multiply_link")
