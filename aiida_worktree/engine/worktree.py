@@ -74,7 +74,7 @@ class WorkTree(Process, metaclass=Protect):
     def define(cls, spec):
         super().define(spec)
         spec.input("input_file", valid_type=orm.SinglefileData, required=False)
-        spec.input_namespace("worktree", dynamic=True, required=False)
+        spec.input_namespace("wt", dynamic=True, required=False, help="WorkTree inputs")
         spec.input_namespace("input_nodes", dynamic=True, required=False)
         spec.exit_code(2, "ERROR_SUBPROCESS", message="A subprocess has failed.")
 
@@ -555,6 +555,7 @@ class WorkTree(Process, metaclass=Protect):
         is_finished = True
         for name, node in self.ctx.nodes.items():
             # self.update_node_state(name)
+            print("node: ", name, node["state"])
             if node["state"] in ["RUNNING", "CREATED", "READY"]:
                 is_finished = False
         if is_finished:
@@ -564,6 +565,7 @@ class WorkTree(Process, metaclass=Protect):
             if self.ctx.worktree["worktree_type"].upper() == "FOR":
                 should_run = self.check_for_conditions()
                 is_finished = not should_run
+        print("is worktree finished: ", is_finished)
         return is_finished
 
     def check_while_conditions(self):
@@ -659,7 +661,7 @@ class WorkTree(Process, metaclass=Protect):
                 self.ctx.nodes[name]["state"] = "FINISHED"
                 self.node_to_ctx(name)
             elif node["metadata"]["node_type"] in ["calcfunction", "workfunction"]:
-                print("node  type: calcfunction/workfunction.")
+                print("node type: calcfunction/workfunction.")
                 kwargs.setdefault("metadata", {})
                 kwargs["metadata"].update({"call_link_label": name})
                 try:

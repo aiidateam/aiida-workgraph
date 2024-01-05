@@ -57,7 +57,7 @@ class WorkTree(node_graph.NodeGraph):
             return
         wtdata = self.to_dict()
         merge_properties(wtdata)
-        inputs = {"worktree": wtdata}
+        inputs = {"wt": wtdata}
         # init a process
         runner = manager.get_manager().get_runner()
         process_inited = WorkTreeEngine(runner=runner, inputs=inputs)
@@ -115,7 +115,7 @@ class WorkTree(node_graph.NodeGraph):
         wtdata = self.to_dict()
         merge_properties(wtdata)
         metadata = metadata or {}
-        inputs = {"worktree": wtdata, "metadata": metadata}
+        inputs = {"wt": wtdata, "metadata": metadata}
         if self.process is None:
             # init a process node
             process_inited = WorkTreeEngine(inputs=inputs)
