@@ -35,8 +35,9 @@ class WorkTree(node_graph.NodeGraph):
         self.conditions = []
         self.process = None
         self.restart_process = None
+        self.max_number_jobs = 1000000
 
-    def run(self):
+    def run(self, inputs=None):
         """
         Run the AiiDA worktree process and update the process status. The method uses AiiDA's engine to run
         the process and then calls the update method to update the state of the process.
@@ -45,6 +46,10 @@ class WorkTree(node_graph.NodeGraph):
         from aiida_worktree.utils import merge_properties
         from aiida.manage import manager
 
+        # set node inputs
+        if inputs is not None:
+            for name, input in inputs.items():
+                self.nodes[name].set(input)
         # One can not run again if the process is alreay created. otherwise, a new process node will
         # be created again.
         if self.process is not None:
@@ -52,7 +57,7 @@ class WorkTree(node_graph.NodeGraph):
             return
         wtdata = self.to_dict()
         merge_properties(wtdata)
-        inputs = {"worktree": wtdata}
+        inputs = {"wt": wtdata}
         # init a process
         runner = manager.get_manager().get_runner()
         process_inited = WorkTreeEngine(runner=runner, inputs=inputs)
@@ -63,7 +68,7 @@ class WorkTree(node_graph.NodeGraph):
         self.update()
         return result
 
-    def submit(self, wait=False, timeout=60, restart=False, new=False):
+    def submit(self, inputs=None, wait=False, timeout=60, restart=False, new=False):
         """Submit the AiiDA worktree process and optionally wait for it to finish.
         Args:
             wait (bool): Wait for the process to finish.
@@ -73,6 +78,11 @@ class WorkTree(node_graph.NodeGraph):
             new (bool): Submit a new process.
         """
         from aiida.manage import get_manager
+
+        # set node inputs
+        if inputs is not None:
+            for name, input in inputs.items():
+                self.nodes[name].set(input)
 
         process_controller = get_manager().get_process_controller()
         # Create a new submission
@@ -105,14 +115,14 @@ class WorkTree(node_graph.NodeGraph):
         wtdata = self.to_dict()
         merge_properties(wtdata)
         metadata = metadata or {}
-        inputs = {"worktree": wtdata, "metadata": metadata}
+        inputs = {"wt": wtdata, "metadata": metadata}
         if self.process is None:
             # init a process node
             process_inited = WorkTreeEngine(inputs=inputs)
             process_inited.runner.persister.save_checkpoint(process_inited)
             self.process = process_inited.node
             self.process_inited = process_inited
-            print(f"WorkTree node crated, PK: {self.process.pk}")
+            print(f"WorkTree node created, PK: {self.process.pk}")
         self.save_to_base(wtdata)
         self.update()
 
@@ -136,6 +146,7 @@ class WorkTree(node_graph.NodeGraph):
         }
         wtdata["worktree_type"] = self.worktree_type
         wtdata["conditions"] = self.conditions
+        wtdata["max_number_jobs"] = self.max_number_jobs
 
         return wtdata
 
@@ -181,6 +192,8 @@ class WorkTree(node_graph.NodeGraph):
                 self.nodes[link.link_label].state = node.process_state.value.upper()
                 self.nodes[link.link_label].node = node
                 self.nodes[link.link_label].pk = node.pk
+                self.nodes[link.link_label].ctime = node.ctime
+                self.nodes[link.link_label].mtime = node.mtime
             elif isinstance(node, aiida.orm.Data):
                 label = link.link_label.split("__", 1)[1]
                 if label in self.nodes.keys():

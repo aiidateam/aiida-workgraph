@@ -37,6 +37,9 @@ if t.TYPE_CHECKING:
 __all__ = "WorkTree"
 
 
+MAX_NUMBER_AWAITABLES_MSG = "The maximum number of subprocesses has been reached: {}. Cannot launch the job: {}."
+
+
 @auto_persist("_awaitables")
 class WorkTree(Process, metaclass=Protect):
     """The `WorkTree` class is used to construct workflows in AiiDA."""
@@ -71,7 +74,7 @@ class WorkTree(Process, metaclass=Protect):
     def define(cls, spec):
         super().define(spec)
         spec.input("input_file", valid_type=orm.SinglefileData, required=False)
-        spec.input_namespace("worktree", dynamic=True, required=False)
+        spec.input_namespace("wt", dynamic=True, required=False, help="WorkTree inputs")
         spec.input_namespace("input_nodes", dynamic=True, required=False)
         spec.exit_code(2, "ERROR_SUBPROCESS", message="A subprocess has failed.")
 
@@ -431,6 +434,9 @@ class WorkTree(Process, metaclass=Protect):
         from aiida_worktree.utils import update_nested_dict
 
         # set up the context variables
+        self.ctx.max_number_awaitables = (
+            wtdata["max_number_jobs"] if wtdata["max_number_jobs"] else 1000000
+        )
         self.ctx["_count"] = 0
         for key, value in wtdata["ctx"].items():
             key = key.replace("__", ".")
@@ -524,7 +530,7 @@ class WorkTree(Process, metaclass=Protect):
             if ready:
                 node_to_run.append(name)
         #
-        self.report("node_to_run: {}".format(",".join(node_to_run)))
+        self.report("nodes ready to run: {}".format(",".join(node_to_run)))
         self.run_nodes(node_to_run)
 
     def update_node_state(self, name):
@@ -549,6 +555,7 @@ class WorkTree(Process, metaclass=Protect):
         is_finished = True
         for name, node in self.ctx.nodes.items():
             # self.update_node_state(name)
+            print("node: ", name, node["state"])
             if node["state"] in ["RUNNING", "CREATED", "READY"]:
                 is_finished = False
         if is_finished:
@@ -558,6 +565,7 @@ class WorkTree(Process, metaclass=Protect):
             if self.ctx.worktree["worktree_type"].upper() == "FOR":
                 should_run = self.check_for_conditions()
                 is_finished = not should_run
+        print("is worktree finished: ", is_finished)
         return is_finished
 
     def check_while_conditions(self):
@@ -607,12 +615,20 @@ class WorkTree(Process, metaclass=Protect):
         for name in names:
             print("-" * 60)
             node = self.ctx.nodes[name]
+            if node["metadata"]["node_type"] in ["calcjob", "workchain", "worktree"]:
+                if len(self._awaitables) > self.ctx.max_number_awaitables:
+                    print(
+                        MAX_NUMBER_AWAITABLES_MSG.format(
+                            self.ctx.max_number_awaitables, name
+                        )
+                    )
+                    continue
             self.report(f"Run node: {name}, type: {node['metadata']['node_type']}")
             # print("Run node: ", name)
             # print("executor: ", node["executor"])
             executor, _ = get_executor(node["executor"])
             print("executor: ", executor)
-            args, kwargs, var_args, var_kwargs = self.get_inputs(node)
+            args, kwargs, var_args, var_kwargs, args_dict = self.get_inputs(node)
             # update the port namespace
             kwargs = update_nested_dict_with_special_keys(kwargs)
             # print("args: ", args)
@@ -645,15 +661,16 @@ class WorkTree(Process, metaclass=Protect):
                 self.ctx.nodes[name]["state"] = "FINISHED"
                 self.node_to_ctx(name)
             elif node["metadata"]["node_type"] in ["calcfunction", "workfunction"]:
-                print("node  type: calcfunction/workfunction.")
+                print("node type: calcfunction/workfunction.")
                 kwargs.setdefault("metadata", {})
                 kwargs["metadata"].update({"call_link_label": name})
                 try:
+                    # since aiida 2.5.0, we need to use args_dict to pass the args to the run_get_node
                     if var_kwargs is None:
-                        results, process = run_get_node(executor, *args, **kwargs)
+                        results, process = run_get_node(executor, **args_dict, **kwargs)
                     else:
                         results, process = run_get_node(
-                            executor, *args, **kwargs, **var_kwargs
+                            executor, *args_dict, **kwargs, **var_kwargs
                         )
                     # only one output
                     if isinstance(results, orm.Data):
@@ -726,6 +743,7 @@ class WorkTree(Process, metaclass=Protect):
     def get_inputs(self, node):
         """Get input based on the links."""
         args = []
+        args_dict = {}
         kwargs = {}
         var_args = None
         var_kwargs = None
@@ -760,9 +778,11 @@ class WorkTree(Process, metaclass=Protect):
         for name in node["metadata"].get("args", []):
             if name in inputs:
                 args.append(inputs[name])
+                args_dict[name] = inputs[name]
             else:
                 value = self.update_ctx_variable(properties[name]["value"])
                 args.append(value)
+                args_dict[name] = value
         for name in node["metadata"].get("kwargs", []):
             if name in inputs:
                 kwargs[name] = inputs[name]
@@ -783,7 +803,7 @@ class WorkTree(Process, metaclass=Protect):
             else:
                 value = self.update_ctx_variable(properties[name]["value"])
                 var_kwargs = value
-        return args, kwargs, var_args, var_kwargs
+        return args, kwargs, var_args, var_kwargs, args_dict
 
     def update_ctx_variable(self, value):
         # replace context variables

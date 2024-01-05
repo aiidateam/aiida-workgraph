@@ -17,5 +17,6 @@ This section contains a collection of HowTos for various topics.
    restart
    continue_finished_worktree
    protocol
+   queue
    cli
    web
