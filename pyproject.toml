@@ -27,7 +27,7 @@ requires-python = ">=3.9"
 dependencies = [
     "numpy~=1.21",
     "node-graph",
-    "aiida-core~=2.3",
+    "aiida-core < 2.5.0",
     "cloudpickle",
     "aiida-pseudo",
     "aiida-quantumespresso",
