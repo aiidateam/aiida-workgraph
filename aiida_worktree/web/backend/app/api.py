@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from aiida import load_profile
 from aiida_worktree.web.backend.app.daemon import router as daemon_router
 from aiida_worktree.web.backend.app.worktree import router as worktree_router
+from aiida_worktree.web.backend.app.datanode import router as datanode_router
 from fastapi.staticfiles import StaticFiles
 from pathlib import Path
 import os
@@ -31,6 +32,7 @@ async def read_root() -> dict:
 
 
 app.include_router(worktree_router)
+app.include_router(datanode_router)
 app.include_router(daemon_router)
 
 # Integrating React build into a FastAPI application and serving the build (HTML, CSS, JavaScript) as static files

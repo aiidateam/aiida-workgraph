@@ -1,0 +1,29 @@
+/* App.css */
+.table-container {
+  margin: 20px;
+  border-collapse: collapse;
+  width: 100%;
+  max-width: 800px; /* Adjust the max width as needed */
+}
+
+.table-container table {
+  border: 1px solid #ddd;
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.table-container th,
+.table-container td {
+  text-align: left;
+  padding: 8px;
+  border-bottom: 1px solid #ddd;
+}
+
+.table-container th {
+  background-color: #4CAF50;
+  color: white;
+}
+
+.table-container tr:nth-child(even) {
+  background-color: #f2f2f2;
+}

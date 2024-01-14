@@ -1,4 +1,7 @@
 from aiida.orm import load_node
+from datetime import datetime
+from dateutil import relativedelta
+from dateutil.tz import tzlocal
 
 
 def worktree_to_short_json(wtdata):
@@ -162,3 +165,25 @@ def get_node_summary(node):
             table.append(["computer", f"[{node.computer.pk}] {node.computer.label}"])
 
     return table
+
+
+def time_ago(past_time):
+    # Get the current time
+    now = datetime.now(tzlocal())
+
+    # Calculate the time difference
+    delta = relativedelta.relativedelta(now, past_time)
+
+    # Format the time difference
+    if delta.years > 0:
+        return f"{delta.years}Y ago"
+    elif delta.months > 0:
+        return f"{delta.months}M ago"
+    elif delta.days > 0:
+        return f"{delta.days}D ago"
+    elif delta.hours > 0:
+        return f"{delta.hours}h ago"
+    elif delta.minutes > 0:
+        return f"{delta.minutes}min ago"
+    else:
+        return "Just now"

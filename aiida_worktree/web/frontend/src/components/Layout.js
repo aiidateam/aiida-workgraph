@@ -13,7 +13,7 @@ const Layout = ({ children }) => {
           <ul>
             <li><Link to="/"><FontAwesomeIcon icon={faHome} /><span>Home</span></Link></li>
             <li><Link to="/worktree"><FontAwesomeIcon icon={faTree} /><span>WorkTree</span></Link></li>
-            {/* <li><Link to="/node"><FontAwesomeIcon icon={faDotCircle} /><span>Node</span></Link></li> */}
+            <li><Link to="/datanode"><FontAwesomeIcon icon={faDotCircle} /><span>DataNode</span></Link></li>
             <li><Link to="/settings"><FontAwesomeIcon icon={faCog} /><span>Settings</span></Link></li>
           </ul>
         </nav>

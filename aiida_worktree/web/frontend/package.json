@@ -17,6 +17,8 @@
     "antd": "^5.12.1",
     "d3": "^7.8.5",
     "elkjs": "^0.8.2",
+    "fs": "^0.0.1-security",
+    "mathjs": "^12.3.0",
     "moment": "^2.29.4",
     "react": "^18.2.0",
     "react-calendar-timeline": "^0.28.0",
@@ -72,6 +74,7 @@
   "devDependencies": {
     "@types/antd": "^1.0.0",
     "@types/react-syntax-highlighter": "^15.5.11",
-    "@types/styled-components": "^5.1.34"
+    "@types/styled-components": "^5.1.34",
+    "dat.gui": "^0.7.9"
   }
 }
