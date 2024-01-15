@@ -44,3 +44,7 @@
 .action-button:hover {
     background-color: #0056b3; /* Change the background color on hover */
 }
+
+.table {
+  width: 100%; /* Set the table width to 100% */
+}

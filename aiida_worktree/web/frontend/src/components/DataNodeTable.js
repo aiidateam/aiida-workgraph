@@ -3,24 +3,24 @@ import ReactPaginate from 'react-paginate';
 import { Link } from 'react-router-dom';
 import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
-import { FaPlay, FaPause, FaTrash } from 'react-icons/fa'; // Import icons from react-icons
-import './WorkTreeTable.css'; // Import a custom CSS file for styling
-
+import { FaPlay, FaPause, FaTrash } from 'react-icons/fa';
+import './WorkTreeTable.css';
 
 function DataNode() {
     const [data, setData] = useState([]);
     const [currentPage, setCurrentPage] = useState(0);
     const [itemsPerPage] = useState(15);
     const [sortField, setSortField] = useState("pk");
-    const [sortOrder, setSortOrder] = useState('desc'); // 'asc' or 'desc'
-    const [searchQuery, setSearchQuery] = useState('');
+    const [sortOrder, setSortOrder] = useState('desc');
+    const [searchTypeQuery, setSearchTypeQuery] = useState('');
+    const [searchLabelQuery, setSearchLabelQuery] = useState(''); // New state for Label search
 
     useEffect(() => {
-        fetch(`http://localhost:8000/api/datanode-data?search=${searchQuery}`)
+        fetch(`http://localhost:8000/api/datanode-data?typeSearch=${searchTypeQuery}&labelSearch=${searchLabelQuery}`) // Include labelSearch query parameter
             .then(response => response.json())
             .then(data => setData(data))
             .catch(error => console.error('Error fetching data: ', error));
-    }, [searchQuery]);
+    }, [searchTypeQuery, searchLabelQuery]); // Include searchLabelQuery as a dependency
 
     const sortData = (field) => {
         const order = field === sortField && sortOrder === 'asc' ? 'desc' : 'asc';
@@ -34,7 +34,6 @@ function DataNode() {
         setSortOrder(order);
     };
 
-    // Function to render sort indicator
     const renderSortIndicator = (field) => {
         if (sortField === field) {
             return sortOrder === 'asc' ? ' 🔼' : ' 🔽';
@@ -50,20 +49,15 @@ function DataNode() {
         setCurrentPage(event.selected);
     };
 
-
-    // Function to handle delete click
     const handleDeleteClick = (item) => {
-        // Make an API request to delete the worktree item
         fetch(`http://localhost:8000/api/worktree/delete/${item.pk}`, {
             method: 'DELETE',
         })
         .then(response => response.json())
         .then(data => {
-            // Show toast notification for success or error
             if (data.message) {
                 toast.success(data.message);
-                // Refresh the table after delete (you may fetch the updated data here)
-                fetch(`http://localhost:8000/api/worktree-data?search=${searchQuery}`)
+                fetch(`http://localhost:8000/api/worktree-data?TypeSearch=${searchTypeQuery}&labelSearch=${searchLabelQuery}`) // Include labelSearch in refresh
                     .then(response => response.json())
                     .then(data => setData(data))
                     .catch(error => console.error('Error fetching data: ', error));
@@ -80,9 +74,16 @@ function DataNode() {
             <div className="search-container">
                 <input
                     type="text"
-                    placeholder="Search..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder="Search by Type..."
+                    value={searchTypeQuery}
+                    onChange={(e) => setSearchTypeQuery(e.target.value)}
+                    className="search-input"
+                />
+                <input
+                    type="text"
+                    placeholder="Search by Label..." // Add placeholder for Label
+                    value={searchLabelQuery} // Create state for Label search
+                    onChange={(e) => setSearchLabelQuery(e.target.value)} // Create handler for Label search
                     className="search-input"
                 />
             </div>
@@ -92,6 +93,7 @@ function DataNode() {
                         <th onClick={() => sortData('pk')}>PK {renderSortIndicator('pk')}</th>
                         <th onClick={() => sortData('ctime')}>Created {renderSortIndicator('ctime')}</th>
                         <th>Type</th>
+                        <th>Label</th>
                         <th>Actions</th>
                     </tr>
                 </thead>
@@ -103,6 +105,7 @@ function DataNode() {
                             </td>
                             <td>{item.ctime}</td>
                             <td>{item.node_type}</td>
+                            <td>{item.label}</td>
                             <td>
                                 <button onClick={() => handleDeleteClick(item)} className="action-button delete-button"><FaTrash /></button>
                             </td>

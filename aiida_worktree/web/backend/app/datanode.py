@@ -5,19 +5,30 @@ router = APIRouter()
 
 
 @router.get("/api/datanode-data")
-async def read_datanode_data(search: str = Query(None)):
+async def read_datanode_data(
+    typeSearch: str = Query(None),
+    labelSearch: str = Query(None),
+):
     from aiida.orm import QueryBuilder, Data
     from aiida_worktree.web.backend.app.utils import time_ago
 
     try:
         builder = QueryBuilder()
+        filters = {}
+
+        if typeSearch:
+            filters["node_type"] = {"like": f"%{typeSearch}%"}
+
+        if labelSearch:
+            filters["label"] = {"like": f"%{labelSearch}%"}
+
         builder.append(
             Data,
-            filters={"node_type": {"like": f"%{search}%"}} if search else None,
+            filters=filters,
             project=["id", "uuid", "ctime", "node_type", "label"],
             tag="data",
         )
-
+        builder.order_by({"data": {"ctime": "desc"}})
         records = builder.all()
         data = [
             {
