@@ -923,7 +923,7 @@ class WorkTree(Process, metaclass=Protect):
                 group_outputs[output[1]] = get_nested_dict(self.ctx, socket_name)
             else:
                 group_outputs[output[1]] = self.ctx.nodes[node_name]["results"][
-                    output[1]
+                    socket_name
                 ]
         self.out("group_outputs", group_outputs)
         self.out("new_data", self.ctx.new_data)
