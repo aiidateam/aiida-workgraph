@@ -31,6 +31,7 @@ dependencies = [
     "cloudpickle",
     "aiida-pseudo",
     "aiida-quantumespresso",
+    "aiida-shell",
     "fastapi",
     "uvicorn",
 ]
