@@ -86,9 +86,9 @@ def launch_shell_job(  # noqa: PLR0913
 
 
 @node()
-def generate_nodes(data):
+def generate_nodes(file):
     """Prepare the nodes"""
-    return {"pdb": data}
+    return {"pdb": file}
 
 
 # Create a worktree

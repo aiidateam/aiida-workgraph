@@ -1,4 +1,4 @@
-from aiida_worktree import node, WorkTree, build_node
+from aiida_worktree import node, WorkTree
 from aiida import load_profile
 from aiida.orm import load_code
 
@@ -9,25 +9,19 @@ pdb_selchain = load_code("pdb_selchain")
 pdb_delhetatm = load_code("pdb_delhetatm")
 pdb_tidy = load_code("pdb_tidy")
 
-shelljob = build_node({"path": "aiida_shell.calculations.shell.ShellJob"})
-
 
 @node()
-def generate_nodes(data):
+def generate_nodes(file):
     """Prepare the nodes"""
-    return {"pdb": data}
+    return {"pdb": file}
 
 
 # Create a worktree
-wt = WorkTree(name="test_aiida_shell")
-job1 = wt.nodes.new(shelljob, code=pdb_fetch, arguments=["1brs"])
-job1.outputs.new("General", "stdout")
-job2 = wt.nodes.new(shelljob, code=pdb_selchain, arguments=["-A,D", "{pdb}"])
-job2.outputs.new("General", "stdout")
-job3 = wt.nodes.new(shelljob, code=pdb_delhetatm, arguments=["{pdb}"])
-job3.outputs.new("General", "stdout")
-job4 = wt.nodes.new(shelljob, code=pdb_tidy, arguments=["{pdb}"])
-job4.outputs.new("General", "stdout")
+wt = WorkTree(name="test_aiida_shell_calcjob")
+job1 = wt.nodes.new("AiiDAShell", code=pdb_fetch, arguments=["1brs"])
+job2 = wt.nodes.new("AiiDAShell", code=pdb_selchain, arguments=["-A,D", "{pdb}"])
+job3 = wt.nodes.new("AiiDAShell", code=pdb_delhetatm, arguments=["{pdb}"])
+job4 = wt.nodes.new("AiiDAShell", code=pdb_tidy, arguments=["{pdb}"])
 generate_nodes1 = wt.nodes.new(generate_nodes)
 generate_nodes2 = wt.nodes.new(generate_nodes)
 generate_nodes3 = wt.nodes.new(generate_nodes)

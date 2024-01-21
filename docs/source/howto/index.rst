@@ -14,6 +14,7 @@ This section contains a collection of HowTos for various topics.
    for
    while
    ctx
+   aiida_shell
    wait
    restart
    continue_finished_worktree
