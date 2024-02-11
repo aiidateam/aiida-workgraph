@@ -517,7 +517,7 @@ class WorkTree(Process, metaclass=Protect):
             self.ctx.nodes[name]["result"] = None
             self.ctx.nodes[name]["process"] = None
 
-    def continue_worktree(self):
+    def continue_worktree(self, exclude=[]):
         self.report("Continue worktree.")
         self.update_worktree_from_base()
         self.apply_actions()
@@ -527,7 +527,7 @@ class WorkTree(Process, metaclass=Protect):
             if node["state"] in ["RUNNING", "FINISHED", "FAILED", "SKIPPED"]:
                 continue
             ready, output = self.check_parent_state(name)
-            if ready:
+            if ready and name not in exclude:
                 node_to_run.append(name)
         #
         self.report("nodes ready to run: {}".format(",".join(node_to_run)))
@@ -653,7 +653,7 @@ class WorkTree(Process, metaclass=Protect):
                 # ValueError: attempted to add an input link after the process node was already stored.
                 # self.node.base.links.add_incoming(results, "INPUT_WORK", name)
                 self.report(f"Node: {name} finished.")
-                self.continue_worktree()
+                self.continue_worktree(names)
             elif node["metadata"]["node_type"] == "data":
                 print("node  type: data.")
                 results = create_data_node(executor, args, kwargs)
@@ -663,7 +663,7 @@ class WorkTree(Process, metaclass=Protect):
                 self.ctx.nodes[name]["state"] = "FINISHED"
                 self.node_to_ctx(name)
                 self.report(f"Node: {name} finished.")
-                self.continue_worktree()
+                self.continue_worktree(names)
             elif node["metadata"]["node_type"] in ["calcfunction", "workfunction"]:
                 print("node type: calcfunction/workfunction.")
                 kwargs.setdefault("metadata", {})
@@ -695,7 +695,8 @@ class WorkTree(Process, metaclass=Protect):
                     )
                     print(f"Node: {name} failed.")
                     self.report(f"Node: {name} failed.")
-                self.continue_worktree()
+                # exclude the current nodes from the next run
+                self.continue_worktree(names)
             elif node["metadata"]["node_type"] in ["calcjob", "workchain"]:
                 # process = run_get_node(executor, *args, **kwargs)
                 print("node  type: calcjob/workchain.")
