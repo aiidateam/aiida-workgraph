@@ -425,8 +425,8 @@ class WorkTree(Process, metaclass=Protect):
         wtdata = self.read_wtdata_from_base()
         for name, node in wtdata["nodes"].items():
             node["state"] = self.ctx.nodes[name]["state"]
-            node["results"] = self.ctx.nodes[name]["results"]
-            node["process"] = self.ctx.nodes[name].get("process", None)
+            node["results"] = self.ctx.nodes[name].get("results")
+            node["process"] = self.ctx.nodes[name].get("process")
         self.setup_ctx_worktree(wtdata)
 
     def init_ctx(self, wtdata):
@@ -742,6 +742,8 @@ class WorkTree(Process, metaclass=Protect):
                 self.ctx.input_nodes[name] = results
                 self.ctx.nodes[name]["state"] = "FINISHED"
                 self.node_to_ctx(name)
+                self.report(f"Node: {name} finished.")
+                self.continue_worktree(names)
                 # print("result from node: ", node["results"])
             else:
                 print("node  type: unknown.")

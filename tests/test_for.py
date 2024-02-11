@@ -30,5 +30,5 @@ def test_for(decorated_add, decorated_multiply):
     for1 = wt.nodes.new(add_multiply_for, sequence=range(5))
     add1 = wt.nodes.new(decorated_add, y=orm.Int(1))
     wt.links.new(for1.outputs[0], add1.inputs[0])
-    wt.submit(wait=True)
+    wt.submit(wait=True, timeout=200)
     assert add1.node.outputs.result.value == 21

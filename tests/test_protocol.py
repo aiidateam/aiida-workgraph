@@ -17,7 +17,9 @@ def test_pw_relax_protocol(structure_si):
     wt = WorkTree("test_pw_relax")
     pw_relax1 = wt.nodes.new(pw_relax_node, name="pw_relax1")
     pw_relax1.set_from_protocol(
-        code, structure_si, protocol="fast", pseudo_family="SSSP/1.2/PBEsol/efficiency"
+        code,
+        structure_si,
+        protocol="fast",
     )
     wt.submit(wait=True, timeout=200)
     assert wt.state == "FINISHED"
@@ -39,7 +41,9 @@ def test_pw_relax_protocol_pop(structure_si):
     wt = WorkTree("test_pw_relax")
     pw_relax1 = wt.nodes.new(pw_relax_node, name="pw_relax1")
     pw_relax1.set_from_protocol(
-        code, structure_si, protocol="fast", pseudo_family="SSSP/1.2/PBEsol/efficiency"
+        code,
+        structure_si,
+        protocol="fast",
     )
     # do not run "base_final_scf"
     pw_relax1.inputs["base_final_scf"].value = None
