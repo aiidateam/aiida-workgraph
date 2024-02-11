@@ -652,6 +652,8 @@ class WorkTree(Process, metaclass=Protect):
                 self.node_to_ctx(name)
                 # ValueError: attempted to add an input link after the process node was already stored.
                 # self.node.base.links.add_incoming(results, "INPUT_WORK", name)
+                self.report(f"Node: {name} finished.")
+                self.continue_worktree()
             elif node["metadata"]["node_type"] == "data":
                 print("node  type: data.")
                 results = create_data_node(executor, args, kwargs)
@@ -660,6 +662,8 @@ class WorkTree(Process, metaclass=Protect):
                 self.ctx.new_data[name] = results
                 self.ctx.nodes[name]["state"] = "FINISHED"
                 self.node_to_ctx(name)
+                self.report(f"Node: {name} finished.")
+                self.continue_worktree()
             elif node["metadata"]["node_type"] in ["calcfunction", "workfunction"]:
                 print("node type: calcfunction/workfunction.")
                 kwargs.setdefault("metadata", {})
@@ -680,6 +684,7 @@ class WorkTree(Process, metaclass=Protect):
                     node["process"] = process
                     self.ctx.nodes[name]["state"] = "FINISHED"
                     self.node_to_ctx(name)
+                    self.report(f"Node: {name} finished.")
                 except Exception as e:
                     print(e)
                     self.report(e)
@@ -689,6 +694,8 @@ class WorkTree(Process, metaclass=Protect):
                         self.ctx.connectivity["child_node"][name], "FAILED"
                     )
                     print(f"Node: {name} failed.")
+                    self.report(f"Node: {name} failed.")
+                self.continue_worktree()
             elif node["metadata"]["node_type"] in ["calcjob", "workchain"]:
                 # process = run_get_node(executor, *args, **kwargs)
                 print("node  type: calcjob/workchain.")
