@@ -101,6 +101,8 @@ jobs:
 
         -   name: Setup SSSP
             run: |
+                aiida-pseudo install sssp -v 1.3 -x PBEsol -p efficiency
+                aiida-pseudo install sssp -v 1.3 -x PBE -p efficiency
                 aiida-pseudo install sssp -v 1.2 -x PBEsol -p efficiency
                 aiida-pseudo install sssp -v 1.2 -x PBE -p efficiency
 

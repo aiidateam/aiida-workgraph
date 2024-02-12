@@ -1,5 +1,5 @@
 from node_graph.utils import get_entries
-from .builtin import AiiDAGather, AiiDAToCtx, AiiDAFromCtx
+from .builtin import AiiDAGather, AiiDAToCtx, AiiDAFromCtx, AiiDAShell
 from .test import (
     AiiDAInt,
     AiiDAFloat,
@@ -26,6 +26,7 @@ node_list = [
     AiiDAGather,
     AiiDAToCtx,
     AiiDAFromCtx,
+    AiiDAShell,
     AiiDAInt,
     AiiDAFloat,
     AiiDAString,

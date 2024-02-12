@@ -425,8 +425,8 @@ class WorkTree(Process, metaclass=Protect):
         wtdata = self.read_wtdata_from_base()
         for name, node in wtdata["nodes"].items():
             node["state"] = self.ctx.nodes[name]["state"]
-            node["results"] = self.ctx.nodes[name]["results"]
-            node["process"] = self.ctx.nodes[name].get("process", None)
+            node["results"] = self.ctx.nodes[name].get("results")
+            node["process"] = self.ctx.nodes[name].get("process")
         self.setup_ctx_worktree(wtdata)
 
     def init_ctx(self, wtdata):
@@ -517,7 +517,7 @@ class WorkTree(Process, metaclass=Protect):
             self.ctx.nodes[name]["result"] = None
             self.ctx.nodes[name]["process"] = None
 
-    def continue_worktree(self):
+    def continue_worktree(self, exclude=[]):
         self.report("Continue worktree.")
         self.update_worktree_from_base()
         self.apply_actions()
@@ -527,7 +527,7 @@ class WorkTree(Process, metaclass=Protect):
             if node["state"] in ["RUNNING", "FINISHED", "FAILED", "SKIPPED"]:
                 continue
             ready, output = self.check_parent_state(name)
-            if ready:
+            if ready and name not in exclude:
                 node_to_run.append(name)
         #
         self.report("nodes ready to run: {}".format(",".join(node_to_run)))
@@ -652,6 +652,8 @@ class WorkTree(Process, metaclass=Protect):
                 self.node_to_ctx(name)
                 # ValueError: attempted to add an input link after the process node was already stored.
                 # self.node.base.links.add_incoming(results, "INPUT_WORK", name)
+                self.report(f"Node: {name} finished.")
+                self.continue_worktree(names)
             elif node["metadata"]["node_type"] == "data":
                 print("node  type: data.")
                 results = create_data_node(executor, args, kwargs)
@@ -660,6 +662,8 @@ class WorkTree(Process, metaclass=Protect):
                 self.ctx.new_data[name] = results
                 self.ctx.nodes[name]["state"] = "FINISHED"
                 self.node_to_ctx(name)
+                self.report(f"Node: {name} finished.")
+                self.continue_worktree(names)
             elif node["metadata"]["node_type"] in ["calcfunction", "workfunction"]:
                 print("node type: calcfunction/workfunction.")
                 kwargs.setdefault("metadata", {})
@@ -680,6 +684,7 @@ class WorkTree(Process, metaclass=Protect):
                     node["process"] = process
                     self.ctx.nodes[name]["state"] = "FINISHED"
                     self.node_to_ctx(name)
+                    self.report(f"Node: {name} finished.")
                 except Exception as e:
                     print(e)
                     self.report(e)
@@ -689,6 +694,9 @@ class WorkTree(Process, metaclass=Protect):
                         self.ctx.connectivity["child_node"][name], "FAILED"
                     )
                     print(f"Node: {name} failed.")
+                    self.report(f"Node: {name} failed.")
+                # exclude the current nodes from the next run
+                self.continue_worktree(names)
             elif node["metadata"]["node_type"] in ["calcjob", "workchain"]:
                 # process = run_get_node(executor, *args, **kwargs)
                 print("node  type: calcjob/workchain.")
@@ -734,6 +742,8 @@ class WorkTree(Process, metaclass=Protect):
                 self.ctx.input_nodes[name] = results
                 self.ctx.nodes[name]["state"] = "FINISHED"
                 self.node_to_ctx(name)
+                self.report(f"Node: {name} finished.")
+                self.continue_worktree(names)
                 # print("result from node: ", node["results"])
             else:
                 print("node  type: unknown.")
@@ -923,7 +933,7 @@ class WorkTree(Process, metaclass=Protect):
                 group_outputs[output[1]] = get_nested_dict(self.ctx, socket_name)
             else:
                 group_outputs[output[1]] = self.ctx.nodes[node_name]["results"][
-                    output[1]
+                    socket_name
                 ]
         self.out("group_outputs", group_outputs)
         self.out("new_data", self.ctx.new_data)
