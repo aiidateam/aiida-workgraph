@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
+import AtomsItem from './AtomsItem.js'; // Adjust the path as necessary
 
 import './DataNodeItem.css';
 import '../App.css';
@@ -43,6 +44,7 @@ function DataNodeItem() {
           ))}
         </tbody>
       </table>
+      {NodeData.node_type === 'StructureData' && <AtomsItem data={NodeData} />}
     </div>
   );
 }
