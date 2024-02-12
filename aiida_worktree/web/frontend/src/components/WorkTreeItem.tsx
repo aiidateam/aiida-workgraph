@@ -127,7 +127,7 @@ function WorkTreeGraph() {
       // Fetch data initially
       fetchStateData();
       // Set up an interval to fetch data every 5 seconds
-      intervalId = setInterval(fetchStateData, 1000);
+      intervalId = setInterval(fetchStateData, 5000);
     }
     return () => {
       if (intervalId) {

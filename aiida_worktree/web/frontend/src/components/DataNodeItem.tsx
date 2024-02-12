@@ -44,7 +44,7 @@ function DataNodeItem() {
           ))}
         </tbody>
       </table>
-      {NodeData.node_type === 'StructureData' && <AtomsItem data={NodeData} />}
+      {NodeData.node_type === 'data.core.structure.StructureData.' && <AtomsItem data={NodeData} />}
     </div>
   );
 }
