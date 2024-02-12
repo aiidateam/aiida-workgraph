@@ -49,6 +49,7 @@ const NodeDetailsTable = styled.div`
   flex-grow: 1; /* Allow this section to take available space */
   overflow-y: auto; /* Make only this section scrollable if needed */
   margin-bottom: 1em;
+  background-color: #f7f7f7; /* Light gray background for better readability */
 `;
 
 const NodeDetailRow = styled.div`
@@ -106,6 +107,12 @@ const InputsCode = styled(SyntaxHighlighter)`
   font-family: monospace;
 `;
 
+const StyledLink = styled.span`
+  cursor: pointer;
+  text-decoration: underline;
+  color: blue;
+`;
+
 function NodeDetails({ selectedNode, onClose, setShowNodeDetails }) {
   const navigate = useNavigate();
 
@@ -119,6 +126,36 @@ function NodeDetails({ selectedNode, onClose, setShowNodeDetails }) {
       navigate(`/worktree/${selectedNode.process.pk}`);
     }
   };
+
+
+  const renderInputs = (inputs, depth = 0) => {
+    return Object.entries(inputs).map(([key, value]) => {
+      const nodeId = Array.isArray(value) ? value[0] : value;
+      const nodeType = Array.isArray(value) ? value[1] : null;
+
+      if (Array.isArray(value)) {
+        return (
+          <li key={key}>
+            <span >
+              {key}: <a href={`/datanode/${nodeId}`}>{nodeId}</a>
+            </span>
+          </li>
+        );
+      } else if (typeof value === 'object') {
+        return (
+          <li key={key}>
+            <span >
+              {key}:
+            </span>
+            <ul>{renderInputs(value, depth + 1)}</ul>
+          </li>
+        );
+      } else {
+        return null; // or handle other types if needed
+      }
+    });
+  };
+
   // Determine if the button should be disabled
   const isButtonDisabled = !selectedNode.process || !selectedNode.process.pk;
 
@@ -142,21 +179,23 @@ function NodeDetails({ selectedNode, onClose, setShowNodeDetails }) {
         </NodeDetailsTable>
       )}
       <div>
-        <strong>Inputs:</strong>
+        <NodeDetailsTitle>Inputs:</NodeDetailsTitle>
       </div>
-      <InputsCode language="python" style={dark}>
-        {/* Display args and inputs here */}
-        {selectedNode.inputs}
-      </InputsCode>
+      <NodeDetailsTable>
+        <ul style={{ margin: 10, padding: 5, textAlign: 'left' }}>
+          {renderInputs(selectedNode.inputs)}
+        </ul>
+      </NodeDetailsTable>
       <div>
-        <strong>Outputs:</strong>
+        <NodeDetailsTitle>Outputs:</NodeDetailsTitle>
       </div>
-      <InputsCode language="python" style={dark}>
-        {/* Display args and inputs here */}
-        {selectedNode.outputs}
-      </InputsCode>
+      <NodeDetailsTable>
+        <ul style={{ margin: 10, padding: 5, textAlign: 'left' }}>
+          {renderInputs(selectedNode.outputs)}
+        </ul>
+      </NodeDetailsTable>
       <div>
-        <strong>Executor:</strong>
+        <NodeDetailsTitle>Executor:</NodeDetailsTitle>
       </div>
       <PythonCode language="python" style={dark}>
         {selectedNode.executor}

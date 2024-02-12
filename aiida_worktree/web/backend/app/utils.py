@@ -1,4 +1,7 @@
 from aiida.orm import load_node
+from datetime import datetime
+from dateutil import relativedelta
+from dateutil.tz import tzlocal
 
 
 def worktree_to_short_json(wtdata):
@@ -42,27 +45,39 @@ def is_function_and_get_source(obj):
         return False, None
 
 
+def get_node_recursive(links):
+    """Recursively get a dictionary of nodess."""
+    from collections.abc import Mapping
+
+    data = {}
+    for label, value in links.items():
+        if isinstance(value, Mapping):
+            data.update({label: get_node_recursive(value)})
+        else:
+            data[label] = [value.pk, value.__class__.__name__]
+    return data
+
+
 def get_node_inputs(pk):
     from aiida.common.links import LinkType
-    from aiida.cmdline.utils.common import format_nested_links
 
     if pk is None:
         return ""
 
     node = load_node(pk)
-    result = ""
     nodes_input = node.base.links.get_incoming(
         link_type=(LinkType.INPUT_CALC, LinkType.INPUT_WORK)
     )
     if nodes_input:
-        result += f"{format_nested_links(nodes_input.nested(), headers=['Inputs', 'PK', 'Type'])}"
+        result = get_node_recursive(nodes_input.nested())
+    else:
+        result = {}
 
     return result
 
 
 def get_node_outputs(pk):
     from aiida.common.links import LinkType
-    from aiida.cmdline.utils.common import format_nested_links
 
     if pk is None:
         return ""
@@ -73,7 +88,9 @@ def get_node_outputs(pk):
         link_type=(LinkType.CREATE, LinkType.RETURN)
     )
     if nodes_output.all():
-        result += f"{format_nested_links(nodes_output.nested(), headers=['outputs', 'PK', 'Type'])}"
+        result = get_node_recursive(nodes_output.nested())
+    else:
+        result = {}
 
     return result
 
@@ -162,3 +179,25 @@ def get_node_summary(node):
             table.append(["computer", f"[{node.computer.pk}] {node.computer.label}"])
 
     return table
+
+
+def time_ago(past_time):
+    # Get the current time
+    now = datetime.now(tzlocal())
+
+    # Calculate the time difference
+    delta = relativedelta.relativedelta(now, past_time)
+
+    # Format the time difference
+    if delta.years > 0:
+        return f"{delta.years}Y ago"
+    elif delta.months > 0:
+        return f"{delta.months}M ago"
+    elif delta.days > 0:
+        return f"{delta.days}D ago"
+    elif delta.hours > 0:
+        return f"{delta.hours}h ago"
+    elif delta.minutes > 0:
+        return f"{delta.minutes}min ago"
+    else:
+        return "Just now"

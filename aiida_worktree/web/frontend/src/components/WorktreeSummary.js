@@ -46,21 +46,52 @@ export const WorktreeInfoStyle = styled.div`
     }
   }
   `;
-  export const InputsCode = styled(SyntaxHighlighter)`
+
+  const NodeDetailsTitle = styled.h3`
+  font-size: 1.2em;
+  margin-bottom: 0.5em;
+  color: #333; /* Darker color for headers */
+`;
+
+
+  const NodeDetailsTable = styled.div`
   width: 100%;
-  max-width: 100%;
-  max-height: 300px;
-  overflow-x: auto;
-  white-space: pre;
-  margin-top: 10px;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-  padding: 10px;
-  background-color: #f7f7f7;
-  font-family: monospace;
+  flex-grow: 1; /* Allow this section to take available space */
+  overflow-y: auto; /* Make only this section scrollable if needed */
+  margin-bottom: 1em;
+  background-color: #f7f7f7; /* Light gray background for better readability */
 `;
 
 function WorktreeSummary({ summary }) {
+
+  const renderInputs = (inputs, depth = 0) => {
+    return Object.entries(inputs).map(([key, value]) => {
+      const nodeId = Array.isArray(value) ? value[0] : value;
+      const nodeType = Array.isArray(value) ? value[1] : null;
+
+      if (Array.isArray(value)) {
+        return (
+          <li key={key}>
+            <span >
+              {key}: <a href={`/datanode/${nodeId}`}>{nodeId}</a>
+            </span>
+          </li>
+        );
+      } else if (typeof value === 'object') {
+        return (
+          <li key={key}>
+            <span >
+              {key}:
+            </span>
+            <ul>{renderInputs(value, depth + 1)}</ul>
+          </li>
+        );
+      } else {
+        return null; // or handle other types if needed
+      }
+    });
+  };
+
   return (
     <WorktreeInfoStyle>
     <div>
@@ -74,19 +105,21 @@ function WorktreeSummary({ summary }) {
         ))}
       </div>
       <div>
-        <strong>Inputs:</strong>
+        <NodeDetailsTitle>Inputs:</NodeDetailsTitle>
       </div>
-      <InputsCode language="python" style={dark}>
-        {/* Display args and inputs here */}
-        {summary.inputs}
-      </InputsCode>
+      <NodeDetailsTable>
+        <ul style={{ margin: 10, padding: 5, textAlign: 'left' }}>
+          {renderInputs(summary.inputs)}
+        </ul>
+      </NodeDetailsTable>
       <div>
-        <strong>Outputs:</strong>
+        <NodeDetailsTitle>Outputs:</NodeDetailsTitle>
       </div>
-      <InputsCode language="python" style={dark}>
-        {/* Display args and inputs here */}
-        {summary.outputs}
-      </InputsCode>
+      <NodeDetailsTable>
+        <ul style={{ margin: 10, padding: 5, textAlign: 'left' }}>
+          {renderInputs(summary.outputs)}
+        </ul>
+      </NodeDetailsTable>
     </div>
     </WorktreeInfoStyle>
   );
