@@ -212,22 +212,23 @@ def wt_structure_si():
 
 
 @pytest.fixture
-def wt_engine(arithmetic_add):
+def wt_engine(decorated_add, arithmetic_add):
     """Use to test the engine."""
     code = load_code("add@localhost")
     x = Int(2)
     wt = WorkTree(name="test_run_order")
-    adds = []
-    for i in range(6):
-        temp = wt.nodes.new(arithmetic_add, f"add{i}", x=x, y=Int(i), code=code)
-        if i == 0:
-            temp.set({"metadata.options.sleep": 15})
-        else:
-            temp.set({"metadata.options.sleep": 1})
-        adds.append(temp)
-    wt.links.new(adds[0].outputs["sum"], adds[2].inputs["x"])
-    wt.links.new(adds[1].outputs["sum"], adds[3].inputs["x"])
-    wt.links.new(adds[3].outputs["sum"], adds[4].inputs["x"])
-    wt.links.new(adds[2].outputs["sum"], adds[5].inputs["x"])
-    wt.links.new(adds[4].outputs["sum"], adds[5].inputs["y"])
+    add0 = wt.nodes.new(arithmetic_add, "add0", x=x, y=Int(0), code=code)
+    add0.set({"metadata.options.sleep": 15})
+    add1 = wt.nodes.new(decorated_add, "add1", x=x, y=Int(1), t=Int(1))
+    add2 = wt.nodes.new(arithmetic_add, "add2", x=x, y=Int(2), code=code)
+    add2.set({"metadata.options.sleep": 1})
+    add3 = wt.nodes.new(decorated_add, "add3", x=x, y=Int(3), t=Int(1))
+    add4 = wt.nodes.new(arithmetic_add, "add4", x=x, y=Int(4), code=code)
+    add4.set({"metadata.options.sleep": 1})
+    add5 = wt.nodes.new(decorated_add, "add5", x=x, y=Int(5), t=Int(1))
+    wt.links.new(add0.outputs["sum"], add2.inputs["x"])
+    wt.links.new(add1.outputs[0], add3.inputs["x"])
+    wt.links.new(add3.outputs[0], add4.inputs["x"])
+    wt.links.new(add2.outputs["sum"], add5.inputs["x"])
+    wt.links.new(add4.outputs["sum"], add5.inputs["y"])
     return wt

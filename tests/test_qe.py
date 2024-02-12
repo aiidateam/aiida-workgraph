@@ -157,7 +157,7 @@ def test_pw_relax_workchain(structure_si):
     kpoints = KpointsData()
     kpoints.set_kpoints_mesh([1, 1, 1])
     # Load the pseudopotential family.
-    pseudo_family = load_group("SSSP/1.2/PBEsol/efficiency")
+    pseudo_family = load_group("SSSP/1.3/PBEsol/efficiency")
     pseudos = pseudo_family.get_pseudos(structure=structure_si)
     #
     metadata = {
