@@ -36,12 +36,11 @@ function AtomsItem({ data }) {
     const atoms = new Atoms(atomsData);
 
     if (atomsContainerRef.current) {
-      const bjs = new BlendJS(atomsContainerRef.current);
       // Create an instance of AtomsViewer and pass the Atoms object to it
-      const avr = new AtomsViewer(bjs, atoms);
+      const avr = new AtomsViewer(atomsContainerRef.current, atoms);
       // Call the render method to start the visualization
       avr.drawModels();
-      bjs.render();
+      avr.render();
 
       // Cleanup function to be called when the component unmounts
       return () => {
