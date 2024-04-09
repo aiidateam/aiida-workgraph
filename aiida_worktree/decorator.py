@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Callable
 from aiida_worktree.utils import get_executor
 from aiida.engine.processes.functions import calcfunction, workfunction
 from aiida.engine.processes.calcjobs import CalcJob
@@ -6,6 +6,8 @@ from aiida.engine.processes.workchains import WorkChain
 from aiida.orm.nodes.process.calculation.calcfunction import CalcFunctionNode
 from aiida.orm.nodes.process.workflow.workfunction import WorkFunctionNode
 from aiida.engine.processes.ports import PortNamespace
+from node_graph.decorator import create_node
+import cloudpickle as pickle
 
 
 def add_input_recursive(inputs, port, prefix=None):
@@ -30,9 +32,7 @@ def add_input_recursive(inputs, port, prefix=None):
 
 def build_node(ndata):
     """Register a node from a AiiDA component."""
-    from node_graph.decorator import create_node
     from aiida_worktree.node import Node
-    import cloudpickle as pickle
     import inspect
 
     path, executor_name, = ndata.pop(
@@ -89,165 +89,160 @@ def build_node(ndata):
     return node
 
 
-# decorator with arguments indentifier, args, kwargs, properties, inputs, outputs, executor
-def decorator_node(
-    identifier=None,
-    node_type="Normal",
-    properties=None,
-    inputs=None,
-    outputs=None,
-    catalog="Others",
-    executor_type="function",
-):
-    """Generate a decorator that register a function as a node.
+def serialize_function(func):
+    """Serialize a function for storage or transmission."""
+    import cloudpickle as pickle
 
-    Attributes:
-        indentifier (str): node identifier
-        catalog (str): node catalog
-        args (list): node args
-        kwargs (dict): node kwargs
-        properties (list): node properties
-        inputs (list): node inputs
-        outputs (list): node outputs
-    """
+    return {
+        "executor": pickle.dumps(func),
+        "type": "function",
+        "is_pickle": True,
+    }
+
+
+def generate_ndata(
+    func: Callable,
+    identifier: str,
+    inputs: list,
+    outputs: list,
+    properties: list,
+    catalog: str,
+    node_type: str,
+    additional_data: dict = None,
+):
+    """Generate node data for creating a node."""
+    from node_graph.decorator import generate_input_sockets
     from aiida_worktree.node import Node
 
-    properties = properties or []
-    inputs = inputs or []
-    outputs = outputs or [["General", "result"]]
-
-    def decorator(func):
-        import cloudpickle as pickle
-        from node_graph.decorator import generate_input_sockets, create_node
-
-        nonlocal identifier
-
-        if identifier is None:
-            identifier = func.__name__
-        # use cloudpickle to serialize function
-        executor = {
-            "executor": pickle.dumps(func),
-            "type": "function",
-            "is_pickle": True,
-        }
-        # Get the args and kwargs of the function
-        args, kwargs, var_args, var_kwargs, _inputs = generate_input_sockets(
-            func, inputs, properties
-        )
-        # I don't know why isinstance(func.node_class, CalcFunctionNode) is False
-        # print("func: ", func)
-        # print("node_class: ", func.node_class)
-        if hasattr(func, "node_class"):
-            if func.node_class is CalcFunctionNode:
-                node_type = "calcfunction"
-            elif func.node_class is WorkFunctionNode:
-                node_type = "workfunction"
-        else:
-            node_type = "Normal"
-        ndata = {
-            "node_class": Node,
-            "identifier": identifier,
-            "node_type": node_type,
-            "args": args,
-            "kwargs": kwargs,
-            "var_args": var_args,
-            "var_kwargs": var_kwargs,
-            "properties": properties,
-            "inputs": _inputs,
-            "outputs": outputs,
-            "executor": executor,
-            "catalog": catalog,
-        }
-        node = create_node(ndata)
-        func.identifier = identifier
-        func.node = node
-        return func
-
-    return decorator
-
-
-# decorator with arguments indentifier, args, kwargs, properties, inputs, outputs, executor
-def decorator_node_group(
-    identifier=None,
-    properties=None,
-    inputs=None,
-    outputs=None,
-    catalog="Others",
-    executor_type="function",
-):
-    """Generate a decorator that register a node group as a node.
-
-    Attributes:
-        indentifier (str): node identifier
-        catalog (str): node catalog
-        properties (list): node properties
-        inputs (list): node inputs
-        outputs (list): node outputs
-    """
-    from aiida_worktree.node import Node
-
-    properties = properties or []
-    inputs = inputs or []
-    outputs = outputs or []
-
-    def decorator(func):
-        import cloudpickle as pickle
-        from node_graph.decorator import generate_input_sockets, create_node
-
-        nonlocal identifier, inputs, outputs
-
-        if identifier is None:
-            identifier = func.__name__
-        # use cloudpickle to serialize function
-        func.identifier = identifier
-        func.group_outputs = outputs
-        executor = {
-            "executor": pickle.dumps(func),
-            "type": executor_type,
-            "is_pickle": True,
-        }
-        # Get the args and kwargs of the function
-        args, kwargs, var_args, var_kwargs, _inputs = generate_input_sockets(
-            func, inputs, properties
-        )
-        # nt = func()
-        # inputs = [[nt.nodes[input[0]].inputs[input[1]].identifier, input[2]] for input in group_inputs]
-        # outputs = [[nt.nodes[output[0]].outputs[output[1]].identifier, output[2]] for output in group_outputs]
-        # node_inputs = [["General", input[2]] for input in inputs]
-        node_outputs = [["General", output[1]] for output in outputs]
-        # print(node_inputs, node_outputs)
-        #
-        node_type = "worktree"
-        ndata = {
-            "node_class": Node,
-            "identifier": identifier,
-            "args": args,
-            "kwargs": kwargs,
-            "var_args": var_args,
-            "var_kwargs": var_kwargs,
-            "node_type": node_type,
-            "properties": properties,
-            "inputs": _inputs,
-            "outputs": node_outputs,
-            "executor": executor,
-            "catalog": catalog,
-        }
-        node = create_node(ndata)
-        node.group_inputs = inputs
-        node.group_outputs = outputs
-        func.node = node
-        return func
-
-    return decorator
+    args, kwargs, var_args, var_kwargs, _inputs = generate_input_sockets(
+        func, inputs, properties
+    )
+    node_outputs = [["General", output[1]] for output in outputs]
+    ndata = {
+        "node_class": Node,
+        "identifier": identifier,
+        "args": args,
+        "kwargs": kwargs,
+        "var_args": var_args,
+        "var_kwargs": var_kwargs,
+        "node_type": node_type,
+        "properties": properties,
+        "inputs": _inputs,
+        "outputs": node_outputs,
+        "executor": serialize_function(func),
+        "catalog": catalog,
+    }
+    if additional_data:
+        ndata.update(additional_data)
+    return ndata
 
 
 class NodeDecoratorCollection:
     """Collection of node decorators."""
 
-    node = staticmethod(decorator_node)
-    group = staticmethod(decorator_node_group)
+    # decorator with arguments indentifier, args, kwargs, properties, inputs, outputs, executor
+    @staticmethod
+    def decorator_node(
+        identifier=None,
+        node_type="Normal",
+        properties=None,
+        inputs=None,
+        outputs=None,
+        catalog="Others",
+        executor_type="function",
+    ):
+        """Generate a decorator that register a function as a node.
 
-    __call__: Any = node  # Alias '@node' to '@node.node'.
+        Attributes:
+            indentifier (str): node identifier
+            catalog (str): node catalog
+            args (list): node args
+            kwargs (dict): node kwargs
+            properties (list): node properties
+            inputs (list): node inputs
+            outputs (list): node outputs
+        """
+
+        def decorator(func):
+            nonlocal identifier
+
+            if identifier is None:
+                identifier = func.__name__
+
+            # Determine node_type based on AiiDA's node classes
+            node_type = "Normal"
+            if hasattr(func, "node_class"):
+                if func.node_class is CalcFunctionNode:
+                    node_type = "calcfunction"
+                elif func.node_class is WorkFunctionNode:
+                    node_type = "workfunction"
+            ndata = generate_ndata(
+                func,
+                identifier,
+                inputs or [],
+                outputs or [["General", "result"]],
+                properties or [],
+                catalog,
+                node_type,
+            )
+            node = create_node(ndata)
+            func.identifier = identifier
+            func.node = node
+            return func
+
+        return decorator
+
+    # decorator with arguments indentifier, args, kwargs, properties, inputs, outputs, executor
+    @staticmethod
+    def decorator_node_group(
+        identifier=None,
+        properties=None,
+        inputs=None,
+        outputs=None,
+        catalog="Others",
+        executor_type="function",
+    ):
+        """Generate a decorator that register a node group as a node.
+
+        Attributes:
+            indentifier (str): node identifier
+            catalog (str): node catalog
+            properties (list): node properties
+            inputs (list): node inputs
+            outputs (list): node outputs
+        """
+
+        outputs = outputs or []
+
+        def decorator(func):
+            nonlocal identifier, inputs, outputs
+
+            if identifier is None:
+                identifier = func.__name__
+            # use cloudpickle to serialize function
+            func.identifier = identifier
+            func.group_outputs = outputs
+
+            node_outputs = [["General", output[1]] for output in outputs]
+            # print(node_inputs, node_outputs)
+            #
+            node_type = "worktree"
+            ndata = generate_ndata(
+                func,
+                identifier,
+                inputs or [],
+                node_outputs,
+                properties or [],
+                catalog,
+                node_type,
+            )
+            node = create_node(ndata)
+            node.group_inputs = inputs
+            node.group_outputs = outputs
+            func.node = node
+            return func
+
+        return decorator
 
     @staticmethod
     def calcfunction(**kwargs):
@@ -271,6 +266,16 @@ class NodeDecoratorCollection:
             return node_decorated
 
         return decorator
+
+    # Making decorator_node accessible as 'node'
+    node = decorator_node
+
+    # Making decorator_node_group accessible as 'group'
+    group = decorator_node_group
+
+    def __call__(self, *args, **kwargs):
+        # This allows using '@node' to directly apply the decorator_node functionality
+        return self.decorator_node(*args, **kwargs)
 
 
 node = NodeDecoratorCollection()
