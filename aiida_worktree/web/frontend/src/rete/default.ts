@@ -63,8 +63,10 @@ function createDynamicNode(nodeData: any) {
 
   nodeData.inputs.forEach((input: NodeInput) => {
     let socket = new ClassicPreset.Socket(input.name);
-    node.addInput(input.name, new ClassicPreset.Input(socket, input.name));
-    node.height += 25; // Increase height of node for each input
+    if (!node.inputs.hasOwnProperty(input.name)) {
+      node.addInput(input.name, new ClassicPreset.Input(socket, input.name));
+      node.height += 25; // Increase height of node for each input
+    }
 });
 
   nodeData.outputs.forEach((output: NodeOutput) => {

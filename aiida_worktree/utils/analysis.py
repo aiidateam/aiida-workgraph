@@ -15,6 +15,16 @@ class WorkTreeSaver:
         self.wtdata = wtdata
         self.uuid = wtdata["uuid"]
         self.name = wtdata["name"]
+        self.clean_hanging_links()
+
+    def clean_hanging_links(self):
+        """Clean hanging links in the nodetree."""
+        for link in self.wtdata["links"][:]:  # Iterate over a shallow copy of the list
+            if (
+                link["from_node"] not in self.wtdata["nodes"]
+                or link["to_node"] not in self.wtdata["nodes"]
+            ):
+                self.wtdata["links"].remove(link)
 
     def save(self):
         """Save Nodetree.

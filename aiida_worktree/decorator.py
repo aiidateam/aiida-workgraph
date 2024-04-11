@@ -71,6 +71,10 @@ def build_node(ndata):
             ["General", spec.inputs.dynamic, {"property": ["General", {"default": {}}]}]
         )
     # print("kwargs: ", kwargs)
+    # add built-in sockets
+    outputs.append(["General", "_outputs"])
+    outputs.append(["General", "_wait"])
+    inputs.append(["General", "_wait", {"link_limit": 1e6}])
     ndata["node_class"] = Node
     ndata["kwargs"] = kwargs
     ndata["inputs"] = inputs
@@ -118,6 +122,10 @@ def generate_ndata(
         func, inputs, properties
     )
     node_outputs = [["General", output[1]] for output in outputs]
+    # add built-in sockets
+    _inputs.append(["General", "_wait", {"link_limit": 1e6}])
+    node_outputs.append(["General", "_wait"])
+    node_outputs.append(["General", "_outputs"])
     ndata = {
         "node_class": Node,
         "identifier": identifier,
