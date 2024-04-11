@@ -15,7 +15,22 @@ class WorkTreeSaver:
         self.wtdata = wtdata
         self.uuid = wtdata["uuid"]
         self.name = wtdata["name"]
+        self.wait_to_link()
         self.clean_hanging_links()
+
+    def wait_to_link(self):
+        """Convert wait attribute to link."""
+        for name, node in self.wtdata["nodes"].items():
+            for wait_node in node["wait"]:
+                if wait_node in self.wtdata["nodes"]:
+                    self.wtdata["links"].append(
+                        {
+                            "from_node": wait_node,
+                            "from_socket": "_wait",
+                            "to_node": name,
+                            "to_socket": "_wait",
+                        }
+                    )
 
     def clean_hanging_links(self):
         """Clean hanging links in the nodetree."""
