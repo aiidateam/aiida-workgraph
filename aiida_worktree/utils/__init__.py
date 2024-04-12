@@ -8,7 +8,11 @@ def get_executor(data):
     if is_pickle:
         import cloudpickle as pickle
 
-        executor = pickle.loads(data["executor"])
+        try:
+            executor = pickle.loads(data["executor"])
+        except Exception as e:
+            print("Error in loading executor: ", e)
+            executor = None
     else:
         if type == "WorkflowFactory":
             executor = WorkflowFactory(data["name"])
