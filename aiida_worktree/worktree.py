@@ -278,8 +278,8 @@ class WorkTree(node_graph.NodeGraph):
         prefix is used to add a prefix to the node names.
         """
         for node in wt.nodes:
-            node.name = prefix + "_" + node.name
-            node.wait = [prefix + "_" + w for w in node.wait] if node.wait else []
+            node.name = prefix + node.name
+            node.wait = [prefix + w for w in node.wait] if node.wait else []
             node.parent = self
             self.nodes.append(node)
         # self.sequence.extend([prefix + node for node in wt.sequence])

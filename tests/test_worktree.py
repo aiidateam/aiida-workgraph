@@ -79,3 +79,16 @@ def test_restart(wt_calcjob):
     assert wt1.nodes["add3"].node.outputs.sum == 13
     assert wt1.nodes["add1"].node.pk == wt.nodes["add1"].pk
     assert wt1.nodes["add2"].node.pk != wt.nodes["add2"].pk
+
+
+def test_append_worktree(decorated_add_multiply_group):
+    from aiida_worktree import WorkTree
+
+    wt = WorkTree("test_node_group")
+    add1 = wt.nodes.new("AiiDAAdd", "add1", x=2, y=3)
+    add_multiply_wt = decorated_add_multiply_group(x=0, y=4, z=5)
+    # append worktree
+    wt.append(add_multiply_wt, prefix="group_")
+    wt.links.new(add1.outputs[0], wt.nodes["group_add1"].inputs["x"])
+    wt.submit(wait=True)
+    assert wt.nodes["group_multiply1"].node.outputs.result == 45
