@@ -737,6 +737,8 @@ class WorkTree(Process, metaclass=Protect):
                         return self.exit_codes.OUTPUS_NOT_MATCH_RESULTS
                     for i in range(len(node["outputs"])):
                         node["results"][node["outputs"][i]["name"]] = results[i]
+                elif isinstance(results, dict):
+                    node["results"] = results
                 else:
                     node["results"][node["outputs"][0]["name"]] = results
                 self.ctx.input_nodes[name] = results
@@ -771,13 +773,25 @@ class WorkTree(Process, metaclass=Protect):
                 if self.ctx.nodes[link["from_node"]]["results"] is None:
                     inputs[input["name"]] = None
                 else:
-                    inputs[input["name"]] = self.ctx.nodes[link["from_node"]][
-                        "results"
-                    ][link["from_socket"]]
+                    # handle the special socket _wait, _outputs
+                    if link["from_socket"] == "_wait":
+                        continue
+                    elif link["from_socket"] == "_outputs":
+                        inputs[input["name"]] = self.ctx.nodes[link["from_node"]][
+                            "results"
+                        ]
+                    else:
+                        inputs[input["name"]] = self.ctx.nodes[link["from_node"]][
+                            "results"
+                        ][link["from_socket"]]
+            # handle the case of multiple outputs
             elif len(input["links"]) > 1:
                 value = {}
                 for link in input["links"]:
                     name = f'{link["from_node"]}_{link["from_socket"]}'
+                    # handle the special socket _wait, _outputs
+                    if link["from_socket"] == "_wait":
+                        continue
                     if self.ctx.nodes[link["from_node"]]["results"] is None:
                         value[name] = None
                     else:
@@ -872,6 +886,9 @@ class WorkTree(Process, metaclass=Protect):
         else:
             # check the wait node first
             for node_name in wait_nodes:
+                # in case the node is removed
+                if node_name not in self.ctx.nodes:
+                    continue
                 if self.ctx.nodes[node_name]["state"] not in [
                     "FINISHED",
                     "SKIPPED",

@@ -18,7 +18,7 @@ def get_pseudo_from_structure(pseudo_family, structure):
             if ele == node.element:
                 pseudos[ele] = node
     print("pseudos: ", pseudos)
-    return pseudos
+    return {"Pseudo": pseudos}
 
 
 if __name__ == "__main__":

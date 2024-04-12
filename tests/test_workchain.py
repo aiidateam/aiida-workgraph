@@ -16,8 +16,8 @@ def test_build_workchain_inputs_outputs(build_workchain):
     """Submit simple calcjob."""
 
     node = build_workchain()
-    assert len(node.inputs) == 9
-    assert len(node.outputs) == 1
+    assert len(node.inputs) == 10
+    assert len(node.outputs) == 3
 
 
 def test_build_workchain(build_workchain):
