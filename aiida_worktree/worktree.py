@@ -272,3 +272,14 @@ class WorkTree(node_graph.NodeGraph):
         self.conditions = []
         self.ctx = {}
         self.state = "CREATED"
+
+    def _repr_mimebundle_(self, *args, **kwargs):
+        # if ipywdigets > 8.0.0, use _repr_mimebundle_ instead of _ipython_display_
+        from aiida_worktree.widget import NodeGraphWidget
+
+        ngw = NodeGraphWidget()
+        ngw.from_worktree(self)
+        if hasattr(ngw, "_repr_mimebundle_"):
+            return ngw._repr_mimebundle_(*args, **kwargs)
+        else:
+            return ngw._ipython_display_(*args, **kwargs)
