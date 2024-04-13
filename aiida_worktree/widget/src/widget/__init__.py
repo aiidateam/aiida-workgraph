@@ -3,6 +3,7 @@ import pathlib
 
 import anywidget
 import traitlets
+from .utils import clean_hanging_links, wait_to_link
 
 try:
     __version__ = importlib.metadata.version("widget")
@@ -20,4 +21,7 @@ class NodeGraphWidget(anywidget.AnyWidget):
     def from_worktree(self, worktree):
         from aiida_worktree.web.backend.app.utils import worktree_to_short_json
 
-        self.value = worktree_to_short_json(worktree.to_dict())
+        wtdata = worktree.to_dict()
+        wait_to_link(wtdata)
+        clean_hanging_links(wtdata)
+        self.value = worktree_to_short_json(wtdata)
