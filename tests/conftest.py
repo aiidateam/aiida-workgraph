@@ -156,11 +156,11 @@ def decorated_add_multiply(decorated_add, decorated_multiply):
 def decorated_add_multiply_group(decorated_add, decorated_multiply):
     """Generate a decorated node for test."""
 
-    @node.group(outputs=[["multiply.result", "result"]])
+    @node.group(outputs=[["multiply1.result", "result"]])
     def add_multiply_group(x, y, z):
         wt = WorkTree("add_multiply_group")
         add1 = wt.nodes.new(decorated_add, name="add1", x=x, y=y)
-        multiply = wt.nodes.new(decorated_multiply, name="multiply", x=z)
+        multiply = wt.nodes.new(decorated_multiply, name="multiply1", x=z)
         # link the output of int node to the input of add node
         wt.links.new(add1.outputs[0], multiply.inputs["y"])
         return wt

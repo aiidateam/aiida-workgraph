@@ -272,3 +272,19 @@ class WorkTree(node_graph.NodeGraph):
         self.conditions = []
         self.ctx = {}
         self.state = "CREATED"
+
+    def append(self, wt, prefix=""):
+        """Append a worktree to the current worktree.
+        prefix is used to add a prefix to the node names.
+        """
+        for node in wt.nodes:
+            node.name = prefix + node.name
+            node.wait = [prefix + w for w in node.wait] if node.wait else []
+            node.parent = self
+            self.nodes.append(node)
+        # self.sequence.extend([prefix + node for node in wt.sequence])
+        # self.conditions.extend(wt.conditions)
+        self.ctx.update(wt.ctx)
+        # links
+        for link in wt.links:
+            self.links.append(link)
