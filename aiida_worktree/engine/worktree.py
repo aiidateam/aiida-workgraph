@@ -569,13 +569,23 @@ class WorkTree(Process, metaclass=Protect):
         return is_finished
 
     def check_while_conditions(self):
+        """Check while conditions.
+        Run all condition nodes and check if all the conditions are True.
+        """
         print("Is a while worktree")
-        condition_nodes = [c[0] for c in self.ctx.worktree["conditions"]]
+        condition_nodes = []
+        for c in self.ctx.worktree["conditions"]:
+            node_name, socket_name = c.split(".")
+            if "node_name" != "ctx":
+                condition_nodes.append(node_name)
         self.run_nodes(condition_nodes)
-        conditions = [
-            self.ctx.nodes[c[0]]["results"][c[1]]
-            for c in self.ctx.worktree["conditions"]
-        ]
+        conditions = []
+        for c in self.ctx.worktree["conditions"]:
+            node_name, socket_name = c.split(".")
+            if node_name == "ctx":
+                conditions.append(self.ctx[socket_name])
+            else:
+                conditions.append(self.ctx.nodes[node_name]["results"][socket_name])
         print("conditions: ", conditions)
         should_run = False not in conditions
         if should_run:

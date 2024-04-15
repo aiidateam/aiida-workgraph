@@ -10,7 +10,7 @@ def test_while(decorated_add, decorated_multiply, decorated_compare):
     def my_while(n, limit):
         wt = WorkTree("while_worktree")
         wt.worktree_type = "WHILE"
-        wt.conditions = [["compare1", "result"]]
+        wt.conditions = ["compare1.result"]
         wt.ctx = {"n": n}
         wt.nodes.new(decorated_compare, name="compare1", x="{{n}}", y=orm.Int(limit))
         multiply1 = wt.nodes.new(
