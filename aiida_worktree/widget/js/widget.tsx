@@ -1,6 +1,6 @@
 import * as React from "react";
 import { createRender, useModel, useModelState } from "@anywidget/react";
-import { createEditor, createDynamicNode } from "./default_rete";
+import { createEditor, removeNode, addNode, addLink, removeLink } from "./default_rete";
 import "./widget.css";
 
 export function useRete<T extends { destroy(): void }>(
@@ -58,60 +58,34 @@ const render = createRender(() => {
   React.useEffect(() => {
     function handle_custom_msg(msg: any) {
       console.log(msg.data);
-      // Access the editor through the ref
       if (!editor) {
         return;
       }
-      /*
-        Message format:
-        {
-          type: "custom",
-          data: {
-            node_id: string,
-            label: string
-          }
-        }
-        type: could be the following:
-        - "test"
-        - "add_node"
-        - "delete_node"
-        - "add_link"
-        - "remove_link"
-      */
-		    // console.log(editor.editor.getNodes()[0].label);
-        let node;
-        switch (msg.type) {
-          case "test":
-            node = editor.editor.getNodes()[0];
-  		      node.label = "hello";
-            editor.area.update('node', node.id)
-            break;
-          case "add_node":
-            node = createDynamicNode(msg.data);
-            editor.editor.addNode(node);
-            break;
-          case "delete_node":
-            console.log("delete node: ")
-            console.log(editor.editor.nodeMap[msg.data.name]);
-            editor.editor.removeNode(editor.editor.nodeMap[msg.data.name].id).then(() => {
-              delete editor.editor.nodeMap[msg.data.name];
-              console.log("Deleted node successfully");
-              editor.area.update();
-            });
-            break;
-          case "add_link":
-            const fromNode = editor.editor.editor.nodeMap[link.from_node];
-            const toNode = editor.editor.editor.nodeMap[link.to_node];
-            if (fromNode && toNode) {
-                editor.addConnection(new Connection(fromNode, link.from_socket, toNode, link.to_socket));
-            }
-            break;
-          case "remove_link":
-            // Do something
-            break;
-          default:
-            break;
-        }
+      let node;
+      switch (msg.type) {
+        case "test":
+          node = editor.editor.getNodes()[0];
+		      node.label = "hello";
+          editor.area.update('node', node.id)
+          break;
+        case "add_node":
+          addNode(editor.editor, msg.data)
+          editor.layout(true);
+          break;
+        case "delete_node":
+          removeNode(editor.editor, msg.data.name)
+          break;
+        case "add_link":
+          console.log("Adding link", msg.data);
+          addLink(editor.editor, editor.area, editor.layout, msg.data)
+          break;
+        case "delete_link":
+          console.log("Removing link", msg.data);
+          removeLink(editor.editor, msg.data)
+          break;
+        default:
+          break;
+      }
     }
     model.on("msg:custom", handle_custom_msg);
     return () => model.off("msg:custom", handle_custom_msg);

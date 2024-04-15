@@ -77,6 +77,67 @@ export function createDynamicNode(nodeData: any) {
   return node;
 }
 
+export async function addNode(editor, nodeData) {
+  console.log("Adding node", nodeData);
+  const node = createDynamicNode(nodeData);
+  await editor.addNode(node);
+  editor.nodeMap[nodeData.label] = node; // Assuming each nodeData has a unique ID
+}
+
+export async function addLink(editor, area, layout, linkData) {
+  const fromNode = editor.nodeMap[linkData.from_node];
+  const toNode = editor.nodeMap[linkData.to_node];
+  console.log("fromNode", fromNode, "toNode", toNode);
+  let socket;
+  if (fromNode && toNode) {
+    socket = new ClassicPreset.Socket(linkData.from_socket);
+    if (!fromNode.outputs.hasOwnProperty(linkData.from_socket)) {
+      fromNode.addOutput(linkData.from_socket, new ClassicPreset.Output(socket, linkData.from_socket));
+      fromNode.height += 25; // Increase height of node for each output
+      area.update('node', fromNode.id);
+    }
+    socket = new ClassicPreset.Socket(linkData.to_socket);
+    if (!toNode.inputs.hasOwnProperty(linkData.to_socket)) {
+      toNode.addInput(linkData.to_socket, new ClassicPreset.Input(socket, linkData.to_socket));
+      toNode.height += 25; // Increase height of node for each input
+      area.update('node', toNode.id);
+    }
+    await editor.addConnection(new Connection(fromNode, linkData.from_socket, toNode, linkData.to_socket));
+    await layout(true);
+
+  }
+}
+
+export async function removeLink(editor, linkData) {
+  const connections = editor.getConnections();
+  const connection = connections.find((connection) => {
+    return connection.source === editor.nodeMap[linkData.from_node].id && connection.target === editor.nodeMap[linkData.to_node].id;
+  });
+  if (connection) {
+    editor.removeConnection(connection.id);
+    console.log("Deleted link successfully");
+  }
+}
+
+export async function removeNode(editor, name) {
+  // remove all connections to the node
+  const node = editor.nodeMap[name];
+  const connections = editor.getConnections()
+
+  const incomingConnections = connections.filter(connection => connection.target === node.id)
+  const outgoingConnections = connections.filter(connection => connection.source === node.id)
+  incomingConnections.forEach(connection => {
+    editor.removeConnection(connection.id)
+  })
+  outgoingConnections.forEach(connection => {
+    editor.removeConnection(connection.id)
+  })
+  editor.removeNode(editor.nodeMap[name].id).then(() => {
+    delete editor.nodeMap[name];
+    console.log("Deleted node successfully");
+  });
+}
+
 export async function createEditor(container: HTMLElement, worktreeData: any) {
   container.innerHTML = ''
 
@@ -122,33 +183,26 @@ export async function createEditor(container: HTMLElement, worktreeData: any) {
 
   AreaExtensions.simpleNodesOrder(area);
 
-  // Adding nodes based on worktreeData
-  const nodeMap: NodeMap = {}; // To keep track of created nodes for linking
-  for (const nodeId in worktreeData.nodes) {
-    const nodeData = worktreeData.nodes[nodeId];
-    const node = createDynamicNode(nodeData);
-    await editor.addNode(node);
-    nodeMap[nodeId] = node; // Storing reference to the node
-  }
-  editor.nodeMap = nodeMap;
-  // Adding connections based on worktreeData
-  worktreeData.links.forEach(async (link: LinkData) => { // Specify the type of link here
-    const fromNode = nodeMap[link.from_node];
-    const toNode = nodeMap[link.to_node];
-    if (fromNode && toNode) {
-        await editor.addConnection(new Connection(fromNode, link.from_socket, toNode, link.to_socket));
-    }
-  });
-
-  console.log("editor created");
-  console.log(editor);
 
   async function layout(animate: boolean) {
-    console.log("layout");
     await arrange.layout({ applier: animate ? applier : undefined });
-    console.log("arrange.layout done");
     AreaExtensions.zoomAt(area, editor.getNodes());
   };
+
+  // Adding nodes based on worktreeData
+  const nodeMap: NodeMap = {}; // To keep track of created nodes for linking
+  editor.nodeMap = nodeMap;
+
+  for (const nodeId in worktreeData.nodes) {
+    const nodeData = worktreeData.nodes[nodeId];
+    await addNode(editor, nodeData);
+  }
+
+  // Adding connections based on worktreeData
+  worktreeData.links.forEach(async (link: LinkData) => { // Specify the type of link here
+    await addLink(editor, area, layout, link);
+  });
+
 
   // aplly layout twice to ensure all nodes are arranged
   await layout(true);
