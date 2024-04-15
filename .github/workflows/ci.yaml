@@ -109,18 +109,18 @@ jobs:
         -   name: Start AiiDA daemon
             run: verdi daemon start 2
 
-        -   name: FastAPI
-            working-directory: aiida_worktree/web/backend
+        -   name: Install Dependencies for widget
+            working-directory: aiida_worktree/widget
             run: |
-                python main.py &
+                npm install
+                npm run build
 
         -   name: Install Dependencies, Start React Application
             working-directory: aiida_worktree/web/frontend
             run: |
                 npm install
-                # npm run build
-                npm run start &
-                sleep 5
+                npm run build
+                worktree web start
 
         -   name: Run pytest
             env:
