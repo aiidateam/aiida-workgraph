@@ -2,6 +2,13 @@ import node_graph
 import aiida
 from aiida_worktree.nodes import node_pool
 import time
+from aiida_worktree.utils.tree import (
+    node_deletion_hook,
+    node_creation_hook,
+    link_creation_hook,
+    link_deletion_hook,
+)
+from aiida_worktree.widget import NodeGraphWidget
 
 
 class WorkTree(node_graph.NodeGraph):
@@ -36,6 +43,11 @@ class WorkTree(node_graph.NodeGraph):
         self.process = None
         self.restart_process = None
         self.max_number_jobs = 1000000
+        self.nodes.post_deletion_hooks = [node_deletion_hook]
+        self.nodes.post_creation_hooks = [node_creation_hook]
+        self.links.post_creation_hooks = [link_creation_hook]
+        self.links.post_deletion_hooks = [link_deletion_hook]
+        self._widget = NodeGraphWidget()
 
     def run(self, inputs=None):
         """
@@ -288,3 +300,11 @@ class WorkTree(node_graph.NodeGraph):
         # links
         for link in wt.links:
             self.links.append(link)
+
+    def _repr_mimebundle_(self, *args, **kwargs):
+        # if ipywdigets > 8.0.0, use _repr_mimebundle_ instead of _ipython_display_
+        self._widget.from_worktree(self)
+        if hasattr(self._widget, "_repr_mimebundle_"):
+            return self._widget._repr_mimebundle_(*args, **kwargs)
+        else:
+            return self._widget._ipython_display_(*args, **kwargs)

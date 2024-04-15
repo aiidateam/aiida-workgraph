@@ -1,0 +1,29 @@
+{
+	"scripts": {
+		"dev": "npm run build -- --sourcemap=inline --watch",
+		"build": "esbuild js/widget.tsx --minify --format=esm --bundle --outdir=src/widget/static",
+		"typecheck": "tsc --noEmit"
+	},
+	"dependencies": {
+		"@anywidget/react": "^0.0.5",
+		"react": "^18.2.0",
+		"react-dom": "^18.2.0",
+		"rete": "^2.0.2",
+		"rete-area-3d-plugin": "^2.0.3",
+		"rete-area-plugin": "^2.0.1",
+		"rete-auto-arrange-plugin": "^2.0.0",
+		"rete-connection-plugin": "^2.0.0",
+		"rete-connection-reroute-plugin": "^2.0.0",
+		"rete-context-menu-plugin": "^2.0.0",
+		"rete-minimap-plugin": "^2.0.1",
+		"rete-react-plugin": "^2.0.4",
+		"rete-readonly-plugin": "^2.0.0",
+		"rete-render-utils": "^2.0.1"
+	},
+	"devDependencies": {
+		"@types/react": "^18.2.61",
+		"@types/react-dom": "^18.2.19",
+		"esbuild": "^0.20.0",
+		"typescript": "^5.3.3"
+	}
+}
