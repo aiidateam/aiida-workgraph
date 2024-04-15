@@ -3,7 +3,7 @@ import pathlib
 
 import anywidget
 import traitlets
-from .utils import clean_hanging_links, wait_to_link
+from .utils import wait_to_link
 
 try:
     __version__ = importlib.metadata.version("widget")
@@ -23,5 +23,4 @@ class NodeGraphWidget(anywidget.AnyWidget):
 
         wtdata = worktree.to_dict()
         wait_to_link(wtdata)
-        clean_hanging_links(wtdata)
         self.value = worktree_to_short_json(wtdata)

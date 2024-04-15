@@ -55,7 +55,7 @@ type Schemes = GetSchemes<Node, Connection<Node>>;
 type AreaExtra = ReactArea2D<any> | MinimapExtra | ContextMenuExtra;
 
 
-function createDynamicNode(nodeData: any) {
+export function createDynamicNode(nodeData: any) {
   const node = new Node(nodeData.label);
 
   nodeData.inputs.forEach((input: NodeInput) => {
@@ -130,6 +130,7 @@ export async function createEditor(container: HTMLElement, worktreeData: any) {
     await editor.addNode(node);
     nodeMap[nodeId] = node; // Storing reference to the node
   }
+  editor.nodeMap = nodeMap;
   // Adding connections based on worktreeData
   worktreeData.links.forEach(async (link: LinkData) => { // Specify the type of link here
     const fromNode = nodeMap[link.from_node];
