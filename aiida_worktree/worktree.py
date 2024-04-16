@@ -44,6 +44,7 @@ class WorkTree(node_graph.NodeGraph):
         self.restart_process = None
         self.max_number_jobs = 1000000
         self.execution_count = 0
+        self.max_iteration = 1000000
         self.nodes.post_deletion_hooks = [node_deletion_hook]
         self.nodes.post_creation_hooks = [node_creation_hook]
         self.links.post_creation_hooks = [link_creation_hook]
@@ -157,9 +158,15 @@ class WorkTree(node_graph.NodeGraph):
         wtdata["ctx"] = {
             key.replace(".", "__"): value for key, value in self.ctx.items()
         }
-        wtdata["worktree_type"] = self.worktree_type
-        wtdata["conditions"] = self.conditions
-        wtdata["max_number_jobs"] = self.max_number_jobs
+        wtdata.update(
+            {
+                "max_iteration": self.max_iteration,
+                "execution_count": self.execution_count,
+                "worktree_type": self.worktree_type,
+                "conditions": self.conditions,
+                "max_number_jobs": self.max_number_jobs,
+            }
+        )
 
         return wtdata
 
@@ -208,7 +215,9 @@ class WorkTree(node_graph.NodeGraph):
                 self.nodes[link.link_label].ctime = node.ctime
                 self.nodes[link.link_label].mtime = node.mtime
             elif isinstance(node, aiida.orm.Data):
-                if (link.link_label).startswith("group_outputs__"):
+                if link.link_label.startswith(
+                    "group_outputs__"
+                ) or link.link_label.startswith("new_data__"):
                     label = link.link_label.split("__", 1)[1]
                     if label in self.nodes.keys():
                         self.nodes[label].state = "FINISHED"

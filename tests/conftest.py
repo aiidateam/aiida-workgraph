@@ -1,6 +1,6 @@
 import pytest
 from aiida_worktree import node, WorkTree, build_node
-from aiida.orm import Float, Int, Bool, load_code
+from aiida.orm import Float, Int, load_code
 
 
 @pytest.fixture
@@ -131,9 +131,9 @@ def decorated_compare():
     """Generate a decorated node for test."""
 
     # define compare node
-    @node.calcfunction()
+    @node()
     def compare(x, y):
-        return Bool(x < y)
+        return x < y
 
     return compare
 

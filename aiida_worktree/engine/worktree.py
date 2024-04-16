@@ -400,6 +400,8 @@ class WorkTree(Process, metaclass=Protect):
         self.ctx.msgs = []
         self.node.set_process_label(f"WorkTree: {self.ctx.worktree['name']}")
         self.ctx._execution_count = 0
+        # init node results
+        self.set_node_results()
         # while worktree
         if self.ctx.worktree["worktree_type"].upper() == "WHILE":
             self.ctx._max_iteration = self.ctx.worktree.get("max_iteration", 1000)
@@ -411,8 +413,6 @@ class WorkTree(Process, metaclass=Protect):
             should_run = self.check_for_conditions()
             if not should_run:
                 self.set_node_state(self.ctx.nodes.keys(), "SKIPPED")
-        # init node results
-        self.set_node_results()
 
     def setup_ctx_worktree(self, wtdata):
         """setup the worktree in the context."""
@@ -584,6 +584,12 @@ class WorkTree(Process, metaclass=Protect):
         Run all condition nodes and check if all the conditions are True.
         """
         print("Is a while worktree")
+        print(
+            "execution count: ",
+            self.ctx._execution_count,
+            "max iteration: ",
+            self.ctx._max_iteration,
+        )
         self.report("Check while conditions.")
         if self.ctx._execution_count >= self.ctx._max_iteration:
             print("Max iteration reached.")
