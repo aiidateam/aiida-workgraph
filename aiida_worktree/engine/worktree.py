@@ -80,6 +80,12 @@ class WorkTree(Process, metaclass=Protect):
 
         spec.output_namespace("new_data", dynamic=True)
         spec.output_namespace("group_outputs", dynamic=True)
+        spec.output(
+            "execution_count",
+            valid_type=orm.Int,
+            required=False,
+            help="The number of time the WorkTree runs.",
+        )
         #
         spec.exit_code(
             201, "UNKNOWN_MESSAGE_TYPE", message="The message type is unknown."
@@ -351,6 +357,7 @@ class WorkTree(Process, metaclass=Protect):
 
         :param awaitable: an Awaitable instance
         """
+        print("on awaitable finished: ", awaitable.key)
         self.logger.info(
             "received callback that awaitable %d has terminated", awaitable.pk
         )
@@ -392,8 +399,12 @@ class WorkTree(Process, metaclass=Protect):
         #
         self.ctx.msgs = []
         self.node.set_process_label(f"WorkTree: {self.ctx.worktree['name']}")
+        self.ctx._execution_count = 0
+        # init node results
+        self.set_node_results()
         # while worktree
         if self.ctx.worktree["worktree_type"].upper() == "WHILE":
+            self.ctx._max_iteration = self.ctx.worktree.get("max_iteration", 1000)
             should_run = self.check_while_conditions()
             if not should_run:
                 self.set_node_state(self.ctx.nodes.keys(), "SKIPPED")
@@ -402,8 +413,6 @@ class WorkTree(Process, metaclass=Protect):
             should_run = self.check_for_conditions()
             if not should_run:
                 self.set_node_state(self.ctx.nodes.keys(), "SKIPPED")
-        # init node results
-        self.set_node_results()
 
     def setup_ctx_worktree(self, wtdata):
         """setup the worktree in the context."""
@@ -518,6 +527,7 @@ class WorkTree(Process, metaclass=Protect):
             self.ctx.nodes[name]["process"] = None
 
     def continue_worktree(self, exclude=[]):
+        print("Continue worktree.")
         self.report("Continue worktree.")
         self.update_worktree_from_base()
         self.apply_actions()
@@ -535,6 +545,7 @@ class WorkTree(Process, metaclass=Protect):
 
     def update_node_state(self, name):
         """Update ndoe state if node is a Awaitable."""
+        print("update node state: ", name)
         node = self.ctx.nodes[name]
         if (
             node["metadata"]["node_type"]
@@ -569,13 +580,34 @@ class WorkTree(Process, metaclass=Protect):
         return is_finished
 
     def check_while_conditions(self):
+        """Check while conditions.
+        Run all condition nodes and check if all the conditions are True.
+        """
         print("Is a while worktree")
-        condition_nodes = [c[0] for c in self.ctx.worktree["conditions"]]
-        self.run_nodes(condition_nodes)
-        conditions = [
-            self.ctx.nodes[c[0]]["results"][c[1]]
-            for c in self.ctx.worktree["conditions"]
-        ]
+        print(
+            "execution count: ",
+            self.ctx._execution_count,
+            "max iteration: ",
+            self.ctx._max_iteration,
+        )
+        self.report("Check while conditions.")
+        if self.ctx._execution_count >= self.ctx._max_iteration:
+            print("Max iteration reached.")
+            self.report("Max iteration reached.")
+            return False
+        condition_nodes = []
+        for c in self.ctx.worktree["conditions"]:
+            node_name, socket_name = c.split(".")
+            if "node_name" != "ctx":
+                condition_nodes.append(node_name)
+        self.run_nodes(condition_nodes, continue_worktree=False)
+        conditions = []
+        for c in self.ctx.worktree["conditions"]:
+            node_name, socket_name = c.split(".")
+            if node_name == "ctx":
+                conditions.append(self.ctx[socket_name])
+            else:
+                conditions.append(self.ctx.nodes[node_name]["results"][socket_name])
         print("conditions: ", conditions)
         should_run = False not in conditions
         if should_run:
@@ -600,7 +632,7 @@ class WorkTree(Process, metaclass=Protect):
         self.ctx._count += 1
         return should_run
 
-    def run_nodes(self, names):
+    def run_nodes(self, names, continue_worktree=True):
         """Run node
         Here we use ToContext to pass the results of the run to the next step.
         This will force the engine to wait for all the submitted processes to
@@ -653,7 +685,8 @@ class WorkTree(Process, metaclass=Protect):
                 # ValueError: attempted to add an input link after the process node was already stored.
                 # self.node.base.links.add_incoming(results, "INPUT_WORK", name)
                 self.report(f"Node: {name} finished.")
-                self.continue_worktree(names)
+                if continue_worktree:
+                    self.continue_worktree(names)
             elif node["metadata"]["node_type"] == "data":
                 print("node  type: data.")
                 results = create_data_node(executor, args, kwargs)
@@ -663,7 +696,8 @@ class WorkTree(Process, metaclass=Protect):
                 self.ctx.nodes[name]["state"] = "FINISHED"
                 self.node_to_ctx(name)
                 self.report(f"Node: {name} finished.")
-                self.continue_worktree(names)
+                if continue_worktree:
+                    self.continue_worktree(names)
             elif node["metadata"]["node_type"] in ["calcfunction", "workfunction"]:
                 print("node type: calcfunction/workfunction.")
                 kwargs.setdefault("metadata", {})
@@ -696,7 +730,8 @@ class WorkTree(Process, metaclass=Protect):
                     print(f"Node: {name} failed.")
                     self.report(f"Node: {name} failed.")
                 # exclude the current nodes from the next run
-                self.continue_worktree(names)
+                if continue_worktree:
+                    self.continue_worktree(names)
             elif node["metadata"]["node_type"] in ["calcjob", "workchain"]:
                 # process = run_get_node(executor, *args, **kwargs)
                 print("node  type: calcjob/workchain.")
@@ -745,7 +780,8 @@ class WorkTree(Process, metaclass=Protect):
                 self.ctx.nodes[name]["state"] = "FINISHED"
                 self.node_to_ctx(name)
                 self.report(f"Node: {name} finished.")
-                self.continue_worktree(names)
+                if continue_worktree:
+                    self.continue_worktree(names)
                 # print("result from node: ", node["results"])
             else:
                 print("node  type: unknown.")
@@ -922,6 +958,7 @@ class WorkTree(Process, metaclass=Protect):
     #     return outputs
     def reset(self):
         print("Reset")
+        self.ctx._execution_count += 1
         self.set_node_state(self.ctx.nodes.keys(), "CREATED")
 
     def set_node_state(self, names, value):
@@ -954,6 +991,7 @@ class WorkTree(Process, metaclass=Protect):
                 ]
         self.out("group_outputs", group_outputs)
         self.out("new_data", self.ctx.new_data)
+        self.out("execution_count", orm.Int(self.ctx._execution_count).store())
         self.report("Finalize")
         for name, node in self.ctx.nodes.items():
             if node["state"] == "FAILED":
