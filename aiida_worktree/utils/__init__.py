@@ -209,14 +209,15 @@ def get_processes_latest(pk):
             }
 
         elif isinstance(node, aiida.orm.Data):
-            label = link.link_label.split("__", 1)[1]
-            if label in nodes.keys():
-                nodes[label] = {
-                    "pk": node.pk,
-                    "state": "Stored" if node.is_stored else "Unstored",
-                    "ctime": nodes.ctime,
-                    "mtime": nodes.mtime,
-                }
+            if (link.link_label).startswith("group_outputs__"):
+                label = link.link_label.split("__", 1)[1]
+                if label in nodes.keys():
+                    nodes[label] = {
+                        "pk": node.pk,
+                        "state": "Stored" if node.is_stored else "Unstored",
+                        "ctime": nodes.ctime,
+                        "mtime": nodes.mtime,
+                    }
     return nodes
 
 

@@ -43,6 +43,7 @@ class WorkTree(node_graph.NodeGraph):
         self.process = None
         self.restart_process = None
         self.max_number_jobs = 1000000
+        self.execution_count = 0
         self.nodes.post_deletion_hooks = [node_deletion_hook]
         self.nodes.post_creation_hooks = [node_creation_hook]
         self.links.post_creation_hooks = [link_creation_hook]
@@ -207,11 +208,14 @@ class WorkTree(node_graph.NodeGraph):
                 self.nodes[link.link_label].ctime = node.ctime
                 self.nodes[link.link_label].mtime = node.mtime
             elif isinstance(node, aiida.orm.Data):
-                label = link.link_label.split("__", 1)[1]
-                if label in self.nodes.keys():
-                    self.nodes[label].state = "FINISHED"
-                    self.nodes[label].node = node
-                    self.nodes[label].pk = node.pk
+                if (link.link_label).startswith("group_outputs__"):
+                    label = link.link_label.split("__", 1)[1]
+                    if label in self.nodes.keys():
+                        self.nodes[label].state = "FINISHED"
+                        self.nodes[label].node = node
+                        self.nodes[label].pk = node.pk
+                elif link.link_label == "execution_count":
+                    self.execution_count = node.value
 
     @property
     def pk(self):

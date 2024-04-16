@@ -28,5 +28,6 @@ def test_while(decorated_add, decorated_multiply, decorated_compare):
     add2 = wt.nodes.new(decorated_add, y=orm.Int(2))
     wt.links.new(add1.outputs[0], my_while1.inputs["limit"])
     wt.links.new(my_while1.outputs[0], add2.inputs[0])
-    wt.submit(wait=True)
+    wt.submit(wait=True, timeout=100)
     assert add2.node.outputs.result.value == 63
+    assert my_while1.node.outputs.execution_count == 4
