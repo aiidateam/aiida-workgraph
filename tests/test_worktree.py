@@ -1,4 +1,4 @@
-from aiida_worktree import WorkTree
+from aiida_worktree import WorkTree, build_node
 from aiida import load_profile, orm
 import time
 import pytest
@@ -92,3 +92,19 @@ def test_append_worktree(decorated_add_multiply_group):
     wt.links.new(add1.outputs[0], wt.nodes["group_add1"].inputs["x"])
     wt.submit(wait=True)
     assert wt.nodes["group_multiply1"].node.outputs.result == 45
+
+
+def test_node_from_worktree(decorated_add_multiply_group):
+    wt = WorkTree("test_node_from_worktree")
+    add1 = wt.nodes.new("AiiDAAdd", "add1", x=2, y=3)
+    add2 = wt.nodes.new("AiiDAAdd", "add2", y=3)
+    add_multiply_wt = decorated_add_multiply_group(x=0, y=4, z=5)
+    AddMultiplyNode = build_node(add_multiply_wt)
+    assert "add1.x" in AddMultiplyNode().inputs.keys()
+    # add the worktree as a node
+    add_multiply1 = wt.nodes.new(AddMultiplyNode, "add_multiply1")
+    wt.links.new(add1.outputs[0], add_multiply1.inputs["add1.x"])
+    wt.links.new(add_multiply1.outputs["multiply1.result"], add2.inputs["x"])
+    # wt.submit(wait=True)
+    wt.run()
+    assert wt.nodes["add2"].node.outputs.sum == 48
