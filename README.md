@@ -35,6 +35,19 @@ Here is a detailed comparison between the ``WorkTree`` with two AiiDA built-in w
     pip install aiida-worktree
 ```
 
+To install the latest version from source, first clone the repository and then install using `pip`:
+
+```console
+git clone https://github.com/superstar54/aiida-worktree
+cd aiida-worktree
+pip install -e .
+```
+In order to use the widget, you also need to run:
+```console
+cd aiida_worktree/widget/
+npm install
+npm run build
+```
 
 ## Documentation
 Check the [docs](https://aiida-worktree.readthedocs.io/en/latest/) and learn about the features.

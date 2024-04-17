@@ -11,6 +11,7 @@ def test_run(wt_calcfunction):
     print("state: ", wt.state)
     # print("results: ", results[])
     assert wt.nodes["sumdiff2"].node.outputs.sum == 9
+    assert wt.nodes["sumdiff2"].outputs["sum"].value == 9
 
 
 def test_submit(wt_calcfunction):
@@ -19,4 +20,4 @@ def test_submit(wt_calcfunction):
     wt.name = "test_submit_calcfunction"
     wt.submit(wait=True)
     # print("results: ", results[])
-    assert wt.nodes["sumdiff2"].node.outputs.sum == 9
+    assert wt.nodes["sumdiff2"].outputs["sum"].value == 9

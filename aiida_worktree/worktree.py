@@ -214,6 +214,15 @@ class WorkTree(node_graph.NodeGraph):
                 self.nodes[link.link_label].pk = node.pk
                 self.nodes[link.link_label].ctime = node.ctime
                 self.nodes[link.link_label].mtime = node.mtime
+                if self.nodes[link.link_label].state == "FINISHED":
+                    # update the output sockets
+                    for socket in self.nodes[link.link_label].outputs:
+                        if self.nodes[link.link_label].node_type == "node_group":
+                            socket.value = getattr(
+                                node.outputs.group_outputs, socket.name, None
+                            )
+                        else:
+                            socket.value = getattr(node.outputs, socket.name, None)
             elif isinstance(node, aiida.orm.Data):
                 if link.link_label.startswith(
                     "group_outputs__"

@@ -12,7 +12,7 @@ def test_worktree_ctx(decorated_add):
     wt.ctx = {"x": Float(2), "data.y": Float(3)}
     add1 = wt.nodes.new(decorated_add, "add1", x="{{x}}", y="{{data.y}}")
     wt.submit(wait=True)
-    assert add1.node.outputs.result.value == 5
+    assert add1.outputs["result"].value == 5
 
 
 def test_node_to_ctx(decorated_add):
@@ -26,4 +26,4 @@ def test_node_to_ctx(decorated_add):
     add2 = wt.nodes.new(decorated_add, "add2", y="{{ sum }}")
     wt.links.new(add1.outputs[0], add2.inputs["x"])
     wt.submit(wait=True)
-    assert add2.node.outputs.result.value == 10
+    assert add2.outputs["result"].value == 10
