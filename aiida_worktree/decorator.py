@@ -113,10 +113,14 @@ def build_node_from_worktree(wt):
     group_outputs = []
     # add all the inputs/outputs from the nodes in the worktree
     for node in wt.nodes:
+        # inputs
+        inputs.append(["General", f"{node.name}"])
         for socket in node.inputs:
             if socket.name == "_wait":
                 continue
             inputs.append(["General", f"{node.name}.{socket.name}"])
+        # outputs
+        outputs.append(["General", f"{node.name}"])
         for socket in node.outputs:
             if socket.name in ["_wait", "_outputs"]:
                 continue
