@@ -22,12 +22,17 @@
 	transform: scale(1.05);
 }
 
+.App {
+	position: relative;
+	width: 90%;
+	height: 600px;
+	background: rgb(200, 190, 190);
+}
 .rete {
 	position: relative;
 	width: 90%;
 	height: 600px;
 	font-size: 1rem;
-	background: rgb(200, 190, 190);
 	margin: 1em;
 	border-radius: 1em;
 	text-align: left;

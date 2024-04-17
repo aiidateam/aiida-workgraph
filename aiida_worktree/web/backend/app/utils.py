@@ -19,6 +19,7 @@ def worktree_to_short_json(wtdata):
             "label": node["name"],
             "inputs": [],
             "outputs": [],
+            "position": node["position"],
         }
     for link in wtdata["links"]:
         wtdata_short["nodes"][link["to_node"]]["inputs"].append(

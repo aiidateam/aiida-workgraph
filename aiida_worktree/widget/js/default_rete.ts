@@ -77,11 +77,24 @@ export function createDynamicNode(nodeData: any) {
   return node;
 }
 
-export async function addNode(editor, nodeData) {
+export async function loadJSON(editor, area, layout, worktreeData) {
+  for (const nodeId in worktreeData.nodes) {
+    const nodeData = worktreeData.nodes[nodeId];
+    await addNode(editor, area, nodeData);
+  }
+
+  // Adding connections based on worktreeData
+  worktreeData.links.forEach(async (link: LinkData) => { // Specify the type of link here
+    await addLink(editor, area, layout, link);
+  });
+}
+
+export async function addNode(editor, area, nodeData) {
   console.log("Adding node", nodeData);
   const node = createDynamicNode(nodeData);
   await editor.addNode(node);
   editor.nodeMap[nodeData.label] = node; // Assuming each nodeData has a unique ID
+  await area.translate(node.id, { x: nodeData.position[0], y: nodeData.position[1] });
 }
 
 export async function addLink(editor, area, layout, linkData) {
@@ -103,7 +116,7 @@ export async function addLink(editor, area, layout, linkData) {
       area.update('node', toNode.id);
     }
     await editor.addConnection(new Connection(fromNode, linkData.from_socket, toNode, linkData.to_socket));
-    await layout(true);
+    // await layout(true);
 
   }
 }
@@ -138,7 +151,7 @@ export async function removeNode(editor, name) {
   });
 }
 
-export async function createEditor(container: HTMLElement, worktreeData: any) {
+export async function createEditor(container: HTMLElement) {
   container.innerHTML = ''
 
   const editor = new NodeEditor<Schemes>();
@@ -193,20 +206,9 @@ export async function createEditor(container: HTMLElement, worktreeData: any) {
   const nodeMap: NodeMap = {}; // To keep track of created nodes for linking
   editor.nodeMap = nodeMap;
 
-  for (const nodeId in worktreeData.nodes) {
-    const nodeData = worktreeData.nodes[nodeId];
-    await addNode(editor, nodeData);
-  }
-
-  // Adding connections based on worktreeData
-  worktreeData.links.forEach(async (link: LinkData) => { // Specify the type of link here
-    await addLink(editor, area, layout, link);
-  });
-
-
   // aplly layout twice to ensure all nodes are arranged
-  await layout(true);
-  await layout(true);
+  // await layout(true);
+  // await layout(true);
 
   return {
     editor: editor,

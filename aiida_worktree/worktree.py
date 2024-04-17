@@ -50,6 +50,7 @@ class WorkTree(node_graph.NodeGraph):
         self.links.post_creation_hooks = [link_creation_hook]
         self.links.post_deletion_hooks = [link_deletion_hook]
         self._widget = NodeGraphWidget()
+        self._widget.observe(self._on_widget_change, names="value")
 
     def run(self, inputs=None):
         """
@@ -321,3 +322,9 @@ class WorkTree(node_graph.NodeGraph):
             return self._widget._repr_mimebundle_(*args, **kwargs)
         else:
             return self._widget._ipython_display_(*args, **kwargs)
+
+    def _on_widget_change(self, change):
+        # observe the changes of the value of the widget
+        # update position of the nodes
+        for name, node in self._widget.value["nodes"].items():
+            self.nodes[name].position = node["position"]

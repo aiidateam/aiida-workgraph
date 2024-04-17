@@ -23,4 +23,5 @@ class NodeGraphWidget(anywidget.AnyWidget):
 
         wtdata = worktree.to_dict()
         wait_to_link(wtdata)
-        self.value = worktree_to_short_json(wtdata)
+        wtdata = worktree_to_short_json(wtdata)
+        self.value = wtdata
