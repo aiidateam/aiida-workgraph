@@ -31,7 +31,17 @@ def add_input_recursive(inputs, port, prefix=None):
 
 
 def build_node(ndata):
-    """Register a node from a AiiDA component."""
+    from aiida_worktree.worktree import WorkTree
+
+    if isinstance(ndata, WorkTree):
+        return build_node_from_worktree(ndata)
+    elif "path" in ndata:
+        return build_node_from_AiiDA(ndata)
+
+
+def build_node_from_AiiDA(ndata):
+    """Register a node from a AiiDA component.
+    For example: CalcJob, WorkChain, CalcFunction, WorkFunction."""
     from aiida_worktree.node import Node
     import inspect
 
@@ -90,6 +100,56 @@ def build_node(ndata):
     }
     ndata["executor"] = executor
     node = create_node(ndata)
+    return node
+
+
+def build_node_from_worktree(wt):
+    """Build node from worktree."""
+    from aiida_worktree.node import Node
+
+    ndata = {"node_type": "worktree"}
+    inputs = []
+    outputs = []
+    group_outputs = []
+    # add all the inputs/outputs from the nodes in the worktree
+    for node in wt.nodes:
+        # inputs
+        inputs.append(["General", f"{node.name}"])
+        for socket in node.inputs:
+            if socket.name == "_wait":
+                continue
+            inputs.append(["General", f"{node.name}.{socket.name}"])
+        # outputs
+        outputs.append(["General", f"{node.name}"])
+        for socket in node.outputs:
+            if socket.name in ["_wait", "_outputs"]:
+                continue
+            outputs.append(["General", f"{node.name}.{socket.name}"])
+            group_outputs.append(
+                [f"{node.name}.{socket.name}", f"{node.name}.{socket.name}"]
+            )
+    kwargs = [input[1] for input in inputs]
+    # add built-in sockets
+    outputs.append(["General", "_outputs"])
+    outputs.append(["General", "_wait"])
+    inputs.append(["General", "_wait", {"link_limit": 1e6}])
+    ndata["node_class"] = Node
+    ndata["kwargs"] = kwargs
+    ndata["inputs"] = inputs
+    ndata["outputs"] = outputs
+    ndata["identifier"] = wt.name
+    # TODO In order to reload the WorkTree from process, "is_pickle" should be True
+    # so I pickled the function here, but this is not necessary
+    # we need to update the node_graph to support the path and name of the function
+    executor = {
+        "executor": None,
+        "wtdata": wt.to_dict(),
+        "type": ndata["node_type"],
+        "is_pickle": True,
+    }
+    ndata["executor"] = executor
+    node = create_node(ndata)
+    node.group_outputs = group_outputs
     return node
 
 
@@ -157,7 +217,6 @@ class NodeDecoratorCollection:
         inputs=None,
         outputs=None,
         catalog="Others",
-        executor_type="function",
     ):
         """Generate a decorator that register a function as a node.
 
@@ -172,13 +231,13 @@ class NodeDecoratorCollection:
         """
 
         def decorator(func):
-            nonlocal identifier
+            nonlocal identifier, node_type
 
             if identifier is None:
                 identifier = func.__name__
 
             # Determine node_type based on AiiDA's node classes
-            node_type = "Normal"
+            node_type = node_type
             if hasattr(func, "node_class"):
                 if func.node_class is CalcFunctionNode:
                     node_type = "calcfunction"
@@ -208,7 +267,6 @@ class NodeDecoratorCollection:
         inputs=None,
         outputs=None,
         catalog="Others",
-        executor_type="function",
     ):
         """Generate a decorator that register a node group as a node.
 
@@ -229,12 +287,11 @@ class NodeDecoratorCollection:
                 identifier = func.__name__
             # use cloudpickle to serialize function
             func.identifier = identifier
-            func.group_outputs = outputs
 
             node_outputs = [["General", output[1]] for output in outputs]
             # print(node_inputs, node_outputs)
             #
-            node_type = "worktree"
+            node_type = "node_group"
             ndata = generate_ndata(
                 func,
                 identifier,

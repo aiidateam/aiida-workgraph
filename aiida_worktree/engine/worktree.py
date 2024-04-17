@@ -469,12 +469,21 @@ class WorkTree(Process, metaclass=Protect):
             state = node["process"].process_state.value.upper()
             if state == "FINISHED":
                 node["state"] = state
-                if node["metadata"]["node_type"] == "worktree":
+                if node["metadata"]["node_type"] == "node_group":
                     # expose the outputs of nodetree
                     node["results"] = getattr(
                         node["process"].outputs, "group_outputs", None
                     )
                     # self.ctx.new_data[name] = outputs
+                elif node["metadata"]["node_type"] == "worktree":
+                    # expose the outputs of all the nodes in the worktree
+                    node["results"] = {}
+                    outgoing = node["process"].base.links.get_outgoing()
+                    for link in outgoing.all():
+                        if isinstance(link.node, ProcessNode) and getattr(
+                            link.node, "process_state", False
+                        ):
+                            node["results"][link.link_label] = link.node.outputs
                 else:
                     node["results"] = node["process"].outputs
                     # self.ctx.new_data[name] = node["results"]
@@ -554,6 +563,7 @@ class WorkTree(Process, metaclass=Protect):
                 "workfunction",
                 "calcjob",
                 "workchain",
+                "node_group",
                 "worktree",
             ]
             and node["state"] == "RUNNING"
@@ -647,7 +657,12 @@ class WorkTree(Process, metaclass=Protect):
         for name in names:
             print("-" * 60)
             node = self.ctx.nodes[name]
-            if node["metadata"]["node_type"] in ["calcjob", "workchain", "worktree"]:
+            if node["metadata"]["node_type"] in [
+                "calcjob",
+                "workchain",
+                "node_group",
+                "worktree",
+            ]:
                 if len(self._awaitables) > self.ctx.max_number_awaitables:
                     print(
                         MAX_NUMBER_AWAITABLES_MSG.format(
@@ -741,20 +756,47 @@ class WorkTree(Process, metaclass=Protect):
                 node["process"] = process
                 self.ctx.nodes[name]["state"] = "RUNNING"
                 self.to_context(**{name: process})
-            elif node["metadata"]["node_type"] in ["worktree"]:
-                # process = run_get_node(executor, *args, **kwargs)
-
-                print("node  type: worktree.")
+            elif node["metadata"]["node_type"] in ["node_group"]:
+                print("node  type: node_group.")
                 wt = self.run_executor(executor, args, kwargs, var_args, var_kwargs)
-                print("group outputs: ", executor.group_outputs)
-                wt.group_outputs = executor.group_outputs
                 wt.name = name
+                wt.group_outputs = self.ctx.nodes[name]["metadata"]["group_outputs"]
                 wt.parent_uuid = self.node.uuid
                 wt.save(metadata={"call_link_label": name})
                 print("submit worktree: ")
                 process = self.submit(wt.process_inited)
                 node["process"] = process
-                # self.ctx.nodes[name]["group_outputs"] = executor.group_outputs
+                self.ctx.nodes[name]["state"] = "RUNNING"
+                self.to_context(**{name: process})
+            elif node["metadata"]["node_type"] in ["worktree"]:
+                from aiida_worktree.utils import merge_properties
+                from aiida_worktree.utils.analysis import WorkTreeSaver
+
+                print("node  type: worktree.")
+                wtdata = node["executor"]["wtdata"]
+                wtdata["name"] = name
+                wtdata["metadata"]["group_outputs"] = self.ctx.nodes[name]["metadata"][
+                    "group_outputs"
+                ]
+                # update the worktree data by kwargs
+                for node_name, data in kwargs.items():
+                    # because kwargs is updated using update_nested_dict_with_special_keys
+                    # which means the data is grouped by the node name
+                    for socket_name, value in data.items():
+                        wtdata["nodes"][node_name]["properties"][socket_name][
+                            "value"
+                        ] = value
+                # merge the properties
+                merge_properties(wtdata)
+                metadata = {"call_link_label": name}
+                inputs = {"wt": wtdata, "metadata": metadata}
+                process_inited = WorkTree(inputs=inputs)
+                process_inited.runner.persister.save_checkpoint(process_inited)
+                saver = WorkTreeSaver(process_inited.node, wtdata)
+                saver.save()
+                print("submit worktree: ")
+                process = self.submit(process_inited)
+                node["process"] = process
                 self.ctx.nodes[name]["state"] = "RUNNING"
                 self.to_context(**{name: process})
             elif node["metadata"]["node_type"] in ["Normal"]:
@@ -790,6 +832,8 @@ class WorkTree(Process, metaclass=Protect):
 
     def get_inputs(self, node):
         """Get input based on the links."""
+        from aiida_worktree.utils import get_nested_dict
+
         args = []
         args_dict = {}
         kwargs = {}
@@ -817,9 +861,10 @@ class WorkTree(Process, metaclass=Protect):
                             "results"
                         ]
                     else:
-                        inputs[input["name"]] = self.ctx.nodes[link["from_node"]][
-                            "results"
-                        ][link["from_socket"]]
+                        inputs[input["name"]] = get_nested_dict(
+                            self.ctx.nodes[link["from_node"]]["results"],
+                            link["from_socket"],
+                        )
             # handle the case of multiple outputs
             elif len(input["links"]) > 1:
                 value = {}
@@ -975,7 +1020,7 @@ class WorkTree(Process, metaclass=Protect):
 
     def finalize(self):
         """"""
-        from aiida_worktree.utils import get_nested_dict
+        from aiida_worktree.utils import get_nested_dict, update_nested_dict
 
         # expose group outputs
         group_outputs = {}
@@ -984,11 +1029,15 @@ class WorkTree(Process, metaclass=Protect):
             print("output: ", output)
             node_name, socket_name = output[0].split(".")
             if node_name == "ctx":
-                group_outputs[output[1]] = get_nested_dict(self.ctx, socket_name)
+                update_nested_dict(
+                    group_outputs, output[1], get_nested_dict(self.ctx, socket_name)
+                )
             else:
-                group_outputs[output[1]] = self.ctx.nodes[node_name]["results"][
-                    socket_name
-                ]
+                update_nested_dict(
+                    group_outputs,
+                    output[1],
+                    self.ctx.nodes[node_name]["results"][socket_name],
+                )
         self.out("group_outputs", group_outputs)
         self.out("new_data", self.ctx.new_data)
         self.out("execution_count", orm.Int(self.ctx._execution_count).store())
