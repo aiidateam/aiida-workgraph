@@ -9,3 +9,4 @@ In this tutorials, you will see severl examples in real applications.
    :caption: Contents:
 
    qe
+   eos
