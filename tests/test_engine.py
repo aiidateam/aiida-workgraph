@@ -36,7 +36,7 @@ def test_max_number_jobs():
 
     # Use the calcjob: ArithmeticAddCalculation
     arithmetic_add = build_node(
-        {"path": "aiida.calculations.arithmetic.add.ArithmeticAddCalculation"}
+        "aiida.calculations.arithmetic.add.ArithmeticAddCalculation"
     )
     code = load_code("add@localhost")
 
