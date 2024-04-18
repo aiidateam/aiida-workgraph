@@ -8,7 +8,7 @@ def arithmetic_add():
     """Generate a node for test."""
 
     arithmetic_add = build_node(
-        {"path": "aiida.calculations.arithmetic.add.ArithmeticAddCalculation"}
+        "aiida.calculations.arithmetic.add.ArithmeticAddCalculation"
     )
     return arithmetic_add
 
@@ -173,9 +173,9 @@ def build_workchain():
     """Generate a decorated node for test."""
 
     from aiida_worktree import build_node
+    from aiida.workflows.arithmetic.multiply_add import MultiplyAddWorkChain
 
-    ndata = {"path": "aiida.workflows.arithmetic.multiply_add.MultiplyAddWorkChain"}
-    multiply_add = build_node(ndata)
+    multiply_add = build_node(MultiplyAddWorkChain)
 
     return multiply_add
 
