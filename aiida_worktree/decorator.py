@@ -30,27 +30,27 @@ def add_input_recursive(inputs, port, prefix=None):
     return inputs
 
 
-def build_node(ndata):
+def build_node(executor, outputs=None):
+    """Build node from executor."""
     from aiida_worktree.worktree import WorkTree
 
-    if isinstance(ndata, WorkTree):
-        return build_node_from_worktree(ndata)
-    elif "path" in ndata:
-        return build_node_from_AiiDA(ndata)
+    if isinstance(executor, WorkTree):
+        return build_node_from_worktree(executor)
+    elif isinstance(executor, str):
+        (
+            path,
+            executor_name,
+        ) = executor.rsplit(".", 1)
+        executor, _ = get_executor({"path": path, "name": executor_name})
+    if callable(executor):
+        return build_node_from_callable(executor, outputs=outputs)
 
 
-def build_node_from_AiiDA(ndata):
-    """Register a node from a AiiDA component.
-    For example: CalcJob, WorkChain, CalcFunction, WorkFunction."""
-    from aiida_worktree.node import Node
+def build_node_from_callable(executor, outputs=None):
+    """Build node from a callable object."""
     import inspect
 
-    path, executor_name, = ndata.pop(
-        "path"
-    ).rsplit(".", 1)
-    ndata["executor"] = {"path": path, "name": executor_name}
-    executor, type = get_executor(ndata["executor"])
-    # print(executor)
+    ndata = {}
     if inspect.isfunction(executor):
         # calcfunction and workfunction
         if getattr(executor, "node_class", False):
@@ -58,17 +58,40 @@ def build_node_from_AiiDA(ndata):
                 ndata["node_type"] = "calcfunction"
             elif executor.node_class is WorkFunctionNode:
                 ndata["node_type"] = "workfunction"
+            ndata["executor"] = executor
+            return build_node_from_AiiDA(ndata)
         else:
             ndata["node_type"] = "normal"
+            ndata["executor"] = executor
+            return build_node_from_function(executor, outputs=outputs)
     else:
         if issubclass(executor, CalcJob):
             ndata["node_type"] = "calcjob"
+            ndata["executor"] = executor
+            return build_node_from_AiiDA(ndata)
         elif issubclass(executor, WorkChain):
             ndata["node_type"] = "workchain"
+            ndata["executor"] = executor
+            return build_node_from_AiiDA(ndata)
         else:
             ndata["node_type"] = "normal"
+        ndata["executor"] = executor
+
+
+def build_node_from_function(executor, outputs=None):
+    """Build node from function."""
+    return NodeDecoratorCollection.decorator_node(outputs=outputs)(executor).node
+
+
+def build_node_from_AiiDA(ndata):
+    """Register a node from a AiiDA component.
+    For example: CalcJob, WorkChain, CalcFunction, WorkFunction."""
+    from aiida_worktree.node import Node
+
+    # print(executor)
     inputs = []
     outputs = []
+    executor = ndata["executor"]
     spec = executor.spec()
     for _key, port in spec.inputs.ports.items():
         add_input_recursive(inputs, port)
@@ -89,7 +112,7 @@ def build_node_from_AiiDA(ndata):
     ndata["kwargs"] = kwargs
     ndata["inputs"] = inputs
     ndata["outputs"] = outputs
-    ndata["identifier"] = ndata.pop("identifier", ndata["executor"]["name"])
+    ndata["identifier"] = ndata.pop("identifier", ndata["executor"].__name__)
     # TODO In order to reload the WorkTree from process, "is_pickle" should be True
     # so I pickled the function here, but this is not necessary
     # we need to update the node_graph to support the path and name of the function

@@ -11,7 +11,7 @@ def test_pw_relax_protocol(structure_si):
 
     # register node
     pw_relax_node = build_node(
-        {"path": "aiida_quantumespresso.workflows.pw.relax.PwRelaxWorkChain"}
+        "aiida_quantumespresso.workflows.pw.relax.PwRelaxWorkChain"
     )
     code = orm.load_code("qe-7.2-pw@localhost")
     wt = WorkTree("test_pw_relax")
@@ -35,7 +35,7 @@ def test_pw_relax_protocol_pop(structure_si):
 
     # register node
     pw_relax_node = build_node(
-        {"path": "aiida_quantumespresso.workflows.pw.relax.PwRelaxWorkChain"}
+        "aiida_quantumespresso.workflows.pw.relax.PwRelaxWorkChain"
     )
     code = orm.load_code("qe-7.2-pw@localhost")
     wt = WorkTree("test_pw_relax")
