@@ -4,8 +4,8 @@ import { createEditor, removeNode, addNode, addLink, removeLink } from "./defaul
 import "./widget.css";
 
 export function useRete<T extends { destroy(): void }>(
-  create: (el: HTMLElement, data: any) => Promise<T>,
-  worktreeData: any
+  create: (el: HTMLElement, settings: any, data: any) => Promise<T>,
+  settings: any, worktreeData: any
 ) {
   const [container, setContainer] = React.useState<null | HTMLElement>(null);
   const editorRef = React.useRef<T>(); // Ref for storing the actual editor instance
@@ -19,7 +19,7 @@ export function useRete<T extends { destroy(): void }>(
         editorRef.current.destroy();
         container.innerHTML = '';
       }
-      create(container, worktreeData).then((value) => {
+      create(container, settings, worktreeData).then((value) => {
         editorRef.current = value;
         setEditor(value);
         // Expose the editor instance to the window object for debugging
@@ -51,8 +51,10 @@ export function useRete<T extends { destroy(): void }>(
 }
 
 const render = createRender(() => {
-  const [value, setValue] = useModelState<number>("value");
-  const [ref, editor] = useRete(createEditor, value);
+  const [value, setValue] = useModelState<any>("value");
+  const [style, setStyle] = useModelState<any>("style");
+  const [settings, setSettings] = useModelState<any>("settings");
+  const [ref, editor] = useRete(createEditor, settings, value);
   const model = useModel();
 
   React.useEffect(() => {
@@ -93,7 +95,7 @@ const render = createRender(() => {
 
   return (
     <div className="App">
-      <div ref={ref} className="rete"></div>
+      <div ref={ref} className="rete" style={style}></div>
     </div>
   );
 });
