@@ -129,8 +129,9 @@ def test_pw_relax_workchain(structure_si):
     from aiida.orm import Dict, KpointsData, load_code, load_group
 
     # register node
-    ndata = {"path": "aiida_quantumespresso.workflows.pw.relax.PwRelaxWorkChain"}
-    pw_relax_node = build_node(ndata)
+    pw_relax_node = build_node(
+        "aiida_quantumespresso.workflows.pw.relax.PwRelaxWorkChain"
+    )
 
     @node.calcfunction()
     def pw_parameters(paras, relax_type):
