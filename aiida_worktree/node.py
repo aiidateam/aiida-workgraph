@@ -1,6 +1,7 @@
 from node_graph.node import Node as GraphNode
 from aiida_worktree.properties import property_pool
 from aiida_worktree.sockets import socket_pool
+from aiida_worktree.widget import NodeGraphWidget
 
 
 class Node(GraphNode):
@@ -22,6 +23,9 @@ class Node(GraphNode):
         self.wait = None
         self.process = None
         self.pk = None
+        self._widget = NodeGraphWidget(
+            settings={"minmap": False}, style={"width": "40%", "height": "600px"}
+        )
 
     def to_dict(self):
         ndata = super().to_dict()
@@ -63,3 +67,11 @@ class Node(GraphNode):
     def reset(self):
         self.process = None
         self.state = "CREATED"
+
+    def _repr_mimebundle_(self, *args, **kwargs):
+        # if ipywdigets > 8.0.0, use _repr_mimebundle_ instead of _ipython_display_
+        self._widget.from_node(self)
+        if hasattr(self._widget, "_repr_mimebundle_"):
+            return self._widget._repr_mimebundle_(*args, **kwargs)
+        else:
+            return self._widget._ipython_display_(*args, **kwargs)
