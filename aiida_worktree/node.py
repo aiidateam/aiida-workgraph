@@ -20,7 +20,7 @@ class Node(GraphNode):
         """
         super().__init__(**kwargs)
         self.to_ctx = None
-        self.wait = None
+        self.wait = []
         self.process = None
         self.pk = None
         self._widget = NodeGraphWidget(
@@ -30,7 +30,9 @@ class Node(GraphNode):
     def to_dict(self):
         ndata = super().to_dict()
         ndata["to_ctx"] = [] if self.to_ctx is None else self.to_ctx
-        ndata["wait"] = [] if self.wait is None else self.wait
+        ndata["wait"] = [
+            node if isinstance(node, str) else node.name for node in self.wait
+        ]
         ndata["process"] = self.process.uuid if self.process else None
         ndata["metadata"]["pk"] = self.process.pk if self.process else None
 
