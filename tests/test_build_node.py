@@ -1,4 +1,4 @@
-from aiida_worktree import build_node, Node
+from aiida_workgraph import build_node, Node
 
 
 def test_calcjob():

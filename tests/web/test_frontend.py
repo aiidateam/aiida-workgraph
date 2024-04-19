@@ -4,25 +4,25 @@ import pytest
 def test_homepage(page):
     page.goto("http://localhost:8000")
 
-    assert page.title() == "AiiDA-WorkTree App"
+    assert page.title() == "AiiDA-WorkGraph App"
 
     # Check for the existence of a specific element on the page
     # Attempt to locate the element
-    element = page.locator("a[href='/worktree']")
+    element = page.locator("a[href='/workgraph']")
 
     # Check if the element is found
     if not element.is_visible():
         pytest.fail("Element 'a[href='/wortre']' not found on the page")
 
 
-def test_worktree(page, wt_calcfunction):
+def test_workgraph(page, wt_calcfunction):
     wt_calcfunction.submit(wait=True)
-    page.goto("http://localhost:8000/worktree")
+    page.goto("http://localhost:8000/workgraph")
 
     # Check for the existence of a specific element on the page
 
-    # Verify the presence of the WorkTreeTable heading
-    assert page.locator("h2").inner_text() == "WorkTree"
+    # Verify the presence of the WorkGraphTable heading
+    assert page.locator("h2").inner_text() == "WorkGraph"
 
     # Verify the presence of the search input
     assert page.locator(".search-input").is_visible()
@@ -43,11 +43,11 @@ def test_worktree(page, wt_calcfunction):
     assert page.locator("tr").count() >= 2  # Including header row
 
 
-def test_worktree_item(page, wt_calcfunction):
+def test_workgraph_item(page, wt_calcfunction):
 
     wt = wt_calcfunction
     wt.submit(wait=True)
-    page.goto("http://localhost:8000/worktree/{}".format(wt.pk))
+    page.goto("http://localhost:8000/workgraph/{}".format(wt.pk))
     page.wait_for_timeout(8000)
 
     page.get_by_text("sumdiff3").is_visible()

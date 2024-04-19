@@ -8,4 +8,4 @@ Concepts
    :caption: Contents:
 
    node
-   worktree
+   workgraph

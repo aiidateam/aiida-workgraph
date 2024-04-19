@@ -8,4 +8,4 @@ This section contains a collection of blogs for various topics.
    :maxdepth: 1
    :caption: Contents:
 
-   worktree_vs_workchain
+   workgraph_vs_workchain

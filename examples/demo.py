@@ -1,4 +1,4 @@
-from aiida_worktree import node, WorkTree, build_node
+from aiida_workgraph import node, WorkGraph, build_node
 from aiida.orm import Int, load_code
 from aiida import load_profile
 
@@ -28,7 +28,7 @@ def decorated_multiply(x, y, t=1):
 
 @node.group(outputs=[["multiply.result", "result"]])
 def add_multiply_group(x, y, z, t=2):
-    wt = WorkTree("add_multiply_group")
+    wt = WorkGraph("add_multiply_group")
     add1 = wt.nodes.new(decorated_add, name="add1", x=x, y=y, t=t)
     multiply = wt.nodes.new(decorated_multiply, name="multiply", x=z, t=t)
     # link the output of int node to the input of add node
@@ -39,7 +39,7 @@ def add_multiply_group(x, y, z, t=2):
 """Use to test the engine."""
 code = load_code("add@localhost")
 x = Int(2)
-wt = WorkTree(name="test_run_order")
+wt = WorkGraph(name="test_run_order")
 adds = []
 add0 = wt.nodes.new(decorated_add, "add_0", x=x, y=x, t=Int(1))
 multiply0 = wt.nodes.new(decorated_multiply, "multiply_0", x=x, y=x, t=Int(1))

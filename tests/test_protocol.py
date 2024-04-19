@@ -6,7 +6,7 @@ aiida.load_profile()
 
 def test_pw_relax_protocol(structure_si):
     """Run simple calcfunction."""
-    from aiida_worktree import build_node, WorkTree
+    from aiida_workgraph import build_node, WorkGraph
     from aiida import orm
 
     # register node
@@ -14,7 +14,7 @@ def test_pw_relax_protocol(structure_si):
         "aiida_quantumespresso.workflows.pw.relax.PwRelaxWorkChain"
     )
     code = orm.load_code("qe-7.2-pw@localhost")
-    wt = WorkTree("test_pw_relax")
+    wt = WorkGraph("test_pw_relax")
     pw_relax1 = wt.nodes.new(pw_relax_node, name="pw_relax1")
     pw_relax1.set_from_protocol(
         code,
@@ -30,7 +30,7 @@ def test_pw_relax_protocol(structure_si):
 
 def test_pw_relax_protocol_pop(structure_si):
     """Run simple calcfunction."""
-    from aiida_worktree import build_node, WorkTree
+    from aiida_workgraph import build_node, WorkGraph
     from aiida import orm
 
     # register node
@@ -38,7 +38,7 @@ def test_pw_relax_protocol_pop(structure_si):
         "aiida_quantumespresso.workflows.pw.relax.PwRelaxWorkChain"
     )
     code = orm.load_code("qe-7.2-pw@localhost")
-    wt = WorkTree("test_pw_relax")
+    wt = WorkGraph("test_pw_relax")
     pw_relax1 = wt.nodes.new(pw_relax_node, name="pw_relax1")
     pw_relax1.set_from_protocol(
         code,

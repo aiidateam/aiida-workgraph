@@ -1,4 +1,4 @@
-from aiida_worktree import build_node, WorkTree, node
+from aiida_workgraph import build_node, WorkGraph, node
 from aiida import orm
 from aiida.orm import Kind, Site, StructureData, KpointsData
 from aiida import load_profile
@@ -43,7 +43,7 @@ def get_marked_structures(structure, atoms_list, marker="X"):
     return {"structures": structures, "site_info": orm.Dict(site_info)}
 
 
-# the structures is used to generate the worktree dynamically.
+# the structures is used to generate the workgraph dynamically.
 @node.group(outputs=[["ctx", "scf", "result"]])
 def run_scf(
     structure,
@@ -56,13 +56,13 @@ def run_scf(
     xps_pseudos,
     metadata,
 ):
-    from aiida_worktree import WorkTree
+    from aiida_workgraph import WorkGraph
 
     # register node
     ndata = {"path": "aiida_quantumespresso.calculations.pw.PwCalculation"}
     pw_node = build_node(ndata)
     #
-    wt = WorkTree("run_scf")
+    wt = WorkGraph("run_scf")
     site_info = site_info.get_dict()
     for site in site_info.values():
         element = site["symbol"]
@@ -139,7 +139,7 @@ def xps(
     metadata,
     correction_energies={},
 ):
-    wt = WorkTree("xps")
+    wt = WorkGraph("xps")
     marked_structure1 = wt.nodes.new(
         get_marked_structures,
         structure=structure,
@@ -218,7 +218,7 @@ metadata = {
     }
 }
 # ===============================================================================
-wt = WorkTree("xps_test")
+wt = WorkGraph("xps_test")
 xps1 = wt.nodes.new(xps, name="xps")
 xps1.set(
     {

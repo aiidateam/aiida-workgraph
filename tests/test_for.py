@@ -1,16 +1,16 @@
-from aiida_worktree import node, WorkTree
+from aiida_workgraph import node, WorkGraph
 from aiida import load_profile, orm
 
 load_profile()
 
 
 def test_for(decorated_add, decorated_multiply):
-    # Create a WorkTree will loop the a sequence
+    # Create a WorkGraph will loop the a sequence
     @node.group(outputs=[["ctx.total", "result"]])
     def add_multiply_for(sequence):
-        wt = WorkTree("add_multiply_for")
-        # tell the engine that this is a `for` worktree
-        wt.worktree_type = "FOR"
+        wt = WorkGraph("add_multiply_for")
+        # tell the engine that this is a `for` workgraph
+        wt.workgraph_type = "FOR"
         # the sequence to be iter
         wt.sequence = sequence
         # set a context variable before running.
@@ -22,11 +22,11 @@ def test_for(decorated_add, decorated_multiply):
         # update the context variable
         add1.to_ctx = [["result", "total"]]
         wt.links.new(multiply1.outputs[0], add1.inputs[1])
-        # don't forget to return the worktree
+        # don't forget to return the workgraph
         return wt
 
     # -----------------------------------------
-    wt = WorkTree("test_for")
+    wt = WorkGraph("test_for")
     for1 = wt.nodes.new(add_multiply_for, sequence=range(5))
     add1 = wt.nodes.new(decorated_add, y=orm.Int(1))
     wt.links.new(for1.outputs[0], add1.inputs[0])

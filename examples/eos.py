@@ -1,5 +1,5 @@
 from aiida import load_profile
-from aiida_worktree import build_node, WorkTree, node
+from aiida_workgraph import build_node, WorkGraph, node
 from aiida.orm import Dict, KpointsData, StructureData, load_code, load_group
 from ase.build import bulk
 
@@ -77,7 +77,7 @@ metadata = {
     }
 }
 
-wt = WorkTree("eos")
+wt = WorkGraph("eos")
 # structure node
 structure1 = wt.nodes.new("AiiDANode", "si", value=si)
 # get the result of each pw node from the context

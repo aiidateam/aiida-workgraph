@@ -1,6 +1,6 @@
 import pytest
 from fastapi.testclient import TestClient
-from aiida_worktree.web.backend.app.api import app
+from aiida_workgraph.web.backend.app.api import app
 from playwright.sync_api import sync_playwright
 
 
