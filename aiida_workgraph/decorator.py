@@ -1,8 +1,6 @@
 from typing import Callable
 from aiida_workgraph.utils import get_executor
-from aiida.engine.processes.functions import calcfunction, workfunction
-from aiida.engine.processes.calcjobs import CalcJob
-from aiida.engine.processes.workchains import WorkChain
+from aiida.engine import calcfunction, workfunction, CalcJob, WorkChain
 from aiida.orm.nodes.process.calculation.calcfunction import CalcFunctionNode
 from aiida.orm.nodes.process.workflow.workfunction import WorkFunctionNode
 from aiida.engine.processes.ports import PortNamespace
@@ -47,9 +45,24 @@ def build_node(executor, outputs=None):
 
 
 def build_node_from_callable(executor, outputs=None):
-    """Build node from a callable object."""
+    """Build node from a callable object.
+    First, check if the executor is already a node.
+    If not, check if it is a function or a class.
+    If it is a function, build node from function.
+    If it is a class, it only supports CalcJob and WorkChain.
+    """
     import inspect
+    from aiida_workgraph.node import Node
 
+    # if it is already a node, return it
+    if (
+        hasattr(executor, "node")
+        and inspect.isclass(executor.node)
+        and issubclass(executor.node, Node)
+        or inspect.isclass(executor)
+        and issubclass(executor, Node)
+    ):
+        return executor
     ndata = {}
     if inspect.isfunction(executor):
         # calcfunction and workfunction
@@ -59,7 +72,7 @@ def build_node_from_callable(executor, outputs=None):
             elif executor.node_class is WorkFunctionNode:
                 ndata["node_type"] = "workfunction"
             ndata["executor"] = executor
-            return build_node_from_AiiDA(ndata)
+            return build_node_from_AiiDA(ndata, outputs=outputs)
         else:
             ndata["node_type"] = "normal"
             ndata["executor"] = executor
@@ -73,9 +86,7 @@ def build_node_from_callable(executor, outputs=None):
             ndata["node_type"] = "workchain"
             ndata["executor"] = executor
             return build_node_from_AiiDA(ndata)
-        else:
-            ndata["node_type"] = "normal"
-        ndata["executor"] = executor
+    raise ValueError("The executor is not supported.")
 
 
 def build_node_from_function(executor, outputs=None):
@@ -83,14 +94,14 @@ def build_node_from_function(executor, outputs=None):
     return NodeDecoratorCollection.decorator_node(outputs=outputs)(executor).node
 
 
-def build_node_from_AiiDA(ndata):
+def build_node_from_AiiDA(ndata, outputs=None):
     """Register a node from a AiiDA component.
     For example: CalcJob, WorkChain, CalcFunction, WorkFunction."""
     from aiida_workgraph.node import Node
 
     # print(executor)
     inputs = []
-    outputs = []
+    outputs = [] if outputs is None else outputs
     executor = ndata["executor"]
     spec = executor.spec()
     for _key, port in spec.inputs.ports.items():
@@ -103,6 +114,8 @@ def build_node_from_AiiDA(ndata):
         inputs.append(
             ["General", spec.inputs.dynamic, {"property": ["General", {"default": {}}]}]
         )
+    if ndata["node_type"] in ["calcfunction", "workfunction"]:
+        outputs = [["General", "result"]] if not outputs else outputs
     # print("kwargs: ", kwargs)
     # add built-in sockets
     outputs.append(["General", "_outputs"])
