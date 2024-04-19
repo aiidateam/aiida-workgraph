@@ -53,38 +53,39 @@ npm run build
 Check the [docs](https://aiida-workgraph.readthedocs.io/en/latest/) and learn about the features.
 
 ## Examples
-
-Create calcfunction nodes:
+Suppose we want to calculate ```(x + y) * z ``` in two steps. First, add `x` and `y`, then multiply the result with `z`.
 
 ```python
-from aiida_workgraph import node
+from aiida.engine import calcfunction
 
-# define add calcfunction node
-@node.calcfunction()
+# define add calcfunction
+@calcfunction
 def add(x, y):
     return x + y
 
-# define multiply calcfunction node
-@node.calcfunction()
+# define multiply calcfunction
+@calcfunction
 def multiply(x, y):
     return x*y
 
+# Create a workgraph to link the nodes.
+wg = WorkGraph("test_add_multiply")
+wg.nodes.new(add, name="add1")
+wg.nodes.new(multiply, name="multiply1")
+wg.links.new(wg.nodes["add1"].outputs[0], wg.nodes["multiply1"].inputs["x"])
+
 ```
 
-Create a workgraph to link the nodes.
+Prepare inputs and submit the workflow:
 
 ```python
 from aiida_workgraph import WorkGraph
 from aiida import load_profile
-from aiida.orm import Int
+
 load_profile()
 
-
-wg = WorkGraph("test_add_multiply")
-wg.nodes.new(add, name="add1", x=Int(2.0), y=Int(3.0))
-wg.nodes.new(multiply, name="multiply1", y=Int(4.0))
-wg.links.new(wg.nodes["add1"].outputs[0], wg.nodes["multiply1"].inputs["x"])
-wg.submit(wait=True)
+wg.submit(inputs = {"add1": {"x": 2, "y": 3}, "multiply1": {"y": 4}}, wait=True)
+print("Result of multiply1 is", wg.nodes["multiply1"].outputs[0].value)
 ```
 
 Start the web app, open a terminal and run:
