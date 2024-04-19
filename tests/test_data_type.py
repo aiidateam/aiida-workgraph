@@ -12,4 +12,5 @@ def test_numpy_array(decorated_normal_add):
     y = np.array([4, 5, 6])
     wg = WorkGraph()
     wg.nodes.new(decorated_normal_add, name="add1", x=x, y=y)
-    wg.submit()
+    wg.submit(wait=True)
+    assert wg.state.upper() == "FINISHED"
