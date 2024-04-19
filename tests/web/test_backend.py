@@ -6,8 +6,8 @@ def test_root_route(client):
 
 
 # Sample test case for the root route
-def test_workgraph_route(client, wt_calcfunction):
-    wt_calcfunction.submit(wait=True)
+def test_workgraph_route(client, wg_calcfunction):
+    wg_calcfunction.submit(wait=True)
     response = client.get("/api/workgraph-data")
     assert response.status_code == 200
     assert len(response.json()) > 0

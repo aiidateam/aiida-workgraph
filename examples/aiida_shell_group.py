@@ -78,11 +78,11 @@ def launch_shell_job(  # noqa: PLR0913
         "metadata": metadata or {},
     }
 
-    wt = WorkGraph(name="test_aiida_shell")
-    shelljob1 = wt.nodes.new(shelljob, "shelljob1")
+    wg = WorkGraph(name="test_aiida_shell")
+    shelljob1 = wg.nodes.new(shelljob, "shelljob1")
     shelljob1.set(inputs)
 
-    return wt
+    return wg
 
 
 @node()
@@ -92,18 +92,18 @@ def generate_nodes(file):
 
 
 # Create a workgraph
-wt = WorkGraph(name="test_aiida_shell")
-job1 = wt.nodes.new(launch_shell_job, command="pdb_fetch", arguments=["1brs"])
-job2 = wt.nodes.new(launch_shell_job, command="pdb_selchain", arguments=["-A,D {pdb}"])
-job3 = wt.nodes.new(launch_shell_job, command="pdb_delhetatm", arguments=["{pdb}"])
-job4 = wt.nodes.new(launch_shell_job, command="pdb_tidy", arguments=["{pdb}"])
-generate_nodes1 = wt.nodes.new(generate_nodes)
-generate_nodes2 = wt.nodes.new(generate_nodes)
-generate_nodes3 = wt.nodes.new(generate_nodes)
-wt.links.new(job1.outputs["stdout"], generate_nodes1.inputs[0])
-wt.links.new(generate_nodes1.outputs[0], job2.inputs["nodes"])
-wt.links.new(job2.outputs["stdout"], generate_nodes2.inputs[0])
-wt.links.new(generate_nodes2.outputs[0], job3.inputs["nodes"])
-wt.links.new(job3.outputs["stdout"], generate_nodes3.inputs[0])
-wt.links.new(generate_nodes3.outputs[0], job4.inputs["nodes"])
-wt.submit()
+wg = WorkGraph(name="test_aiida_shell")
+job1 = wg.nodes.new(launch_shell_job, command="pdb_fetch", arguments=["1brs"])
+job2 = wg.nodes.new(launch_shell_job, command="pdb_selchain", arguments=["-A,D {pdb}"])
+job3 = wg.nodes.new(launch_shell_job, command="pdb_delhetatm", arguments=["{pdb}"])
+job4 = wg.nodes.new(launch_shell_job, command="pdb_tidy", arguments=["{pdb}"])
+generate_nodes1 = wg.nodes.new(generate_nodes)
+generate_nodes2 = wg.nodes.new(generate_nodes)
+generate_nodes3 = wg.nodes.new(generate_nodes)
+wg.links.new(job1.outputs["stdout"], generate_nodes1.inputs[0])
+wg.links.new(generate_nodes1.outputs[0], job2.inputs["nodes"])
+wg.links.new(job2.outputs["stdout"], generate_nodes2.inputs[0])
+wg.links.new(generate_nodes2.outputs[0], job3.inputs["nodes"])
+wg.links.new(job3.outputs["stdout"], generate_nodes3.inputs[0])
+wg.links.new(generate_nodes3.outputs[0], job4.inputs["nodes"])
+wg.submit()

@@ -10,8 +10,8 @@ def test_shell_date():
     # Create a code on the local computer
     cat_code = prepare_code("cat")
     # Create a workgraph
-    wt = WorkGraph(name="test_shell_cat_with_file_arguments")
-    job1 = wt.nodes.new(
+    wg = WorkGraph(name="test_shell_cat_with_file_arguments")
+    job1 = wg.nodes.new(
         "AiiDAShell",
         code=cat_code,
         arguments=["{file_a}", "{file_b}"],
@@ -20,5 +20,5 @@ def test_shell_date():
             "file_b": SinglefileData.from_string("string b"),
         },
     )
-    wt.submit(wait=True)
+    wg.submit(wait=True)
     assert job1.node.outputs.stdout.get_content() == "string astring b"

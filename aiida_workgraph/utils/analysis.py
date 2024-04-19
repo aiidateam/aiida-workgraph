@@ -141,8 +141,8 @@ class WorkGraphSaver:
         """
         from node_graph.analysis import DifferenceAnalysis
 
-        wt1 = self.get_wgdata_from_db(restart_process)
-        dc = DifferenceAnalysis(nt1=wt1, nt2=self.wgdata)
+        wg1 = self.get_wgdata_from_db(restart_process)
+        dc = DifferenceAnalysis(nt1=wg1, nt2=self.wgdata)
         (
             new_nodes,
             modified_nodes,

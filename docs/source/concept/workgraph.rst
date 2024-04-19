@@ -15,7 +15,7 @@ Create and launch workgraph
 .. code-block:: python
 
     from aiida_workgraph import WorkGraph, node
-    wt = WorkGraph(name="my_first_workgraph")
+    wg = WorkGraph(name="my_first_workgraph")
 
 
 Create and use `node`.
@@ -27,21 +27,21 @@ Create and use `node`.
     def add(x, y):
        return x + y
 
-    add1 = wt.nodes.new(add, name="add1")
-    add2 = wt.nodes.new(add, name="add2")
+    add1 = wg.nodes.new(add, name="add1")
+    add2 = wg.nodes.new(add, name="add2")
 
 
 - Add link between nodes:
 
 .. code-block:: python
 
-    wt.links.new(add1.outputs[0], add2.inputs[0])
+    wg.links.new(add1.outputs[0], add2.inputs[0])
 
 - Submit the workgraph:
 
 .. code-block:: python
 
-    wt.submit()
+    wg.submit()
 
 Load workgraph from the AiiDA process
 =====================================

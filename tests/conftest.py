@@ -14,64 +14,64 @@ def arithmetic_add():
 
 
 @pytest.fixture
-def wt_calcfunction():
+def wg_calcfunction():
     """A workgraph with calcfunction."""
 
-    wt = WorkGraph(name="test_debug_math")
-    float1 = wt.nodes.new("AiiDANode", "float1", value=Float(3.0).store())
-    sumdiff1 = wt.nodes.new("AiiDASumDiff", "sumdiff1", x=2)
-    sumdiff2 = wt.nodes.new("AiiDASumDiff", "sumdiff2", x=4)
-    sumdiff3 = wt.nodes.new("AiiDASumDiff", "sumdiff3", x=6)
-    wt.links.new(float1.outputs[0], sumdiff1.inputs[1])
-    wt.links.new(sumdiff1.outputs[0], sumdiff2.inputs[1])
-    wt.links.new(sumdiff2.outputs[0], sumdiff3.inputs[1])
-    return wt
+    wg = WorkGraph(name="test_debug_math")
+    float1 = wg.nodes.new("AiiDANode", "float1", value=Float(3.0).store())
+    sumdiff1 = wg.nodes.new("AiiDASumDiff", "sumdiff1", x=2)
+    sumdiff2 = wg.nodes.new("AiiDASumDiff", "sumdiff2", x=4)
+    sumdiff3 = wg.nodes.new("AiiDASumDiff", "sumdiff3", x=6)
+    wg.links.new(float1.outputs[0], sumdiff1.inputs[1])
+    wg.links.new(sumdiff1.outputs[0], sumdiff2.inputs[1])
+    wg.links.new(sumdiff2.outputs[0], sumdiff3.inputs[1])
+    return wg
 
 
 @pytest.fixture
-def wt_calcjob(arithmetic_add):
+def wg_calcjob(arithmetic_add):
     """A workgraph with calcjob."""
 
     code = load_code("add@localhost")
-    wt = WorkGraph(name="test_debug_math")
-    int1 = wt.nodes.new("AiiDANode", "int1", value=Int(3).store())
-    code1 = wt.nodes.new("AiiDACode", "code1", value=code.pk)
-    add1 = wt.nodes.new(arithmetic_add, "add1", x=Int(2).store())
-    add2 = wt.nodes.new(arithmetic_add, "add2", x=Int(4).store())
-    add3 = wt.nodes.new(arithmetic_add, "add3", x=Int(4).store())
-    wt.links.new(code1.outputs[0], add1.inputs["code"])
-    wt.links.new(int1.outputs[0], add1.inputs["y"])
-    wt.links.new(code1.outputs[0], add2.inputs["code"])
-    wt.links.new(add1.outputs["sum"], add2.inputs["y"])
-    wt.links.new(code1.outputs[0], add3.inputs["code"])
-    wt.links.new(add2.outputs["sum"], add3.inputs["y"])
-    return wt
+    wg = WorkGraph(name="test_debug_math")
+    int1 = wg.nodes.new("AiiDANode", "int1", value=Int(3).store())
+    code1 = wg.nodes.new("AiiDACode", "code1", value=code.pk)
+    add1 = wg.nodes.new(arithmetic_add, "add1", x=Int(2).store())
+    add2 = wg.nodes.new(arithmetic_add, "add2", x=Int(4).store())
+    add3 = wg.nodes.new(arithmetic_add, "add3", x=Int(4).store())
+    wg.links.new(code1.outputs[0], add1.inputs["code"])
+    wg.links.new(int1.outputs[0], add1.inputs["y"])
+    wg.links.new(code1.outputs[0], add2.inputs["code"])
+    wg.links.new(add1.outputs["sum"], add2.inputs["y"])
+    wg.links.new(code1.outputs[0], add3.inputs["code"])
+    wg.links.new(add2.outputs["sum"], add3.inputs["y"])
+    return wg
 
 
 @pytest.fixture
-def wt_workchain():
+def wg_workchain():
     """A workgraph with workchain."""
 
     code = load_code("add@localhost")
-    wt = WorkGraph(name="test_debug_math")
-    int1 = wt.nodes.new("AiiDANode", "int1", value=Int(2).store())
-    int2 = wt.nodes.new("AiiDANode", "int2", value=Int(3).store())
-    code1 = wt.nodes.new("AiiDACode", "code1", value=code.pk)
-    multiply_add1 = wt.nodes.new(
+    wg = WorkGraph(name="test_debug_math")
+    int1 = wg.nodes.new("AiiDANode", "int1", value=Int(2).store())
+    int2 = wg.nodes.new("AiiDANode", "int2", value=Int(3).store())
+    code1 = wg.nodes.new("AiiDACode", "code1", value=code.pk)
+    multiply_add1 = wg.nodes.new(
         "AiiDAArithmeticMultiplyAdd", "multiply_add1", x=Int(4).store()
     )
-    multiply_add2 = wt.nodes.new(
+    multiply_add2 = wg.nodes.new(
         "AiiDAArithmeticMultiplyAdd",
         "multiply_add2",
         x=Int(2).store(),
         y=Int(3).store(),
     )
-    wt.links.new(code1.outputs[0], multiply_add1.inputs["code"])
-    wt.links.new(int1.outputs[0], multiply_add1.inputs["y"])
-    wt.links.new(int2.outputs[0], multiply_add1.inputs["z"])
-    wt.links.new(code1.outputs[0], multiply_add2.inputs["code"])
-    wt.links.new(multiply_add1.outputs[0], multiply_add2.inputs["z"])
-    return wt
+    wg.links.new(code1.outputs[0], multiply_add1.inputs["code"])
+    wg.links.new(int1.outputs[0], multiply_add1.inputs["y"])
+    wg.links.new(int2.outputs[0], multiply_add1.inputs["z"])
+    wg.links.new(code1.outputs[0], multiply_add2.inputs["code"])
+    wg.links.new(multiply_add1.outputs[0], multiply_add2.inputs["z"])
+    return wg
 
 
 @pytest.fixture
@@ -158,12 +158,12 @@ def decorated_add_multiply_group(decorated_add, decorated_multiply):
 
     @node.group(outputs=[["multiply1.result", "result"]])
     def add_multiply_group(x, y, z):
-        wt = WorkGraph("add_multiply_group")
-        add1 = wt.nodes.new(decorated_add, name="add1", x=x, y=y)
-        multiply = wt.nodes.new(decorated_multiply, name="multiply1", x=z)
+        wg = WorkGraph("add_multiply_group")
+        add1 = wg.nodes.new(decorated_add, name="add1", x=x, y=y)
+        multiply = wg.nodes.new(decorated_multiply, name="multiply1", x=z)
         # link the output of int node to the input of add node
-        wt.links.new(add1.outputs[0], multiply.inputs["y"])
-        return wt
+        wg.links.new(add1.outputs[0], multiply.inputs["y"])
+        return wg
 
     return add_multiply_group
 
@@ -192,10 +192,10 @@ def structure_si():
 
 
 @pytest.fixture
-def wt_structure_si():
+def wg_structure_si():
 
-    wt = WorkGraph(name="test_structure")
-    structure1 = wt.nodes.new("AiiDAStructure", "structure1")
+    wg = WorkGraph(name="test_structure")
+    structure1 = wg.nodes.new("AiiDAStructure", "structure1")
     data = {
         "cell": [[0.0, 2.715, 2.715], [2.715, 0.0, 2.715], [2.715, 2.715, 0.0]],
         "kinds": [{"mass": 28.085, "name": "Si", "symbols": ["Si"], "weights": [1.0]}],
@@ -208,27 +208,27 @@ def wt_structure_si():
         ],
     }
     structure1.set(data)
-    return wt
+    return wg
 
 
 @pytest.fixture
-def wt_engine(decorated_add, arithmetic_add):
+def wg_engine(decorated_add, arithmetic_add):
     """Use to test the engine."""
     code = load_code("add@localhost")
     x = Int(2)
-    wt = WorkGraph(name="test_run_order")
-    add0 = wt.nodes.new(arithmetic_add, "add0", x=x, y=Int(0), code=code)
+    wg = WorkGraph(name="test_run_order")
+    add0 = wg.nodes.new(arithmetic_add, "add0", x=x, y=Int(0), code=code)
     add0.set({"metadata.options.sleep": 15})
-    add1 = wt.nodes.new(decorated_add, "add1", x=x, y=Int(1), t=Int(1))
-    add2 = wt.nodes.new(arithmetic_add, "add2", x=x, y=Int(2), code=code)
+    add1 = wg.nodes.new(decorated_add, "add1", x=x, y=Int(1), t=Int(1))
+    add2 = wg.nodes.new(arithmetic_add, "add2", x=x, y=Int(2), code=code)
     add2.set({"metadata.options.sleep": 1})
-    add3 = wt.nodes.new(decorated_add, "add3", x=x, y=Int(3), t=Int(1))
-    add4 = wt.nodes.new(arithmetic_add, "add4", x=x, y=Int(4), code=code)
+    add3 = wg.nodes.new(decorated_add, "add3", x=x, y=Int(3), t=Int(1))
+    add4 = wg.nodes.new(arithmetic_add, "add4", x=x, y=Int(4), code=code)
     add4.set({"metadata.options.sleep": 1})
-    add5 = wt.nodes.new(decorated_add, "add5", x=x, y=Int(5), t=Int(1))
-    wt.links.new(add0.outputs["sum"], add2.inputs["x"])
-    wt.links.new(add1.outputs[0], add3.inputs["x"])
-    wt.links.new(add3.outputs[0], add4.inputs["x"])
-    wt.links.new(add2.outputs["sum"], add5.inputs["x"])
-    wt.links.new(add4.outputs["sum"], add5.inputs["y"])
-    return wt
+    add5 = wg.nodes.new(decorated_add, "add5", x=x, y=Int(5), t=Int(1))
+    wg.links.new(add0.outputs["sum"], add2.inputs["x"])
+    wg.links.new(add1.outputs[0], add3.inputs["x"])
+    wg.links.new(add3.outputs[0], add4.inputs["x"])
+    wg.links.new(add2.outputs["sum"], add5.inputs["x"])
+    wg.links.new(add4.outputs["sum"], add5.inputs["y"])
+    return wg

@@ -126,7 +126,7 @@ def build_node_from_AiiDA(ndata):
     return node
 
 
-def build_node_from_workgraph(wt):
+def build_node_from_workgraph(wg):
     """Build node from workgraph."""
     from aiida_workgraph.node import Node
 
@@ -135,7 +135,7 @@ def build_node_from_workgraph(wt):
     outputs = []
     group_outputs = []
     # add all the inputs/outputs from the nodes in the workgraph
-    for node in wt.nodes:
+    for node in wg.nodes:
         # inputs
         inputs.append(["General", f"{node.name}"])
         for socket in node.inputs:
@@ -160,13 +160,13 @@ def build_node_from_workgraph(wt):
     ndata["kwargs"] = kwargs
     ndata["inputs"] = inputs
     ndata["outputs"] = outputs
-    ndata["identifier"] = wt.name
+    ndata["identifier"] = wg.name
     # TODO In order to reload the WorkGraph from process, "is_pickle" should be True
     # so I pickled the function here, but this is not necessary
     # we need to update the node_graph to support the path and name of the function
     executor = {
         "executor": None,
-        "wgdata": wt.to_dict(),
+        "wgdata": wg.to_dict(),
         "type": ndata["node_type"],
         "is_pickle": True,
     }

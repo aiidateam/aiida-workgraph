@@ -75,7 +75,7 @@ class WorkGraph(Process, metaclass=Protect):
         super().define(spec)
         spec.input("input_file", valid_type=orm.SinglefileData, required=False)
         spec.input_namespace(
-            "wt", dynamic=True, required=False, help="WorkGraph inputs"
+            "wg", dynamic=True, required=False, help="WorkGraph inputs"
         )
         spec.input_namespace("input_nodes", dynamic=True, required=False)
         spec.exit_code(2, "ERROR_SUBPROCESS", message="A subprocess has failed.")
@@ -760,13 +760,13 @@ class WorkGraph(Process, metaclass=Protect):
                 self.to_context(**{name: process})
             elif node["metadata"]["node_type"] in ["node_group"]:
                 print("node  type: node_group.")
-                wt = self.run_executor(executor, args, kwargs, var_args, var_kwargs)
-                wt.name = name
-                wt.group_outputs = self.ctx.nodes[name]["metadata"]["group_outputs"]
-                wt.parent_uuid = self.node.uuid
-                wt.save(metadata={"call_link_label": name})
+                wg = self.run_executor(executor, args, kwargs, var_args, var_kwargs)
+                wg.name = name
+                wg.group_outputs = self.ctx.nodes[name]["metadata"]["group_outputs"]
+                wg.parent_uuid = self.node.uuid
+                wg.save(metadata={"call_link_label": name})
                 print("submit workgraph: ")
-                process = self.submit(wt.process_inited)
+                process = self.submit(wg.process_inited)
                 node["process"] = process
                 self.ctx.nodes[name]["state"] = "RUNNING"
                 self.to_context(**{name: process})
@@ -791,7 +791,7 @@ class WorkGraph(Process, metaclass=Protect):
                 # merge the properties
                 merge_properties(wgdata)
                 metadata = {"call_link_label": name}
-                inputs = {"wt": wgdata, "metadata": metadata}
+                inputs = {"wg": wgdata, "metadata": metadata}
                 process_inited = WorkGraph(inputs=inputs)
                 process_inited.runner.persister.save_checkpoint(process_inited)
                 saver = WorkGraphSaver(process_inited.node, wgdata)
