@@ -2,6 +2,7 @@ import node_graph
 import aiida
 from aiida_workgraph.nodes import node_pool
 import time
+from aiida_workgraph.collection import WorkGraphNodeCollection
 from aiida_workgraph.utils.graph import (
     node_deletion_hook,
     node_creation_hook,
@@ -45,6 +46,7 @@ class WorkGraph(node_graph.NodeGraph):
         self.max_number_jobs = 1000000
         self.execution_count = 0
         self.max_iteration = 1000000
+        self.nodes = WorkGraphNodeCollection(self, pool=self.node_pool)
         self.nodes.post_deletion_hooks = [node_deletion_hook]
         self.nodes.post_creation_hooks = [node_creation_hook]
         self.links.post_creation_hooks = [link_creation_hook]
