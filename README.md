@@ -1,17 +1,17 @@
-# AiiDA-WorkTree
-[![PyPI version](https://badge.fury.io/py/aiida-worktree.svg)](https://badge.fury.io/py/aiida-worktree)
-[![Unit test](https://github.com/superstar54/aiida-worktree/actions/workflows/ci.yaml/badge.svg)](https://github.com/superstar54/aiida-worktree/actions/workflows/ci.yaml)
-[![Docs status](https://readthedocs.org/projects/aiida-worktree/badge)](http://aiida-worktree.readthedocs.io/)
+# AiiDA-WorkGraph
+[![PyPI version](https://badge.fury.io/py/aiida-workgraph.svg)](https://badge.fury.io/py/aiida-workgraph)
+[![Unit test](https://github.com/superstar54/aiida-workgraph/actions/workflows/ci.yaml/badge.svg)](https://github.com/superstar54/aiida-workgraph/actions/workflows/ci.yaml)
+[![Docs status](https://readthedocs.org/projects/aiida-workgraph/badge)](http://aiida-workgraph.readthedocs.io/)
 
-Provides the third workflow component: `WorkTree`, to design flexible node-based workflows using AiiDA.
+Provides the third workflow component: `WorkGraph`, to design flexible node-based workflows using AiiDA.
 
-In AiiDA, there are two workflow components: `workfunction` and `WorkChain`. Workfunction is easy to implement but it does not support automatic checkpointing, which is important for long-running calculations. Workchain supports automatic checkpointing but it is difficult to implement and also not as flexible as the `workfunction`. AiiDA-WorkTree provides the third component: `WorkTree`. It is easy to implement and supports automatic checkpointing. It is also flexible and can be used to design complex workflows.
-
-
-Here is a detailed comparison between the ``WorkTree`` with two AiiDA built-in workflow components.
+In AiiDA, there are two workflow components: `workfunction` and `WorkChain`. Workfunction is easy to implement but it does not support automatic checkpointing, which is important for long-running calculations. Workchain supports automatic checkpointing but it is difficult to implement and also not as flexible as the `workfunction`. AiiDA-WorkGraph provides the third component: `WorkGraph`. It is easy to implement and supports automatic checkpointing. It is also flexible and can be used to design complex workflows.
 
 
-| Aspect                   | WorkFunction           | WorkChain                     | WorkTree               |
+Here is a detailed comparison between the ``WorkGraph`` with two AiiDA built-in workflow components.
+
+
+| Aspect                   | WorkFunction           | WorkChain                     | WorkGraph               |
 | ------------------------ | ---------------------- | ----------------------------- | ---------------------- |
 | Use Case                 | Short-running jobs     | Long-running jobs             | Long-running jobs      |
 | Checkpointing            | ``No``                 | Yes                           | Yes                    |
@@ -32,32 +32,32 @@ Here is a detailed comparison between the ``WorkTree`` with two AiiDA built-in w
 ## Installation
 
 ```console
-    pip install aiida-worktree
+    pip install aiida-workgraph
 ```
 
 To install the latest version from source, first clone the repository and then install using `pip`:
 
 ```console
-git clone https://github.com/superstar54/aiida-worktree
-cd aiida-worktree
+git clone https://github.com/superstar54/aiida-workgraph
+cd aiida-workgraph
 pip install -e .
 ```
 In order to use the widget, you also need to run:
 ```console
-cd aiida_worktree/widget/
+cd aiida_workgraph/widget/
 npm install
 npm run build
 ```
 
 ## Documentation
-Check the [docs](https://aiida-worktree.readthedocs.io/en/latest/) and learn about the features.
+Check the [docs](https://aiida-workgraph.readthedocs.io/en/latest/) and learn about the features.
 
 ## Examples
 
 Create calcfunction nodes:
 
 ```python
-from aiida_worktree import node
+from aiida_workgraph import node
 
 # define add calcfunction node
 @node.calcfunction()
@@ -71,16 +71,16 @@ def multiply(x, y):
 
 ```
 
-Create a worktree to link the nodes.
+Create a workgraph to link the nodes.
 
 ```python
-from aiida_worktree import WorkTree
+from aiida_workgraph import WorkGraph
 from aiida import load_profile
 from aiida.orm import Int
 load_profile()
 
 
-wt = WorkTree("test_add_multiply")
+wt = WorkGraph("test_add_multiply")
 wt.nodes.new(add, name="add1", x=Int(2.0), y=Int(3.0))
 wt.nodes.new(multiply, name="multiply1", y=Int(4.0))
 wt.links.new(wt.nodes["add1"].outputs[0], wt.nodes["multiply1"].inputs["x"])
@@ -89,10 +89,10 @@ wt.submit(wait=True)
 
 Start the web app, open a terminal and run:
 ```console
-worktree web start
+workgraph web start
 ```
 
-Then visit the page http://127.0.0.1:8000/worktree, you should find a `first_workflow` Worktree, click the pk and view the WorkTree.
+Then visit the page http://127.0.0.1:8000/workgraph, you should find a `first_workflow` Worktree, click the pk and view the WorkGraph.
 
 <img src="docs/source/_static/images/first-workflow.png" />
 
@@ -115,7 +115,7 @@ pre-commit install
 ```
 
 ### Web app
-See the [README.md](https://github.com/superstar54/aiida-worktree/blob/main/aiida_worktree/web/README.md)
+See the [README.md](https://github.com/superstar54/aiida-workgraph/blob/main/aiida_workgraph/web/README.md)
 
 ### Build and publish
 Build package:

@@ -1,5 +1,5 @@
 name: test_calcjob
-description: 'This is a test to run worktree using yaml file.'
+description: 'This is a test to run workgraph using yaml file.'
 metadata:
   version: scinode@0.1.0
   platform: scinode

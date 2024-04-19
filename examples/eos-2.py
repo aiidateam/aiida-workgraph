@@ -1,5 +1,5 @@
 from aiida import load_profile, orm
-from aiida_worktree import build_node, WorkTree, node
+from aiida_workgraph import build_node, WorkGraph, node
 from ase.build import bulk
 
 load_profile()
@@ -20,12 +20,12 @@ def scale_structure(structure, scales):
 # Output result from context
 @node.group(outputs=[["ctx.result", "result"]])
 def all_scf(structures, code, parameters, kpoints, pseudos, metadata):
-    from aiida_worktree import WorkTree
+    from aiida_workgraph import WorkGraph
 
     # register node
     ndata = {"path": "aiida_quantumespresso.calculations.pw.PwCalculation"}
     pw_node = build_node(ndata)
-    wt = WorkTree("all_scf")
+    wt = WorkGraph("all_scf")
     # pw node
     for key, structure in structures.items():
         pw1 = wt.nodes.new(pw_node, name=f"pw1_{key}")
@@ -102,7 +102,7 @@ metadata = {
     }
 }
 
-wt = WorkTree("eos")
+wt = WorkGraph("eos")
 scale_structure1 = wt.nodes.new(
     scale_structure, name="scale_structure1", structure=si, scales=[0.95, 1.0, 1.05]
 )

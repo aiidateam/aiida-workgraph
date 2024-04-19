@@ -1,4 +1,4 @@
-from aiida_worktree import node, WorkTree, build_node
+from aiida_workgraph import node, WorkGraph, build_node
 from aiida import load_profile
 import pathlib
 import shlex
@@ -78,7 +78,7 @@ def launch_shell_job(  # noqa: PLR0913
         "metadata": metadata or {},
     }
 
-    wt = WorkTree(name="test_aiida_shell")
+    wt = WorkGraph(name="test_aiida_shell")
     shelljob1 = wt.nodes.new(shelljob, "shelljob1")
     shelljob1.set(inputs)
 
@@ -91,8 +91,8 @@ def generate_nodes(file):
     return {"pdb": file}
 
 
-# Create a worktree
-wt = WorkTree(name="test_aiida_shell")
+# Create a workgraph
+wt = WorkGraph(name="test_aiida_shell")
 job1 = wt.nodes.new(launch_shell_job, command="pdb_fetch", arguments=["1brs"])
 job2 = wt.nodes.new(launch_shell_job, command="pdb_selchain", arguments=["-A,D {pdb}"])
 job3 = wt.nodes.new(launch_shell_job, command="pdb_delhetatm", arguments=["{pdb}"])

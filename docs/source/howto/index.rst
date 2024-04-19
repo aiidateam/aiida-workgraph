@@ -16,9 +16,9 @@ This section contains a collection of HowTos for various topics.
    ctx
    aiida_shell
    wait
-   append_worktree
+   append_workgraph
    restart
-   continue_finished_worktree
+   continue_finished_workgraph
    protocol
    queue
    cli

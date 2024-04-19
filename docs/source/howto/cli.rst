@@ -3,17 +3,17 @@
 **********************
 Command line interface
 **********************
-As a supplement command for `verdi`, the command line interface utility for AiiDA-WorkTree is called ``worktree``.
-This section explains the basic concepts that apply to all ``worktree`` commands.
+As a supplement command for `verdi`, the command line interface utility for AiiDA-WorkGraph is called ``workgraph``.
+This section explains the basic concepts that apply to all ``workgraph`` commands.
 
 .. _topics:cli:parameters:
 
 Parameters
 ==========
-Parameters to ``worktree`` commands come in two flavors:
+Parameters to ``workgraph`` commands come in two flavors:
 
-* Arguments: positional parameters, e.g. ``123`` in ``worktree tree show 123``
-* Options: announced by a flag (e.g. ``-f`` or ``--flag``), potentially followed by a value. E.g. ``worktree tree list --limit 10`` or ``worktree tree -h``.
+* Arguments: positional parameters, e.g. ``123`` in ``workgraph graph show 123``
+* Options: announced by a flag (e.g. ``-f`` or ``--flag``), potentially followed by a value. E.g. ``workgraph graph list --limit 10`` or ``workgraph graph -h``.
 
 
 .. _topics:cli:help_strings:
@@ -21,9 +21,9 @@ Parameters to ``worktree`` commands come in two flavors:
 Help strings
 ============
 Append the ``--help`` option to any verdi (sub-)command to get help on how to use it.
-For example, ``worktree tree kill --help`` shows::
+For example, ``workgraph graph kill --help`` shows::
 
-    Usage: worktree tree kill [OPTIONS] [PROCESSES]...
+    Usage: workgraph graph kill [OPTIONS] [PROCESSES]...
 
         Kill running processes.
 

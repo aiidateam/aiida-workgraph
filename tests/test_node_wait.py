@@ -5,9 +5,9 @@ aiida.load_profile()
 
 def test_node_wait(decorated_add):
     """Run simple calcfunction."""
-    from aiida_worktree import WorkTree
+    from aiida_workgraph import WorkGraph
 
-    wt = WorkTree(name="test_node_wait")
+    wt = WorkGraph(name="test_node_wait")
     add1 = wt.nodes.new(decorated_add, "add1", x=1, y=1)
     add1.to_ctx = [["result", "sum1"]]
     add2 = wt.nodes.new(decorated_add, "add2", x=2, y=2)

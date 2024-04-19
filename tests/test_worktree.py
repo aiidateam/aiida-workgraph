@@ -1,4 +1,4 @@
-from aiida_worktree import WorkTree, build_node
+from aiida_workgraph import WorkGraph, build_node
 from aiida import load_profile, orm
 import time
 import pytest
@@ -18,7 +18,7 @@ def test_from_dict(wt_calcjob):
     """Export NodeGraph to dict."""
     wt = wt_calcjob
     ntdata = wt.to_dict()
-    wt1 = WorkTree.from_dict(ntdata)
+    wt1 = WorkGraph.from_dict(ntdata)
     assert len(wt.nodes) == len(wt1.nodes)
     assert len(wt.links) == len(wt1.links)
 
@@ -32,11 +32,11 @@ def test_new_node(wt_calcjob, arithmetic_add):
 
 
 def test_save_load(wt_calcjob):
-    """Save the worktree"""
+    """Save the workgraph"""
     wt = wt_calcjob
     wt.save()
     assert wt.process.process_state.value.upper() == "CREATED"
-    wt2 = WorkTree.load(wt.process.pk)
+    wt2 = WorkGraph.load(wt.process.pk)
     assert len(wt.nodes) == len(wt2.nodes)
 
 
@@ -53,25 +53,25 @@ def test_pause(wt_engine):
 
 
 def test_reset_message(wt_calcjob):
-    """Modify a node and save the worktree.
-    This will add a message to the worktree_queue extra field."""
+    """Modify a node and save the workgraph.
+    This will add a message to the workgraph_queue extra field."""
     wt = wt_calcjob
     wt.submit()
-    wt = WorkTree.load(wt.process.pk)
+    wt = WorkGraph.load(wt.process.pk)
     wt.nodes["add2"].set({"y": orm.Int(10).store()})
     wt.save()
-    msgs = wt.process.base.extras.get("worktree_queue", [])
+    msgs = wt.process.base.extras.get("workgraph_queue", [])
     assert len(msgs) == 1
 
 
 def test_restart(wt_calcjob):
-    """Restart from a finished worktree.
-    Load the worktree, modify the node, and restart the worktree.
+    """Restart from a finished workgraph.
+    Load the workgraph, modify the node, and restart the workgraph.
     Only the modified node and its child nodes will be rerun."""
     wt = wt_calcjob
     wt.name = "test_restart_0"
     wt.submit(wait=True)
-    wt1 = WorkTree.load(wt.process.pk)
+    wt1 = WorkGraph.load(wt.process.pk)
     wt1.name = "test_restart_1"
     wt1.nodes["add2"].set({"y": orm.Int(10).store()})
     wt1.submit(wait=True, restart=True)
@@ -81,27 +81,27 @@ def test_restart(wt_calcjob):
     assert wt1.nodes["add2"].node.pk != wt.nodes["add2"].pk
 
 
-def test_append_worktree(decorated_add_multiply_group):
-    from aiida_worktree import WorkTree
+def test_append_workgraph(decorated_add_multiply_group):
+    from aiida_workgraph import WorkGraph
 
-    wt = WorkTree("test_node_group")
+    wt = WorkGraph("test_node_group")
     add1 = wt.nodes.new("AiiDAAdd", "add1", x=2, y=3)
     add_multiply_wt = decorated_add_multiply_group(x=0, y=4, z=5)
-    # append worktree
+    # append workgraph
     wt.append(add_multiply_wt, prefix="group_")
     wt.links.new(add1.outputs[0], wt.nodes["group_add1"].inputs["x"])
     wt.submit(wait=True)
     assert wt.nodes["group_multiply1"].node.outputs.result == 45
 
 
-def test_node_from_worktree(decorated_add_multiply_group):
-    wt = WorkTree("test_node_from_worktree")
+def test_node_from_workgraph(decorated_add_multiply_group):
+    wt = WorkGraph("test_node_from_workgraph")
     add1 = wt.nodes.new("AiiDAAdd", "add1", x=2, y=3)
     add2 = wt.nodes.new("AiiDAAdd", "add2", y=3)
     add_multiply_wt = decorated_add_multiply_group(x=0, y=4, z=5)
     AddMultiplyNode = build_node(add_multiply_wt)
     assert "add1.x" in AddMultiplyNode().inputs.keys()
-    # add the worktree as a node
+    # add the workgraph as a node
     add_multiply1 = wt.nodes.new(AddMultiplyNode, "add_multiply1")
     wt.links.new(add1.outputs[0], add_multiply1.inputs["add1.x"])
     wt.links.new(add_multiply1.outputs["multiply1.result"], add2.inputs["x"])

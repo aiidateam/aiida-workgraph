@@ -15,7 +15,7 @@ def test_run_order(wt_engine):
 
 @pytest.mark.skip(reason="The test is not stable.")
 def test_reset_node(wt_engine):
-    """Modify a node during the excution of a WorkTree."""
+    """Modify a node during the excution of a WorkGraph."""
     wt = wt_engine
     wt.name = "test_reset"
     wt.submit()
@@ -25,12 +25,12 @@ def test_reset_node(wt_engine):
     wt.wait()
     wt.update()
     assert wt.nodes["add5"].node.outputs.sum == 21
-    assert wt.process.base.extras.get("worktree_queue_index") == 1
-    assert len(wt.process.base.extras.get("worktree_queue")) == 1
+    assert wt.process.base.extras.get("workgraph_queue_index") == 1
+    assert len(wt.process.base.extras.get("workgraph_queue")) == 1
 
 
 def test_max_number_jobs():
-    from aiida_worktree import WorkTree, build_node
+    from aiida_workgraph import WorkGraph, build_node
     from aiida.orm import load_code
     from aiida.orm import Int
 
@@ -40,7 +40,7 @@ def test_max_number_jobs():
     )
     code = load_code("add@localhost")
 
-    wt = WorkTree("test_max_number_jobs")
+    wt = WorkGraph("test_max_number_jobs")
     N = 15
     # Create N nodes
     for i in range(N):
@@ -50,7 +50,7 @@ def test_max_number_jobs():
         # Set a sleep option for each job (e.g., 2 seconds per job)
         temp.set({"metadata.options.sleep": 2})
 
-    # Set the maximum number of running jobs inside the WorkTree
+    # Set the maximum number of running jobs inside the WorkGraph
     wt.max_number_jobs = 5
     wt.submit(wait=True)
     wt.nodes["add2"].ctime < wt.nodes["add10"].ctime

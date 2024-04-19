@@ -7,7 +7,7 @@ Installation
 Requirements
 ============
 
-To work with ``aiida-worktree``, you should have:
+To work with ``aiida-workgraph``, you should have:
 
 * installed ``aiida-core``
 * configured an AiiDA profile.
@@ -25,7 +25,7 @@ The recommended method of installation is to use the Python package manager |pip
 
 .. code-block:: console
 
-    $ pip install aiida-worktree
+    $ pip install aiida-workgraph
 
 This will install the latest stable version that was released to PyPI.
 
@@ -33,8 +33,8 @@ To install the package from source, first clone the repository and then install 
 
 .. code-block:: console
 
-    $ git clone https://github.com/superstar54/aiida-worktree
-    $ pip install -e aiida-worktree
+    $ git clone https://github.com/superstar54/aiida-workgraph
+    $ pip install -e aiida-workgraph
 
 The ``-e`` flag will install the package in editable mode, meaning that changes to the source code will be automatically picked up.
 

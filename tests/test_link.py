@@ -6,7 +6,7 @@ aiida.load_profile()
 def test_multiply_link():
     """Test multiply link."""
 
-    from aiida_worktree import node, WorkTree
+    from aiida_workgraph import node, WorkGraph
     from aiida.orm import Float, load_node
 
     @node.calcfunction()
@@ -16,7 +16,7 @@ def test_multiply_link():
             total += load_node(data).value
         return Float(total)
 
-    wt = WorkTree(name="test_multiply_link")
+    wt = WorkGraph(name="test_multiply_link")
     float1 = wt.nodes.new("AiiDANode", value=Float(1.0).store())
     float2 = wt.nodes.new("AiiDANode", value=Float(2.0).store())
     float3 = wt.nodes.new("AiiDANode", value=Float(3.0).store())

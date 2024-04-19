@@ -1,5 +1,5 @@
 import pytest
-from aiida_worktree import node, WorkTree, build_node
+from aiida_workgraph import node, WorkGraph, build_node
 from aiida.orm import Float, Int, load_code
 
 
@@ -15,9 +15,9 @@ def arithmetic_add():
 
 @pytest.fixture
 def wt_calcfunction():
-    """A worktree with calcfunction."""
+    """A workgraph with calcfunction."""
 
-    wt = WorkTree(name="test_debug_math")
+    wt = WorkGraph(name="test_debug_math")
     float1 = wt.nodes.new("AiiDANode", "float1", value=Float(3.0).store())
     sumdiff1 = wt.nodes.new("AiiDASumDiff", "sumdiff1", x=2)
     sumdiff2 = wt.nodes.new("AiiDASumDiff", "sumdiff2", x=4)
@@ -30,10 +30,10 @@ def wt_calcfunction():
 
 @pytest.fixture
 def wt_calcjob(arithmetic_add):
-    """A worktree with calcjob."""
+    """A workgraph with calcjob."""
 
     code = load_code("add@localhost")
-    wt = WorkTree(name="test_debug_math")
+    wt = WorkGraph(name="test_debug_math")
     int1 = wt.nodes.new("AiiDANode", "int1", value=Int(3).store())
     code1 = wt.nodes.new("AiiDACode", "code1", value=code.pk)
     add1 = wt.nodes.new(arithmetic_add, "add1", x=Int(2).store())
@@ -50,10 +50,10 @@ def wt_calcjob(arithmetic_add):
 
 @pytest.fixture
 def wt_workchain():
-    """A worktree with workchain."""
+    """A workgraph with workchain."""
 
     code = load_code("add@localhost")
-    wt = WorkTree(name="test_debug_math")
+    wt = WorkGraph(name="test_debug_math")
     int1 = wt.nodes.new("AiiDANode", "int1", value=Int(2).store())
     int2 = wt.nodes.new("AiiDANode", "int2", value=Int(3).store())
     code1 = wt.nodes.new("AiiDACode", "code1", value=code.pk)
@@ -158,7 +158,7 @@ def decorated_add_multiply_group(decorated_add, decorated_multiply):
 
     @node.group(outputs=[["multiply1.result", "result"]])
     def add_multiply_group(x, y, z):
-        wt = WorkTree("add_multiply_group")
+        wt = WorkGraph("add_multiply_group")
         add1 = wt.nodes.new(decorated_add, name="add1", x=x, y=y)
         multiply = wt.nodes.new(decorated_multiply, name="multiply1", x=z)
         # link the output of int node to the input of add node
@@ -172,7 +172,7 @@ def decorated_add_multiply_group(decorated_add, decorated_multiply):
 def build_workchain():
     """Generate a decorated node for test."""
 
-    from aiida_worktree import build_node
+    from aiida_workgraph import build_node
     from aiida.workflows.arithmetic.multiply_add import MultiplyAddWorkChain
 
     multiply_add = build_node(MultiplyAddWorkChain)
@@ -194,7 +194,7 @@ def structure_si():
 @pytest.fixture
 def wt_structure_si():
 
-    wt = WorkTree(name="test_structure")
+    wt = WorkGraph(name="test_structure")
     structure1 = wt.nodes.new("AiiDAStructure", "structure1")
     data = {
         "cell": [[0.0, 2.715, 2.715], [2.715, 0.0, 2.715], [2.715, 2.715, 0.0]],
@@ -216,7 +216,7 @@ def wt_engine(decorated_add, arithmetic_add):
     """Use to test the engine."""
     code = load_code("add@localhost")
     x = Int(2)
-    wt = WorkTree(name="test_run_order")
+    wt = WorkGraph(name="test_run_order")
     add0 = wt.nodes.new(arithmetic_add, "add0", x=x, y=Int(0), code=code)
     add0.set({"metadata.options.sleep": 15})
     add1 = wt.nodes.new(decorated_add, "add1", x=x, y=Int(1), t=Int(1))

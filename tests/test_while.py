@@ -1,15 +1,15 @@
-from aiida_worktree import node, WorkTree
+from aiida_workgraph import node, WorkGraph
 from aiida import load_profile, orm
 
 load_profile()
 
 
 def test_while(decorated_add, decorated_multiply, decorated_compare):
-    # Create a WorkTree will repeat itself based on the conditions
+    # Create a WorkGraph will repeat itself based on the conditions
     @node.group(outputs=[["ctx.n", "result"]])
     def my_while(n, limit):
-        wt = WorkTree("while_worktree")
-        wt.worktree_type = "WHILE"
+        wt = WorkGraph("while_workgraph")
+        wt.workgraph_type = "WHILE"
         wt.conditions = ["compare1.result"]
         wt.ctx = {"n": n}
         wt.nodes.new(decorated_compare, name="compare1", x="{{n}}", y=orm.Int(limit))
@@ -22,7 +22,7 @@ def test_while(decorated_add, decorated_multiply, decorated_compare):
         return wt
 
     # -----------------------------------------
-    wt = WorkTree("while")
+    wt = WorkGraph("while")
     add1 = wt.nodes.new(decorated_add, x=orm.Int(25), y=orm.Int(25))
     my_while1 = wt.nodes.new(my_while, n=orm.Int(1))
     add2 = wt.nodes.new(decorated_add, y=orm.Int(2))
@@ -34,11 +34,11 @@ def test_while(decorated_add, decorated_multiply, decorated_compare):
 
 
 def test_while_max_iteration(decorated_add, decorated_multiply, decorated_compare):
-    # Create a WorkTree will repeat itself based on the conditions
+    # Create a WorkGraph will repeat itself based on the conditions
     @node.group(outputs=[["ctx.n", "result"]])
     def my_while(n, limit):
-        wt = WorkTree("while_worktree")
-        wt.worktree_type = "WHILE"
+        wt = WorkGraph("while_workgraph")
+        wt.workgraph_type = "WHILE"
         wt.max_iteration = 3
         wt.conditions = ["compare1.result"]
         wt.ctx = {"n": n}
@@ -52,7 +52,7 @@ def test_while_max_iteration(decorated_add, decorated_multiply, decorated_compar
         return wt
 
     # -----------------------------------------
-    wt = WorkTree("while")
+    wt = WorkGraph("while")
     add1 = wt.nodes.new(decorated_add, x=orm.Int(25), y=orm.Int(25))
     my_while1 = wt.nodes.new(my_while, n=orm.Int(1))
     add2 = wt.nodes.new(decorated_add, y=orm.Int(2))

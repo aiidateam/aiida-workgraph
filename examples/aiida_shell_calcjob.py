@@ -1,4 +1,4 @@
-from aiida_worktree import node, WorkTree
+from aiida_workgraph import node, WorkGraph
 from aiida import load_profile
 from aiida.orm import load_code
 
@@ -16,8 +16,8 @@ def generate_nodes(file):
     return {"pdb": file}
 
 
-# Create a worktree
-wt = WorkTree(name="test_aiida_shell_calcjob")
+# Create a workgraph
+wt = WorkGraph(name="test_aiida_shell_calcjob")
 job1 = wt.nodes.new("AiiDAShell", code=pdb_fetch, arguments=["1brs"])
 job2 = wt.nodes.new("AiiDAShell", code=pdb_selchain, arguments=["-A,D", "{pdb}"])
 job3 = wt.nodes.new("AiiDAShell", code=pdb_delhetatm, arguments=["{pdb}"])

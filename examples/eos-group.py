@@ -1,5 +1,5 @@
 from aiida import load_profile
-from aiida_worktree import build_node, WorkTree, node
+from aiida_workgraph import build_node, WorkGraph, node
 from aiida.orm import Dict, KpointsData, StructureData, load_code, load_group
 from ase.build import bulk
 
@@ -45,8 +45,8 @@ def eos(**datas):
 
 
 @node.group()
-def eos_worktree(structure=None, inputs=None, run_relax=True, scales=None):
-    wt = WorkTree()
+def eos_workgraph(structure=None, inputs=None, run_relax=True, scales=None):
+    wt = WorkGraph()
     wt.ctx = {"current_structure": structure}
     # Load the pseudopotential family.
     pseudo_family = load_group("SSSP/1.3/PBEsol/efficiency")
@@ -146,6 +146,6 @@ inputs = {
 }
 
 # -----------------------------------------------------------
-wt = eos_worktree(structure=si, inputs=inputs, scales=[0.95, 1.0, 1.05])
+wt = eos_workgraph(structure=si, inputs=inputs, scales=[0.95, 1.0, 1.05])
 wt.submit(wait=True, timeout=300)
 print("eos: ", wt.nodes["eos"].outputs["result"].value.get_dict())

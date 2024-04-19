@@ -6,9 +6,9 @@ aiida.load_profile()
 
 def test_kpoint():
     """Run simple calcfunction."""
-    from aiida_worktree import WorkTree
+    from aiida_workgraph import WorkGraph
 
-    wt = WorkTree(name="test_kpoint")
+    wt = WorkGraph(name="test_kpoint")
     kpoint1 = wt.nodes.new("AiiDAKpoint", "kpoint1")
     kpoint1.set({"mesh": [2, 2, 2]})
     wt.submit(wait=True)
@@ -17,9 +17,9 @@ def test_kpoint():
 
 def test_pw_parameters():
     """Run simple calcfunction."""
-    from aiida_worktree import WorkTree
+    from aiida_workgraph import WorkGraph
 
-    wt = WorkTree(name="test_pw_parameters")
+    wt = WorkGraph(name="test_pw_parameters")
     pw_parameters1 = wt.nodes.new("AiiDADict", "pw_parameters1")
     paras = {
         "CONTROL": {
@@ -125,7 +125,7 @@ def test_pw_dos_projwfc(wt_structure_si):
 
 def test_pw_relax_workchain(structure_si):
     """Run simple calcfunction."""
-    from aiida_worktree import build_node, node, WorkTree
+    from aiida_workgraph import build_node, node, WorkGraph
     from aiida.orm import Dict, KpointsData, load_code, load_group
 
     # register node
@@ -170,7 +170,7 @@ def test_pw_relax_workchain(structure_si):
         }
     }
 
-    wt = WorkTree("test_pw_relax")
+    wt = WorkGraph("test_pw_relax")
     # structure node
     wt.nodes.new("AiiDANode", "si", value=structure_si)
     # pw node

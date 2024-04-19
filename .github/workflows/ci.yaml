@@ -110,17 +110,17 @@ jobs:
             run: verdi daemon start 2
 
         -   name: Install Dependencies for widget
-            working-directory: aiida_worktree/widget
+            working-directory: aiida_workgraph/widget
             run: |
                 npm install
                 npm run build
 
         -   name: Install Dependencies, Start React Application
-            working-directory: aiida_worktree/web/frontend
+            working-directory: aiida_workgraph/web/frontend
             run: |
                 npm install
                 npm run build
-                worktree web start
+                workgraph web start
 
         -   name: Run pytest
             env:

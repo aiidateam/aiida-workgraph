@@ -23,10 +23,10 @@ def test_build_workchain_inputs_outputs(build_workchain):
 def test_build_workchain(build_workchain):
     """Submit simple calcjob."""
     from aiida.orm import load_code, Int
-    from aiida_worktree import WorkTree
+    from aiida_workgraph import WorkGraph
 
     code = load_code("add@localhost")
-    wt = WorkTree(name="test_debug_math")
+    wt = WorkGraph(name="test_debug_math")
     code1 = wt.nodes.new("AiiDACode", "code1", value=code.pk)
     multiply_add1 = wt.nodes.new(
         build_workchain,
@@ -47,5 +47,5 @@ def test_build_workchain(build_workchain):
     wt.submit(wait=True, timeout=100)
     assert wt.nodes["multiply_add2"].node.outputs.result == 17
     # reload wt
-    wt1 = WorkTree.load(wt.pk)
+    wt1 = WorkGraph.load(wt.pk)
     assert wt1.nodes["multiply_add2"].node.outputs.result == 17
