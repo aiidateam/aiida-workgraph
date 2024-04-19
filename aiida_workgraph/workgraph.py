@@ -3,6 +3,7 @@ import aiida
 from aiida_workgraph.nodes import node_pool
 import time
 from aiida_workgraph.collection import WorkGraphNodeCollection
+from aiida_workgraph.utils import get_executor
 from aiida_workgraph.utils.graph import (
     node_deletion_hook,
     node_creation_hook,
@@ -238,6 +239,16 @@ class WorkGraph(node_graph.NodeGraph):
                         self.nodes[label].pk = node.pk
                 elif link.link_label == "execution_count":
                     self.execution_count = node.value
+        # for normal nodes, we try to read the results from the extras of the node
+        for node in self.nodes:
+            if node.node_type.upper() == "NORMAL":
+                results = self.process.base.extras.get(
+                    f"nodes__results__{node.name}", {}
+                )
+                for key, value in results.items():
+                    deserializer = node.outputs[key].get_deserialize()
+                    value = get_executor(deserializer)[0](bytes(value))
+                    node.outputs[key].value = value
 
     @property
     def pk(self):
