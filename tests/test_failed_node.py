@@ -8,9 +8,9 @@ def test_failed_node(decorated_sqrt, decorated_add):
     from aiida_workgraph import WorkGraph
     from aiida.orm import Float
 
-    wt = WorkGraph(name="test_failed_node")
-    wt.nodes.new(decorated_add, "add1", x=Float(1), y=Float(2))
-    wt.nodes.new(decorated_sqrt, "sqrt1", x=Float(-1))
-    wt.submit(wait=True)
+    wg = WorkGraph(name="test_failed_node")
+    wg.nodes.new(decorated_add, "add1", x=Float(1), y=Float(2))
+    wg.nodes.new(decorated_sqrt, "sqrt1", x=Float(-1))
+    wg.submit(wait=True)
     # print("results: ", results[])
-    assert wt.process.exit_status == 302
+    assert wg.process.exit_status == 302

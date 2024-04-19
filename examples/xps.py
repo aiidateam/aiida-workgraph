@@ -62,7 +62,7 @@ def run_scf(
     ndata = {"path": "aiida_quantumespresso.calculations.pw.PwCalculation"}
     pw_node = build_node(ndata)
     #
-    wt = WorkGraph("run_scf")
+    wg = WorkGraph("run_scf")
     site_info = site_info.get_dict()
     for site in site_info.values():
         element = site["symbol"]
@@ -71,7 +71,7 @@ def run_scf(
         pseudos[element] = xps_pseudos[f"{element}_gs"]
     # ground state
     structure = structure
-    pw_ground = wt.nodes.new(pw_node, name="ground")
+    pw_ground = wg.nodes.new(pw_node, name="ground")
     pw_ground.set(
         {
             "code": code,
@@ -90,7 +90,7 @@ def run_scf(
         pseudos1["X"] = xps_pseudos[data["peak"]]
         # remove pseudo of non-exist element
         pseudos1 = {kind.name: pseudos1[kind.name] for kind in structure.kinds}
-        pw_excited = wt.nodes.new(pw_node, name=f"pw_excited_{key}")
+        pw_excited = wg.nodes.new(pw_node, name=f"pw_excited_{key}")
         pw_excited.set(
             {
                 "code": code,
@@ -102,7 +102,7 @@ def run_scf(
             }
         )
         pw_excited.to_ctx = [["output_parameters", f"scf.{key}"]]
-    return wt
+    return wg
 
 
 # set link limit to a large value so that it can gather the result.
@@ -139,13 +139,13 @@ def xps(
     metadata,
     correction_energies={},
 ):
-    wt = WorkGraph("xps")
-    marked_structure1 = wt.nodes.new(
+    wg = WorkGraph("xps")
+    marked_structure1 = wg.nodes.new(
         get_marked_structures,
         structure=structure,
         atoms_list=atoms_list,
     )
-    run_scf1 = wt.nodes.new(run_scf, name="run_scf1")
+    run_scf1 = wg.nodes.new(run_scf, name="run_scf1")
     run_scf1.set(
         {
             "structure": structure,
@@ -157,18 +157,18 @@ def xps(
             "metadata": metadata,
         }
     )
-    get_spectra1 = wt.nodes.new(
+    get_spectra1 = wg.nodes.new(
         get_spectra, name="get_spectra1", correction_energies=correction_energies
     )
-    wt.links.new(
+    wg.links.new(
         marked_structure1.outputs["structures"], run_scf1.inputs["marked_structures"]
     )
-    wt.links.new(marked_structure1.outputs["site_info"], run_scf1.inputs["site_info"])
-    wt.links.new(run_scf1.outputs["result"], get_spectra1.inputs["pw_outputs"])
-    wt.links.new(
+    wg.links.new(marked_structure1.outputs["site_info"], run_scf1.inputs["site_info"])
+    wg.links.new(run_scf1.outputs["result"], get_spectra1.inputs["pw_outputs"])
+    wg.links.new(
         marked_structure1.outputs["site_info"], get_spectra1.inputs["site_info"]
     )
-    return wt
+    return wg
 
 
 # ===============================================================================
@@ -218,8 +218,8 @@ metadata = {
     }
 }
 # ===============================================================================
-wt = WorkGraph("xps_test")
-xps1 = wt.nodes.new(xps, name="xps")
+wg = WorkGraph("xps_test")
+xps1 = wg.nodes.new(xps, name="xps")
 xps1.set(
     {
         "structure": mol,
@@ -233,4 +233,4 @@ xps1.set(
         "correction_energies": correction_energies,
     }
 )
-wt.submit(wait=True, timeout=300)
+wg.submit(wait=True, timeout=300)

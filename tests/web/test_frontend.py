@@ -15,8 +15,8 @@ def test_homepage(page):
         pytest.fail("Element 'a[href='/wortre']' not found on the page")
 
 
-def test_workgraph(page, wt_calcfunction):
-    wt_calcfunction.submit(wait=True)
+def test_workgraph(page, wg_calcfunction):
+    wg_calcfunction.submit(wait=True)
     page.goto("http://localhost:8000/workgraph")
 
     # Check for the existence of a specific element on the page
@@ -43,11 +43,11 @@ def test_workgraph(page, wt_calcfunction):
     assert page.locator("tr").count() >= 2  # Including header row
 
 
-def test_workgraph_item(page, wt_calcfunction):
+def test_workgraph_item(page, wg_calcfunction):
 
-    wt = wt_calcfunction
-    wt.submit(wait=True)
-    page.goto("http://localhost:8000/workgraph/{}".format(wt.pk))
+    wg = wg_calcfunction
+    wg.submit(wait=True)
+    page.goto("http://localhost:8000/workgraph/{}".format(wg.pk))
     page.wait_for_timeout(8000)
 
     page.get_by_text("sumdiff3").is_visible()

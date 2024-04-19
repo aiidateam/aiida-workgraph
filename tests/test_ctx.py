@@ -8,10 +8,10 @@ def test_workgraph_ctx(decorated_add):
     from aiida_workgraph import WorkGraph
     from aiida.orm import Float
 
-    wt = WorkGraph(name="test_workgraph_ctx")
-    wt.ctx = {"x": Float(2), "data.y": Float(3)}
-    add1 = wt.nodes.new(decorated_add, "add1", x="{{x}}", y="{{data.y}}")
-    wt.submit(wait=True)
+    wg = WorkGraph(name="test_workgraph_ctx")
+    wg.ctx = {"x": Float(2), "data.y": Float(3)}
+    add1 = wg.nodes.new(decorated_add, "add1", x="{{x}}", y="{{data.y}}")
+    wg.submit(wait=True)
     assert add1.outputs["result"].value == 5
 
 
@@ -20,10 +20,10 @@ def test_node_to_ctx(decorated_add):
     from aiida_workgraph import WorkGraph
     from aiida.orm import Float
 
-    wt = WorkGraph(name="test_node_to_ctx")
-    add1 = wt.nodes.new(decorated_add, "add1", x=Float(2).store(), y=Float(3).store())
+    wg = WorkGraph(name="test_node_to_ctx")
+    add1 = wg.nodes.new(decorated_add, "add1", x=Float(2).store(), y=Float(3).store())
     add1.to_ctx = [["result", "sum"]]
-    add2 = wt.nodes.new(decorated_add, "add2", y="{{ sum }}")
-    wt.links.new(add1.outputs[0], add2.inputs["x"])
-    wt.submit(wait=True)
+    add2 = wg.nodes.new(decorated_add, "add2", y="{{ sum }}")
+    wg.links.new(add1.outputs[0], add2.inputs["x"])
+    wg.submit(wait=True)
     assert add2.outputs["result"].value == 10

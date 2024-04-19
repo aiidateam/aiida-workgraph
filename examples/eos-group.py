@@ -46,13 +46,13 @@ def eos(**datas):
 
 @node.group()
 def eos_workgraph(structure=None, inputs=None, run_relax=True, scales=None):
-    wt = WorkGraph()
-    wt.ctx = {"current_structure": structure}
+    wg = WorkGraph()
+    wg.ctx = {"current_structure": structure}
     # Load the pseudopotential family.
     pseudo_family = load_group("SSSP/1.3/PBEsol/efficiency")
     pseudos = pseudo_family.get_pseudos(structure=structure)
     # -------------relax----------------
-    relax_node = wt.nodes.new(PwCalculation, name="relax1")
+    relax_node = wg.nodes.new(PwCalculation, name="relax1")
     relax_inputs = inputs.get("relax", {})
     relax_inputs["pseudos"] = pseudos
     relax_inputs["structure"] = "{{current_structure}}"
@@ -60,13 +60,13 @@ def eos_workgraph(structure=None, inputs=None, run_relax=True, scales=None):
     # save the relaxed structure to the context
     relax_node.to_ctx = [["output_structure", "current_structure"]]
     # -------------eos euqatioin----------------
-    eos1 = wt.nodes.new(eos, name="eos", datas="{{pw_result}}")
+    eos1 = wg.nodes.new(eos, name="eos", datas="{{pw_result}}")
     eos1.wait = []
     # create pw node for each scaled structure
     for i in range(len(scales)):
         # -------------scale structure----------------
         # use the structure from the ctx
-        scale1 = wt.nodes.new(
+        scale1 = wg.nodes.new(
             scale_structure,
             name=f"scale_{i}",
             structure="{{structure}}",
@@ -74,17 +74,17 @@ def eos_workgraph(structure=None, inputs=None, run_relax=True, scales=None):
         )
         scale1.wait = ["relax1"]
         # -------------scf----------------
-        pw1 = wt.nodes.new(PwCalculation, name=f"pw_{i}")
+        pw1 = wg.nodes.new(PwCalculation, name=f"pw_{i}")
         scf_inputs = inputs.get("scf", {})
         pw1.set(scf_inputs)
         # save the output_parameters to the context
         pw1.to_ctx = [["output_parameters", f"pw_result.s_{i}"]]
         # link the scale structure to the pw node
-        wt.links.new(scale1.outputs[0], pw1.inputs["structure"])
+        wg.links.new(scale1.outputs[0], pw1.inputs["structure"])
         eos1.wait.append(pw1.name)
     if not run_relax:
-        wt.nodes.delete("relax1")
-    return wt
+        wg.nodes.delete("relax1")
+    return wg
 
 
 # ===============================================================================
@@ -146,6 +146,6 @@ inputs = {
 }
 
 # -----------------------------------------------------------
-wt = eos_workgraph(structure=si, inputs=inputs, scales=[0.95, 1.0, 1.05])
-wt.submit(wait=True, timeout=300)
-print("eos: ", wt.nodes["eos"].outputs["result"].value.get_dict())
+wg = eos_workgraph(structure=si, inputs=inputs, scales=[0.95, 1.0, 1.05])
+wg.submit(wait=True, timeout=300)
+print("eos: ", wg.nodes["eos"].outputs["result"].value.get_dict())

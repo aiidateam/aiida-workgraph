@@ -77,16 +77,16 @@ metadata = {
     }
 }
 
-wt = WorkGraph("eos")
+wg = WorkGraph("eos")
 # structure node
-structure1 = wt.nodes.new("AiiDANode", "si", value=si)
+structure1 = wg.nodes.new("AiiDANode", "si", value=si)
 # get the result of each pw node from the context
-eos1 = wt.nodes.new(eos, name="eos", datas="{{pw_result}}")
+eos1 = wg.nodes.new(eos, name="eos", datas="{{pw_result}}")
 # create pw node for each scale
 scales = [0.95, 1.0, 1.05]
 for i in range(len(scales)):
-    pw1 = wt.nodes.new(pw_node, name=f"pw1_{i}")
-    scale1 = wt.nodes.new(scale_structure, name=f"scale_{i}", scale=scales[i])
+    pw1 = wg.nodes.new(pw_node, name=f"pw1_{i}")
+    scale1 = wg.nodes.new(scale_structure, name=f"scale_{i}", scale=scales[i])
     pw1.set(
         {
             "code": code,
@@ -97,8 +97,8 @@ for i in range(len(scales)):
         }
     )
     pw1.to_ctx = [["output_parameters", f"pw_result.s_{i}"]]
-    wt.links.new(structure1.outputs[0], scale1.inputs["structure"])
-    wt.links.new(scale1.outputs[0], pw1.inputs["structure"])
-    wt.ctrl_links.new(pw1.ctrl_outputs[0], eos1.ctrl_inputs[0])
-wt.submit(wait=True, timeout=300)
+    wg.links.new(structure1.outputs[0], scale1.inputs["structure"])
+    wg.links.new(scale1.outputs[0], pw1.inputs["structure"])
+    wg.ctrl_links.new(pw1.ctrl_outputs[0], eos1.ctrl_inputs[0])
+wg.submit(wait=True, timeout=300)
 print("eos: ", eos1.node.outputs.eos.get_dict())

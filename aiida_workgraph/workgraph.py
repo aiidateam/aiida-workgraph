@@ -71,7 +71,7 @@ class WorkGraph(node_graph.NodeGraph):
             return
         wgdata = self.to_dict()
         merge_properties(wgdata)
-        inputs = {"wt": wgdata}
+        inputs = {"wg": wgdata}
         # init a process
         runner = manager.get_manager().get_runner()
         process_inited = WorkGraphEngine(runner=runner, inputs=inputs)
@@ -129,7 +129,7 @@ class WorkGraph(node_graph.NodeGraph):
         wgdata = self.to_dict()
         merge_properties(wgdata)
         metadata = metadata or {}
-        inputs = {"wt": wgdata, "metadata": metadata}
+        inputs = {"wg": wgdata, "metadata": metadata}
         if self.process is None:
             # init a process node
             process_inited = WorkGraphEngine(inputs=inputs)
@@ -256,10 +256,10 @@ class WorkGraph(node_graph.NodeGraph):
         if wgdata is None:
             print("No workgraph data found in the process node.")
             return
-        wt = cls.from_dict(wgdata)
-        wt.process = process
-        wt.update()
-        return wt
+        wg = cls.from_dict(wgdata)
+        wg.process = process
+        wg.update()
+        return wg
 
     def show(self):
         """
@@ -309,20 +309,20 @@ class WorkGraph(node_graph.NodeGraph):
         self.ctx = {}
         self.state = "CREATED"
 
-    def append(self, wt, prefix=""):
+    def append(self, wg, prefix=""):
         """Append a workgraph to the current workgraph.
         prefix is used to add a prefix to the node names.
         """
-        for node in wt.nodes:
+        for node in wg.nodes:
             node.name = prefix + node.name
             node.wait = [prefix + w for w in node.wait] if node.wait else []
             node.parent = self
             self.nodes.append(node)
-        # self.sequence.extend([prefix + node for node in wt.sequence])
-        # self.conditions.extend(wt.conditions)
-        self.ctx.update(wt.ctx)
+        # self.sequence.extend([prefix + node for node in wg.sequence])
+        # self.conditions.extend(wg.conditions)
+        self.ctx.update(wg.ctx)
         # links
-        for link in wt.links:
+        for link in wg.links:
             self.links.append(link)
 
     def _repr_mimebundle_(self, *args, **kwargs):

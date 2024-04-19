@@ -80,11 +80,11 @@ from aiida.orm import Int
 load_profile()
 
 
-wt = WorkGraph("test_add_multiply")
-wt.nodes.new(add, name="add1", x=Int(2.0), y=Int(3.0))
-wt.nodes.new(multiply, name="multiply1", y=Int(4.0))
-wt.links.new(wt.nodes["add1"].outputs[0], wt.nodes["multiply1"].inputs["x"])
-wt.submit(wait=True)
+wg = WorkGraph("test_add_multiply")
+wg.nodes.new(add, name="add1", x=Int(2.0), y=Int(3.0))
+wg.nodes.new(multiply, name="multiply1", y=Int(4.0))
+wg.links.new(wg.nodes["add1"].outputs[0], wg.nodes["multiply1"].inputs["x"])
+wg.submit(wait=True)
 ```
 
 Start the web app, open a terminal and run:

@@ -178,8 +178,8 @@ def process_show(processes):
     from aiida_workgraph import WorkGraph
 
     for process in processes:
-        wt = WorkGraph.load(process.pk)
-        wt.show()
+        wg = WorkGraph.load(process.pk)
+        wg.show()
 
 
 @workgraph_graph.command("report")
