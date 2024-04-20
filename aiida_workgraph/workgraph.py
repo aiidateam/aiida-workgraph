@@ -246,9 +246,13 @@ class WorkGraph(node_graph.NodeGraph):
                     f"nodes__results__{node.name}", {}
                 )
                 for key, value in results.items():
-                    deserializer = node.outputs[key].get_deserialize()
-                    value = get_executor(deserializer)[0](bytes(value))
-                    node.outputs[key].value = value
+                    # if value is an AiiDA data node, we don't need to deserialize it
+                    if isinstance(value, aiida.orm.Data):
+                        node.outputs[key].value = value
+                    else:
+                        deserializer = node.outputs[key].get_deserialize()
+                        value = get_executor(deserializer)[0](bytes(value))
+                        node.outputs[key].value = value
 
     @property
     def pk(self):
