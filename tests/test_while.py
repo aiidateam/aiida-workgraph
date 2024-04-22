@@ -7,7 +7,7 @@ load_profile()
 def test_while(decorated_add, decorated_multiply, decorated_compare):
     # Create a WorkGraph will repeat itself based on the conditions
     @node.group(outputs=[["ctx.n", "result"]])
-    def my_while(n, limit):
+    def my_while(n=0, limit=100):
         wg = WorkGraph("while_workgraph")
         wg.workgraph_type = "WHILE"
         wg.conditions = ["compare1.result"]
@@ -29,14 +29,15 @@ def test_while(decorated_add, decorated_multiply, decorated_compare):
     wg.links.new(add1.outputs[0], my_while1.inputs["limit"])
     wg.links.new(my_while1.outputs[0], add2.inputs[0])
     wg.submit(wait=True, timeout=100)
-    assert add2.node.outputs.result.value == 63
+    assert add2.outputs["result"].value == 63
     assert my_while1.node.outputs.execution_count == 4
+    assert my_while1.outputs["result"].value == 61
 
 
 def test_while_max_iteration(decorated_add, decorated_multiply, decorated_compare):
     # Create a WorkGraph will repeat itself based on the conditions
     @node.group(outputs=[["ctx.n", "result"]])
-    def my_while(n, limit):
+    def my_while(n=0, limit=100):
         wg = WorkGraph("while_workgraph")
         wg.workgraph_type = "WHILE"
         wg.max_iteration = 3
@@ -59,5 +60,5 @@ def test_while_max_iteration(decorated_add, decorated_multiply, decorated_compar
     wg.links.new(add1.outputs[0], my_while1.inputs["limit"])
     wg.links.new(my_while1.outputs[0], add2.inputs[0])
     wg.submit(wait=True, timeout=100)
-    assert add2.node.outputs.result.value < 63
+    assert add2.outputs["result"].value < 63
     assert my_while1.node.outputs.execution_count == 3

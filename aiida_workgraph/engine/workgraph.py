@@ -820,6 +820,9 @@ class WorkGraph(Process, metaclass=Protect):
                     node["results"] = results
                 else:
                     node["results"][node["outputs"][0]["name"]] = results
+                # save the results to the database (as a extra field of the node)
+                # this is disabled
+                # self.save_results_to_extras(name)
                 self.ctx.input_nodes[name] = results
                 self.ctx.nodes[name]["state"] = "FINISHED"
                 self.node_to_ctx(name)
@@ -1019,6 +1022,32 @@ class WorkGraph(Process, metaclass=Protect):
         else:
             print("var_kwargs: ", var_kwargs)
             return executor(*args, **kwargs, **var_kwargs)
+
+    def save_results_to_extras(self, name):
+        """Save the results to the base.extras.
+        For the outputs of a Normal node, they are not saved to the database like the calcjob or workchain.
+        One temporary solution is to save the results to the base.extras. In order to do this, we need to
+        serialize the results
+        """
+        from aiida_workgraph.utils import get_executor
+
+        results = self.ctx.nodes[name]["results"]
+        if results is None:
+            return
+        datas = {}
+        for key, value in results.items():
+            # find outptus sockets with the name as key
+            output = [
+                output
+                for output in self.ctx.nodes[name]["outputs"]
+                if output["name"] == key
+            ]
+            if len(output) == 0:
+                continue
+            output = output[0]
+            Executor, _ = get_executor(output["serialize"])
+            datas[key] = Executor(value)
+        self.node.set_extra(f"nodes__results__{name}", datas)
 
     def finalize(self):
         """"""

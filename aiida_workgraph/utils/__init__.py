@@ -73,9 +73,20 @@ def update_nested_dict(d, key, value):
     current[keys[-1]] = value
 
 
+def is_empty(value):
+    """Check if the provided value is an empty collection."""
+    import numpy as np
+
+    if isinstance(value, np.ndarray):
+        return value.size == 0
+    elif isinstance(value, (dict, list, set, tuple)):
+        return not value
+    return False
+
+
 def update_nested_dict_with_special_keys(d):
-    # first remove None and empty value
-    d = {k: v for k, v in d.items() if v is not None and v != {}}
+    """Remove None and empty value"""
+    d = {k: v for k, v in d.items() if v is not None and not is_empty(v)}
     #
     special_keys = [k for k in d.keys() if "." in k]
     for key in special_keys:

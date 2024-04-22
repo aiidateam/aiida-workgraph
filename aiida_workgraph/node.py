@@ -2,6 +2,11 @@ from node_graph.node import Node as GraphNode
 from aiida_workgraph.properties import property_pool
 from aiida_workgraph.sockets import socket_pool
 from aiida_workgraph.widget import NodeGraphWidget
+from aiida_workgraph.collection import (
+    WorkGraphPropertyCollection,
+    WorkGraphInputSocketCollection,
+    WorkGraphOutputSocketCollection,
+)
 
 
 class Node(GraphNode):
@@ -18,7 +23,12 @@ class Node(GraphNode):
         """
         Initialize a Node instance.
         """
-        super().__init__(**kwargs)
+        super().__init__(
+            property_collection_class=WorkGraphPropertyCollection,
+            input_collection_class=WorkGraphInputSocketCollection,
+            output_collection_class=WorkGraphOutputSocketCollection,
+            **kwargs
+        )
         self.to_ctx = None
         self.wait = []
         self.process = None
