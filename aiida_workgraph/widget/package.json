@@ -6,6 +6,7 @@
 	},
 	"dependencies": {
 		"@anywidget/react": "^0.0.5",
+		"antd": "^5.16.4",
 		"react": "^18.2.0",
 		"react-dom": "^18.2.0",
 		"rete": "^2.0.2",

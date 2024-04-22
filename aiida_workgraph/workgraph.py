@@ -51,7 +51,7 @@ class WorkGraph(node_graph.NodeGraph):
         self.nodes.post_creation_hooks = [node_creation_hook]
         self.links.post_creation_hooks = [link_creation_hook]
         self.links.post_deletion_hooks = [link_deletion_hook]
-        self._widget = NodeGraphWidget()
+        self._widget = NodeGraphWidget(parent=self)
 
     def run(self, inputs=None):
         """
@@ -263,6 +263,7 @@ class WorkGraph(node_graph.NodeGraph):
             #         except Exception:
             #             pass
             #         node.outputs[key].value = value
+        self._widget.states = {node.name: node.state for node in self.nodes}
 
     @property
     def pk(self):
