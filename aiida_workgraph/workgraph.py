@@ -3,7 +3,6 @@ import aiida
 from aiida_workgraph.nodes import node_pool
 import time
 from aiida_workgraph.collection import WorkGraphNodeCollection
-from aiida_workgraph.utils import get_executor
 from aiida_workgraph.utils.graph import (
     node_deletion_hook,
     node_creation_hook,
@@ -201,6 +200,8 @@ class WorkGraph(node_graph.NodeGraph):
         of the nodes that are outgoing from the process node. This includes updating the state of process nodes
         linked to the current process, and data nodes linked to the current process.
         """
+        # from aiida_workgraph.utils import get_executor
+
         self.state = self.process.process_state.value.upper()
         outgoing = self.process.base.links.get_outgoing()
         for link in outgoing.all():
@@ -239,21 +240,29 @@ class WorkGraph(node_graph.NodeGraph):
                         self.nodes[label].pk = node.pk
                 elif link.link_label == "execution_count":
                     self.execution_count = node.value
-        # for normal nodes, we try to read the results from the extras of the node
+        # read results from the process outputs
         for node in self.nodes:
-            if node.node_type.upper() == "NORMAL":
-                results = self.process.base.extras.get(
-                    f"nodes__results__{node.name}", {}
+            if node.node_type.upper() == "DATA":
+                if not getattr(self.process.outputs, "new_data", False):
+                    continue
+                node.outputs[0].value = getattr(
+                    self.process.outputs.new_data, node.name, None
                 )
-                for key, value in results.items():
-                    # if value is an AiiDA data node, we don't need to deserialize it
-                    deserializer = node.outputs[key].get_deserialize()
-                    executor = get_executor(deserializer)[0]
-                    try:
-                        value = executor(bytes(value))
-                    except Exception:
-                        pass
-                    node.outputs[key].value = value
+            # for normal nodes, we try to read the results from the extras of the node
+            # this is disabled for now
+            # if node.node_type.upper() == "NORMAL":
+            #     results = self.process.base.extras.get(
+            #         f"nodes__results__{node.name}", {}
+            #     )
+            #     for key, value in results.items():
+            #         # if value is an AiiDA data node, we don't need to deserialize it
+            #         deserializer = node.outputs[key].get_deserialize()
+            #         executor = get_executor(deserializer)[0]
+            #         try:
+            #             value = executor(bytes(value))
+            #         except Exception:
+            #             pass
+            #         node.outputs[key].value = value
 
     @property
     def pk(self):

@@ -21,7 +21,7 @@ class WorkGraphPropertyCollection(PropertyCollection):
     def new(self, identifier, name=None, **kwargs):
         from aiida_workgraph.property import build_property_from_AiiDA
 
-        # build the node on the fly if the identifier is a callable
+        # build the property on the fly if the identifier is a callable
         if callable(identifier):
             identifier = build_property_from_AiiDA(identifier)
         # Call the original new method
@@ -32,10 +32,9 @@ class WorkGraphInputSocketCollection(InputSocketCollection):
     def new(self, identifier, name=None, **kwargs):
         from aiida_workgraph.socket import build_socket_from_AiiDA
 
-        # build the node on the fly if the identifier is a callable
+        # build the socket on the fly if the identifier is a callable
         if callable(identifier):
             identifier = build_socket_from_AiiDA(identifier)
-        print("identifier", identifier)
         # Call the original new method
         return super().new(identifier, name, **kwargs)
 
@@ -44,7 +43,7 @@ class WorkGraphOutputSocketCollection(OutputSocketCollection):
     def new(self, identifier, name=None, **kwargs):
         from aiida_workgraph.socket import build_socket_from_AiiDA
 
-        # build the node on the fly if the identifier is a callable
+        # build the socket on the fly if the identifier is a callable
         if callable(identifier):
             identifier = build_socket_from_AiiDA(identifier)
         # Call the original new method

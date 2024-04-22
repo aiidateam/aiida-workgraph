@@ -51,6 +51,7 @@ Here is a detailed comparison between the ``WorkGraph`` with two AiiDA built-in 
    howto/index
    blog/index
    concept/index
+   faqs
 
 
 
