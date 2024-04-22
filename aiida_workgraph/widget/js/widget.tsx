@@ -165,7 +165,8 @@ const render = createRender(() => {
   return (
     <div className="App">
       <div>
-        <Button onClick={() => editor?.layout(true)}>Arrange</Button>
+        <Button type="primary" onClick={() => editor?.layout(true)}>Arrange</Button>
+        {/* <Button type="primary" onClick={() => editor?.layout(true)}>Save</Button> */}
       </div>
       <div ref={ref} className="rete" style={style}></div>
     </div>

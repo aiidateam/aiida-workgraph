@@ -34,7 +34,8 @@ class Node(GraphNode):
         self.process = None
         self.pk = None
         self._widget = NodeGraphWidget(
-            settings={"minmap": False}, style={"width": "40%", "height": "600px"}
+            settings={"minmap": False},
+            style={"width": "40%", "height": "600px"},
         )
 
     def to_dict(self):

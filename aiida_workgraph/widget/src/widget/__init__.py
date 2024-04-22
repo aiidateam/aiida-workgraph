@@ -24,6 +24,10 @@ class NodeGraphWidget(anywidget.AnyWidget):
     states = traitlets.Dict({}).tag(sync=True)
     positions = traitlets.Dict({}).tag(sync=True)
 
+    def __init__(self, parent=None, **kwargs):
+        self.parent = parent
+        super().__init__(**kwargs)
+
     def from_workgraph(self, workgraph):
         from aiida_workgraph.web.backend.app.utils import workgraph_to_short_json
 
@@ -41,8 +45,8 @@ class NodeGraphWidget(anywidget.AnyWidget):
 
     @traitlets.observe("positions")
     def _observe_positions(self, change):
-        print(f"Old value: {change['old']}")
-        print(f"New value: {change['new']}")
+        if not self.parent:
+            return
         if change["new"]:
             for name, pos in change["new"].items():
                 self.parent.nodes[name].position = pos

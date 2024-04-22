@@ -51,7 +51,7 @@ class WorkGraph(node_graph.NodeGraph):
         self.nodes.post_creation_hooks = [node_creation_hook]
         self.links.post_creation_hooks = [link_creation_hook]
         self.links.post_deletion_hooks = [link_deletion_hook]
-        self._widget = NodeGraphWidget()
+        self._widget = NodeGraphWidget(parent=self)
 
     def run(self, inputs=None):
         """
