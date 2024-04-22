@@ -1,8 +1,11 @@
-from aiida import load_profile
+from aiida_workgraph import node
+from aiida.orm import StructureData, UpfData
 
-load_profile()
 
-
+@node(
+    inputs=[["String", "pseudo_family"], [StructureData, "structure"]],
+    outputs=[[UpfData, "Pseudo"]],
+)
 def get_pseudo_from_structure(pseudo_family, structure):
     """for input_namespace"""
     from aiida.orm import Group, QueryBuilder
@@ -12,12 +15,10 @@ def get_pseudo_from_structure(pseudo_family, structure):
     )
     elements = [kind.name for kind in structure.kinds]
     pseudos = {}
-    print("elements: ", elements)
     for ele in elements:
-        for node in pseudo_group.nodes:
-            if ele == node.element:
-                pseudos[ele] = node
-    print("pseudos: ", pseudos)
+        for n in pseudo_group.nodes:
+            if ele == n.element:
+                pseudos[ele] = n
     return {"Pseudo": pseudos}
 
 

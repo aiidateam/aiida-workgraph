@@ -64,7 +64,7 @@ class AiiDAPWPseudo(Node):
 
     def create_sockets(self):
         self.inputs.new("General", "structure")
-        self.outputs.new("General", "Pseudo")
+        self.outputs.new("AiiDA", "Pseudo")
 
     def get_executor(self):
         return {

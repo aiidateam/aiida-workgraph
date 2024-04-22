@@ -12,7 +12,7 @@ def test_kpoint():
     kpoint1 = wg.nodes.new("AiiDAKpoint", "kpoint1")
     kpoint1.set({"mesh": [2, 2, 2]})
     wg.submit(wait=True)
-    assert kpoint1.node.get_kpoints_mesh() == ([2, 2, 2], [0, 0, 0])
+    assert kpoint1.outputs[0].value.get_kpoints_mesh() == ([2, 2, 2], [0, 0, 0])
 
 
 def test_pw_parameters():

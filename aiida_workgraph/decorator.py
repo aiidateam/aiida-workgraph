@@ -217,7 +217,7 @@ def generate_ndata(
     args, kwargs, var_args, var_kwargs, _inputs = generate_input_sockets(
         func, inputs, properties
     )
-    node_outputs = [["General", output[1]] for output in outputs]
+    node_outputs = outputs
     # add built-in sockets
     _inputs.append(["General", "_wait", {"link_limit": 1e6}])
     node_outputs.append(["General", "_wait"])

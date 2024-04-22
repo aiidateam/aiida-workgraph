@@ -1040,10 +1040,6 @@ class WorkGraph(Process, metaclass=Protect):
             if len(output) == 0:
                 continue
             output = output[0]
-            # if value is an AiiDA data, we don't need to serialize it
-            if isinstance(value, orm.Node):
-                datas[key] = value
-                continue
             Executor, _ = get_executor(output["serialize"])
             datas[key] = Executor(value)
         self.node.set_extra(f"nodes__results__{name}", datas)
