@@ -263,6 +263,7 @@ class WorkGraph(node_graph.NodeGraph):
             #         except Exception:
             #             pass
             #         node.outputs[key].value = value
+        self._widget.states = {node.name: node.state for node in self.nodes}
 
     @property
     def pk(self):

@@ -80,11 +80,24 @@ export function createDynamicNode(nodeData: any) {
   return node;
 }
 
+export async function loadJSON(editor, area, layout, workgraphData) {
+  for (const nodeId in workgraphData.nodes) {
+    const nodeData = workgraphData.nodes[nodeId];
+    await addNode(editor, area, nodeData);
+  }
+
+  // Adding connections based on workgraphData
+  workgraphData.links.forEach(async (link: LinkData) => { // Specify the type of link here
+    await addLink(editor, area, layout, link);
+  });
+}
+
 export async function addNode(editor, area, nodeData) {
   console.log("Adding node", nodeData);
   const node = createDynamicNode(nodeData);
   await editor.addNode(node);
   editor.nodeMap[nodeData.label] = node; // Assuming each nodeData has a unique ID
+  await area.translate(node.id, { x: nodeData.position[0], y: nodeData.position[1] });
 }
 
 export async function addLink(editor, area, layout, linkData) {
@@ -106,7 +119,7 @@ export async function addLink(editor, area, layout, linkData) {
       area.update('node', toNode.id);
     }
     await editor.addConnection(new Connection(fromNode, linkData.from_socket, toNode, linkData.to_socket));
-    await layout(true);
+    // await layout(true);
 
   }
 }
@@ -141,7 +154,7 @@ export async function removeNode(editor, name) {
   });
 }
 
-export async function createEditor(container: HTMLElement, settings: any, workgraphData: any) {
+export async function createEditor(container: HTMLElement, settings: any) {
   container.innerHTML = ''
 
   const editor = new NodeEditor<Schemes>();
@@ -198,22 +211,9 @@ export async function createEditor(container: HTMLElement, settings: any, workgr
   const nodeMap: NodeMap = {}; // To keep track of created nodes for linking
   editor.nodeMap = nodeMap;
 
-  console.log("workgraphData", workgraphData)
-  console.log("settings: ", settings)
-  for (const nodeId in workgraphData.nodes) {
-    const nodeData = workgraphData.nodes[nodeId];
-    await addNode(editor, area, nodeData);
-  }
-
-  // Adding connections based on workgraphData
-  workgraphData.links.forEach(async (link: LinkData) => { // Specify the type of link here
-    await addLink(editor, area, layout, link);
-  });
-
-
   // aplly layout twice to ensure all nodes are arranged
-  await layout(true);
-  await layout(true);
+  // await layout(true);
+  // await layout(true);
 
   return {
     editor: editor,

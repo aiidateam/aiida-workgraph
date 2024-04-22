@@ -19,6 +19,7 @@ def workgraph_to_short_json(wgdata):
             "label": node["name"],
             "inputs": [],
             "outputs": [],
+            "position": node["position"],
         }
     for link in wgdata["links"]:
         wgdata_short["nodes"][link["to_node"]]["inputs"].append(
