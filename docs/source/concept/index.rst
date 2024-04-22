@@ -9,3 +9,4 @@ Concepts
 
    node
    workgraph
+   socket
