@@ -7,6 +7,7 @@ from aiida_workgraph.collection import (
     WorkGraphInputSocketCollection,
     WorkGraphOutputSocketCollection,
 )
+from typing import Any, Dict, Optional, Union, Callable
 
 
 class Node(GraphNode):
@@ -19,7 +20,7 @@ class Node(GraphNode):
     property_pool = property_pool
     socket_pool = socket_pool
 
-    def __init__(self, **kwargs):
+    def __init__(self, **kwargs: Any) -> None:
         """
         Initialize a Node instance.
         """
@@ -38,7 +39,7 @@ class Node(GraphNode):
             style={"width": "40%", "height": "600px"},
         )
 
-    def to_dict(self):
+    def to_dict(self) -> Dict[str, Any]:
         ndata = super().to_dict()
         ndata["to_ctx"] = [] if self.to_ctx is None else self.to_ctx
         ndata["wait"] = [
@@ -49,7 +50,7 @@ class Node(GraphNode):
 
         return ndata
 
-    def set_from_protocol(self, *args, **kwargs):
+    def set_from_protocol(self, *args: Any, **kwargs: Any) -> None:
         """For node support protocol, set the node from protocol data."""
         from aiida_workgraph.utils import get_executor, get_dict_from_builder
 
@@ -59,14 +60,16 @@ class Node(GraphNode):
         self.set(data)
 
     @classmethod
-    def new(cls, identifier, name=None):
+    def new(
+        cls, identifier: Union[str, Callable], name: Optional[str] = None
+    ) -> "Node":
         """Create a node from a identifier."""
         from aiida_workgraph.nodes import node_pool
 
         return super().new(identifier, name=name, node_pool=node_pool)
 
     @classmethod
-    def from_dict(cls, data, node_pool=None):
+    def from_dict(cls, data: Dict[str, Any], node_pool: Optional[Any] = None) -> "Node":
         """Create a node from a dictionary."""
         from aiida_workgraph.nodes import node_pool
 
@@ -77,11 +80,11 @@ class Node(GraphNode):
 
         return node
 
-    def reset(self):
+    def reset(self) -> None:
         self.process = None
         self.state = "CREATED"
 
-    def _repr_mimebundle_(self, *args, **kwargs):
+    def _repr_mimebundle_(self, *args: Any, **kwargs: Any) -> any:
         # if ipywdigets > 8.0.0, use _repr_mimebundle_ instead of _ipython_display_
         self._widget.from_node(self)
         if hasattr(self._widget, "_repr_mimebundle_"):

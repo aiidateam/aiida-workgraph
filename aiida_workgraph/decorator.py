@@ -1,4 +1,4 @@
-from typing import Callable
+from typing import Any, Callable, Dict, List, Optional, Union, Tuple
 from aiida_workgraph.utils import get_executor
 from aiida.engine import calcfunction, workfunction, CalcJob, WorkChain
 from aiida.orm.nodes.process.calculation.calcfunction import CalcFunctionNode
@@ -6,9 +6,14 @@ from aiida.orm.nodes.process.workflow.workfunction import WorkFunctionNode
 from aiida.engine.processes.ports import PortNamespace
 from node_graph.decorator import create_node
 import cloudpickle as pickle
+from aiida_workgraph.node import Node
 
 
-def add_input_recursive(inputs, port, prefix=None):
+def add_input_recursive(
+    inputs: List[List[Union[str, Dict[str, Any]]]],
+    port: PortNamespace,
+    prefix: Optional[str] = None,
+) -> List[List[Union[str, Dict[str, Any]]]]:
     """Add input recursively."""
     if prefix is None:
         port_name = port.name
@@ -28,7 +33,9 @@ def add_input_recursive(inputs, port, prefix=None):
     return inputs
 
 
-def build_node(executor, outputs=None):
+def build_node(
+    executor: Union[Callable, str], outputs: Optional[List[str]] = None
+) -> Node:
     """Build node from executor."""
     from aiida_workgraph.workgraph import WorkGraph
 
@@ -44,7 +51,9 @@ def build_node(executor, outputs=None):
         return build_node_from_callable(executor, outputs=outputs)
 
 
-def build_node_from_callable(executor, outputs=None):
+def build_node_from_callable(
+    executor: Callable, outputs: Optional[List[str]] = None
+) -> Node:
     """Build node from a callable object.
     First, check if the executor is already a node.
     If not, check if it is a function or a class.
@@ -89,12 +98,16 @@ def build_node_from_callable(executor, outputs=None):
     raise ValueError("The executor is not supported.")
 
 
-def build_node_from_function(executor, outputs=None):
+def build_node_from_function(
+    executor: Callable, outputs: Optional[List[str]] = None
+) -> Node:
     """Build node from function."""
     return NodeDecoratorCollection.decorator_node(outputs=outputs)(executor).node
 
 
-def build_node_from_AiiDA(ndata, outputs=None):
+def build_node_from_AiiDA(
+    ndata: Dict[str, Any], outputs: Optional[List[str]] = None
+) -> Node:
     """Register a node from a AiiDA component.
     For example: CalcJob, WorkChain, CalcFunction, WorkFunction."""
     from aiida_workgraph.node import Node
@@ -139,7 +152,7 @@ def build_node_from_AiiDA(ndata, outputs=None):
     return node
 
 
-def build_node_from_workgraph(wg):
+def build_node_from_workgraph(wg: any) -> Node:
     """Build node from workgraph."""
     from aiida_workgraph.node import Node
 
@@ -189,7 +202,7 @@ def build_node_from_workgraph(wg):
     return node
 
 
-def serialize_function(func):
+def serialize_function(func: Callable) -> Dict[str, Any]:
     """Serialize a function for storage or transmission."""
     import cloudpickle as pickle
 
@@ -203,13 +216,13 @@ def serialize_function(func):
 def generate_ndata(
     func: Callable,
     identifier: str,
-    inputs: list,
-    outputs: list,
-    properties: list,
+    inputs: List[Tuple[str, str]],
+    outputs: List[Tuple[str, str]],
+    properties: List[Tuple[str, str]],
     catalog: str,
     node_type: str,
-    additional_data: dict = None,
-):
+    additional_data: Optional[Dict[str, Any]] = None,
+) -> Dict[str, Any]:
     """Generate node data for creating a node."""
     from node_graph.decorator import generate_input_sockets
     from aiida_workgraph.node import Node
@@ -245,15 +258,14 @@ class NodeDecoratorCollection:
     """Collection of node decorators."""
 
     # decorator with arguments indentifier, args, kwargs, properties, inputs, outputs, executor
-    @staticmethod
     def decorator_node(
-        identifier=None,
-        node_type="Normal",
-        properties=None,
-        inputs=None,
-        outputs=None,
-        catalog="Others",
-    ):
+        identifier: Optional[str] = None,
+        node_type: str = "Normal",
+        properties: Optional[List[Tuple[str, str]]] = None,
+        inputs: Optional[List[Tuple[str, str]]] = None,
+        outputs: Optional[List[Tuple[str, str]]] = None,
+        catalog: str = "Others",
+    ) -> Callable:
         """Generate a decorator that register a function as a node.
 
         Attributes:
@@ -298,12 +310,12 @@ class NodeDecoratorCollection:
     # decorator with arguments indentifier, args, kwargs, properties, inputs, outputs, executor
     @staticmethod
     def decorator_node_group(
-        identifier=None,
-        properties=None,
-        inputs=None,
-        outputs=None,
-        catalog="Others",
-    ):
+        identifier: Optional[str] = None,
+        properties: Optional[List[Tuple[str, str]]] = None,
+        inputs: Optional[List[Tuple[str, str]]] = None,
+        outputs: Optional[List[Tuple[str, str]]] = None,
+        catalog: str = "Others",
+    ) -> Callable:
         """Generate a decorator that register a node group as a node.
 
         Attributes:
@@ -346,7 +358,7 @@ class NodeDecoratorCollection:
         return decorator
 
     @staticmethod
-    def calcfunction(**kwargs):
+    def calcfunction(**kwargs: Any) -> Callable:
         def decorator(func):
             # First, apply the calcfunction decorator
             calcfunc_decorated = calcfunction(func)
@@ -358,7 +370,7 @@ class NodeDecoratorCollection:
         return decorator
 
     @staticmethod
-    def workfunction(**kwargs):
+    def workfunction(**kwargs: Any) -> Callable:
         def decorator(func):
             # First, apply the workfunction decorator
             calcfunc_decorated = workfunction(func)
