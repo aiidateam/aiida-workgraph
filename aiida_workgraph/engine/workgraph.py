@@ -754,7 +754,10 @@ class WorkGraph(Process, metaclass=Protect):
                 print("node  type: calcjob/workchain.")
                 kwargs.setdefault("metadata", {})
                 kwargs["metadata"].update({"call_link_label": name})
-                process = self.submit(executor, *args, **kwargs)
+                # transfer the args to kwargs
+                for i, key in enumerate(self.ctx.nodes[name]["metadata"]["args"]):
+                    kwargs[key] = args[i]
+                process = self.submit(executor, **kwargs)
                 node["process"] = process
                 self.ctx.nodes[name]["state"] = "RUNNING"
                 self.to_context(**{name: process})
