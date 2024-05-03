@@ -156,7 +156,7 @@ def decorated_add_multiply(decorated_add, decorated_multiply):
 def decorated_add_multiply_group(decorated_add, decorated_multiply):
     """Generate a decorated node for test."""
 
-    @node.group(outputs=[["multiply1.result", "result"]])
+    @node.graph_builder(outputs=[["multiply1.result", "result"]])
     def add_multiply_group(x, y, z):
         wg = WorkGraph("add_multiply_group")
         add1 = wg.nodes.new(decorated_add, name="add1", x=x, y=y)

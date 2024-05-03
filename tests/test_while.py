@@ -6,7 +6,7 @@ load_profile()
 
 def test_while(decorated_add, decorated_multiply, decorated_compare):
     # Create a WorkGraph will repeat itself based on the conditions
-    @node.group(outputs=[["ctx.n", "result"]])
+    @node.graph_builder(outputs=[["ctx.n", "result"]])
     def my_while(n=0, limit=100):
         wg = WorkGraph("while_workgraph")
         wg.workgraph_type = "WHILE"
@@ -36,7 +36,7 @@ def test_while(decorated_add, decorated_multiply, decorated_compare):
 
 def test_while_max_iteration(decorated_add, decorated_multiply, decorated_compare):
     # Create a WorkGraph will repeat itself based on the conditions
-    @node.group(outputs=[["ctx.n", "result"]])
+    @node.graph_builder(outputs=[["ctx.n", "result"]])
     def my_while(n=0, limit=100):
         wg = WorkGraph("while_workgraph")
         wg.workgraph_type = "WHILE"

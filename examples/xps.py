@@ -44,7 +44,7 @@ def get_marked_structures(structure, atoms_list, marker="X"):
 
 
 # the structures is used to generate the workgraph dynamically.
-@node.group(outputs=[["ctx", "scf", "result"]])
+@node.graph_builder(outputs=[["ctx", "scf", "result"]])
 def run_scf(
     structure,
     marked_structures,
@@ -127,7 +127,7 @@ def get_spectra(site_info, correction_energies={}, orbital="1s", **pw_outputs):
     return orm.Dict(binding_energies)
 
 
-@node.group(outputs=[["get_spectra1", "result", "result"]])
+@node.graph_builder(outputs=[["get_spectra1", "result", "result"]])
 def xps(
     structure,
     code,

@@ -6,7 +6,7 @@ load_profile()
 
 def test_for(decorated_add, decorated_multiply):
     # Create a WorkGraph will loop the a sequence
-    @node.group(outputs=[["ctx.total", "result"]])
+    @node.graph_builder(outputs=[["ctx.total", "result"]])
     def add_multiply_for(sequence):
         wg = WorkGraph("add_multiply_for")
         # tell the engine that this is a `for` workgraph

@@ -221,7 +221,7 @@ class WorkGraph(node_graph.NodeGraph):
                 if self.nodes[link.link_label].state == "FINISHED":
                     # update the output sockets
                     for socket in self.nodes[link.link_label].outputs:
-                        if self.nodes[link.link_label].node_type == "node_group":
+                        if self.nodes[link.link_label].node_type == "graph_builder":
                             if not getattr(node.outputs, "group_outputs", False):
                                 continue
                             socket.value = getattr(

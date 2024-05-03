@@ -15,7 +15,7 @@ load_profile()
 shelljob = build_node({"path": "aiida_shell.calculations.shell.ShellJob"})
 
 
-@node.group(
+@node.graph_builder(
     outputs=[
         ["shelljob1.stdout", "stdout"],
         ["shelljob1.stderr", "stderr"],

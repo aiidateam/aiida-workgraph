@@ -131,7 +131,7 @@ def build_node_link(ntdata):
     """Create links for nodes.
     Create the links for node inputs using:
     1) workgraph links
-    2) if it is a node group graph, expose the group inputs and outputs
+    2) if it is a graph builder graph, expose the group inputs and outputs
     sockets.
     """
     # reset node input links
