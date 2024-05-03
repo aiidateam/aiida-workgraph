@@ -47,6 +47,7 @@ Here is a detailed comparison between the ``WorkGraph`` with two AiiDA built-in 
 
    quick_start
    installation
+   zero_to_hero
    tutorial/index
    howto/index
    blog/index
