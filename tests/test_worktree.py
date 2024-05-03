@@ -87,8 +87,8 @@ def test_append_workgraph(decorated_add_multiply_group):
     wg = WorkGraph("test_graph_build")
     add1 = wg.nodes.new("AiiDAAdd", "add1", x=2, y=3)
     add_multiply_wg = decorated_add_multiply_group(x=0, y=4, z=5)
-    # append workgraph
-    wg.append(add_multiply_wg, prefix="group_")
+    # extend workgraph
+    wg.extend(add_multiply_wg, prefix="group_")
     wg.links.new(add1.outputs[0], wg.nodes["group_add1"].inputs["x"])
     wg.submit(wait=True)
     assert wg.nodes["group_multiply1"].node.outputs.result == 45

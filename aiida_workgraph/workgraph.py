@@ -337,8 +337,8 @@ class WorkGraph(node_graph.NodeGraph):
         self.ctx = {}
         self.state = "CREATED"
 
-    def append(self, wg, prefix=""):
-        """Append a workgraph to the current workgraph.
+    def extend(self, wg, prefix=""):
+        """Add a workgraph to the current workgraph.
         prefix is used to add a prefix to the node names.
         """
         for node in wg.nodes:
