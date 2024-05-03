@@ -471,7 +471,7 @@ class WorkGraph(Process, metaclass=Protect):
             state = node["process"].process_state.value.upper()
             if state == "FINISHED":
                 node["state"] = state
-                if node["metadata"]["node_type"] == "node_group":
+                if node["metadata"]["node_type"] == "graph_builder":
                     # expose the outputs of workgraph
                     node["results"] = getattr(
                         node["process"].outputs, "group_outputs", None
@@ -565,7 +565,7 @@ class WorkGraph(Process, metaclass=Protect):
                 "workfunction",
                 "calcjob",
                 "workchain",
-                "node_group",
+                "graph_builder",
                 "workgraph",
             ]
             and node["state"] == "RUNNING"
@@ -662,7 +662,7 @@ class WorkGraph(Process, metaclass=Protect):
             if node["metadata"]["node_type"] in [
                 "calcjob",
                 "workchain",
-                "node_group",
+                "graph_builder",
                 "workgraph",
             ]:
                 if len(self._awaitables) > self.ctx.max_number_awaitables:
@@ -758,8 +758,8 @@ class WorkGraph(Process, metaclass=Protect):
                 node["process"] = process
                 self.ctx.nodes[name]["state"] = "RUNNING"
                 self.to_context(**{name: process})
-            elif node["metadata"]["node_type"] in ["node_group"]:
-                print("node  type: node_group.")
+            elif node["metadata"]["node_type"] in ["graph_builder"]:
+                print("node  type: graph_builder.")
                 wg = self.run_executor(executor, args, kwargs, var_args, var_kwargs)
                 wg.name = name
                 wg.group_outputs = self.ctx.nodes[name]["metadata"]["group_outputs"]
@@ -997,8 +997,8 @@ class WorkGraph(Process, metaclass=Protect):
                         )
         return ready, None
 
-    # def expose_node_group_outputs(self, name):
-    #     # print("expose_node_group_outputs")
+    # def expose_graph_build_outputs(self, name):
+    #     # print("expose_graph_build_outputs")
     #     outputs = {}
     #     process = self.ctx.nodes[name]["process"]
     #     outgoing = process.base.links.get_outgoing()

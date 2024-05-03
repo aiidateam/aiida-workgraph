@@ -26,7 +26,7 @@ def decorated_multiply(x, y, t=1):
     return x * y
 
 
-@node.group(outputs=[["multiply.result", "result"]])
+@node.graph_builder(outputs=[["multiply.result", "result"]])
 def add_multiply_group(x, y, z, t=2):
     wg = WorkGraph("add_multiply_group")
     add1 = wg.nodes.new(decorated_add, name="add1", x=x, y=y, t=t)

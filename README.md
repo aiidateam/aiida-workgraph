@@ -57,6 +57,7 @@ Suppose we want to calculate ```(x + y) * z ``` in two steps. First, add `x` and
 
 ```python
 from aiida.engine import calcfunction
+from aiida_workgraph import WorkGraph
 
 # define add calcfunction
 @calcfunction
@@ -79,7 +80,6 @@ wg.links.new(wg.nodes["add1"].outputs[0], wg.nodes["multiply1"].inputs["x"])
 Prepare inputs and submit the workflow:
 
 ```python
-from aiida_workgraph import WorkGraph
 from aiida import load_profile
 
 load_profile()

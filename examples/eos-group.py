@@ -44,7 +44,7 @@ def eos(**datas):
     return eos
 
 
-@node.group()
+@node.graph_builder()
 def eos_workgraph(structure=None, inputs=None, run_relax=True, scales=None):
     wg = WorkGraph()
     wg.ctx = {"current_structure": structure}

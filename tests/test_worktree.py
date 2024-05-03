@@ -84,7 +84,7 @@ def test_restart(wg_calcjob):
 def test_append_workgraph(decorated_add_multiply_group):
     from aiida_workgraph import WorkGraph
 
-    wg = WorkGraph("test_node_group")
+    wg = WorkGraph("test_graph_build")
     add1 = wg.nodes.new("AiiDAAdd", "add1", x=2, y=3)
     add_multiply_wg = decorated_add_multiply_group(x=0, y=4, z=5)
     # append workgraph

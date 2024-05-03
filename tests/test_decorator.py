@@ -38,10 +38,10 @@ def test_decorator_workfunction(decorated_add_multiply):
     assert wg.nodes["add_multiply1"].outputs["result"].value == 20
 
 
-def test_decorator_node_group(decorated_add_multiply_group):
+def test_decorator_graph_build(decorated_add_multiply_group):
     from aiida_workgraph import WorkGraph
 
-    wg = WorkGraph("test_node_group")
+    wg = WorkGraph("test_graph_build")
     add1 = wg.nodes.new("AiiDAAdd", "add1", x=2, y=3, t=10)
     add_multiply1 = wg.nodes.new(
         decorated_add_multiply_group, "add_multiply1", y=3, z=4

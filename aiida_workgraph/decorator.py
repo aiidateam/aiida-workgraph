@@ -297,14 +297,14 @@ class NodeDecoratorCollection:
 
     # decorator with arguments indentifier, args, kwargs, properties, inputs, outputs, executor
     @staticmethod
-    def decorator_node_group(
+    def decorator_graph_builder(
         identifier=None,
         properties=None,
         inputs=None,
         outputs=None,
         catalog="Others",
     ):
-        """Generate a decorator that register a node group as a node.
+        """Generate a decorator that register a graph builder as a node.
 
         Attributes:
             indentifier (str): node identifier
@@ -327,7 +327,7 @@ class NodeDecoratorCollection:
             node_outputs = [["General", output[1]] for output in outputs]
             # print(node_inputs, node_outputs)
             #
-            node_type = "node_group"
+            node_type = "graph_builder"
             ndata = generate_ndata(
                 func,
                 identifier,
@@ -371,8 +371,8 @@ class NodeDecoratorCollection:
     # Making decorator_node accessible as 'node'
     node = decorator_node
 
-    # Making decorator_node_group accessible as 'group'
-    group = decorator_node_group
+    # Making decorator_graph_builder accessible as 'graph_builder'
+    graph_builder = decorator_graph_builder
 
     def __call__(self, *args, **kwargs):
         # This allows using '@node' to directly apply the decorator_node functionality

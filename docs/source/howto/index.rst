@@ -8,7 +8,7 @@ This section contains a collection of HowTos for various topics.
    :maxdepth: 1
    :caption: Contents:
 
-   group
+   graph_builder
    if
    parallel
    for
