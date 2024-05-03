@@ -104,9 +104,14 @@ def build_node_from_AiiDA(ndata, outputs=None):
     outputs = [] if outputs is None else outputs
     executor = ndata["executor"]
     spec = executor.spec()
+    args = []
+    kwargs = []
     for _key, port in spec.inputs.ports.items():
         add_input_recursive(inputs, port)
-    kwargs = [input[1] for input in inputs]
+        if port.required:
+            args.append(port.name)
+        else:
+            kwargs.append(port.name)
     for _key, port in spec.outputs.ports.items():
         outputs.append(["General", port.name])
     if spec.inputs.dynamic:
@@ -122,6 +127,7 @@ def build_node_from_AiiDA(ndata, outputs=None):
     outputs.append(["General", "_wait"])
     inputs.append(["General", "_wait", {"link_limit": 1e6}])
     ndata["node_class"] = Node
+    ndata["args"] = args
     ndata["kwargs"] = kwargs
     ndata["inputs"] = inputs
     ndata["outputs"] = outputs
