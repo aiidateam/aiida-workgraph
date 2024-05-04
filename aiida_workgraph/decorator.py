@@ -8,12 +8,13 @@ from node_graph.decorator import create_node
 import cloudpickle as pickle
 
 
-def add_input_recursive(inputs, port, prefix=None):
+def add_input_recursive(inputs, port, args, kwargs, prefix=None, required=True):
     """Add input recursively."""
     if prefix is None:
         port_name = port.name
     else:
         port_name = f"{prefix}.{port.name}"
+    required = port.required and required
     if isinstance(port, PortNamespace):
         # TODO the default value is {} could cause problem, because the address of the dict is the same,
         # so if you change the value of one port, the value of all the ports of other nodes will be changed
@@ -21,10 +22,20 @@ def add_input_recursive(inputs, port, prefix=None):
         inputs.append(
             ["General", port_name, {"property": ["General", {"default": {}}]}]
         )
+        if required:
+            args.append(port_name)
+        else:
+            kwargs.append(port_name)
         for value in port.values():
-            add_input_recursive(inputs, value, prefix=port_name)
+            add_input_recursive(
+                inputs, value, args, kwargs, prefix=port_name, required=required
+            )
     else:
         inputs.append(["General", port_name])
+        if required:
+            args.append(port_name)
+        else:
+            kwargs.append(port_name)
     return inputs
 
 
@@ -104,9 +115,14 @@ def build_node_from_AiiDA(ndata, outputs=None):
     outputs = [] if outputs is None else outputs
     executor = ndata["executor"]
     spec = executor.spec()
+    args = []
+    kwargs = []
     for _key, port in spec.inputs.ports.items():
-        add_input_recursive(inputs, port)
-    kwargs = [input[1] for input in inputs]
+        add_input_recursive(inputs, port, args, kwargs, required=port.required)
+        if port.required:
+            args.append(port.name)
+        else:
+            kwargs.append(port.name)
     for _key, port in spec.outputs.ports.items():
         outputs.append(["General", port.name])
     if spec.inputs.dynamic:
@@ -122,6 +138,7 @@ def build_node_from_AiiDA(ndata, outputs=None):
     outputs.append(["General", "_wait"])
     inputs.append(["General", "_wait", {"link_limit": 1e6}])
     ndata["node_class"] = Node
+    ndata["args"] = args
     ndata["kwargs"] = kwargs
     ndata["inputs"] = inputs
     ndata["outputs"] = outputs

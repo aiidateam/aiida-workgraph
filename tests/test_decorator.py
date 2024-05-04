@@ -12,8 +12,8 @@ def test_args():
 
     #
     n = test.node()
-    assert n.args == []
-    assert n.kwargs == ["a", "b"]
+    assert n.args == ["a"]
+    assert n.kwargs == ["b"]
     assert n.var_args is None
     assert n.var_kwargs == "c"
 

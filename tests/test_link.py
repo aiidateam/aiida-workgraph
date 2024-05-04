@@ -17,9 +17,9 @@ def test_multiply_link():
         return Float(total)
 
     wg = WorkGraph(name="test_multiply_link")
-    float1 = wg.nodes.new("AiiDANode", value=Float(1.0).store())
-    float2 = wg.nodes.new("AiiDANode", value=Float(2.0).store())
-    float3 = wg.nodes.new("AiiDANode", value=Float(3.0).store())
+    float1 = wg.nodes.new("AiiDANode", pk=Float(1.0).store().pk)
+    float2 = wg.nodes.new("AiiDANode", pk=Float(2.0).store().pk)
+    float3 = wg.nodes.new("AiiDANode", pk=Float(3.0).store().pk)
     gather1 = wg.nodes.new("AiiDAGather", "gather1")
     sum1 = wg.nodes.new(sum, "sum1")
     wg.links.new(float1.outputs[0], gather1.inputs[0])
