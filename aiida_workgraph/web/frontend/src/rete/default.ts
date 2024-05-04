@@ -50,7 +50,7 @@ interface NodeMap {
 
 class Node extends ClassicPreset.Node {
   width = 180;
-  height = 120;
+  height = 100;
 }
 class Connection<N extends Node> extends ClassicPreset.Connection<N, N> {}
 
@@ -60,22 +60,25 @@ type AreaExtra = ReactArea2D<any> | MinimapExtra | ContextMenuExtra;
 
 function createDynamicNode(nodeData: any) {
   const node = new Node(nodeData.label);
-
+  // resize the node based on the max length of the input/output names
+  let maxSocketNameLength = 0;
   nodeData.inputs.forEach((input: NodeInput) => {
     let socket = new ClassicPreset.Socket(input.name);
     if (!node.inputs.hasOwnProperty(input.name)) {
       node.addInput(input.name, new ClassicPreset.Input(socket, input.name));
-      node.height += 25; // Increase height of node for each input
+      maxSocketNameLength = Math.max(maxSocketNameLength, input.name.length);
     }
-});
+  });
 
   nodeData.outputs.forEach((output: NodeOutput) => {
     let socket = new ClassicPreset.Socket(output.name);
     if (!node.outputs.hasOwnProperty(output.name)) {
       node.addOutput(output.name, new ClassicPreset.Output(socket, output.name));
-      node.height += 25; // Increase height of node for each output
-  }
+      maxSocketNameLength = Math.max(maxSocketNameLength, output.name.length);
+    }
   });
+  node.height = Math.max(140, node.height + (nodeData.inputs.length + nodeData.outputs.length) * 35)
+  node.width += maxSocketNameLength * 5;
 
   return node;
 }

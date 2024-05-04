@@ -28,6 +28,7 @@ def get_executor(data):
 
 
 def create_data_node(executor, args, kwargs):
+    """Create an AiiDA data node from the executor and args and kwargs."""
     from aiida import orm
 
     # print("Create data node: ", executor, args, kwargs)
@@ -131,7 +132,7 @@ def build_node_link(ntdata):
     """Create links for nodes.
     Create the links for node inputs using:
     1) workgraph links
-    2) if it is a node group graph, expose the group inputs and outputs
+    2) if it is a graph builder graph, expose the group inputs and outputs
     sockets.
     """
     # reset node input links

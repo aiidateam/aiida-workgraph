@@ -120,7 +120,7 @@ class AiiDANode(Node):
     name = "AiiDANode"
     node_type = "node"
     catalog = "Test"
-    args = ["value"]
+    kwargs = ["identifier", "pk", "uuid", "label"]
 
     def create_properties(self):
         pass
@@ -128,7 +128,10 @@ class AiiDANode(Node):
     def create_sockets(self):
         self.inputs.clear()
         self.outputs.clear()
-        self.inputs.new("General", "value")
+        self.inputs.new("General", "identifier")
+        self.inputs.new("General", "pk")
+        self.inputs.new("General", "uuid")
+        self.inputs.new("General", "label")
         self.outputs.new("General", "node")
 
     def get_executor(self):
@@ -145,14 +148,15 @@ class AiiDACode(Node):
     name = "AiiDACode"
     node_type = "node"
     catalog = "Test"
-    args = ["value"]
-
-    def create_properties(self):
-        self.properties.new("General", "value", default=1)
+    kwargs = ["identifier", "pk", "uuid", "label"]
 
     def create_sockets(self):
         self.inputs.clear()
         self.outputs.clear()
+        self.inputs.new("General", "identifier")
+        self.inputs.new("General", "pk")
+        self.inputs.new("General", "uuid")
+        self.inputs.new("General", "label")
         self.outputs.new("General", "Code")
 
     def get_executor(self):

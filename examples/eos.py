@@ -96,7 +96,7 @@ for i in range(len(scales)):
             "metadata": metadata,
         }
     )
-    pw1.to_ctx = [["output_parameters", f"pw_result.s_{i}"]]
+    pw1.to_context = [["output_parameters", f"pw_result.s_{i}"]]
     wg.links.new(structure1.outputs[0], scale1.inputs["structure"])
     wg.links.new(scale1.outputs[0], pw1.inputs["structure"])
     wg.ctrl_links.new(pw1.ctrl_outputs[0], eos1.ctrl_inputs[0])

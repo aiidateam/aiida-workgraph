@@ -449,7 +449,7 @@ class WorkGraph(Process, metaclass=Protect):
             wgdata["max_number_jobs"] if wgdata["max_number_jobs"] else 1000000
         )
         self.ctx["_count"] = 0
-        for key, value in wgdata["ctx"].items():
+        for key, value in wgdata["context"].items():
             key = key.replace("__", ".")
             update_nested_dict(self.ctx, key, value)
         # set up the workgraph
@@ -471,7 +471,7 @@ class WorkGraph(Process, metaclass=Protect):
             state = node["process"].process_state.value.upper()
             if state == "FINISHED":
                 node["state"] = state
-                if node["metadata"]["node_type"] == "node_group":
+                if node["metadata"]["node_type"] == "graph_builder":
                     # expose the outputs of workgraph
                     node["results"] = getattr(
                         node["process"].outputs, "group_outputs", None
@@ -490,7 +490,7 @@ class WorkGraph(Process, metaclass=Protect):
                     node["results"] = node["process"].outputs
                     # self.ctx.new_data[name] = node["results"]
                 self.ctx.nodes[name]["state"] = "FINISHED"
-                self.node_to_ctx(name)
+                self.node_to_context(name)
                 self.report(f"Node: {name} finished.")
             elif state == "EXCEPTED":
                 node["state"] = state
@@ -565,7 +565,7 @@ class WorkGraph(Process, metaclass=Protect):
                 "workfunction",
                 "calcjob",
                 "workchain",
-                "node_group",
+                "graph_builder",
                 "workgraph",
             ]
             and node["state"] == "RUNNING"
@@ -610,13 +610,13 @@ class WorkGraph(Process, metaclass=Protect):
         condition_nodes = []
         for c in self.ctx.workgraph["conditions"]:
             node_name, socket_name = c.split(".")
-            if "node_name" != "ctx":
+            if "node_name" != "context":
                 condition_nodes.append(node_name)
         self.run_nodes(condition_nodes, continue_workgraph=False)
         conditions = []
         for c in self.ctx.workgraph["conditions"]:
             node_name, socket_name = c.split(".")
-            if node_name == "ctx":
+            if node_name == "context":
                 conditions.append(self.ctx[socket_name])
             else:
                 conditions.append(self.ctx.nodes[node_name]["results"][socket_name])
@@ -662,7 +662,7 @@ class WorkGraph(Process, metaclass=Protect):
             if node["metadata"]["node_type"] in [
                 "calcjob",
                 "workchain",
-                "node_group",
+                "graph_builder",
                 "workgraph",
             ]:
                 if len(self._awaitables) > self.ctx.max_number_awaitables:
@@ -678,6 +678,8 @@ class WorkGraph(Process, metaclass=Protect):
             executor, _ = get_executor(node["executor"])
             print("executor: ", executor)
             args, kwargs, var_args, var_kwargs, args_dict = self.get_inputs(node)
+            for i, key in enumerate(self.ctx.nodes[name]["metadata"]["args"]):
+                kwargs[key] = args[i]
             # update the port namespace
             kwargs = update_nested_dict_with_special_keys(kwargs)
             # print("args: ", args)
@@ -688,17 +690,12 @@ class WorkGraph(Process, metaclass=Protect):
             node["results"] = {}
             if node["metadata"]["node_type"] == "node":
                 print("node  type: node.")
-                if isinstance(args[0], orm.Node):
-                    results = args[0]
-                else:
-                    results = self.run_executor(
-                        executor, args, kwargs, var_args, var_kwargs
-                    )
+                results = self.run_executor(executor, [], kwargs, var_args, var_kwargs)
                 node["process"] = results
                 node["results"] = {node["outputs"][0]["name"]: results}
                 self.ctx.input_nodes[name] = results
                 self.ctx.nodes[name]["state"] = "FINISHED"
-                self.node_to_ctx(name)
+                self.node_to_context(name)
                 # ValueError: attempted to add an input link after the process node was already stored.
                 # self.node.base.links.add_incoming(results, "INPUT_WORK", name)
                 self.report(f"Node: {name} finished.")
@@ -706,12 +703,14 @@ class WorkGraph(Process, metaclass=Protect):
                     self.continue_workgraph(names)
             elif node["metadata"]["node_type"] == "data":
                 print("node  type: data.")
+                for key in self.ctx.nodes[name]["metadata"]["args"]:
+                    kwargs.pop(key, None)
                 results = create_data_node(executor, args, kwargs)
                 node["results"] = {node["outputs"][0]["name"]: results}
                 node["process"] = results
                 self.ctx.new_data[name] = results
                 self.ctx.nodes[name]["state"] = "FINISHED"
-                self.node_to_ctx(name)
+                self.node_to_context(name)
                 self.report(f"Node: {name} finished.")
                 if continue_workgraph:
                     self.continue_workgraph(names)
@@ -722,10 +721,10 @@ class WorkGraph(Process, metaclass=Protect):
                 try:
                     # since aiida 2.5.0, we need to use args_dict to pass the args to the run_get_node
                     if var_kwargs is None:
-                        results, process = run_get_node(executor, **args_dict, **kwargs)
+                        results, process = run_get_node(executor, **kwargs)
                     else:
                         results, process = run_get_node(
-                            executor, *args_dict, **kwargs, **var_kwargs
+                            executor, **kwargs, **var_kwargs
                         )
                     # only one output
                     if isinstance(results, orm.Data):
@@ -734,7 +733,7 @@ class WorkGraph(Process, metaclass=Protect):
                     # print("results: ", results)
                     node["process"] = process
                     self.ctx.nodes[name]["state"] = "FINISHED"
-                    self.node_to_ctx(name)
+                    self.node_to_context(name)
                     self.report(f"Node: {name} finished.")
                 except Exception as e:
                     print(e)
@@ -754,13 +753,14 @@ class WorkGraph(Process, metaclass=Protect):
                 print("node  type: calcjob/workchain.")
                 kwargs.setdefault("metadata", {})
                 kwargs["metadata"].update({"call_link_label": name})
-                process = self.submit(executor, *args, **kwargs)
+                # transfer the args to kwargs
+                process = self.submit(executor, **kwargs)
                 node["process"] = process
                 self.ctx.nodes[name]["state"] = "RUNNING"
                 self.to_context(**{name: process})
-            elif node["metadata"]["node_type"] in ["node_group"]:
-                print("node  type: node_group.")
-                wg = self.run_executor(executor, args, kwargs, var_args, var_kwargs)
+            elif node["metadata"]["node_type"] in ["graph_builder"]:
+                print("node  type: graph_builder.")
+                wg = self.run_executor(executor, [], kwargs, var_args, var_kwargs)
                 wg.name = name
                 wg.group_outputs = self.ctx.nodes[name]["metadata"]["group_outputs"]
                 wg.parent_uuid = self.node.uuid
@@ -804,9 +804,11 @@ class WorkGraph(Process, metaclass=Protect):
             elif node["metadata"]["node_type"] in ["Normal"]:
                 print("node  type: Normal.")
                 # normal function does not have a process
-                if "ctx" in node["metadata"]["kwargs"]:
+                if "context" in node["metadata"]["kwargs"]:
                     self.ctx.node_name = name
-                    kwargs.update({"ctx": self.ctx})
+                    kwargs.update({"context": self.ctx})
+                for key in self.ctx.nodes[name]["metadata"]["args"]:
+                    kwargs.pop(key, None)
                 results = self.run_executor(
                     executor, args, kwargs, var_args, var_kwargs
                 )
@@ -825,7 +827,7 @@ class WorkGraph(Process, metaclass=Protect):
                 # self.save_results_to_extras(name)
                 self.ctx.input_nodes[name] = results
                 self.ctx.nodes[name]["state"] = "FINISHED"
-                self.node_to_ctx(name)
+                self.node_to_context(name)
                 self.report(f"Node: {name} finished.")
                 if continue_workgraph:
                     self.continue_workgraph(names)
@@ -850,7 +852,7 @@ class WorkGraph(Process, metaclass=Protect):
         for input in node["inputs"]:
             # print(f"input: {input['name']}")
             if len(input["links"]) == 0:
-                inputs[input["name"]] = self.update_ctx_variable(
+                inputs[input["name"]] = self.update_context_variable(
                     properties[input["name"]]["value"]
                 )
             elif len(input["links"]) == 1:
@@ -890,39 +892,39 @@ class WorkGraph(Process, metaclass=Protect):
                 args.append(inputs[name])
                 args_dict[name] = inputs[name]
             else:
-                value = self.update_ctx_variable(properties[name]["value"])
+                value = self.update_context_variable(properties[name]["value"])
                 args.append(value)
                 args_dict[name] = value
         for name in node["metadata"].get("kwargs", []):
             if name in inputs:
                 kwargs[name] = inputs[name]
             else:
-                value = self.update_ctx_variable(properties[name]["value"])
+                value = self.update_context_variable(properties[name]["value"])
                 kwargs[name] = value
         if node["metadata"]["var_args"] is not None:
             name = node["metadata"]["var_args"]
             if name in inputs:
                 var_args = inputs[name]
             else:
-                value = self.update_ctx_variable(properties[name]["value"])
+                value = self.update_context_variable(properties[name]["value"])
                 var_args = value
         if node["metadata"]["var_kwargs"] is not None:
             name = node["metadata"]["var_kwargs"]
             if name in inputs:
                 var_kwargs = inputs[name]
             else:
-                value = self.update_ctx_variable(properties[name]["value"])
+                value = self.update_context_variable(properties[name]["value"])
                 var_kwargs = value
         return args, kwargs, var_args, var_kwargs, args_dict
 
-    def update_ctx_variable(self, value):
+    def update_context_variable(self, value):
         # replace context variables
         from aiida_workgraph.utils import get_nested_dict
 
         """Get value from context."""
         if isinstance(value, dict):
             for key, sub_value in value.items():
-                value[key] = self.update_ctx_variable(sub_value)
+                value[key] = self.update_context_variable(sub_value)
         elif (
             isinstance(value, str)
             and value.strip().startswith("{{")
@@ -932,11 +934,11 @@ class WorkGraph(Process, metaclass=Protect):
             return get_nested_dict(self.ctx, name)
         return value
 
-    def node_to_ctx(self, name):
+    def node_to_context(self, name):
         """Export node result to context."""
         from aiida_workgraph.utils import update_nested_dict
 
-        items = self.ctx.nodes[name]["to_ctx"]
+        items = self.ctx.nodes[name]["to_context"]
         for item in items:
             update_nested_dict(
                 self.ctx, item[1], self.ctx.nodes[name]["results"][item[0]]
@@ -997,8 +999,8 @@ class WorkGraph(Process, metaclass=Protect):
                         )
         return ready, None
 
-    # def expose_node_group_outputs(self, name):
-    #     # print("expose_node_group_outputs")
+    # def expose_graph_build_outputs(self, name):
+    #     # print("expose_graph_build_outputs")
     #     outputs = {}
     #     process = self.ctx.nodes[name]["process"]
     #     outgoing = process.base.links.get_outgoing()
@@ -1059,7 +1061,7 @@ class WorkGraph(Process, metaclass=Protect):
         for output in self.ctx.workgraph["metadata"]["group_outputs"]:
             print("output: ", output)
             node_name, socket_name = output[0].split(".")
-            if node_name == "ctx":
+            if node_name == "context":
                 update_nested_dict(
                     group_outputs, output[1], get_nested_dict(self.ctx, socket_name)
                 )

@@ -18,7 +18,7 @@ def wg_calcfunction():
     """A workgraph with calcfunction."""
 
     wg = WorkGraph(name="test_debug_math")
-    float1 = wg.nodes.new("AiiDANode", "float1", value=Float(3.0).store())
+    float1 = wg.nodes.new("AiiDANode", "float1", pk=Float(3.0).store().pk)
     sumdiff1 = wg.nodes.new("AiiDASumDiff", "sumdiff1", x=2)
     sumdiff2 = wg.nodes.new("AiiDASumDiff", "sumdiff2", x=4)
     sumdiff3 = wg.nodes.new("AiiDASumDiff", "sumdiff3", x=6)
@@ -34,8 +34,8 @@ def wg_calcjob(arithmetic_add):
 
     code = load_code("add@localhost")
     wg = WorkGraph(name="test_debug_math")
-    int1 = wg.nodes.new("AiiDANode", "int1", value=Int(3).store())
-    code1 = wg.nodes.new("AiiDACode", "code1", value=code.pk)
+    int1 = wg.nodes.new("AiiDANode", "int1", pk=Int(3).store().pk)
+    code1 = wg.nodes.new("AiiDACode", "code1", pk=code.pk)
     add1 = wg.nodes.new(arithmetic_add, "add1", x=Int(2).store())
     add2 = wg.nodes.new(arithmetic_add, "add2", x=Int(4).store())
     add3 = wg.nodes.new(arithmetic_add, "add3", x=Int(4).store())
@@ -54,9 +54,9 @@ def wg_workchain():
 
     code = load_code("add@localhost")
     wg = WorkGraph(name="test_debug_math")
-    int1 = wg.nodes.new("AiiDANode", "int1", value=Int(2).store())
-    int2 = wg.nodes.new("AiiDANode", "int2", value=Int(3).store())
-    code1 = wg.nodes.new("AiiDACode", "code1", value=code.pk)
+    int1 = wg.nodes.new("AiiDANode", "int1", pk=Int(2).store().pk)
+    int2 = wg.nodes.new("AiiDANode", "int2", pk=Int(3).store().pk)
+    code1 = wg.nodes.new("AiiDACode", "code1", pk=code.pk)
     multiply_add1 = wg.nodes.new(
         "AiiDAArithmeticMultiplyAdd", "multiply_add1", x=Int(4).store()
     )
@@ -156,7 +156,7 @@ def decorated_add_multiply(decorated_add, decorated_multiply):
 def decorated_add_multiply_group(decorated_add, decorated_multiply):
     """Generate a decorated node for test."""
 
-    @node.group(outputs=[["multiply1.result", "result"]])
+    @node.graph_builder(outputs=[["multiply1.result", "result"]])
     def add_multiply_group(x, y, z):
         wg = WorkGraph("add_multiply_group")
         add1 = wg.nodes.new(decorated_add, name="add1", x=x, y=y)

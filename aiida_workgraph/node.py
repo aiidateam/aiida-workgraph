@@ -30,7 +30,7 @@ class Node(GraphNode):
             output_collection_class=WorkGraphOutputSocketCollection,
             **kwargs
         )
-        self.to_ctx = None
+        self.to_context = None
         self.wait = []
         self.process = None
         self.pk = None
@@ -41,7 +41,7 @@ class Node(GraphNode):
 
     def to_dict(self) -> Dict[str, Any]:
         ndata = super().to_dict()
-        ndata["to_ctx"] = [] if self.to_ctx is None else self.to_ctx
+        ndata["to_context"] = [] if self.to_context is None else self.to_context
         ndata["wait"] = [
             node if isinstance(node, str) else node.name for node in self.wait
         ]
@@ -74,7 +74,7 @@ class Node(GraphNode):
         from aiida_workgraph.nodes import node_pool
 
         node = super().from_dict(data, node_pool=node_pool)
-        node.to_ctx = data.get("to_ctx", [])
+        node.to_context = data.get("to_context", [])
         node.wait = data.get("wait", [])
         node.process = data.get("process", None)
 

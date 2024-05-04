@@ -8,15 +8,15 @@ This section contains a collection of HowTos for various topics.
    :maxdepth: 1
    :caption: Contents:
 
-   group
+   graph_builder
    if
    parallel
    for
    while
-   ctx
+   context
    aiida_shell
    wait
-   append_workgraph
+   combine_workgraph
    restart
    continue_finished_workgraph
    protocol

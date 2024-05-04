@@ -44,7 +44,7 @@ def get_marked_structures(structure, atoms_list, marker="X"):
 
 
 # the structures is used to generate the workgraph dynamically.
-@node.group(outputs=[["ctx", "scf", "result"]])
+@node.graph_builder(outputs=[["context", "scf", "result"]])
 def run_scf(
     structure,
     marked_structures,
@@ -82,7 +82,7 @@ def run_scf(
             "structure": structure,
         }
     )
-    pw_ground.to_ctx = [["output_parameters", "scf.ground"]]
+    pw_ground.to_context = [["output_parameters", "scf.ground"]]
     # excited state node
     for key, data in site_info.items():
         structure = marked_structures[key]
@@ -101,7 +101,7 @@ def run_scf(
                 "structure": structure,
             }
         )
-        pw_excited.to_ctx = [["output_parameters", f"scf.{key}"]]
+        pw_excited.to_context = [["output_parameters", f"scf.{key}"]]
     return wg
 
 
@@ -127,7 +127,7 @@ def get_spectra(site_info, correction_energies={}, orbital="1s", **pw_outputs):
     return orm.Dict(binding_energies)
 
 
-@node.group(outputs=[["get_spectra1", "result", "result"]])
+@node.graph_builder(outputs=[["get_spectra1", "result", "result"]])
 def xps(
     structure,
     code,

@@ -18,7 +18,7 @@ def scale_structure(structure, scales):
 
 
 # Output result from context
-@node.group(outputs=[["ctx.result", "result"]])
+@node.graph_builder(outputs=[["context.result", "result"]])
 def all_scf(structures, code, parameters, kpoints, pseudos, metadata):
     from aiida_workgraph import WorkGraph
 
@@ -39,7 +39,7 @@ def all_scf(structures, code, parameters, kpoints, pseudos, metadata):
                 "structure": structure,
             }
         )
-        pw1.to_ctx = [["output_parameters", f"result.{key}"]]
+        pw1.to_context = [["output_parameters", f"result.{key}"]]
     return wg
 
 
