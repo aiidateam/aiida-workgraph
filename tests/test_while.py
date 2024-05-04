@@ -6,18 +6,18 @@ load_profile()
 
 def test_while(decorated_add, decorated_multiply, decorated_compare):
     # Create a WorkGraph will repeat itself based on the conditions
-    @node.graph_builder(outputs=[["ctx.n", "result"]])
+    @node.graph_builder(outputs=[["context.n", "result"]])
     def my_while(n=0, limit=100):
         wg = WorkGraph("while_workgraph")
         wg.workgraph_type = "WHILE"
         wg.conditions = ["compare1.result"]
-        wg.ctx = {"n": n}
+        wg.context = {"n": n}
         wg.nodes.new(decorated_compare, name="compare1", x="{{n}}", y=orm.Int(limit))
         multiply1 = wg.nodes.new(
             decorated_multiply, name="multiply1", x="{{ n }}", y=orm.Int(2)
         )
         add1 = wg.nodes.new(decorated_add, name="add1", y=3)
-        add1.to_ctx = [["result", "n"]]
+        add1.to_context = [["result", "n"]]
         wg.links.new(multiply1.outputs[0], add1.inputs[0])
         return wg
 
@@ -36,19 +36,19 @@ def test_while(decorated_add, decorated_multiply, decorated_compare):
 
 def test_while_max_iteration(decorated_add, decorated_multiply, decorated_compare):
     # Create a WorkGraph will repeat itself based on the conditions
-    @node.graph_builder(outputs=[["ctx.n", "result"]])
+    @node.graph_builder(outputs=[["context.n", "result"]])
     def my_while(n=0, limit=100):
         wg = WorkGraph("while_workgraph")
         wg.workgraph_type = "WHILE"
         wg.max_iteration = 3
         wg.conditions = ["compare1.result"]
-        wg.ctx = {"n": n}
+        wg.context = {"n": n}
         wg.nodes.new(decorated_compare, name="compare1", x="{{n}}", y=orm.Int(limit))
         multiply1 = wg.nodes.new(
             decorated_multiply, name="multiply1", x="{{ n }}", y=orm.Int(2)
         )
         add1 = wg.nodes.new(decorated_add, name="add1", y=3)
-        add1.to_ctx = [["result", "n"]]
+        add1.to_context = [["result", "n"]]
         wg.links.new(multiply1.outputs[0], add1.inputs[0])
         return wg
 

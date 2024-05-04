@@ -13,7 +13,7 @@ This section contains a collection of HowTos for various topics.
    parallel
    for
    while
-   ctx
+   context
    aiida_shell
    wait
    combine_workgraph
