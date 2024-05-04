@@ -28,6 +28,7 @@ def get_executor(data):
 
 
 def create_data_node(executor, args, kwargs):
+    """Create an AiiDA data node from the executor and args and kwargs."""
     from aiida import orm
 
     # print("Create data node: ", executor, args, kwargs)

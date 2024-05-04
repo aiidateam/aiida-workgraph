@@ -69,8 +69,7 @@ def test_pw_dos_projwfc(wg_structure_si):
     }
     pw_relax1.set({"metadata": metadata})
     #
-    pw_code = wg.nodes.new("AiiDACode", "pw_code")
-    pw_code.set({"value": "qe-7.2-pw@localhost"})
+    pw_code = wg.nodes.new("AiiDACode", "pw_code", label="qe-7.2-pw@localhost")
     #
     pw_parameters1 = wg.nodes.new("AiiDADict", "pw_parameters1")
     paras = {
@@ -91,14 +90,14 @@ def test_pw_dos_projwfc(wg_structure_si):
     #
     #
     dos1 = wg.nodes.new("AiiDADos", "dos1")
-    dos_code = wg.nodes.new("AiiDACode", "dos_code")
-    dos_code.set({"value": "qe-7.2-dos@localhost"})
+    dos_code = wg.nodes.new("AiiDACode", "dos_code", label="qe-7.2-dos@localhost")
     dos_parameters1 = wg.nodes.new("AiiDADict", "dos_parameters1")
     dos1.set({"metadata": metadata})
     #
     projwfc1 = wg.nodes.new("AiiDAProjwfc", "projwfc1")
-    projwfc_code = wg.nodes.new("AiiDACode", "projwfc_code")
-    projwfc_code.set({"value": "qe-7.2-projwfc@localhost"})
+    projwfc_code = wg.nodes.new(
+        "AiiDACode", "projwfc_code", label="qe-7.2-projwfc@localhost"
+    )
     projwfc_parameters1 = wg.nodes.new("AiiDADict", "projwfc_parameters1")
     projwfc1.set({"metadata": metadata})
     #
@@ -125,13 +124,9 @@ def test_pw_dos_projwfc(wg_structure_si):
 
 def test_pw_relax_workchain(structure_si):
     """Run simple calcfunction."""
-    from aiida_workgraph import build_node, node, WorkGraph
+    from aiida_workgraph import node, WorkGraph
     from aiida.orm import Dict, KpointsData, load_code, load_group
-
-    # register node
-    pw_relax_node = build_node(
-        "aiida_quantumespresso.workflows.pw.relax.PwRelaxWorkChain"
-    )
+    from aiida_quantumespresso.workflows.pw.relax import PwRelaxWorkChain
 
     @node.calcfunction()
     def pw_parameters(paras, relax_type):
@@ -139,6 +134,7 @@ def test_pw_relax_workchain(structure_si):
         paras1["CONTROL"]["calculation"] = relax_type
         return paras1
 
+    structure_si.store()
     #
     code = load_code("qe-7.2-pw@localhost")
     paras = Dict(
@@ -172,9 +168,9 @@ def test_pw_relax_workchain(structure_si):
 
     wg = WorkGraph("test_pw_relax")
     # structure node
-    wg.nodes.new("AiiDANode", "si", value=structure_si)
+    wg.nodes.new("AiiDANode", "si", pk=structure_si.pk)
     # pw node
-    pw_relax1 = wg.nodes.new(pw_relax_node, name="pw_relax1")
+    pw_relax1 = wg.nodes.new(PwRelaxWorkChain, name="pw_relax1")
     pw_relax1.set(
         {
             "base": {

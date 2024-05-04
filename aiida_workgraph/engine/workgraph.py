@@ -678,6 +678,8 @@ class WorkGraph(Process, metaclass=Protect):
             executor, _ = get_executor(node["executor"])
             print("executor: ", executor)
             args, kwargs, var_args, var_kwargs, args_dict = self.get_inputs(node)
+            for i, key in enumerate(self.ctx.nodes[name]["metadata"]["args"]):
+                kwargs[key] = args[i]
             # update the port namespace
             kwargs = update_nested_dict_with_special_keys(kwargs)
             # print("args: ", args)
@@ -688,12 +690,7 @@ class WorkGraph(Process, metaclass=Protect):
             node["results"] = {}
             if node["metadata"]["node_type"] == "node":
                 print("node  type: node.")
-                if isinstance(args[0], orm.Node):
-                    results = args[0]
-                else:
-                    results = self.run_executor(
-                        executor, args, kwargs, var_args, var_kwargs
-                    )
+                results = self.run_executor(executor, [], kwargs, var_args, var_kwargs)
                 node["process"] = results
                 node["results"] = {node["outputs"][0]["name"]: results}
                 self.ctx.input_nodes[name] = results
@@ -706,6 +703,8 @@ class WorkGraph(Process, metaclass=Protect):
                     self.continue_workgraph(names)
             elif node["metadata"]["node_type"] == "data":
                 print("node  type: data.")
+                for key in self.ctx.nodes[name]["metadata"]["args"]:
+                    kwargs.pop(key, None)
                 results = create_data_node(executor, args, kwargs)
                 node["results"] = {node["outputs"][0]["name"]: results}
                 node["process"] = results
@@ -722,10 +721,10 @@ class WorkGraph(Process, metaclass=Protect):
                 try:
                     # since aiida 2.5.0, we need to use args_dict to pass the args to the run_get_node
                     if var_kwargs is None:
-                        results, process = run_get_node(executor, **args_dict, **kwargs)
+                        results, process = run_get_node(executor, **kwargs)
                     else:
                         results, process = run_get_node(
-                            executor, *args_dict, **kwargs, **var_kwargs
+                            executor, **kwargs, **var_kwargs
                         )
                     # only one output
                     if isinstance(results, orm.Data):
@@ -755,15 +754,13 @@ class WorkGraph(Process, metaclass=Protect):
                 kwargs.setdefault("metadata", {})
                 kwargs["metadata"].update({"call_link_label": name})
                 # transfer the args to kwargs
-                for i, key in enumerate(self.ctx.nodes[name]["metadata"]["args"]):
-                    kwargs[key] = args[i]
                 process = self.submit(executor, **kwargs)
                 node["process"] = process
                 self.ctx.nodes[name]["state"] = "RUNNING"
                 self.to_context(**{name: process})
             elif node["metadata"]["node_type"] in ["graph_builder"]:
                 print("node  type: graph_builder.")
-                wg = self.run_executor(executor, args, kwargs, var_args, var_kwargs)
+                wg = self.run_executor(executor, [], kwargs, var_args, var_kwargs)
                 wg.name = name
                 wg.group_outputs = self.ctx.nodes[name]["metadata"]["group_outputs"]
                 wg.parent_uuid = self.node.uuid
@@ -810,6 +807,8 @@ class WorkGraph(Process, metaclass=Protect):
                 if "ctx" in node["metadata"]["kwargs"]:
                     self.ctx.node_name = name
                     kwargs.update({"ctx": self.ctx})
+                for key in self.ctx.nodes[name]["metadata"]["args"]:
+                    kwargs.pop(key, None)
                 results = self.run_executor(
                     executor, args, kwargs, var_args, var_kwargs
                 )

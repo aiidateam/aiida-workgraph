@@ -27,7 +27,7 @@ def test_build_workchain(build_workchain):
 
     code = load_code("add@localhost")
     wg = WorkGraph(name="test_debug_math")
-    code1 = wg.nodes.new("AiiDACode", "code1", value=code.pk)
+    code1 = wg.nodes.new("AiiDACode", "code1", pk=code.pk)
     multiply_add1 = wg.nodes.new(
         build_workchain,
         "multiply_add1",
