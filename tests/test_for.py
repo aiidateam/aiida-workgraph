@@ -28,7 +28,7 @@ def test_for(decorated_add, decorated_multiply):
     # -----------------------------------------
     wg = WorkGraph("test_for")
     for1 = wg.nodes.new(add_multiply_for, sequence=range(5))
-    add1 = wg.nodes.new(decorated_add, y=orm.Int(1))
+    add1 = wg.nodes.new(decorated_add, name="add1", y=orm.Int(1))
     wg.links.new(for1.outputs[0], add1.inputs[0])
     wg.submit(wait=True, timeout=200)
     assert add1.node.outputs.result.value == 21

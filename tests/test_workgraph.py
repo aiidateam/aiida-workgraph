@@ -81,7 +81,7 @@ def test_restart(wg_calcjob):
     assert wg1.nodes["add2"].node.pk != wg.nodes["add2"].pk
 
 
-def test_append_workgraph(decorated_add_multiply_group):
+def test_extend_workgraph(decorated_add_multiply_group):
     from aiida_workgraph import WorkGraph
 
     wg = WorkGraph("test_graph_build")
