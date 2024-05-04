@@ -37,7 +37,7 @@ class WorkGraph(node_graph.NodeGraph):
             **kwargs: Additional keyword arguments to be passed to the WorkGraph class.
         """
         super().__init__(name, **kwargs)
-        self.ctx = {}
+        self.context = {}
         self.workgraph_type = "NORMAL"
         self.sequence = []
         self.conditions = []
@@ -155,10 +155,10 @@ class WorkGraph(node_graph.NodeGraph):
 
     def to_dict(self):
         wgdata = super().to_dict()
-        self.ctx["sequence"] = self.sequence
+        self.context["sequence"] = self.sequence
         # only alphanumeric and underscores are allowed
-        wgdata["ctx"] = {
-            key.replace(".", "__"): value for key, value in self.ctx.items()
+        wgdata["context"] = {
+            key.replace(".", "__"): value for key, value in self.context.items()
         }
         wgdata.update(
             {
@@ -334,7 +334,7 @@ class WorkGraph(node_graph.NodeGraph):
             node.reset()
         self.sequence = []
         self.conditions = []
-        self.ctx = {}
+        self.context = {}
         self.state = "CREATED"
 
     def extend(self, wg, prefix=""):
@@ -348,7 +348,7 @@ class WorkGraph(node_graph.NodeGraph):
             self.nodes.append(node)
         # self.sequence.extend([prefix + node for node in wg.sequence])
         # self.conditions.extend(wg.conditions)
-        self.ctx.update(wg.ctx)
+        self.context.update(wg.context)
         # links
         for link in wg.links:
             self.links.append(link)
