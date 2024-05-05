@@ -1,3 +1,4 @@
+from typing import Optional, Dict, Any
 import importlib.metadata
 import pathlib
 
@@ -24,11 +25,11 @@ class NodeGraphWidget(anywidget.AnyWidget):
     states = traitlets.Dict({}).tag(sync=True)
     positions = traitlets.Dict({}).tag(sync=True)
 
-    def __init__(self, parent=None, **kwargs):
+    def __init__(self, parent: Optional[Any] = None, **kwargs: Any) -> None:
         self.parent = parent
         super().__init__(**kwargs)
 
-    def from_workgraph(self, workgraph):
+    def from_workgraph(self, workgraph: Any) -> None:
         from aiida_workgraph.web.backend.app.utils import workgraph_to_short_json
 
         wgdata = workgraph.to_dict()
@@ -36,7 +37,7 @@ class NodeGraphWidget(anywidget.AnyWidget):
         wgdata = workgraph_to_short_json(wgdata)
         self.value = wgdata
 
-    def from_node(self, node):
+    def from_node(self, node: Any) -> None:
         ndata = node.to_dict()
         ndata.pop("properties", None)
         ndata["label"] = ndata["metadata"]["identifier"]
@@ -44,7 +45,7 @@ class NodeGraphWidget(anywidget.AnyWidget):
         self.value = wgdata
 
     @traitlets.observe("positions")
-    def _observe_positions(self, change):
+    def _observe_positions(self, change: Dict[str, Any]) -> None:
         if not self.parent:
             return
         if change["new"]:

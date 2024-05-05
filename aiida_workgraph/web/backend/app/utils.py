@@ -1,10 +1,13 @@
-from aiida.orm import load_node
+from typing import Dict, Optional, Union, Tuple, List, Any
+from aiida.orm import load_node, Node
 from datetime import datetime
 from dateutil import relativedelta
 from dateutil.tz import tzlocal
 
 
-def workgraph_to_short_json(wgdata):
+def workgraph_to_short_json(
+    wgdata: Dict[str, Union[str, List, Dict]]
+) -> Dict[str, Union[str, Dict]]:
     """Export a workgraph to a rete js editor data."""
     wgdata_short = {
         "name": wgdata["name"],
@@ -42,7 +45,7 @@ def workgraph_to_short_json(wgdata):
     return wgdata_short
 
 
-def is_function_and_get_source(obj):
+def is_function_and_get_source(obj: Any) -> Tuple[bool, Optional[str]]:
     import inspect
 
     if callable(obj):
@@ -53,7 +56,7 @@ def is_function_and_get_source(obj):
         return False, None
 
 
-def get_node_recursive(links):
+def get_node_recursive(links: Dict) -> Dict[str, Union[List[int], str]]:
     """Recursively get a dictionary of nodess."""
     from collections.abc import Mapping
 
@@ -66,7 +69,7 @@ def get_node_recursive(links):
     return data
 
 
-def get_node_inputs(pk):
+def get_node_inputs(pk: Optional[int]) -> Union[str, Dict[str, Union[List[int], str]]]:
     from aiida.common.links import LinkType
 
     if pk is None:
@@ -84,7 +87,7 @@ def get_node_inputs(pk):
     return result
 
 
-def get_node_outputs(pk):
+def get_node_outputs(pk: Optional[int]) -> Union[str, Dict[str, Union[List[int], str]]]:
     from aiida.common.links import LinkType
 
     if pk is None:
@@ -103,7 +106,7 @@ def get_node_outputs(pk):
     return result
 
 
-def node_to_short_json(workgraph_pk, ndata):
+def node_to_short_json(workgraph_pk: int, ndata: Dict[str, Any]) -> Dict[str, Any]:
     """Export a node to a rete js node."""
     from aiida_workgraph.utils import get_executor, get_processes_latest
 
@@ -138,7 +141,7 @@ def node_to_short_json(workgraph_pk, ndata):
     return ndata_short
 
 
-def get_node_summary(node):
+def get_node_summary(node: Node) -> List[List[str]]:
     """ """
     from plumpy import ProcessState
     from aiida.orm import ProcessNode
@@ -189,7 +192,7 @@ def get_node_summary(node):
     return table
 
 
-def time_ago(past_time):
+def time_ago(past_time: datetime) -> str:
     # Get the current time
     now = datetime.now(tzlocal())
 

@@ -1,3 +1,4 @@
+from typing import List, Dict, Any
 from fastapi import APIRouter, HTTPException, Query
 from aiida import orm
 
@@ -8,7 +9,7 @@ router = APIRouter()
 async def read_datanode_data(
     typeSearch: str = Query(None),
     labelSearch: str = Query(None),
-):
+) -> List[Dict[str, Any]]:
     from aiida.orm import QueryBuilder, Data
     from aiida_workgraph.web.backend.app.utils import time_ago
 
@@ -46,7 +47,7 @@ async def read_datanode_data(
 
 
 @router.get("/api/datanode/{id}")
-async def read_data_node_item(id: int):
+async def read_data_node_item(id: int) -> Dict[str, Any]:
 
     try:
         node = orm.load_node(id)
@@ -61,7 +62,7 @@ async def read_data_node_item(id: int):
 @router.delete("/api/datanode/delete/{id}")
 async def delete_data_node(
     id: int,
-):
+) -> Dict[str, str]:
     from aiida.tools import delete_nodes
 
     try:

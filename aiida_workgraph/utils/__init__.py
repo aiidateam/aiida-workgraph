@@ -1,4 +1,9 @@
-def get_executor(data):
+from typing import Any, Dict, Optional, Union
+from aiida.engine.processes import Process
+from aiida import orm
+
+
+def get_executor(data: Dict[str, Any]) -> Union[Process, Any]:
     """Import executor from path and return the executor and type."""
     import importlib
     from aiida.plugins import CalculationFactory, WorkflowFactory, DataFactory
@@ -27,7 +32,7 @@ def get_executor(data):
     return executor, type
 
 
-def create_data_node(executor, args, kwargs):
+def create_data_node(executor: orm.Data, args: list, kwargs: dict) -> orm.Node:
     """Create an AiiDA data node from the executor and args and kwargs."""
     from aiida import orm
 
@@ -45,7 +50,7 @@ def create_data_node(executor, args, kwargs):
     return data_node
 
 
-def get_nested_dict(d, name):
+def get_nested_dict(d: Dict, name: str) -> Any:
     """
     name = "base.pw.parameters"
     """
@@ -58,7 +63,7 @@ def get_nested_dict(d, name):
     return current
 
 
-def update_nested_dict(d, key, value):
+def update_nested_dict(d: Dict[str, Any], key: str, value: Any) -> None:
     """
     d = {}
     key = "base.pw.parameters"
@@ -74,7 +79,7 @@ def update_nested_dict(d, key, value):
     current[keys[-1]] = value
 
 
-def is_empty(value):
+def is_empty(value: Any) -> bool:
     """Check if the provided value is an empty collection."""
     import numpy as np
 
@@ -85,7 +90,7 @@ def is_empty(value):
     return False
 
 
-def update_nested_dict_with_special_keys(d):
+def update_nested_dict_with_special_keys(d: Dict[str, Any]) -> Dict[str, Any]:
     """Remove None and empty value"""
     d = {k: v for k, v in d.items() if v is not None and not is_empty(v)}
     #
@@ -96,7 +101,7 @@ def update_nested_dict_with_special_keys(d):
     return d
 
 
-def merge_properties(ntdata):
+def merge_properties(ntdata: Dict[str, Any]) -> None:
     """Merge sub properties to the root properties.
     {
         "base.pw.parameters": 2,
@@ -117,7 +122,7 @@ def merge_properties(ntdata):
                 prop["value"] = None
 
 
-def generate_node_graph(pk):
+def generate_node_graph(pk: int) -> Any:
     from aiida.tools.visualization import Graph
     from aiida import orm
 
@@ -128,7 +133,7 @@ def generate_node_graph(pk):
     return graph.graphviz
 
 
-def build_node_link(ntdata):
+def build_node_link(ntdata: Dict[str, Any]) -> None:
     """Create links for nodes.
     Create the links for node inputs using:
     1) workgraph links
@@ -156,7 +161,7 @@ def build_node_link(ntdata):
         from_socket["links"].append(link)
 
 
-def get_dict_from_builder(builder):
+def get_dict_from_builder(builder: Any) -> Dict:
     """Transform builder to pure dict."""
     from aiida.engine.processes.builder import ProcessBuilderNamespace
 
@@ -166,7 +171,7 @@ def get_dict_from_builder(builder):
         return builder
 
 
-def get_workgraph_data(process):
+def get_workgraph_data(process: Union[int, orm.Node]) -> Optional[Dict[str, Any]]:
     """Get the workgraph data from the process node."""
     from aiida.orm.utils.serialize import deserialize_unsafe
     from aiida.orm import load_node
@@ -180,7 +185,7 @@ def get_workgraph_data(process):
     return wgdata
 
 
-def get_parent_workgraphs(pk):
+def get_parent_workgraphs(pk: int) -> list:
     """Get the list of parent workgraphs.
     Use aiida incoming links to find the parent workgraphs.
     the parent workgraph is the workgraph that has a link (type CALL_WORK) to the current workgraph.
@@ -198,7 +203,7 @@ def get_parent_workgraphs(pk):
     return parent_workgraphs
 
 
-def get_processes_latest(pk):
+def get_processes_latest(pk: int) -> Dict[str, Dict[str, Union[int, str]]]:
     """Get the latest info of all nodes from the process."""
     import aiida
 
@@ -231,15 +236,3 @@ def get_processes_latest(pk):
                         "mtime": nodes.mtime,
                     }
     return nodes
-
-
-if __name__ == "__main__":
-    d = {
-        "base": {
-            "pw": {"code": 1, "parameters": 1, "pseudos": 1, "metadata": 1},
-            "kpoints": 1,
-        },
-        "base.pw.parameters": 2,
-    }
-    d = update_nested_dict_with_special_keys(d)
-    print(d)

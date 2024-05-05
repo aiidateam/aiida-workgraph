@@ -1,10 +1,17 @@
+from typing import Optional, Dict, Tuple, List
 import datetime
+from aiida.orm import ProcessNode
 
 
 class WorkGraphSaver:
     """Save a workgraph to the database."""
 
-    def __init__(self, process, wgdata, restart_process=None) -> None:
+    def __init__(
+        self,
+        process: ProcessNode,
+        wgdata: Dict,
+        restart_process: Optional[ProcessNode] = None,
+    ) -> None:
         """Init WorkGraphSaver.
 
         Args:
@@ -18,7 +25,7 @@ class WorkGraphSaver:
         self.wait_to_link()
         self.clean_hanging_links()
 
-    def wait_to_link(self):
+    def wait_to_link(self) -> None:
         """Convert wait attribute to link."""
         for name, node in self.wgdata["nodes"].items():
             for wait_node in node["wait"]:
@@ -32,7 +39,7 @@ class WorkGraphSaver:
                         }
                     )
 
-    def clean_hanging_links(self):
+    def clean_hanging_links(self) -> None:
         """Clean hanging links in the workgraph."""
         for link in self.wgdata["links"][:]:  # Iterate over a shallow copy of the list
             if (
@@ -41,7 +48,7 @@ class WorkGraphSaver:
             ):
                 self.wgdata["links"].remove(link)
 
-    def save(self):
+    def save(self) -> None:
         """Save workgraph.
 
         - Update uuid for links. Build compressed nodes for workgraph.
@@ -59,7 +66,7 @@ class WorkGraphSaver:
             self.reset_nodes(modified_nodes)
         self.insert_workgraph_to_db()
 
-    def build_node_link(self):
+    def build_node_link(self) -> None:
         """Create links for nodes.
         Create the links for node inputs using:
         1) workgraph links
@@ -85,7 +92,7 @@ class WorkGraphSaver:
             to_socket["links"].append(link)
             from_socket["links"].append(link)
 
-    def insert_workgraph_to_db(self):
+    def insert_workgraph_to_db(self) -> None:
         """Save a new workgraph in the database.
 
         - workgraph
@@ -98,7 +105,7 @@ class WorkGraphSaver:
         self.wgdata["lastUpdate"] = datetime.datetime.utcnow()
         self.process.base.extras.set("workgraph", serialize(self.wgdata))
 
-    def reset_nodes(self, nodes):
+    def reset_nodes(self, nodes: List[str]) -> None:
         """Reset nodes
 
         Args:
@@ -110,18 +117,20 @@ class WorkGraphSaver:
                 f"node,{name}:RESET",
             )
 
-    def append_message_to_queue(self, message):
+    def append_message_to_queue(self, message: str) -> None:
         queue = self.process.base.extras.get("workgraph_queue", [])
         queue.append(message)
         self.process.base.extras.set("workgraph_queue", queue)
 
-    def set_nodes_action(self, action):
+    def set_nodes_action(self, action: str) -> None:
         """Set node action."""
         for name, node in self.wgdata["nodes"].items():
             # print("Reset node: {}".format(node))
             node["action"] = action
 
-    def get_wgdata_from_db(self, process=None):
+    def get_wgdata_from_db(
+        self, process: Optional[ProcessNode] = None
+    ) -> Optional[Dict]:
         from aiida.orm.utils.serialize import deserialize_unsafe
 
         process = self.process if process is None else process
@@ -132,7 +141,9 @@ class WorkGraphSaver:
         wgdata = deserialize_unsafe(wgdata)
         return wgdata
 
-    def check_diff(self, restart_process=None):
+    def check_diff(
+        self, restart_process: Optional[ProcessNode] = None
+    ) -> Tuple[List[str], List[str], Dict]:
         """Find difference between workgraph and its database.
 
         Returns:
@@ -150,7 +161,7 @@ class WorkGraphSaver:
         ) = dc.build_difference()
         return new_nodes, modified_nodes, update_metadata
 
-    def exist_in_db(self):
+    def exist_in_db(self) -> bool:
         """Check workgraph exist in database or not.
 
         Returns:
@@ -160,7 +171,7 @@ class WorkGraphSaver:
             return True
         return False
 
-    def build_connectivity(self):
+    def build_connectivity(self) -> None:
         """Analyze the connectivity of workgraph and save it into dict."""
         from node_graph.analysis import ConnectivityAnalysis
 
