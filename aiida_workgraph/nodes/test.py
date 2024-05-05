@@ -1,3 +1,4 @@
+from typing import Dict
 from aiida_workgraph.node import Node
 
 
@@ -10,15 +11,15 @@ class AiiDAInt(Node):
     args = ["value"]
     kwargs = ["t"]
 
-    def create_properties(self):
+    def create_properties(self) -> None:
         self.properties.new("AiiDAFloat", "t", default=1.0)
 
-    def create_sockets(self):
+    def create_sockets(self) -> None:
         inp = self.inputs.new("General", "value", default=0.0)
         inp.add_property("AiiDAInt", default=1.0)
         self.outputs.new("AiiDAInt", "result")
 
-    def get_executor(self):
+    def get_executor(self) -> Dict[str, str]:
         return {
             "path": "aiida.orm",
             "name": "Int",
@@ -34,14 +35,14 @@ class AiiDAFloat(Node):
     args = ["value"]
     kwargs = ["t"]
 
-    def create_properties(self):
+    def create_properties(self) -> None:
         self.properties.new("AiiDAFloat", "t", default=1.0)
 
-    def create_sockets(self):
+    def create_sockets(self) -> None:
         self.inputs.new("AiiDAFloat", "value", default=0.0)
         self.outputs.new("AiiDAFloat", "result")
 
-    def get_executor(self):
+    def get_executor(self) -> Dict[str, str]:
         return {
             "path": "aiida.orm",
             "name": "Float",
@@ -57,14 +58,14 @@ class AiiDAString(Node):
     args = ["value"]
     kwargs = ["t"]
 
-    def create_properties(self):
+    def create_properties(self) -> None:
         self.properties.new("AiiDAFloat", "t", default=1.0)
 
-    def create_sockets(self):
+    def create_sockets(self) -> None:
         self.inputs.new("AiiDAString", "value", default="")
         self.outputs.new("AiiDAString", "result")
 
-    def get_executor(self):
+    def get_executor(self) -> Dict[str, str]:
         return {
             "path": "aiida.orm",
             "name": "Str",
@@ -79,13 +80,13 @@ class AiiDAList(Node):
 
     args = ["value"]
 
-    def create_properties(self):
+    def create_properties(self) -> None:
         self.properties.new("BaseList", "value", default=[])
 
-    def create_sockets(self):
+    def create_sockets(self) -> None:
         self.outputs.new("General", "Parameters")
 
-    def get_executor(self):
+    def get_executor(self) -> Dict[str, str]:
         return {
             "path": "aiida.orm",
             "name": "List",
@@ -100,13 +101,13 @@ class AiiDADict(Node):
 
     args = ["value"]
 
-    def create_properties(self):
+    def create_properties(self) -> None:
         self.properties.new("BaseDict", "value", default={})
 
-    def create_sockets(self):
+    def create_sockets(self) -> None:
         self.outputs.new("General", "Parameters")
 
-    def get_executor(self):
+    def get_executor(self) -> Dict[str, str]:
         return {
             "path": "aiida.orm",
             "name": "Dict",
@@ -122,10 +123,10 @@ class AiiDANode(Node):
     catalog = "Test"
     kwargs = ["identifier", "pk", "uuid", "label"]
 
-    def create_properties(self):
+    def create_properties(self) -> None:
         pass
 
-    def create_sockets(self):
+    def create_sockets(self) -> None:
         self.inputs.clear()
         self.outputs.clear()
         self.inputs.new("General", "identifier")
@@ -134,7 +135,7 @@ class AiiDANode(Node):
         self.inputs.new("General", "label")
         self.outputs.new("General", "node")
 
-    def get_executor(self):
+    def get_executor(self) -> Dict[str, str]:
         return {
             "path": "aiida.orm",
             "name": "load_node",
@@ -150,7 +151,7 @@ class AiiDACode(Node):
     catalog = "Test"
     kwargs = ["identifier", "pk", "uuid", "label"]
 
-    def create_sockets(self):
+    def create_sockets(self) -> None:
         self.inputs.clear()
         self.outputs.clear()
         self.inputs.new("General", "identifier")
@@ -159,7 +160,7 @@ class AiiDACode(Node):
         self.inputs.new("General", "label")
         self.outputs.new("General", "Code")
 
-    def get_executor(self):
+    def get_executor(self) -> Dict[str, str]:
         return {
             "path": "aiida.orm",
             "name": "load_code",
@@ -176,10 +177,10 @@ class AiiDAAdd(Node):
     args = ["x", "y"]
     kwargs = ["t"]
 
-    def create_properties(self):
+    def create_properties(self) -> None:
         self.properties.new("AiiDAFloat", "t", default=1.0)
 
-    def create_sockets(self):
+    def create_sockets(self) -> None:
         self.inputs.clear()
         self.outputs.clear()
         inp = self.inputs.new("AiiDAFloat", "x")
@@ -188,7 +189,7 @@ class AiiDAAdd(Node):
         inp.add_property("AiiDAFloat", "y", default=0.0)
         self.outputs.new("AiiDAFloat", "sum")
 
-    def get_executor(self):
+    def get_executor(self) -> Dict[str, str]:
         return {
             "path": "aiida_workgraph.executors.test",
             "name": "add",
@@ -203,17 +204,17 @@ class AiiDAGreater(Node):
     catalog = "Test"
     kwargs = ["x", "y"]
 
-    def create_properties(self):
+    def create_properties(self) -> None:
         pass
 
-    def create_sockets(self):
+    def create_sockets(self) -> None:
         self.inputs.clear()
         self.outputs.clear()
         self.inputs.new("AiiDAFloat", "x")
         self.inputs.new("AiiDAFloat", "y")
         self.outputs.new("AiiDABool", "result")
 
-    def get_executor(self):
+    def get_executor(self) -> Dict[str, str]:
         return {
             "path": "aiida_workgraph.executors.test",
             "name": "greater",
@@ -230,10 +231,10 @@ class AiiDASumDiff(Node):
     args = ["x", "y"]
     kwargs = ["t"]
 
-    def create_properties(self):
+    def create_properties(self) -> None:
         self.properties.new("AiiDAFloat", "t", default=1.0)
 
-    def create_sockets(self):
+    def create_sockets(self) -> None:
         self.inputs.clear()
         self.outputs.clear()
         inp = self.inputs.new("AiiDAFloat", "x")
@@ -243,7 +244,7 @@ class AiiDASumDiff(Node):
         self.outputs.new("AiiDAFloat", "sum")
         self.outputs.new("AiiDAFloat", "diff")
 
-    def get_executor(self):
+    def get_executor(self) -> Dict[str, str]:
         return {
             "path": "aiida_workgraph.executors.test",
             "name": "sum_diff",
@@ -258,10 +259,10 @@ class AiiDAArithmeticMultiplyAdd(Node):
     catalog = "Test"
     kwargs = ["code", "x", "y", "z"]
 
-    def create_properties(self):
+    def create_properties(self) -> None:
         pass
 
-    def create_sockets(self):
+    def create_sockets(self) -> None:
         self.inputs.clear()
         self.outputs.clear()
         self.inputs.new("General", "code")
@@ -273,7 +274,7 @@ class AiiDAArithmeticMultiplyAdd(Node):
         inp.add_property("AiiDAInt", "z", default=0.0)
         self.outputs.new("AiiDAInt", "result")
 
-    def get_executor(self):
+    def get_executor(self) -> Dict[str, str]:
         return {
             "name": "core.arithmetic.multiply_add",
             "type": "WorkflowFactory",

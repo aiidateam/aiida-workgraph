@@ -1,3 +1,4 @@
+from typing import Dict
 from aiida_workgraph.node import Node
 
 
@@ -10,14 +11,14 @@ class AiiDAGather(Node):
     catalog = "AiiDA"
     kwargs = ["datas"]
 
-    def create_sockets(self):
+    def create_sockets(self) -> None:
         self.inputs.clear()
         self.outputs.clear()
         inp = self.inputs.new("General", "datas")
         inp.link_limit = 100000
         self.outputs.new("General", "result")
 
-    def get_executor(self):
+    def get_executor(self) -> Dict[str, str]:
         return {
             "path": "aiida_workgraph.executors.builtin",
             "name": "GatherWorkChain",
@@ -33,14 +34,14 @@ class AiiDAToCtx(Node):
     catalog = "AiiDA"
     args = ["key", "value"]
 
-    def create_sockets(self):
+    def create_sockets(self) -> None:
         self.inputs.clear()
         self.outputs.clear()
         self.inputs.new("General", "key")
         self.inputs.new("General", "value")
         self.outputs.new("General", "result")
 
-    def get_executor(self):
+    def get_executor(self) -> Dict[str, str]:
         return {
             "path": "builtins",
             "name": "setattr",
@@ -56,13 +57,13 @@ class AiiDAFromCtx(Node):
     catalog = "AiiDA"
     args = ["key"]
 
-    def create_sockets(self):
+    def create_sockets(self) -> None:
         self.inputs.clear()
         self.outputs.clear()
         self.inputs.new("General", "key")
         self.outputs.new("General", "result")
 
-    def get_executor(self):
+    def get_executor(self) -> Dict[str, str]:
         return {
             "path": "builtins",
             "name": "getattr",
@@ -137,7 +138,7 @@ class AiiDAShell(Node):
     catalog = "AiiDA"
     kwargs = shelljob_inputs
 
-    def create_sockets(self):
+    def create_sockets(self) -> None:
         self.inputs.clear()
         self.outputs.clear()
         for inp in shelljob_inputs:
@@ -145,12 +146,8 @@ class AiiDAShell(Node):
         for out in shelljob_outputs:
             self.outputs.new("General", out)
 
-    def get_executor(self):
+    def get_executor(self) -> Dict[str, str]:
         return {
             "path": "aiida_shell.calculations.shell",
             "name": "ShellJob",
         }
-
-
-if __name__ == "__main__":
-    print()
