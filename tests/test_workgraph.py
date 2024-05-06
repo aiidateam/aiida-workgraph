@@ -2,6 +2,7 @@ from aiida_workgraph import WorkGraph, build_node
 from aiida import load_profile, orm
 import time
 import pytest
+from aiida.calculations.arithmetic.add import ArithmeticAddCalculation
 
 load_profile()
 
@@ -23,11 +24,11 @@ def test_from_dict(wg_calcjob):
     assert len(wg.links) == len(wg1.links)
 
 
-def test_new_node(wg_calcjob, arithmetic_add):
+def test_new_node(wg_calcjob):
     """Add new node."""
     wg = wg_calcjob
     n = len(wg.nodes)
-    wg.nodes.new(arithmetic_add)
+    wg.nodes.new(ArithmeticAddCalculation)
     assert len(wg.nodes) == n + 1
 
 

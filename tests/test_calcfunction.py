@@ -1,9 +1,10 @@
 import aiida
+from aiida_workgraph import WorkGraph
 
 aiida.load_profile()
 
 
-def test_run(wg_calcfunction):
+def test_run(wg_calcfunction: WorkGraph) -> None:
     """Run simple calcfunction."""
     wg = wg_calcfunction
     wg.name = "test_run_calcfunction"
@@ -14,7 +15,7 @@ def test_run(wg_calcfunction):
     assert wg.nodes["sumdiff2"].outputs["sum"].value == 9
 
 
-def test_submit(wg_calcfunction):
+def test_submit(wg_calcfunction: WorkGraph) -> None:
     """Submit simple calcfunction."""
     wg = wg_calcfunction
     wg.name = "test_submit_calcfunction"

@@ -93,13 +93,21 @@ def generate_nodes(file):
 
 # Create a workgraph
 wg = WorkGraph(name="test_aiida_shell")
-job1 = wg.nodes.new(launch_shell_job, command="pdb_fetch", arguments=["1brs"])
-job2 = wg.nodes.new(launch_shell_job, command="pdb_selchain", arguments=["-A,D {pdb}"])
-job3 = wg.nodes.new(launch_shell_job, command="pdb_delhetatm", arguments=["{pdb}"])
-job4 = wg.nodes.new(launch_shell_job, command="pdb_tidy", arguments=["{pdb}"])
-generate_nodes1 = wg.nodes.new(generate_nodes)
-generate_nodes2 = wg.nodes.new(generate_nodes)
-generate_nodes3 = wg.nodes.new(generate_nodes)
+job1 = wg.nodes.new(
+    launch_shell_job, name="job1", command="pdb_fetch", arguments=["1brs"]
+)
+job2 = wg.nodes.new(
+    launch_shell_job, name="job2", command="pdb_selchain", arguments=["-A,D {pdb}"]
+)
+job3 = wg.nodes.new(
+    launch_shell_job, name="job3", command="pdb_delhetatm", arguments=["{pdb}"]
+)
+job4 = wg.nodes.new(
+    launch_shell_job, name="job4", command="pdb_tidy", arguments=["{pdb}"]
+)
+generate_nodes1 = wg.nodes.new(generate_nodes, name="generate_nodes1")
+generate_nodes2 = wg.nodes.new(generate_nodes, name="generate_nodes2")
+generate_nodes3 = wg.nodes.new(generate_nodes, name="generate_nodes3")
 wg.links.new(job1.outputs["stdout"], generate_nodes1.inputs[0])
 wg.links.new(generate_nodes1.outputs[0], job2.inputs["nodes"])
 wg.links.new(job2.outputs["stdout"], generate_nodes2.inputs[0])

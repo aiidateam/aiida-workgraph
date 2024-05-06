@@ -1,9 +1,10 @@
 import aiida
+from typing import Callable
 
 aiida.load_profile()
 
 
-def test_node_wait(decorated_add):
+def test_node_wait(decorated_add: Callable) -> None:
     """Run simple calcfunction."""
     from aiida_workgraph import WorkGraph
 

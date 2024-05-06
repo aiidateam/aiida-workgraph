@@ -1,11 +1,12 @@
 import aiida
+from aiida_workgraph import WorkGraph
+from typing import Callable
 
 aiida.load_profile()
 
 
-def test_workgraph_ctx(decorated_add):
+def test_workgraph_ctx(decorated_add: Callable) -> None:
     """Set/get data to/from context."""
-    from aiida_workgraph import WorkGraph
     from aiida.orm import Float
 
     wg = WorkGraph(name="test_workgraph_ctx")
@@ -15,9 +16,8 @@ def test_workgraph_ctx(decorated_add):
     assert add1.outputs["result"].value == 5
 
 
-def test_node_to_ctx(decorated_add):
+def test_node_to_ctx(decorated_add: Callable) -> None:
     """Set/get data to/from context."""
-    from aiida_workgraph import WorkGraph
     from aiida.orm import Float
 
     wg = WorkGraph(name="test_node_to_ctx")

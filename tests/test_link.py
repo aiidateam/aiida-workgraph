@@ -3,7 +3,7 @@ import aiida
 aiida.load_profile()
 
 
-def test_multiply_link():
+def test_multiply_link() -> None:
     """Test multiply link."""
 
     from aiida_workgraph import node, WorkGraph
