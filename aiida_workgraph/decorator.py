@@ -278,6 +278,7 @@ class NodeDecoratorCollection:
     """Collection of node decorators."""
 
     # decorator with arguments indentifier, args, kwargs, properties, inputs, outputs, executor
+    @staticmethod
     def decorator_node(
         identifier: Optional[str] = None,
         node_type: str = "Normal",
@@ -382,9 +383,13 @@ class NodeDecoratorCollection:
             # First, apply the calcfunction decorator
             calcfunc_decorated = calcfunction(func)
             # Then, apply node decorator
-            node_decorated = node(**kwargs)(calcfunc_decorated)
-
-            return node_decorated
+            node_decorated = build_node_from_callable(
+                calcfunc_decorated, outputs=kwargs.get("outputs", [])
+            )
+            identifier = kwargs.get("identifier", None)
+            func.identifier = identifier if identifier else func.__name__
+            func.node = node_decorated
+            return func
 
         return decorator
 
@@ -393,9 +398,14 @@ class NodeDecoratorCollection:
         def decorator(func):
             # First, apply the workfunction decorator
             calcfunc_decorated = workfunction(func)
-            node_decorated = node(**kwargs)(calcfunc_decorated)
+            node_decorated = build_node_from_callable(
+                calcfunc_decorated, outputs=kwargs.get("outputs", [])
+            )
+            identifier = kwargs.get("identifier", None)
+            func.identifier = identifier if identifier else func.__name__
+            func.node = node_decorated
 
-            return node_decorated
+            return func
 
         return decorator
 

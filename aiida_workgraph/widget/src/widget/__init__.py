@@ -40,6 +40,9 @@ class NodeGraphWidget(anywidget.AnyWidget):
     def from_node(self, node: Any) -> None:
         ndata = node.to_dict()
         ndata.pop("properties", None)
+        ndata.pop("executor", None)
+        ndata.pop("node_class", None)
+        ndata.pop("process", None)
         ndata["label"] = ndata["metadata"]["identifier"]
         wgdata = {"nodes": {node.name: ndata}, "links": []}
         self.value = wgdata
