@@ -36,7 +36,8 @@ jobs:
 
         strategy:
             matrix:
-                python-version: ['3.9', '3.10', '3.11']
+                python-version: ['3.9', '3.11']
+                aiida-core-version: ['2.4', '2.5']
 
         services:
             postgres:
@@ -68,6 +69,9 @@ jobs:
             uses: actions/setup-python@v2
             with:
                 python-version: ${{ matrix.python-version }}
+
+        -   name: Install aiida-core
+            run: pip install aiida-core==${{ matrix.aiida-core-version }}
 
         -   name: Install system dependencies
             run: sudo apt update && sudo apt install --no-install-recommends libfftw3-dev quantum-espresso

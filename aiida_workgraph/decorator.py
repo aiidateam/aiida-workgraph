@@ -147,10 +147,14 @@ def build_node_from_callable(
 
 
 def build_node_from_function(
-    executor: Callable, outputs: Optional[List[str]] = None
+    executor: Callable,
+    inputs: Optional[List[str]] = None,
+    outputs: Optional[List[str]] = None,
 ) -> Node:
     """Build node from function."""
-    return NodeDecoratorCollection.decorator_node(outputs=outputs)(executor).node
+    return NodeDecoratorCollection.decorator_node(inputs=inputs, outputs=outputs)(
+        executor
+    ).node
 
 
 def build_node_from_AiiDA(
