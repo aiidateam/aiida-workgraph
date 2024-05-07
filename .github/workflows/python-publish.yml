@@ -36,9 +36,12 @@ jobs:
         npm install
         npm run build
     - name: Build web frontend package
+      working-directory: aiida_workgraph/web/frontend/
       run:
         npm install
         npm run build
+    - name: Build package
+      run:
         python -m build
     - name: Publish package
       uses: pypa/gh-action-pypi-publish@27b31702a0e7fc50959f5ad993c78deac1bdfc29
