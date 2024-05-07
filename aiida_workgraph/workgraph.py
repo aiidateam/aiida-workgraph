@@ -98,8 +98,7 @@ class WorkGraph(node_graph.NodeGraph):
         Args:
             wait (bool): Wait for the process to finish.
             timeout (int): The maximum time in seconds to wait for the process to finish. Defaults to 60.
-            restart (bool): Restart the process, it will check the modified nodes and reset them,
-                and then only re-run the modified nodes.
+            restart (bool): Restart the process, and reset the modified nodes, then only re-run the modified nodes.
             new (bool): Submit a new process.
         """
         from aiida.manage import get_manager
