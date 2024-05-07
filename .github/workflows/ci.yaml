@@ -130,5 +130,4 @@ jobs:
             env:
                 AIIDA_WARN_v3: 1
             run: |
-                verdi daemon restart --reset
-                pytest -sv tests/test_shell.py
+                pytest -sv tests

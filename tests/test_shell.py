@@ -107,8 +107,10 @@ def test_shell_workflow():
     wg.links.new(nodes2.outputs["result"], job3.inputs["nodes"])
     wg.links.new(job3.outputs["stdout"], nodes3.inputs["file"])
     wg.links.new(nodes3.outputs[0], job4.inputs["nodes"])
-    wg.submit(wait=True, timeout=200)
-    # wg.run()
+    # there is a bug in aiida-shell, the following line will raise an error
+    # https://github.com/sphuber/aiida-shell/issues/91
+    # wg.submit(wait=True, timeout=200)
+    wg.run()
     print("state: ", wg.state)
     os.system(f"verdi process report {wg.pk}")
     assert job4.outputs["result"].value.value == 20
