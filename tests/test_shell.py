@@ -29,6 +29,7 @@ def test_shell_workflow():
     from aiida_shell.launch import prepare_code
     from aiida.orm import Int
     from aiida_shell.data import PickledData
+    import os
 
     echo_code = prepare_code("echo")
     bc_code = prepare_code("bc")
@@ -106,6 +107,8 @@ def test_shell_workflow():
     wg.links.new(nodes2.outputs["result"], job3.inputs["nodes"])
     wg.links.new(job3.outputs["stdout"], nodes3.inputs["file"])
     wg.links.new(nodes3.outputs[0], job4.inputs["nodes"])
-    wg.submit(wait=True, timeout=100)
+    wg.submit(wait=True, timeout=200)
     # wg.run()
+    print("state: ", wg.state)
+    os.system(f"verdi process report {wg.pk}")
     assert job4.outputs["result"].value.value == 20

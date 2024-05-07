@@ -731,6 +731,7 @@ class WorkGraph(Process, metaclass=Protect):
                         results, process = run_get_node(
                             executor, **kwargs, **var_kwargs
                         )
+                    process.label = name
                     # only one output
                     if isinstance(results, orm.Data):
                         results = {node["outputs"][0]["name"]: results}
@@ -760,6 +761,7 @@ class WorkGraph(Process, metaclass=Protect):
                 kwargs["metadata"].update({"call_link_label": name})
                 # transfer the args to kwargs
                 process = self.submit(executor, **kwargs)
+                process.label = name
                 node["process"] = process
                 self.ctx.nodes[name]["state"] = "RUNNING"
                 self.to_context(**{name: process})
