@@ -15,9 +15,29 @@ def test_args() -> None:
     #
     n = test.node()
     assert n.args == ["a"]
-    assert n.kwargs == ["b"]
+    assert n.kwargs == [
+        "metadata",
+        "metadata.store_provenance",
+        "metadata.description",
+        "metadata.label",
+        "metadata.call_link_label",
+        "b",
+    ]
     assert n.var_args is None
     assert n.var_kwargs == "c"
+    assert n.outputs.keys() == ["result", "_outputs", "_wait"]
+
+
+def test_inputs_outputs_workchain() -> None:
+    from aiida_quantumespresso.workflows.pdos import PdosWorkChain
+
+    wg = WorkGraph()
+    pdos = wg.nodes.new(PdosWorkChain)
+    assert "scf" in pdos.inputs.keys()
+    assert "scf.pw" in pdos.inputs.keys()
+    assert "scf.pw.metadata" in pdos.inputs.keys()
+    assert "dos" in pdos.outputs.keys()
+    assert "dos.remote_folder" in pdos.outputs.keys()
 
 
 def test_decorator_calcfunction(decorated_add: Callable) -> None:
