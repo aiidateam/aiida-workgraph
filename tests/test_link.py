@@ -3,7 +3,7 @@ import aiida
 aiida.load_profile()
 
 
-def test_multiply_link():
+def test_multiply_link() -> None:
     """Test multiply link."""
 
     from aiida_workgraph import node, WorkGraph
@@ -25,6 +25,6 @@ def test_multiply_link():
     wg.links.new(float1.outputs[0], gather1.inputs[0])
     wg.links.new(float2.outputs[0], gather1.inputs[0])
     wg.links.new(float3.outputs[0], gather1.inputs[0])
-    wg.links.new(gather1.outputs[0], sum1.inputs[0])
+    wg.links.new(gather1.outputs["result"], sum1.inputs["datas"])
     wg.submit(wait=True)
     assert sum1.node.outputs.result.value == 6

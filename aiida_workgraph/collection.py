@@ -4,10 +4,17 @@ from node_graph.collection import (
     InputSocketCollection,
     OutputSocketCollection,
 )
+from typing import Any, Callable, Optional, Union
 
 
 class WorkGraphNodeCollection(NodeCollection):
-    def new(self, identifier, name=None, uuid=None, **kwargs):
+    def new(
+        self,
+        identifier: Union[Callable, str],
+        name: Optional[str] = None,
+        uuid: Optional[str] = None,
+        **kwargs: Any
+    ) -> Any:
         from aiida_workgraph.decorator import build_node_from_callable
 
         # build the node on the fly if the identifier is a callable
@@ -18,7 +25,12 @@ class WorkGraphNodeCollection(NodeCollection):
 
 
 class WorkGraphPropertyCollection(PropertyCollection):
-    def new(self, identifier, name=None, **kwargs):
+    def new(
+        self,
+        identifier: Union[Callable, str],
+        name: Optional[str] = None,
+        **kwargs: Any
+    ) -> Any:
         from aiida_workgraph.property import build_property_from_AiiDA
 
         # build the property on the fly if the identifier is a callable
@@ -29,7 +41,12 @@ class WorkGraphPropertyCollection(PropertyCollection):
 
 
 class WorkGraphInputSocketCollection(InputSocketCollection):
-    def new(self, identifier, name=None, **kwargs):
+    def new(
+        self,
+        identifier: Union[Callable, str],
+        name: Optional[str] = None,
+        **kwargs: Any
+    ) -> Any:
         from aiida_workgraph.socket import build_socket_from_AiiDA
 
         # build the socket on the fly if the identifier is a callable
@@ -40,7 +57,12 @@ class WorkGraphInputSocketCollection(InputSocketCollection):
 
 
 class WorkGraphOutputSocketCollection(OutputSocketCollection):
-    def new(self, identifier, name=None, **kwargs):
+    def new(
+        self,
+        identifier: Union[Callable, str],
+        name: Optional[str] = None,
+        **kwargs: Any
+    ) -> Any:
         from aiida_workgraph.socket import build_socket_from_AiiDA
 
         # build the socket on the fly if the identifier is a callable

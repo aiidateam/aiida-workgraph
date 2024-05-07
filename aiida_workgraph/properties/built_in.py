@@ -1,3 +1,4 @@
+from typing import Dict, List, Union, Callable
 from node_graph.property import NodeProperty
 from node_graph.serializer import SerializeJson, SerializePickle
 from node_graph.properties.builtin import (
@@ -18,7 +19,13 @@ class GeneralProperty(NodeProperty, SerializePickle):
     identifier: str = "General"
     data_type = "General"
 
-    def __init__(self, name, description="", default=None, update=None) -> None:
+    def __init__(
+        self,
+        name: str,
+        description: str = "",
+        default: Union[int, str, None] = None,
+        update: Callable = None,
+    ) -> None:
         super().__init__(name, description, default, update)
 
 
@@ -28,10 +35,16 @@ class AiiDAIntProperty(NodeProperty, SerializeJson):
     identifier: str = "AiiDAInt"
     data_type = "Int"
 
-    def __init__(self, name, description="", default=0, update=None) -> None:
+    def __init__(
+        self,
+        name: str,
+        description: str = "",
+        default: Union[int, None] = 0,
+        update: Callable = None,
+    ) -> None:
         super().__init__(name, description, default, update)
 
-    def set_value(self, value):
+    def set_value(self, value: Union[int, orm.Int, str]) -> None:
         # run the callback function
         if isinstance(value, int):
             self._value = orm.Int(value)
@@ -57,10 +70,16 @@ class AiiDAFloatProperty(NodeProperty, SerializeJson):
     identifier: str = "AiiDAFloat"
     data_type = "Float"
 
-    def __init__(self, name, description="", default=0.0, update=None) -> None:
+    def __init__(
+        self,
+        name: str,
+        description: str = "",
+        default: Union[int, None] = 0.0,
+        update: Callable = None,
+    ) -> None:
         super().__init__(name, description, default, update)
 
-    def set_value(self, value):
+    def set_value(self, value: Union[float, orm.Float, int, orm.Int, str]) -> None:
         # run the callback function
         if isinstance(value, (int, float)):
             self._value = orm.Float(value)
@@ -86,10 +105,16 @@ class AiiDABoolProperty(NodeProperty, SerializeJson):
     identifier: str = "AiiDABool"
     data_type = "Bool"
 
-    def __init__(self, name, description="", default=True, update=None) -> None:
+    def __init__(
+        self,
+        name: str,
+        description: str = "",
+        default: Union[bool, None] = True,
+        update: Callable = None,
+    ) -> None:
         super().__init__(name, description, default, update)
 
-    def set_value(self, value):
+    def set_value(self, value: Union[bool, orm.Bool, int, str]) -> None:
         # run the callback function
         if isinstance(value, (bool, int)):
             self._value = orm.Bool(value)
@@ -115,10 +140,16 @@ class AiiDAStringProperty(NodeProperty, SerializeJson):
     identifier: str = "AiiDAString"
     data_type = "String"
 
-    def __init__(self, name, description="", default=None, update=None) -> None:
+    def __init__(
+        self,
+        name: str,
+        description: str = "",
+        default: Union[str, orm.Str, None] = True,
+        update: Callable = None,
+    ) -> None:
         super().__init__(name, description, default, update)
 
-    def set_value(self, value):
+    def set_value(self, value: Union[str, orm.Str]) -> None:
         if isinstance(value, str):
             self._value = orm.Str(value)
             if self.update is not None:
@@ -143,10 +174,16 @@ class AiiDADictProperty(NodeProperty, SerializeJson):
     identifier: str = "AiiDADict"
     data_type = "Dict"
 
-    def __init__(self, name, description="", default=None, update=None) -> None:
+    def __init__(
+        self,
+        name: str,
+        description: str = "",
+        default: Union[dict, orm.Dict, None] = True,
+        update: Callable = None,
+    ) -> None:
         super().__init__(name, description, default, update)
 
-    def set_value(self, value):
+    def set_value(self, value: Union[Dict, orm.Dict, str]) -> None:
         if isinstance(value, dict):
             self._value = orm.Dict(value)
             if self.update is not None:
@@ -172,11 +209,16 @@ class AiiDAIntVectorProperty(VectorProperty):
     data_type = "AiiDAIntVector"
 
     def __init__(
-        self, name, description="", size=3, default=[0, 0, 0], update=None
+        self,
+        name: str,
+        description: str = "",
+        size: int = 3,
+        default: List[int] = [0, 0, 0],
+        update: Callable = None,
     ) -> None:
         super().__init__(name, description, size, default, update)
 
-    def set_value(self, value):
+    def set_value(self, value: List[int]) -> None:
         # run the callback function
         if len(value) == self.size:
             for i in range(self.size):
@@ -201,11 +243,16 @@ class AiiDAFloatVectorProperty(VectorProperty):
     data_type = "AiiDAFloatVector"
 
     def __init__(
-        self, name, description="", size=3, default=[0, 0, 0], update=None
+        self,
+        name: str,
+        description: str = "",
+        size: int = 3,
+        default: List[float] = [0.0, 0.0, 0.0],
+        update: Callable = None,
     ) -> None:
         super().__init__(name, description, size, default, update)
 
-    def set_value(self, value):
+    def set_value(self, value: List[Union[int, float]]) -> None:
         # run the callback function
         if len(value) == self.size:
             for i in range(self.size):
@@ -236,11 +283,16 @@ class BoolVectorProperty(VectorProperty):
     data_type = "BoolVector"
 
     def __init__(
-        self, name, description="", size=3, default=[0, 0, 0], update=None
+        self,
+        name: str,
+        description: str = "",
+        size: int = 3,
+        default: List[bool] = [False, False, False],
+        update: Callable = None,
     ) -> None:
         super().__init__(name, description, size, default, update)
 
-    def set_value(self, value):
+    def set_value(self, value: List[Union[bool, int]]) -> None:
         # run the callback function
         if len(value) == self.size:
             for i in range(self.size):

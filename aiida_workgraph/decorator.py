@@ -1,4 +1,4 @@
-from typing import Callable
+from typing import Any, Callable, Dict, List, Optional, Union, Tuple
 from aiida_workgraph.utils import get_executor
 from aiida.engine import calcfunction, workfunction, CalcJob, WorkChain
 from aiida.orm.nodes.process.calculation.calcfunction import CalcFunctionNode
@@ -6,22 +6,32 @@ from aiida.orm.nodes.process.workflow.workfunction import WorkFunctionNode
 from aiida.engine.processes.ports import PortNamespace
 from node_graph.decorator import create_node
 import cloudpickle as pickle
+from aiida_workgraph.node import Node
 
 
-def add_input_recursive(inputs, port, args, kwargs, prefix=None, required=True):
+def add_input_recursive(
+    inputs: List[List[Union[str, Dict[str, Any]]]],
+    port: PortNamespace,
+    args: List,
+    kwargs: List,
+    prefix: Optional[str] = None,
+    required: bool = True,
+) -> List[List[Union[str, Dict[str, Any]]]]:
     """Add input recursively."""
     if prefix is None:
         port_name = port.name
     else:
         port_name = f"{prefix}.{port.name}"
     required = port.required and required
+    input_names = [input[1] for input in inputs]
     if isinstance(port, PortNamespace):
         # TODO the default value is {} could cause problem, because the address of the dict is the same,
         # so if you change the value of one port, the value of all the ports of other nodes will be changed
         # consider to use None as default value
-        inputs.append(
-            ["General", port_name, {"property": ["General", {"default": {}}]}]
-        )
+        if port_name not in input_names:
+            inputs.append(
+                ["General", port_name, {"property": ["General", {"default": {}}]}]
+            )
         if required:
             args.append(port_name)
         else:
@@ -31,7 +41,8 @@ def add_input_recursive(inputs, port, args, kwargs, prefix=None, required=True):
                 inputs, value, args, kwargs, prefix=port_name, required=required
             )
     else:
-        inputs.append(["General", port_name])
+        if port_name not in input_names:
+            inputs.append(["General", port_name])
         if required:
             args.append(port_name)
         else:
@@ -39,7 +50,38 @@ def add_input_recursive(inputs, port, args, kwargs, prefix=None, required=True):
     return inputs
 
 
-def build_node(executor, outputs=None):
+def add_output_recursive(
+    outputs: List[List[Union[str, Dict[str, Any]]]],
+    port: PortNamespace,
+    prefix: Optional[str] = None,
+    required: bool = True,
+) -> List[List[Union[str, Dict[str, Any]]]]:
+    """Add input recursively."""
+    if prefix is None:
+        port_name = port.name
+    else:
+        port_name = f"{prefix}.{port.name}"
+    required = port.required and required
+    output_names = [output[1] for output in outputs]
+    if isinstance(port, PortNamespace):
+        # TODO the default value is {} could cause problem, because the address of the dict is the same,
+        # so if you change the value of one port, the value of all the ports of other nodes will be changed
+        # consider to use None as default value
+        if port_name not in output_names:
+            outputs.append(["General", port_name])
+        for value in port.values():
+            add_output_recursive(outputs, value, prefix=port_name, required=required)
+    else:
+        if port_name not in output_names:
+            outputs.append(["General", port_name])
+    return outputs
+
+
+def build_node(
+    executor: Union[Callable, str],
+    inputs: Optional[List[str]] = None,
+    outputs: Optional[List[str]] = None,
+) -> Node:
     """Build node from executor."""
     from aiida_workgraph.workgraph import WorkGraph
 
@@ -52,10 +94,14 @@ def build_node(executor, outputs=None):
         ) = executor.rsplit(".", 1)
         executor, _ = get_executor({"path": path, "name": executor_name})
     if callable(executor):
-        return build_node_from_callable(executor, outputs=outputs)
+        return build_node_from_callable(executor, inputs=inputs, outputs=outputs)
 
 
-def build_node_from_callable(executor, outputs=None):
+def build_node_from_callable(
+    executor: Callable,
+    inputs: Optional[List[str]] = None,
+    outputs: Optional[List[str]] = None,
+) -> Node:
     """Build node from a callable object.
     First, check if the executor is already a node.
     If not, check if it is a function or a class.
@@ -83,35 +129,45 @@ def build_node_from_callable(executor, outputs=None):
             elif executor.node_class is WorkFunctionNode:
                 ndata["node_type"] = "workfunction"
             ndata["executor"] = executor
-            return build_node_from_AiiDA(ndata, outputs=outputs)
+            return build_node_from_AiiDA(ndata, inputs=inputs, outputs=outputs)
         else:
             ndata["node_type"] = "normal"
             ndata["executor"] = executor
-            return build_node_from_function(executor, outputs=outputs)
+            return build_node_from_function(executor, inputs=inputs, outputs=outputs)
     else:
         if issubclass(executor, CalcJob):
             ndata["node_type"] = "calcjob"
             ndata["executor"] = executor
-            return build_node_from_AiiDA(ndata)
+            return build_node_from_AiiDA(ndata, inputs=inputs, outputs=outputs)
         elif issubclass(executor, WorkChain):
             ndata["node_type"] = "workchain"
             ndata["executor"] = executor
-            return build_node_from_AiiDA(ndata)
+            return build_node_from_AiiDA(ndata, inputs=inputs, outputs=outputs)
     raise ValueError("The executor is not supported.")
 
 
-def build_node_from_function(executor, outputs=None):
+def build_node_from_function(
+    executor: Callable,
+    inputs: Optional[List[str]] = None,
+    outputs: Optional[List[str]] = None,
+) -> Node:
     """Build node from function."""
-    return NodeDecoratorCollection.decorator_node(outputs=outputs)(executor).node
+    return NodeDecoratorCollection.decorator_node(inputs=inputs, outputs=outputs)(
+        executor
+    ).node
 
 
-def build_node_from_AiiDA(ndata, outputs=None):
+def build_node_from_AiiDA(
+    ndata: Dict[str, Any],
+    inputs: Optional[List[str]] = None,
+    outputs: Optional[List[str]] = None,
+) -> Node:
     """Register a node from a AiiDA component.
     For example: CalcJob, WorkChain, CalcFunction, WorkFunction."""
     from aiida_workgraph.node import Node
 
     # print(executor)
-    inputs = []
+    inputs = [] if inputs is None else inputs
     outputs = [] if outputs is None else outputs
     executor = ndata["executor"]
     spec = executor.spec()
@@ -119,17 +175,15 @@ def build_node_from_AiiDA(ndata, outputs=None):
     kwargs = []
     for _key, port in spec.inputs.ports.items():
         add_input_recursive(inputs, port, args, kwargs, required=port.required)
-        if port.required:
-            args.append(port.name)
-        else:
-            kwargs.append(port.name)
     for _key, port in spec.outputs.ports.items():
-        outputs.append(["General", port.name])
+        add_output_recursive(outputs, port, required=port.required)
     if spec.inputs.dynamic:
-        ndata["var_kwargs"] = spec.inputs.dynamic
-        inputs.append(
-            ["General", spec.inputs.dynamic, {"property": ["General", {"default": {}}]}]
+        name = (
+            executor.process_class._var_keyword
+            or executor.process_class._var_positional
         )
+        ndata["var_kwargs"] = name
+        inputs.append(["General", name, {"property": ["General", {"default": {}}]}])
     if ndata["node_type"] in ["calcfunction", "workfunction"]:
         outputs = [["General", "result"]] if not outputs else outputs
     # print("kwargs: ", kwargs)
@@ -156,7 +210,7 @@ def build_node_from_AiiDA(ndata, outputs=None):
     return node
 
 
-def build_node_from_workgraph(wg):
+def build_node_from_workgraph(wg: any) -> Node:
     """Build node from workgraph."""
     from aiida_workgraph.node import Node
 
@@ -206,7 +260,7 @@ def build_node_from_workgraph(wg):
     return node
 
 
-def serialize_function(func):
+def serialize_function(func: Callable) -> Dict[str, Any]:
     """Serialize a function for storage or transmission."""
     import cloudpickle as pickle
 
@@ -220,13 +274,13 @@ def serialize_function(func):
 def generate_ndata(
     func: Callable,
     identifier: str,
-    inputs: list,
-    outputs: list,
-    properties: list,
+    inputs: List[Tuple[str, str]],
+    outputs: List[Tuple[str, str]],
+    properties: List[Tuple[str, str]],
     catalog: str,
     node_type: str,
-    additional_data: dict = None,
-):
+    additional_data: Optional[Dict[str, Any]] = None,
+) -> Dict[str, Any]:
     """Generate node data for creating a node."""
     from node_graph.decorator import generate_input_sockets
     from aiida_workgraph.node import Node
@@ -264,13 +318,13 @@ class NodeDecoratorCollection:
     # decorator with arguments indentifier, args, kwargs, properties, inputs, outputs, executor
     @staticmethod
     def decorator_node(
-        identifier=None,
-        node_type="Normal",
-        properties=None,
-        inputs=None,
-        outputs=None,
-        catalog="Others",
-    ):
+        identifier: Optional[str] = None,
+        node_type: str = "Normal",
+        properties: Optional[List[Tuple[str, str]]] = None,
+        inputs: Optional[List[Tuple[str, str]]] = None,
+        outputs: Optional[List[Tuple[str, str]]] = None,
+        catalog: str = "Others",
+    ) -> Callable:
         """Generate a decorator that register a function as a node.
 
         Attributes:
@@ -315,14 +369,13 @@ class NodeDecoratorCollection:
     # decorator with arguments indentifier, args, kwargs, properties, inputs, outputs, executor
     @staticmethod
     def decorator_graph_builder(
-        identifier=None,
-        properties=None,
-        inputs=None,
-        outputs=None,
-        catalog="Others",
-    ):
-        """Generate a decorator that register a graph builder as a node.
-
+        identifier: Optional[str] = None,
+        properties: Optional[List[Tuple[str, str]]] = None,
+        inputs: Optional[List[Tuple[str, str]]] = None,
+        outputs: Optional[List[Tuple[str, str]]] = None,
+        catalog: str = "Others",
+    ) -> Callable:
+        """Generate a decorator that register a node group as a node.
         Attributes:
             indentifier (str): node identifier
             catalog (str): node catalog
@@ -363,25 +416,38 @@ class NodeDecoratorCollection:
         return decorator
 
     @staticmethod
-    def calcfunction(**kwargs):
+    def calcfunction(**kwargs: Any) -> Callable:
         def decorator(func):
             # First, apply the calcfunction decorator
             calcfunc_decorated = calcfunction(func)
             # Then, apply node decorator
-            node_decorated = node(**kwargs)(calcfunc_decorated)
-
-            return node_decorated
+            node_decorated = build_node_from_callable(
+                calcfunc_decorated,
+                inputs=kwargs.get("inputs", []),
+                outputs=kwargs.get("outputs", []),
+            )
+            identifier = kwargs.get("identifier", None)
+            func.identifier = identifier if identifier else func.__name__
+            func.node = node_decorated
+            return func
 
         return decorator
 
     @staticmethod
-    def workfunction(**kwargs):
+    def workfunction(**kwargs: Any) -> Callable:
         def decorator(func):
             # First, apply the workfunction decorator
             calcfunc_decorated = workfunction(func)
-            node_decorated = node(**kwargs)(calcfunc_decorated)
+            node_decorated = build_node_from_callable(
+                calcfunc_decorated,
+                inputs=kwargs.get("inputs", []),
+                outputs=kwargs.get("outputs", []),
+            )
+            identifier = kwargs.get("identifier", None)
+            func.identifier = identifier if identifier else func.__name__
+            func.node = node_decorated
 
-            return node_decorated
+            return func
 
         return decorator
 

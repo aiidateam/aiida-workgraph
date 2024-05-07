@@ -1,4 +1,5 @@
 import aiida
+from aiida.workflows.arithmetic.multiply_add import MultiplyAddWorkChain
 
 aiida.load_profile()
 
@@ -12,15 +13,16 @@ def test_workchain(wg_workchain):
     assert wg.nodes["multiply_add2"].node.outputs.result == 17
 
 
-def test_build_workchain_inputs_outputs(build_workchain):
+def test_build_workchain_inputs_outputs():
     """Submit simple calcjob."""
+    from aiida_workgraph import build_node
 
-    node = build_workchain()
+    node = build_node(MultiplyAddWorkChain)()
     assert len(node.inputs) == 10
     assert len(node.outputs) == 3
 
 
-def test_build_workchain(build_workchain):
+def test_build_workchain():
     """Submit simple calcjob."""
     from aiida.orm import load_code, Int
     from aiida_workgraph import WorkGraph
@@ -29,14 +31,14 @@ def test_build_workchain(build_workchain):
     wg = WorkGraph(name="test_debug_math")
     code1 = wg.nodes.new("AiiDACode", "code1", pk=code.pk)
     multiply_add1 = wg.nodes.new(
-        build_workchain,
+        MultiplyAddWorkChain,
         "multiply_add1",
         x=Int(4).store(),
         y=Int(2).store(),
         z=Int(3).store(),
     )
     multiply_add2 = wg.nodes.new(
-        build_workchain,
+        MultiplyAddWorkChain,
         "multiply_add2",
         x=Int(2).store(),
         y=Int(3).store(),

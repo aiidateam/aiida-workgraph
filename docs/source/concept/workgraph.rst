@@ -35,7 +35,7 @@ Create and use `node`.
 
 .. code-block:: python
 
-    wg.links.new(add1.outputs[0], add2.inputs[0])
+    wg.links.new(add1.outputs["result"], add2.inputs["x"])
 
 - Submit the workgraph:
 

@@ -1,9 +1,10 @@
+from typing import Callable
 import aiida
 
 aiida.load_profile()
 
 
-def test_failed_node(decorated_sqrt, decorated_add):
+def test_failed_node(decorated_sqrt: Callable, decorated_add: Callable) -> None:
     """Submit simple calcfunction."""
     from aiida_workgraph import WorkGraph
     from aiida.orm import Float

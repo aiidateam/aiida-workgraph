@@ -1,3 +1,4 @@
+from typing import Dict
 from aiida_workgraph import node
 from aiida.orm import StructureData, UpfData
 
@@ -6,7 +7,9 @@ from aiida.orm import StructureData, UpfData
     inputs=[["String", "pseudo_family"], [StructureData, "structure"]],
     outputs=[[UpfData, "Pseudo"]],
 )
-def get_pseudo_from_structure(pseudo_family, structure):
+def get_pseudo_from_structure(
+    pseudo_family: str, structure: StructureData
+) -> Dict[str, UpfData]:
     """for input_namespace"""
     from aiida.orm import Group, QueryBuilder
 
@@ -20,7 +23,3 @@ def get_pseudo_from_structure(pseudo_family, structure):
             if ele == n.element:
                 pseudos[ele] = n
     return {"Pseudo": pseudos}
-
-
-if __name__ == "__main__":
-    pass

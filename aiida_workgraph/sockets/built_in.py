@@ -1,3 +1,4 @@
+from typing import Optional, Any
 from aiida_workgraph.socket import NodeSocket
 from node_graph.serializer import SerializeJson, SerializePickle
 from node_graph.sockets.builtin import (
@@ -12,7 +13,13 @@ class SocketGeneral(NodeSocket, SerializePickle):
     identifier: str = "General"
 
     def __init__(
-        self, name, node=None, type="INPUT", index=0, uuid=None, **kwargs
+        self,
+        name: str,
+        node: Optional[Any] = None,
+        type: str = "INPUT",
+        index: int = 0,
+        uuid: Optional[str] = None,
+        **kwargs: Any
     ) -> None:
         super().__init__(name, node, type, index, uuid=uuid)
         self.add_property("General", name, **kwargs)
@@ -24,7 +31,13 @@ class SocketAiiDAFloat(NodeSocket, SerializeJson):
     identifier: str = "AiiDAFloat"
 
     def __init__(
-        self, name, node=None, type="INPUT", index=0, uuid=None, **kwargs
+        self,
+        name: str,
+        node: Optional[Any] = None,
+        type: str = "INPUT",
+        index: int = 0,
+        uuid: Optional[str] = None,
+        **kwargs: Any
     ) -> None:
         super().__init__(name, node, type, index, uuid=uuid)
         self.add_property("AiiDAFloat", name, **kwargs)
@@ -36,7 +49,13 @@ class SocketAiiDAInt(NodeSocket, SerializeJson):
     identifier: str = "AiiDAInt"
 
     def __init__(
-        self, name, node=None, type="INPUT", index=0, uuid=None, **kwargs
+        self,
+        name: str,
+        node: Optional[Any] = None,
+        type: str = "INPUT",
+        index: int = 0,
+        uuid: Optional[str] = None,
+        **kwargs: Any
     ) -> None:
         super().__init__(name, node, type, index, uuid=uuid)
         self.add_property("AiiDAInt", name, **kwargs)
@@ -48,7 +67,13 @@ class SocketAiiDAString(NodeSocket, SerializeJson):
     identifier: str = "AiiDAString"
 
     def __init__(
-        self, name, node=None, type="INPUT", index=0, uuid=None, **kwargs
+        self,
+        name: str,
+        node: Optional[Any] = None,
+        type: str = "INPUT",
+        index: int = 0,
+        uuid: Optional[str] = None,
+        **kwargs: Any
     ) -> None:
         super().__init__(name, node, type, index, uuid=uuid)
         self.add_property("AiiDAString", name, **kwargs)
@@ -60,7 +85,13 @@ class SocketAiiDABool(NodeSocket, SerializeJson):
     identifier: str = "AiiDABool"
 
     def __init__(
-        self, name, node=None, type="INPUT", index=0, uuid=None, **kwargs
+        self,
+        name: str,
+        node: Optional[Any] = None,
+        type: str = "INPUT",
+        index: int = 0,
+        uuid: Optional[str] = None,
+        **kwargs: Any
     ) -> None:
         super().__init__(name, node, type, index, uuid=uuid)
         self.add_property("AiiDABool", name, **kwargs)
@@ -72,7 +103,13 @@ class SocketAiiDAIntVector(NodeSocket, SerializeJson):
     identifier: str = "AiiDAIntVector"
 
     def __init__(
-        self, name, node=None, type="INPUT", index=0, uuid=None, **kwargs
+        self,
+        name: str,
+        node: Optional[Any] = None,
+        type: str = "INPUT",
+        index: int = 0,
+        uuid: Optional[str] = None,
+        **kwargs: Any
     ) -> None:
         super().__init__(name, node, type, index, uuid=uuid)
         self.add_property("AiiDAIntVector", name, **kwargs)
@@ -84,7 +121,13 @@ class SocketAiiDAFloatVector(NodeSocket, SerializeJson):
     identifier: str = "FloatVector"
 
     def __init__(
-        self, name, node=None, type="INPUT", index=0, uuid=None, **kwargs
+        self,
+        name: str,
+        node: Optional[Any] = None,
+        type: str = "INPUT",
+        index: int = 0,
+        uuid: Optional[str] = None,
+        **kwargs: Any
     ) -> None:
         super().__init__(name, node, type, index, uuid=uuid)
         self.add_property("FloatVector", name, **kwargs)

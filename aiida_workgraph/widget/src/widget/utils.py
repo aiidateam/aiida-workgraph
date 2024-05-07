@@ -1,4 +1,7 @@
-def wait_to_link(wgdata):
+from typing import Dict, Any
+
+
+def wait_to_link(wgdata: Dict[str, Any]) -> None:
     """Convert wait attribute to link."""
     for name, node in wgdata["nodes"].items():
         for wait_node in node["wait"]:
@@ -13,7 +16,7 @@ def wait_to_link(wgdata):
                 )
 
 
-def clean_hanging_links(wgdata):
+def clean_hanging_links(wgdata: Dict[str, Any]) -> None:
     """Clean hanging links in the workgraph."""
     for link in wgdata["links"][:]:  # Iterate over a shallow copy of the list
         if (

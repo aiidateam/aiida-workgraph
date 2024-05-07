@@ -1,4 +1,7 @@
-def node_creation_hook(self, node):
+from typing import Any
+
+
+def node_creation_hook(self, node: Any) -> None:
     """Hook for node creation.
 
     Args:
@@ -10,7 +13,7 @@ def node_creation_hook(self, node):
     )
 
 
-def node_deletion_hook(self, node):
+def node_deletion_hook(self, node: Any) -> None:
     """Hook for node deletion.
 
     Args:
@@ -25,7 +28,7 @@ def node_deletion_hook(self, node):
     self.parent._widget.send({"type": "delete_node", "data": {"name": node.name}})
 
 
-def link_creation_hook(self, link):
+def link_creation_hook(self, link: Any) -> None:
     """Hook for link creation.
 
     Args:
@@ -44,7 +47,7 @@ def link_creation_hook(self, link):
     )
 
 
-def link_deletion_hook(self, link):
+def link_deletion_hook(self, link: Any) -> None:
     """Hook for link deletion.
 
     Args:

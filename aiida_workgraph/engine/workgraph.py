@@ -71,7 +71,7 @@ class WorkGraph(Process, metaclass=Protect):
         self._context = AttributeDict()
 
     @classmethod
-    def define(cls, spec):
+    def define(cls, spec: WorkChainSpec) -> None:
         super().define(spec)
         spec.input("input_file", valid_type=orm.SinglefileData, required=False)
         spec.input_namespace(
@@ -116,7 +116,9 @@ class WorkGraph(Process, metaclass=Protect):
         return self._context
 
     @override
-    def save_instance_state(self, out_state, save_context):
+    def save_instance_state(
+        self, out_state: t.Dict[str, t.Any], save_context: t.Any
+    ) -> None:
         """Save instance state.
 
         :param out_state: state to save in
@@ -130,7 +132,9 @@ class WorkGraph(Process, metaclass=Protect):
         out_state[self._CONTEXT] = self.ctx
 
     @override
-    def load_instance_state(self, saved_state, load_context):
+    def load_instance_state(
+        self, saved_state: t.Dict[str, t.Any], load_context: t.Any
+    ) -> None:
         super().load_instance_state(saved_state, load_context)
         # Load the context
         self._context = saved_state[self._CONTEXT]
@@ -390,7 +394,7 @@ class WorkGraph(Process, metaclass=Protect):
         except Exception as e:
             print(e)
 
-    def setup(self):
+    def setup(self) -> None:
         # track if the awaitable callback is added to the runner
         self.ctx._awaitable_actions = []
         self.ctx.new_data = dict()
@@ -416,7 +420,7 @@ class WorkGraph(Process, metaclass=Protect):
             if not should_run:
                 self.set_node_state(self.ctx.nodes.keys(), "SKIPPED")
 
-    def setup_ctx_workgraph(self, wgdata):
+    def setup_ctx_workgraph(self, wgdata: t.Dict[str, t.Any]) -> None:
         """setup the workgraph in the context."""
         self.ctx.nodes = wgdata["nodes"]
         self.ctx.links = wgdata["links"]
@@ -424,14 +428,14 @@ class WorkGraph(Process, metaclass=Protect):
         self.ctx.ctrl_links = wgdata["ctrl_links"]
         self.ctx.workgraph = wgdata
 
-    def read_wgdata_from_base(self):
+    def read_wgdata_from_base(self) -> t.Dict[str, t.Any]:
         """Read workgraph data from base.extras."""
         from aiida.orm.utils.serialize import deserialize_unsafe
 
         wgdata = deserialize_unsafe(self.node.base.extras.get("workgraph"))
         return wgdata
 
-    def update_workgraph_from_base(self):
+    def update_workgraph_from_base(self) -> None:
         """Update the ctx from base.extras."""
         wgdata = self.read_wgdata_from_base()
         for name, node in wgdata["nodes"].items():
@@ -440,7 +444,7 @@ class WorkGraph(Process, metaclass=Protect):
             node["process"] = self.ctx.nodes[name].get("process")
         self.setup_ctx_workgraph(wgdata)
 
-    def init_ctx(self, wgdata):
+    def init_ctx(self, wgdata: t.Dict[str, t.Any]) -> None:
         """Init the context from the workgraph data."""
         from aiida_workgraph.utils import update_nested_dict
 
@@ -455,7 +459,7 @@ class WorkGraph(Process, metaclass=Protect):
         # set up the workgraph
         self.setup_ctx_workgraph(wgdata)
 
-    def set_node_results(self):
+    def set_node_results(self) -> None:
         for _, node in self.ctx.nodes.items():
             if node.get("process"):
                 if isinstance(node["process"], str):
@@ -463,7 +467,7 @@ class WorkGraph(Process, metaclass=Protect):
                 self.set_node_result(node)
             self.set_node_result(node)
 
-    def set_node_result(self, node):
+    def set_node_result(self, node: t.Dict[str, t.Any]) -> None:
         name = node["name"]
         # print(f"set node result: {name}")
         if node.get("process"):
@@ -503,7 +507,7 @@ class WorkGraph(Process, metaclass=Protect):
         else:
             node["results"] = None
 
-    def apply_actions(self):
+    def apply_actions(self) -> None:
         """Apply actions to the workgraph.
         The actions are stored in the base.extras["workgraph_queue"].
         The index of the last applied action is stored in the base.extras["workgraph_queue_index"].
@@ -520,14 +524,14 @@ class WorkGraph(Process, metaclass=Protect):
             self.report("Apply actions: {}".format(msg))
             msgs = self.node.base.extras.set("workgraph_queue_index", index)
 
-    def apply_node_actions(self, msg):
+    def apply_node_actions(self, msg: str) -> None:
         """Apply node actions to the workgraph."""
         name, action = msg.split(":")
         print("apply node actions: ", name, action)
         if action == "RESET":
             self.reset_node(name)
 
-    def reset_node(self, name):
+    def reset_node(self, name: str) -> None:
         """Reset node."""
         self.ctx.nodes[name]["state"] = "CREATED"
         # reset its child nodes
@@ -537,8 +541,9 @@ class WorkGraph(Process, metaclass=Protect):
             self.ctx.nodes[name]["result"] = None
             self.ctx.nodes[name]["process"] = None
 
-    def continue_workgraph(self, exclude=[]):
+    def continue_workgraph(self, exclude: t.Optional[t.List[str]] = None) -> None:
         print("Continue workgraph.")
+        exclude = exclude or []
         self.report("Continue workgraph.")
         self.update_workgraph_from_base()
         self.apply_actions()
@@ -554,7 +559,7 @@ class WorkGraph(Process, metaclass=Protect):
         self.report("nodes ready to run: {}".format(",".join(node_to_run)))
         self.run_nodes(node_to_run)
 
-    def update_node_state(self, name):
+    def update_node_state(self, name: str) -> None:
         """Update ndoe state if node is a Awaitable."""
         print("update node state: ", name)
         node = self.ctx.nodes[name]
@@ -572,7 +577,7 @@ class WorkGraph(Process, metaclass=Protect):
         ):
             self.set_node_result(node)
 
-    def is_workgraph_finished(self):
+    def is_workgraph_finished(self) -> bool:
         """Check if the workgraph is finished.
         For `while` workgraph, we need check its conditions"""
         is_finished = True
@@ -591,7 +596,7 @@ class WorkGraph(Process, metaclass=Protect):
         print("is workgraph finished: ", is_finished)
         return is_finished
 
-    def check_while_conditions(self):
+    def check_while_conditions(self) -> bool:
         """Check while conditions.
         Run all condition nodes and check if all the conditions are True.
         """
@@ -627,7 +632,7 @@ class WorkGraph(Process, metaclass=Protect):
             self.set_node_state(condition_nodes, "SKIPPED")
         return should_run
 
-    def check_for_conditions(self):
+    def check_for_conditions(self) -> bool:
         print("Is a for workgraph")
         condition_nodes = [c[0] for c in self.ctx.workgraph["conditions"]]
         self.run_nodes(condition_nodes)
@@ -644,7 +649,7 @@ class WorkGraph(Process, metaclass=Protect):
         self.ctx._count += 1
         return should_run
 
-    def run_nodes(self, names, continue_workgraph=True):
+    def run_nodes(self, names: t.List[str], continue_workgraph: bool = True) -> None:
         """Run node
         Here we use ToContext to pass the results of the run to the next step.
         This will force the engine to wait for all the submitted processes to
@@ -726,6 +731,7 @@ class WorkGraph(Process, metaclass=Protect):
                         results, process = run_get_node(
                             executor, **kwargs, **var_kwargs
                         )
+                    process.label = name
                     # only one output
                     if isinstance(results, orm.Data):
                         results = {node["outputs"][0]["name"]: results}
@@ -755,6 +761,7 @@ class WorkGraph(Process, metaclass=Protect):
                 kwargs["metadata"].update({"call_link_label": name})
                 # transfer the args to kwargs
                 process = self.submit(executor, **kwargs)
+                process.label = name
                 node["process"] = process
                 self.ctx.nodes[name]["state"] = "RUNNING"
                 self.to_context(**{name: process})
@@ -837,7 +844,15 @@ class WorkGraph(Process, metaclass=Protect):
                 # self.report("Unknow node type {}".format(node["metadata"]["node_type"]))
                 return self.exit_codes.UNKNOWN_NODE_TYPE
 
-    def get_inputs(self, node):
+    def get_inputs(
+        self, node: t.Dict[str, t.Any]
+    ) -> t.Tuple[
+        t.List[t.Any],
+        t.Dict[str, t.Any],
+        t.Optional[t.List[t.Any]],
+        t.Optional[t.Dict[str, t.Any]],
+        t.Dict[str, t.Any],
+    ]:
         """Get input based on the links."""
         from aiida_workgraph.utils import get_nested_dict
 
@@ -917,7 +932,7 @@ class WorkGraph(Process, metaclass=Protect):
                 var_kwargs = value
         return args, kwargs, var_args, var_kwargs, args_dict
 
-    def update_context_variable(self, value):
+    def update_context_variable(self, value: t.Any) -> t.Any:
         # replace context variables
         from aiida_workgraph.utils import get_nested_dict
 
@@ -934,7 +949,7 @@ class WorkGraph(Process, metaclass=Protect):
             return get_nested_dict(self.ctx, name)
         return value
 
-    def node_to_context(self, name):
+    def node_to_context(self, name: str) -> None:
         """Export node result to context."""
         from aiida_workgraph.utils import update_nested_dict
 
@@ -944,7 +959,7 @@ class WorkGraph(Process, metaclass=Protect):
                 self.ctx, item[1], self.ctx.nodes[name]["results"][item[0]]
             )
 
-    def check_node_state(self, name):
+    def check_node_state(self, name: str) -> None:
         """Check node states.
 
         - if all input nodes finished, launch node
@@ -963,7 +978,7 @@ class WorkGraph(Process, metaclass=Protect):
             # print(f"    Node {name} is in state {self.ctx.nodes[name]['state']}")
             pass
 
-    def check_parent_state(self, name):
+    def check_parent_state(self, name: str) -> t.Tuple[bool, t.Optional[str]]:
         node = self.ctx.nodes[name]
         inputs = node.get("inputs", None)
         wait_nodes = self.ctx.nodes[name].get("wait", [])
@@ -1008,24 +1023,33 @@ class WorkGraph(Process, metaclass=Protect):
     #         node = outgoing.get_node_by_label(output[0])
     #         outputs[output[2]] = getattr(node.outputs, output[1])
     #     return outputs
-    def reset(self):
+    def reset(self) -> None:
         print("Reset")
         self.ctx._execution_count += 1
         self.set_node_state(self.ctx.nodes.keys(), "CREATED")
 
-    def set_node_state(self, names, value):
+    def set_node_state(
+        self, names: t.Union[t.List[str], t.Sequence[str]], value: str
+    ) -> None:
         """Set node state"""
         for name in names:
             self.ctx.nodes[name]["state"] = value
 
-    def run_executor(self, executor, args, kwargs, var_args, var_kwargs):
+    def run_executor(
+        self,
+        executor: t.Callable,
+        args: t.List[t.Any],
+        kwargs: t.Dict[str, t.Any],
+        var_args: t.Optional[t.List[t.Any]],
+        var_kwargs: t.Optional[t.Dict[str, t.Any]],
+    ) -> t.Any:
         if var_kwargs is None:
             return executor(*args, **kwargs)
         else:
             print("var_kwargs: ", var_kwargs)
             return executor(*args, **kwargs, **var_kwargs)
 
-    def save_results_to_extras(self, name):
+    def save_results_to_extras(self, name: str) -> None:
         """Save the results to the base.extras.
         For the outputs of a Normal node, they are not saved to the database like the calcjob or workchain.
         One temporary solution is to save the results to the base.extras. In order to do this, we need to
@@ -1051,7 +1075,7 @@ class WorkGraph(Process, metaclass=Protect):
             datas[key] = Executor(value)
         self.node.set_extra(f"nodes__results__{name}", datas)
 
-    def finalize(self):
+    def finalize(self) -> t.Optional[ExitCode]:
         """"""
         from aiida_workgraph.utils import get_nested_dict, update_nested_dict
 

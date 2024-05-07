@@ -1,20 +1,14 @@
 import pytest
-from aiida_workgraph import node, WorkGraph, build_node
-from aiida.orm import Float, Int, load_code
+from aiida_workgraph import node, WorkGraph
+from aiida.engine import calcfunction, workfunction
+from aiida.orm import Float, Int, load_code, StructureData
+from aiida.calculations.arithmetic.add import ArithmeticAddCalculation
+from typing import Callable, Any, Union
+import time
 
 
 @pytest.fixture
-def arithmetic_add():
-    """Generate a node for test."""
-
-    arithmetic_add = build_node(
-        "aiida.calculations.arithmetic.add.ArithmeticAddCalculation"
-    )
-    return arithmetic_add
-
-
-@pytest.fixture
-def wg_calcfunction():
+def wg_calcfunction() -> WorkGraph:
     """A workgraph with calcfunction."""
 
     wg = WorkGraph(name="test_debug_math")
@@ -29,16 +23,16 @@ def wg_calcfunction():
 
 
 @pytest.fixture
-def wg_calcjob(arithmetic_add):
+def wg_calcjob() -> WorkGraph:
     """A workgraph with calcjob."""
 
     code = load_code("add@localhost")
     wg = WorkGraph(name="test_debug_math")
     int1 = wg.nodes.new("AiiDANode", "int1", pk=Int(3).store().pk)
     code1 = wg.nodes.new("AiiDACode", "code1", pk=code.pk)
-    add1 = wg.nodes.new(arithmetic_add, "add1", x=Int(2).store())
-    add2 = wg.nodes.new(arithmetic_add, "add2", x=Int(4).store())
-    add3 = wg.nodes.new(arithmetic_add, "add3", x=Int(4).store())
+    add1 = wg.nodes.new(ArithmeticAddCalculation, "add1", x=Int(2).store())
+    add2 = wg.nodes.new(ArithmeticAddCalculation, "add2", x=Int(4).store())
+    add3 = wg.nodes.new(ArithmeticAddCalculation, "add3", x=Int(4).store())
     wg.links.new(code1.outputs[0], add1.inputs["code"])
     wg.links.new(int1.outputs[0], add1.inputs["y"])
     wg.links.new(code1.outputs[0], add2.inputs["code"])
@@ -49,7 +43,7 @@ def wg_calcjob(arithmetic_add):
 
 
 @pytest.fixture
-def wg_workchain():
+def wg_workchain() -> WorkGraph:
     """A workgraph with workchain."""
 
     code = load_code("add@localhost")
@@ -75,23 +69,24 @@ def wg_workchain():
 
 
 @pytest.fixture
-def decorated_normal_add():
+def decorated_normal_add() -> Callable:
     """Generate a decorated node for test."""
 
     @node()
-    def add(x, y):
+    def add(x: Any, y: Any) -> Any:
         return x + y
 
     return add
 
 
 @pytest.fixture
-def decorated_add():
+def decorated_add() -> Callable:
     """Generate a decorated node for test."""
 
-    @node.calcfunction()
-    def add(x, y, t=1):
-        import time
+    @calcfunction
+    def add(
+        x: Union[int, float], y: Union[int, float], t: Union[int, float] = 1.0
+    ) -> Union[int, float]:
 
         time.sleep(t.value)
         return x + y
@@ -100,12 +95,13 @@ def decorated_add():
 
 
 @pytest.fixture
-def decorated_multiply():
+def decorated_multiply() -> Callable:
     """Generate a decorated node for test."""
 
-    @node.calcfunction()
-    def multiply(x, y, t=1):
-        import time
+    @calcfunction
+    def multiply(
+        x: Union[int, float], y: Union[int, float], t: Union[int, float] = 1.0
+    ) -> Union[int, float]:
 
         time.sleep(t.value)
         return x * y
@@ -114,11 +110,11 @@ def decorated_multiply():
 
 
 @pytest.fixture
-def decorated_sqrt():
+def decorated_sqrt() -> Callable:
     """Generate a decorated node for test."""
 
-    @node.calcfunction()
-    def mysqrt(x):
+    @calcfunction
+    def mysqrt(x: Union[int, float]) -> Union[int, float]:
         from math import sqrt
 
         return sqrt(x)
@@ -127,7 +123,7 @@ def decorated_sqrt():
 
 
 @pytest.fixture
-def decorated_compare():
+def decorated_compare() -> Callable:
     """Generate a decorated node for test."""
 
     # define compare node
@@ -139,10 +135,10 @@ def decorated_compare():
 
 
 @pytest.fixture
-def decorated_add_multiply(decorated_add, decorated_multiply):
+def decorated_add_multiply(decorated_add, decorated_multiply) -> Callable:
     """Generate a decorated node for test."""
 
-    @node.workfunction()
+    @workfunction
     def add_multiply(x, y, z):
         """Add two numbers and multiply it with a third."""
         addition = decorated_add(x, y)
@@ -153,7 +149,7 @@ def decorated_add_multiply(decorated_add, decorated_multiply):
 
 
 @pytest.fixture
-def decorated_add_multiply_group(decorated_add, decorated_multiply):
+def decorated_add_multiply_group(decorated_add, decorated_multiply) -> Callable:
     """Generate a decorated node for test."""
 
     @node.graph_builder(outputs=[["multiply1.result", "result"]])
@@ -169,21 +165,7 @@ def decorated_add_multiply_group(decorated_add, decorated_multiply):
 
 
 @pytest.fixture
-def build_workchain():
-    """Generate a decorated node for test."""
-
-    from aiida_workgraph import build_node
-    from aiida.workflows.arithmetic.multiply_add import MultiplyAddWorkChain
-
-    multiply_add = build_node(MultiplyAddWorkChain)
-
-    return multiply_add
-
-
-@pytest.fixture
-def structure_si():
-
-    from aiida.orm import StructureData
+def structure_si() -> StructureData:
     from ase.build import bulk
 
     si = bulk("Si")
@@ -192,8 +174,7 @@ def structure_si():
 
 
 @pytest.fixture
-def wg_structure_si():
-
+def wg_structure_si() -> WorkGraph:
     wg = WorkGraph(name="test_structure")
     structure1 = wg.nodes.new("AiiDAStructure", "structure1")
     data = {
@@ -212,18 +193,18 @@ def wg_structure_si():
 
 
 @pytest.fixture
-def wg_engine(decorated_add, arithmetic_add):
+def wg_engine(decorated_add) -> WorkGraph:
     """Use to test the engine."""
     code = load_code("add@localhost")
     x = Int(2)
     wg = WorkGraph(name="test_run_order")
-    add0 = wg.nodes.new(arithmetic_add, "add0", x=x, y=Int(0), code=code)
+    add0 = wg.nodes.new(ArithmeticAddCalculation, "add0", x=x, y=Int(0), code=code)
     add0.set({"metadata.options.sleep": 15})
     add1 = wg.nodes.new(decorated_add, "add1", x=x, y=Int(1), t=Int(1))
-    add2 = wg.nodes.new(arithmetic_add, "add2", x=x, y=Int(2), code=code)
+    add2 = wg.nodes.new(ArithmeticAddCalculation, "add2", x=x, y=Int(2), code=code)
     add2.set({"metadata.options.sleep": 1})
     add3 = wg.nodes.new(decorated_add, "add3", x=x, y=Int(3), t=Int(1))
-    add4 = wg.nodes.new(arithmetic_add, "add4", x=x, y=Int(4), code=code)
+    add4 = wg.nodes.new(ArithmeticAddCalculation, "add4", x=x, y=Int(4), code=code)
     add4.set({"metadata.options.sleep": 1})
     add5 = wg.nodes.new(decorated_add, "add5", x=x, y=Int(5), t=Int(1))
     wg.links.new(add0.outputs["sum"], add2.inputs["x"])

@@ -1,3 +1,4 @@
+import aiida.orm
 import node_graph
 import aiida
 from aiida_workgraph.nodes import node_pool
@@ -10,6 +11,7 @@ from aiida_workgraph.utils.graph import (
     link_deletion_hook,
 )
 from aiida_workgraph.widget import NodeGraphWidget
+from typing import Any, Dict, List, Optional
 
 
 class WorkGraph(node_graph.NodeGraph):
@@ -28,7 +30,7 @@ class WorkGraph(node_graph.NodeGraph):
 
     node_pool = node_pool
 
-    def __init__(self, name="WorkGraph", **kwargs):
+    def __init__(self, name: str = "WorkGraph", **kwargs) -> None:
         """
         Initialize a WorkGraph instance.
 
@@ -53,7 +55,7 @@ class WorkGraph(node_graph.NodeGraph):
         self.links.post_deletion_hooks = [link_deletion_hook]
         self._widget = NodeGraphWidget(parent=self)
 
-    def run(self, inputs=None):
+    def run(self, inputs: Optional[Dict[str, Any]] = None) -> Any:
         """
         Run the AiiDA workgraph process and update the process status. The method uses AiiDA's engine to run
         the process and then calls the update method to update the state of the process.
@@ -84,13 +86,19 @@ class WorkGraph(node_graph.NodeGraph):
         self.update()
         return result
 
-    def submit(self, inputs=None, wait=False, timeout=60, restart=False, new=False):
+    def submit(
+        self,
+        inputs: Optional[Dict[str, Any]] = None,
+        wait: bool = False,
+        timeout: int = 60,
+        restart: bool = False,
+        new: bool = False,
+    ) -> aiida.orm.ProcessNode:
         """Submit the AiiDA workgraph process and optionally wait for it to finish.
         Args:
             wait (bool): Wait for the process to finish.
             timeout (int): The maximum time in seconds to wait for the process to finish. Defaults to 60.
-            restart (bool): Restart the process, it will check the modified nodes and reset them,
-                and then only re-run the modified nodes.
+            restart (bool): Restart the process, and reset the modified nodes, then only re-run the modified nodes.
             new (bool): Submit a new process.
         """
         from aiida.manage import get_manager
@@ -119,8 +127,9 @@ class WorkGraph(node_graph.NodeGraph):
         process_controller.continue_process(self.process.pk)
         if wait:
             self.wait(timeout=timeout)
+        return self.process
 
-    def save(self, metadata=None):
+    def save(self, metadata: Optional[Dict[str, Any]] = None) -> None:
         """Save the udpated workgraph to the process
         This is only used for a running workgraph.
         Save the AiiDA workgraph process and update the process status.
@@ -142,7 +151,7 @@ class WorkGraph(node_graph.NodeGraph):
         self.save_to_base(wgdata)
         self.update()
 
-    def save_to_base(self, wgdata):
+    def save_to_base(self, wgdata: Dict[str, Any]) -> None:
         """Save new wgdata to base.extras.
         It will first check the difference, and reset nodes if needed.
         """
@@ -153,7 +162,7 @@ class WorkGraph(node_graph.NodeGraph):
         )
         saver.save()
 
-    def to_dict(self):
+    def to_dict(self) -> Dict[str, Any]:
         wgdata = super().to_dict()
         self.context["sequence"] = self.sequence
         # only alphanumeric and underscores are allowed
@@ -172,7 +181,7 @@ class WorkGraph(node_graph.NodeGraph):
 
         return wgdata
 
-    def wait(self, timeout=50):
+    def wait(self, timeout: int = 50) -> None:
         """
         Periodically checks and waits for the AiiDA workgraph process to finish until a given timeout.
 
@@ -194,7 +203,7 @@ class WorkGraph(node_graph.NodeGraph):
             if time.time() - start > timeout:
                 return
 
-    def update(self):
+    def update(self) -> None:
         """
         Update the current state and primary key of the process node as well as the state, node and primary key
         of the nodes that are outgoing from the process node. This includes updating the state of process nodes
@@ -266,11 +275,11 @@ class WorkGraph(node_graph.NodeGraph):
         self._widget.states = {node.name: node.state for node in self.nodes}
 
     @property
-    def pk(self):
+    def pk(self) -> Optional[int]:
         return self.process.pk if self.process else None
 
     @classmethod
-    def load(cls, pk):
+    def load(cls, pk: int) -> Optional["WorkGraph"]:
         """
         Load the process node with the given primary key.
 
@@ -289,7 +298,7 @@ class WorkGraph(node_graph.NodeGraph):
         wg.update()
         return wg
 
-    def show(self):
+    def show(self) -> None:
         """
         Print the current state of the workgraph process.
         """
@@ -307,7 +316,7 @@ class WorkGraph(node_graph.NodeGraph):
         print(tabulate(table, headers=["Name", "PK", "State"]))
         print("-" * 80)
 
-    def pause(self):
+    def pause(self) -> None:
         """Pause the workgraph."""
         # from aiida.engine.processes import control
         # try:
@@ -316,17 +325,17 @@ class WorkGraph(node_graph.NodeGraph):
 
         os.system("verdi process pause {}".format(self.process.pk))
 
-    def pause_nodes(self, nodes):
+    def pause_nodes(self, nodes: List[str]) -> None:
         """
         Pause the given nodes
         """
 
-    def play_nodes(self, nodes):
+    def play_nodes(self, nodes: List[str]) -> None:
         """
         Play the given nodes
         """
 
-    def reset(self):
+    def reset(self) -> None:
         """Reset the workgraph."""
 
         self.process = None
@@ -337,8 +346,8 @@ class WorkGraph(node_graph.NodeGraph):
         self.context = {}
         self.state = "CREATED"
 
-    def extend(self, wg, prefix=""):
-        """Add a workgraph to the current workgraph.
+    def extend(self, wg: "WorkGraph", prefix: str = "") -> None:
+        """Append a workgraph to the current workgraph.
         prefix is used to add a prefix to the node names.
         """
         for node in wg.nodes:

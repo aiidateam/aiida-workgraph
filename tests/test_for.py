@@ -1,10 +1,11 @@
 from aiida_workgraph import node, WorkGraph
 from aiida import load_profile, orm
+from typing import Callable
 
 load_profile()
 
 
-def test_for(decorated_add, decorated_multiply):
+def test_for(decorated_add: Callable, decorated_multiply: Callable) -> None:
     # Create a WorkGraph will loop the a sequence
     @node.graph_builder(outputs=[["context.total", "result"]])
     def add_multiply_for(sequence):
@@ -21,14 +22,14 @@ def test_for(decorated_add, decorated_multiply):
         add1 = wg.nodes.new(decorated_add, name="add1", x="{{ total }}")
         # update the context variable
         add1.to_context = [["result", "total"]]
-        wg.links.new(multiply1.outputs[0], add1.inputs[1])
+        wg.links.new(multiply1.outputs["result"], add1.inputs["y"])
         # don't forget to return the workgraph
         return wg
 
     # -----------------------------------------
     wg = WorkGraph("test_for")
     for1 = wg.nodes.new(add_multiply_for, sequence=range(5))
-    add1 = wg.nodes.new(decorated_add, y=orm.Int(1))
-    wg.links.new(for1.outputs[0], add1.inputs[0])
+    add1 = wg.nodes.new(decorated_add, name="add1", y=orm.Int(1))
+    wg.links.new(for1.outputs["result"], add1.inputs["x"])
     wg.submit(wait=True, timeout=200)
     assert add1.node.outputs.result.value == 21
