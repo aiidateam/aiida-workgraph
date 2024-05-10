@@ -1,6 +1,7 @@
 # AiiDA-WorkGraph
 [![PyPI version](https://badge.fury.io/py/aiida-workgraph.svg)](https://badge.fury.io/py/aiida-workgraph)
 [![Unit test](https://github.com/superstar54/aiida-workgraph/actions/workflows/ci.yaml/badge.svg)](https://github.com/superstar54/aiida-workgraph/actions/workflows/ci.yaml)
+[![codecov](https://codecov.io/gh/superstar54/aiida-workgraph/branch/main/graph/badge.svg)](https://codecov.io/gh/superstar54/aiida-workgraph)
 [![Docs status](https://readthedocs.org/projects/aiida-workgraph/badge)](http://aiida-workgraph.readthedocs.io/)
 
 Provides the third workflow component: `WorkGraph`, to design flexible node-based workflows using AiiDA.
