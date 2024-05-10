@@ -7,7 +7,7 @@ class AiiDAGather(Node):
 
     identifier = "AiiDAGather"
     name = "AiiDAGather"
-    node_type = "workchain"
+    node_type = "WORKCHAIN"
     catalog = "AiiDA"
     kwargs = ["datas"]
 
@@ -134,7 +134,7 @@ class AiiDAShell(Node):
 
     identifier = "AiiDAShell"
     name = "AiiDAShell"
-    node_type = "calcjob"
+    node_type = "CALCJOB"
     catalog = "AiiDA"
     kwargs = shelljob_inputs
 
