@@ -8,6 +8,13 @@ from node_graph.decorator import create_node
 import cloudpickle as pickle
 from aiida_workgraph.node import Node
 
+node_types = {
+    CalcFunctionNode: "CALCFUNCTION",
+    WorkFunctionNode: "WORKFUNCTION",
+    CalcJob: "CALCJOB",
+    WorkChain: "WORKCHAIN",
+}
+
 
 def add_input_recursive(
     inputs: List[List[Union[str, Dict[str, Any]]]],
@@ -56,7 +63,7 @@ def add_output_recursive(
     prefix: Optional[str] = None,
     required: bool = True,
 ) -> List[List[Union[str, Dict[str, Any]]]]:
-    """Add input recursively."""
+    """Add output recursively."""
     if prefix is None:
         port_name = port.name
     else:
@@ -124,23 +131,21 @@ def build_node_from_callable(
     if inspect.isfunction(executor):
         # calcfunction and workfunction
         if getattr(executor, "node_class", False):
-            if executor.node_class is CalcFunctionNode:
-                ndata["node_type"] = "calcfunction"
-            elif executor.node_class is WorkFunctionNode:
-                ndata["node_type"] = "workfunction"
+            ndata["node_type"] = node_types.get(executor.node_class, "NORMAL")
             ndata["executor"] = executor
+            print("ndata: ", ndata)
             return build_node_from_AiiDA(ndata, inputs=inputs, outputs=outputs)
         else:
-            ndata["node_type"] = "normal"
+            ndata["node_type"] = "NORMAL"
             ndata["executor"] = executor
             return build_node_from_function(executor, inputs=inputs, outputs=outputs)
     else:
         if issubclass(executor, CalcJob):
-            ndata["node_type"] = "calcjob"
+            ndata["node_type"] = "CALCJOB"
             ndata["executor"] = executor
             return build_node_from_AiiDA(ndata, inputs=inputs, outputs=outputs)
         elif issubclass(executor, WorkChain):
-            ndata["node_type"] = "workchain"
+            ndata["node_type"] = "WORKCHAIN"
             ndata["executor"] = executor
             return build_node_from_AiiDA(ndata, inputs=inputs, outputs=outputs)
     raise ValueError("The executor is not supported.")
@@ -184,7 +189,7 @@ def build_node_from_AiiDA(
         )
         ndata["var_kwargs"] = name
         inputs.append(["General", name, {"property": ["General", {"default": {}}]}])
-    if ndata["node_type"] in ["calcfunction", "workfunction"]:
+    if ndata["node_type"].upper() in ["CALCFUNCTION", "WORKFUNCTION"]:
         outputs = [["General", "result"]] if not outputs else outputs
     # print("kwargs: ", kwargs)
     # add built-in sockets
@@ -346,10 +351,7 @@ class NodeDecoratorCollection:
             # Determine node_type based on AiiDA's node classes
             node_type = node_type
             if hasattr(func, "node_class"):
-                if func.node_class is CalcFunctionNode:
-                    node_type = "calcfunction"
-                elif func.node_class is WorkFunctionNode:
-                    node_type = "workfunction"
+                node_type = node_types.get(func.node_class, node_type)
             ndata = generate_ndata(
                 func,
                 identifier,

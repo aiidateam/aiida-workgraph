@@ -171,7 +171,7 @@ class AiiDAAdd(Node):
 
     identifier: str = "AiiDAAdd"
     name = "AiiDAAdd"
-    node_type = "calcfunction"
+    node_type = "CALCFUNCTION"
     catalog = "Test"
 
     args = ["x", "y"]
@@ -200,7 +200,7 @@ class AiiDAGreater(Node):
 
     identifier: str = "AiiDAGreater"
     name = "AiiDAGreater"
-    node_type = "calcfunction"
+    node_type = "CALCFUNCTION"
     catalog = "Test"
     kwargs = ["x", "y"]
 
@@ -225,7 +225,7 @@ class AiiDASumDiff(Node):
 
     identifier: str = "AiiDASumDiff"
     name = "AiiDASumDiff"
-    node_type = "calcfunction"
+    node_type = "CALCFUNCTION"
     catalog = "Test"
 
     args = ["x", "y"]
@@ -255,7 +255,7 @@ class AiiDAArithmeticMultiplyAdd(Node):
 
     identifier: str = "AiiDAArithmeticMultiplyAdd"
     name = "AiiDAArithmeticMultiplyAdd"
-    node_type = "workchain"
+    node_type = "WORKCHAIN"
     catalog = "Test"
     kwargs = ["code", "x", "y", "z"]
 

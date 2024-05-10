@@ -1,6 +1,7 @@
 import aiida.orm
 import node_graph
 import aiida
+from aiida.manage import get_manager
 from aiida_workgraph.nodes import node_pool
 import time
 from aiida_workgraph.collection import WorkGraphNodeCollection
@@ -62,11 +63,12 @@ class WorkGraph(node_graph.NodeGraph):
         """
         from aiida_workgraph.engine.workgraph import WorkGraph as WorkGraphEngine
         from aiida_workgraph.utils import merge_properties
-        from aiida.manage import manager
 
         # set node inputs
         if inputs is not None:
             for name, input in inputs.items():
+                if name not in self.nodes.keys():
+                    raise KeyError(f"Node {name} not found in WorkGraph.")
                 self.nodes[name].set(input)
         # One can not run again if the process is alreay created. otherwise, a new process node will
         # be created again.
@@ -77,7 +79,7 @@ class WorkGraph(node_graph.NodeGraph):
         merge_properties(wgdata)
         inputs = {"wg": wgdata}
         # init a process
-        runner = manager.get_manager().get_runner()
+        runner = get_manager().get_runner()
         process_inited = WorkGraphEngine(runner=runner, inputs=inputs)
         self.process = process_inited.node
         # save workgraph data into process node
@@ -101,11 +103,11 @@ class WorkGraph(node_graph.NodeGraph):
             restart (bool): Restart the process, and reset the modified nodes, then only re-run the modified nodes.
             new (bool): Submit a new process.
         """
-        from aiida.manage import get_manager
-
         # set node inputs
         if inputs is not None:
             for name, input in inputs.items():
+                if name not in self.nodes.keys():
+                    raise KeyError(f"Node {name} not found in WorkGraph.")
                 self.nodes[name].set(input)
 
         process_controller = get_manager().get_process_controller()
@@ -121,7 +123,7 @@ class WorkGraph(node_graph.NodeGraph):
         # save the workgraph to the process node
         self.save()
         if self.process.process_state.value.upper() not in ["CREATED"]:
-            return "Error!!! The process has already been submitted and finished."
+            raise ValueError(f"Process {self.process.pk} has already been submitted.")
         # launch the process, send the task to RabbitMA
         # TODO in case of "[ERROR] Process<3705> is unreachable."
         process_controller.continue_process(self.process.pk)

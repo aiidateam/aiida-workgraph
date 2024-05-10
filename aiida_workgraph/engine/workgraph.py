@@ -475,13 +475,13 @@ class WorkGraph(Process, metaclass=Protect):
             state = node["process"].process_state.value.upper()
             if state == "FINISHED":
                 node["state"] = state
-                if node["metadata"]["node_type"] == "graph_builder":
+                if node["metadata"]["node_type"].upper() == "GRAPH_BUILDER":
                     # expose the outputs of workgraph
                     node["results"] = getattr(
                         node["process"].outputs, "group_outputs", None
                     )
                     # self.ctx.new_data[name] = outputs
-                elif node["metadata"]["node_type"] == "workgraph":
+                elif node["metadata"]["node_type"].upper() == "WORKGRAPH":
                     # expose the outputs of all the nodes in the workgraph
                     node["results"] = {}
                     outgoing = node["process"].base.links.get_outgoing()
@@ -564,14 +564,14 @@ class WorkGraph(Process, metaclass=Protect):
         print("update node state: ", name)
         node = self.ctx.nodes[name]
         if (
-            node["metadata"]["node_type"]
+            node["metadata"]["node_type"].upper()
             in [
-                "calcfunction",
-                "workfunction",
-                "calcjob",
-                "workchain",
-                "graph_builder",
-                "workgraph",
+                "CALCFUNCTION",
+                "WORKFUNCTION",
+                "CALCJOB",
+                "WORKCHAIN",
+                "GRAPH_BUILDER",
+                "WORKGRAPH",
             ]
             and node["state"] == "RUNNING"
         ):
@@ -664,11 +664,11 @@ class WorkGraph(Process, metaclass=Protect):
         for name in names:
             print("-" * 60)
             node = self.ctx.nodes[name]
-            if node["metadata"]["node_type"] in [
-                "calcjob",
-                "workchain",
-                "graph_builder",
-                "workgraph",
+            if node["metadata"]["node_type"].upper() in [
+                "CALCJOB",
+                "WORKCHAIN",
+                "GRAPH_BUILDER",
+                "WORKGRAPH",
             ]:
                 if len(self._awaitables) > self.ctx.max_number_awaitables:
                     print(
@@ -693,7 +693,7 @@ class WorkGraph(Process, metaclass=Protect):
             # kwargs["meta.label"] = name
             # output must be a Data type or a mapping of {string: Data}
             node["results"] = {}
-            if node["metadata"]["node_type"] == "node":
+            if node["metadata"]["node_type"].upper() == "NODE":
                 print("node  type: node.")
                 results = self.run_executor(executor, [], kwargs, var_args, var_kwargs)
                 node["process"] = results
@@ -706,7 +706,7 @@ class WorkGraph(Process, metaclass=Protect):
                 self.report(f"Node: {name} finished.")
                 if continue_workgraph:
                     self.continue_workgraph(names)
-            elif node["metadata"]["node_type"] == "data":
+            elif node["metadata"]["node_type"].upper() == "DATA":
                 print("node  type: data.")
                 for key in self.ctx.nodes[name]["metadata"]["args"]:
                     kwargs.pop(key, None)
@@ -719,7 +719,10 @@ class WorkGraph(Process, metaclass=Protect):
                 self.report(f"Node: {name} finished.")
                 if continue_workgraph:
                     self.continue_workgraph(names)
-            elif node["metadata"]["node_type"] in ["calcfunction", "workfunction"]:
+            elif node["metadata"]["node_type"].upper() in [
+                "CALCFUNCTION",
+                "WORKFUNCTION",
+            ]:
                 print("node type: calcfunction/workfunction.")
                 kwargs.setdefault("metadata", {})
                 kwargs["metadata"].update({"call_link_label": name})
@@ -754,7 +757,7 @@ class WorkGraph(Process, metaclass=Protect):
                 # exclude the current nodes from the next run
                 if continue_workgraph:
                     self.continue_workgraph(names)
-            elif node["metadata"]["node_type"] in ["calcjob", "workchain"]:
+            elif node["metadata"]["node_type"].upper() in ["CALCJOB", "WORKCHAIN"]:
                 # process = run_get_node(executor, *args, **kwargs)
                 print("node  type: calcjob/workchain.")
                 kwargs.setdefault("metadata", {})
@@ -765,7 +768,7 @@ class WorkGraph(Process, metaclass=Protect):
                 node["process"] = process
                 self.ctx.nodes[name]["state"] = "RUNNING"
                 self.to_context(**{name: process})
-            elif node["metadata"]["node_type"] in ["graph_builder"]:
+            elif node["metadata"]["node_type"].upper() in ["GRAPH_BUILDER"]:
                 print("node  type: graph_builder.")
                 wg = self.run_executor(executor, [], kwargs, var_args, var_kwargs)
                 wg.name = name
@@ -777,7 +780,7 @@ class WorkGraph(Process, metaclass=Protect):
                 node["process"] = process
                 self.ctx.nodes[name]["state"] = "RUNNING"
                 self.to_context(**{name: process})
-            elif node["metadata"]["node_type"] in ["workgraph"]:
+            elif node["metadata"]["node_type"].upper() in ["WORKGRAPH"]:
                 from aiida_workgraph.utils import merge_properties
                 from aiida_workgraph.utils.analysis import WorkGraphSaver
 
@@ -808,7 +811,7 @@ class WorkGraph(Process, metaclass=Protect):
                 node["process"] = process
                 self.ctx.nodes[name]["state"] = "RUNNING"
                 self.to_context(**{name: process})
-            elif node["metadata"]["node_type"] in ["Normal"]:
+            elif node["metadata"]["node_type"].upper() in ["NORMAL"]:
                 print("node  type: Normal.")
                 # normal function does not have a process
                 if "context" in node["metadata"]["kwargs"]:

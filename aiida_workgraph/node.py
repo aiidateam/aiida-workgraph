@@ -7,7 +7,8 @@ from aiida_workgraph.collection import (
     WorkGraphInputSocketCollection,
     WorkGraphOutputSocketCollection,
 )
-from typing import Any, Dict, Optional, Union, Callable
+import aiida
+from typing import Any, Dict, Optional, Union, Callable, List
 
 
 class Node(GraphNode):
@@ -20,7 +21,14 @@ class Node(GraphNode):
     property_pool = property_pool
     socket_pool = socket_pool
 
-    def __init__(self, **kwargs: Any) -> None:
+    def __init__(
+        self,
+        to_context: Optional[List[Any]] = None,
+        wait: List[Union[str, GraphNode]] = [],
+        process: Optional[aiida.orm.ProcessNode] = None,
+        pk: Optional[int] = None,
+        **kwargs: Any
+    ) -> None:
         """
         Initialize a Node instance.
         """
@@ -30,10 +38,10 @@ class Node(GraphNode):
             output_collection_class=WorkGraphOutputSocketCollection,
             **kwargs
         )
-        self.to_context = None
-        self.wait = []
-        self.process = None
-        self.pk = None
+        self.to_context = [] if to_context is None else to_context
+        self.wait = [] if wait is None else wait
+        self.process = process
+        self.pk = pk
         self._widget = NodeGraphWidget(
             settings={"minmap": False},
             style={"width": "40%", "height": "600px"},
@@ -70,7 +78,17 @@ class Node(GraphNode):
 
     @classmethod
     def from_dict(cls, data: Dict[str, Any], node_pool: Optional[Any] = None) -> "Node":
-        """Create a node from a dictionary."""
+        """Create a node from a dictionary. This method initializes a Node instance with properties and settings
+        defined within the provided data dictionary. If node_pool is not specified, the default node_pool from
+        aiida_workgraph.nodes is used.
+
+        Args:
+            data (Dict[str, Any]): A dictionary containing the node's configuration.
+            node_pool (Optional[Any]): A pool of node configurations, defaults to None
+            which will use the global node_pool.
+
+        Returns:
+            Node: An instance of Node initialized with the provided data."""
         from aiida_workgraph.nodes import node_pool
 
         node = super().from_dict(data, node_pool=node_pool)
