@@ -24,12 +24,14 @@ def test_from_dict(wg_calcjob):
     assert len(wg.links) == len(wg1.links)
 
 
-def test_new_node(wg_calcjob):
+def test_new_node():
     """Add new node."""
-    wg = wg_calcjob
-    n = len(wg.nodes)
-    wg.nodes.new(ArithmeticAddCalculation)
-    assert len(wg.nodes) == n + 1
+    wg = WorkGraph("test_new_node")
+    add1 = wg.nodes.new(ArithmeticAddCalculation, name="add1")
+    add2 = wg.add_node(ArithmeticAddCalculation, name="add2")
+    wg.add_link(add1.outputs["sum"], add2.inputs["x"])
+    assert len(wg.nodes) == 2
+    assert len(wg.links) == 1
 
 
 def test_save_load(wg_calcjob):

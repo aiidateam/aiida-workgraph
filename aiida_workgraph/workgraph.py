@@ -3,6 +3,7 @@ import node_graph
 import aiida
 from aiida.manage import get_manager
 from aiida_workgraph.nodes import node_pool
+from aiida_workgraph.socket import NodeSocket
 import time
 from aiida_workgraph.collection import WorkGraphNodeCollection
 from aiida_workgraph.utils.graph import (
@@ -12,7 +13,7 @@ from aiida_workgraph.utils.graph import (
     link_deletion_hook,
 )
 from aiida_workgraph.widget import NodeGraphWidget
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Union
 
 
 class WorkGraph(node_graph.NodeGraph):
@@ -371,3 +372,13 @@ class WorkGraph(node_graph.NodeGraph):
             return self._widget._repr_mimebundle_(*args, **kwargs)
         else:
             return self._widget._ipython_display_(*args, **kwargs)
+
+    def add_node(self, identifier: Union[str, callable], name: str, **kwargs) -> None:
+        """Add a node to the workgraph."""
+        node = self.nodes.new(identifier, name, **kwargs)
+        return node
+
+    def add_link(self, source: NodeSocket, target: NodeSocket) -> None:
+        """Add a link between two nodes."""
+        link = self.links.new(source, target)
+        return link
