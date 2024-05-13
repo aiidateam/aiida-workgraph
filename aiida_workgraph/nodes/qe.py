@@ -1,8 +1,8 @@
 from typing import Dict
-from aiida_workgraph.node import Node
+from aiida_workgraph.node import WorkNode
 
 
-class AiiDAKpoint(Node):
+class AiiDAKpoint(WorkNode):
     identifier = "AiiDAKpoint"
     name = "AiiDAKpoint"
     node_type = "data"
@@ -24,7 +24,7 @@ class AiiDAKpoint(Node):
         }
 
 
-class AiiDAStructure(Node):
+class AiiDAStructure(WorkNode):
     identifier = "AiiDAStructure"
     name = "AiiDAStructure"
     node_type = "data"
@@ -50,7 +50,7 @@ class AiiDAStructure(Node):
         }
 
 
-class AiiDAPWPseudo(Node):
+class AiiDAPWPseudo(WorkNode):
     identifier = "AiiDAPWPseudo"
     name = "AiiDAPWPseudo"
     node_type = "Normal"
@@ -75,7 +75,7 @@ class AiiDAPWPseudo(Node):
         }
 
 
-class AiiDAPW(Node):
+class AiiDAPW(WorkNode):
     """DFT calculation using PW code."""
 
     identifier = "AiiDAPW"
@@ -107,7 +107,7 @@ class AiiDAPW(Node):
         }
 
 
-class AiiDADos(Node):
+class AiiDADos(WorkNode):
     """DFT calculation using dos code."""
 
     identifier = "AiiDADos"
@@ -136,7 +136,7 @@ class AiiDADos(Node):
         }
 
 
-class AiiDAProjwfc(Node):
+class AiiDAProjwfc(WorkNode):
     """DFT calculation using Projwfc code."""
 
     identifier = "AiiDAProjwfc"

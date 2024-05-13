@@ -6,7 +6,7 @@ from aiida.orm.nodes.process.workflow.workfunction import WorkFunctionNode
 from aiida.engine.processes.ports import PortNamespace
 from node_graph.decorator import create_node
 import cloudpickle as pickle
-from aiida_workgraph.node import Node
+from aiida_workgraph.node import WorkNode
 
 node_types = {
     CalcFunctionNode: "CALCFUNCTION",
@@ -88,7 +88,7 @@ def build_node(
     executor: Union[Callable, str],
     inputs: Optional[List[str]] = None,
     outputs: Optional[List[str]] = None,
-) -> Node:
+) -> WorkNode:
     """Build node from executor."""
     from aiida_workgraph.workgraph import WorkGraph
 
@@ -108,7 +108,7 @@ def build_node_from_callable(
     executor: Callable,
     inputs: Optional[List[str]] = None,
     outputs: Optional[List[str]] = None,
-) -> Node:
+) -> WorkNode:
     """Build node from a callable object.
     First, check if the executor is already a node.
     If not, check if it is a function or a class.
@@ -116,15 +116,14 @@ def build_node_from_callable(
     If it is a class, it only supports CalcJob and WorkChain.
     """
     import inspect
-    from aiida_workgraph.node import Node
 
     # if it is already a node, return it
     if (
         hasattr(executor, "node")
         and inspect.isclass(executor.node)
-        and issubclass(executor.node, Node)
+        and issubclass(executor.node, WorkNode)
         or inspect.isclass(executor)
-        and issubclass(executor, Node)
+        and issubclass(executor, WorkNode)
     ):
         return executor
     ndata = {}
@@ -155,7 +154,7 @@ def build_node_from_function(
     executor: Callable,
     inputs: Optional[List[str]] = None,
     outputs: Optional[List[str]] = None,
-) -> Node:
+) -> WorkNode:
     """Build node from function."""
     return NodeDecoratorCollection.decorator_node(inputs=inputs, outputs=outputs)(
         executor
@@ -166,10 +165,9 @@ def build_node_from_AiiDA(
     ndata: Dict[str, Any],
     inputs: Optional[List[str]] = None,
     outputs: Optional[List[str]] = None,
-) -> Node:
+) -> WorkNode:
     """Register a node from a AiiDA component.
     For example: CalcJob, WorkChain, CalcFunction, WorkFunction."""
-    from aiida_workgraph.node import Node
 
     # print(executor)
     inputs = [] if inputs is None else inputs
@@ -196,7 +194,7 @@ def build_node_from_AiiDA(
     outputs.append(["General", "_outputs"])
     outputs.append(["General", "_wait"])
     inputs.append(["General", "_wait", {"link_limit": 1e6}])
-    ndata["node_class"] = Node
+    ndata["node_class"] = WorkNode
     ndata["args"] = args
     ndata["kwargs"] = kwargs
     ndata["inputs"] = inputs
@@ -215,9 +213,8 @@ def build_node_from_AiiDA(
     return node
 
 
-def build_node_from_workgraph(wg: any) -> Node:
+def build_node_from_workgraph(wg: any) -> WorkNode:
     """Build node from workgraph."""
-    from aiida_workgraph.node import Node
 
     ndata = {"node_type": "workgraph"}
     inputs = []
@@ -245,7 +242,7 @@ def build_node_from_workgraph(wg: any) -> Node:
     outputs.append(["General", "_outputs"])
     outputs.append(["General", "_wait"])
     inputs.append(["General", "_wait", {"link_limit": 1e6}])
-    ndata["node_class"] = Node
+    ndata["node_class"] = WorkNode
     ndata["kwargs"] = kwargs
     ndata["inputs"] = inputs
     ndata["outputs"] = outputs
@@ -288,7 +285,6 @@ def generate_ndata(
 ) -> Dict[str, Any]:
     """Generate node data for creating a node."""
     from node_graph.decorator import generate_input_sockets
-    from aiida_workgraph.node import Node
 
     args, kwargs, var_args, var_kwargs, _inputs = generate_input_sockets(
         func, inputs, properties
@@ -299,7 +295,7 @@ def generate_ndata(
     node_outputs.append(["General", "_wait"])
     node_outputs.append(["General", "_outputs"])
     ndata = {
-        "node_class": Node,
+        "node_class": WorkNode,
         "identifier": identifier,
         "args": args,
         "kwargs": kwargs,

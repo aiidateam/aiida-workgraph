@@ -1,8 +1,8 @@
 from typing import Dict
-from aiida_workgraph.node import Node
+from aiida_workgraph.node import WorkNode
 
 
-class AiiDAGather(Node):
+class AiiDAGather(WorkNode):
     """AiiDAGather"""
 
     identifier = "AiiDAGather"
@@ -25,7 +25,7 @@ class AiiDAGather(Node):
         }
 
 
-class AiiDAToCtx(Node):
+class AiiDAToCtx(WorkNode):
     """AiiDAToCtx"""
 
     identifier = "ToCtx"
@@ -48,7 +48,7 @@ class AiiDAToCtx(Node):
         }
 
 
-class AiiDAFromCtx(Node):
+class AiiDAFromCtx(WorkNode):
     """AiiDAFromCtx"""
 
     identifier = "FromCtx"
@@ -129,7 +129,7 @@ shelljob_outputs = [
 ]
 
 
-class AiiDAShell(Node):
+class AiiDAShell(WorkNode):
     """AiiDAShell"""
 
     identifier = "AiiDAShell"

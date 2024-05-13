@@ -5,7 +5,7 @@ def node_creation_hook(self, node: Any) -> None:
     """Hook for node creation.
 
     Args:
-        node (Node): a node to be created.
+        node (WorkNode): a node to be created.
     """
     # send message to the widget
     self.parent._widget.send(
@@ -17,7 +17,7 @@ def node_deletion_hook(self, node: Any) -> None:
     """Hook for node deletion.
 
     Args:
-        node (Node): a node to be deleted.
+        node (WorkNode): a node to be deleted.
     """
     # remove all links to the node
     link_index = []

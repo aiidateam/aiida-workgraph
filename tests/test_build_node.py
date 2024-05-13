@@ -1,4 +1,4 @@
-from aiida_workgraph import build_node, Node, WorkGraph
+from aiida_workgraph import build_node, WorkNode, WorkGraph
 
 
 def test_calcjob():
@@ -7,12 +7,12 @@ def test_calcjob():
 
     # build from the class directly
     ArithmeticAddNode = build_node(ArithmeticAddCalculation)
-    assert issubclass(ArithmeticAddNode, Node)
+    assert issubclass(ArithmeticAddNode, WorkNode)
     # build from path
     ArithmeticAddNode = build_node(
         "aiida.calculations.arithmetic.add.ArithmeticAddCalculation"
     )
-    assert issubclass(ArithmeticAddNode, Node)
+    assert issubclass(ArithmeticAddNode, WorkNode)
     # use the class directly
     wg = WorkGraph()
     add1 = wg.nodes.new(ArithmeticAddCalculation, name="add1")
@@ -23,12 +23,12 @@ def test_workchain():
     from aiida.workflows.arithmetic.multiply_add import MultiplyAddWorkChain
 
     MultiplyAddWorkNode = build_node(MultiplyAddWorkChain)
-    assert issubclass(MultiplyAddWorkNode, Node)
+    assert issubclass(MultiplyAddWorkNode, WorkNode)
     # build from path
     MultiplyAddWorkNode = build_node(
         "aiida.workflows.arithmetic.multiply_add.MultiplyAddWorkChain"
     )
-    assert issubclass(MultiplyAddWorkNode, Node)
+    assert issubclass(MultiplyAddWorkNode, WorkNode)
 
 
 def test_calcfunction():
@@ -47,12 +47,12 @@ def test_calcfunction():
 
     # build from callable
     AddNode = build_node(add)
-    assert issubclass(AddNode, Node)
+    assert issubclass(AddNode, WorkNode)
     # define outputs explicitly
     AddNode = build_node(
         add_minus, outputs=[["General", "sum"], ["General", "difference"]]
     )
-    assert issubclass(AddNode, Node)
+    assert issubclass(AddNode, WorkNode)
     assert "sum" in AddNode().outputs.keys()
     # use the class directly
     wg = WorkGraph()
@@ -66,4 +66,4 @@ def test_function():
     from scipy.linalg import norm
 
     AddNode = build_node(norm)
-    assert issubclass(AddNode, Node)
+    assert issubclass(AddNode, WorkNode)

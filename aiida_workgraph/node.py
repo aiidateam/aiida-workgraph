@@ -11,8 +11,8 @@ import aiida
 from typing import Any, Dict, Optional, Union, Callable, List
 
 
-class Node(GraphNode):
-    """Represent a Node in the AiiDA WorkGraph.
+class WorkNode(GraphNode):
+    """Represent a node in the AiiDA WorkGraph.
 
     The class extends from node_graph.node.Node and add new
     attributes to it.

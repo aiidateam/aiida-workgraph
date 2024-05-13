@@ -14,7 +14,7 @@ Create and launch workgraph
 
 .. code-block:: python
 
-    from aiida_workgraph import WorkGraph, node
+    from aiida_workgraph import WorkGraph, worknode
     wg = WorkGraph(name="my_first_workgraph")
 
 

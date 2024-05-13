@@ -1,8 +1,8 @@
 from typing import Dict
-from aiida_workgraph.node import Node
+from aiida_workgraph.node import WorkNode
 
 
-class AiiDAInt(Node):
+class AiiDAInt(WorkNode):
     identifier = "AiiDAInt"
     name = "AiiDAInt"
     node_type = "data"
@@ -26,7 +26,7 @@ class AiiDAInt(Node):
         }
 
 
-class AiiDAFloat(Node):
+class AiiDAFloat(WorkNode):
     identifier = "AiiDAFloat"
     name = "AiiDAFloat"
     node_type = "data"
@@ -49,7 +49,7 @@ class AiiDAFloat(Node):
         }
 
 
-class AiiDAString(Node):
+class AiiDAString(WorkNode):
     identifier = "AiiDAString"
     name = "AiiDAString"
     node_type = "data"
@@ -72,7 +72,7 @@ class AiiDAString(Node):
         }
 
 
-class AiiDAList(Node):
+class AiiDAList(WorkNode):
     identifier = "AiiDAList"
     name = "AiiDAList"
     node_type = "data"
@@ -93,7 +93,7 @@ class AiiDAList(Node):
         }
 
 
-class AiiDADict(Node):
+class AiiDADict(WorkNode):
     identifier = "AiiDADict"
     name = "AiiDADict"
     node_type = "data"
@@ -114,7 +114,7 @@ class AiiDADict(Node):
         }
 
 
-class AiiDANode(Node):
+class AiiDANode(WorkNode):
     """AiiDANode"""
 
     identifier = "AiiDANode"
@@ -142,7 +142,7 @@ class AiiDANode(Node):
         }
 
 
-class AiiDACode(Node):
+class AiiDACode(WorkNode):
     """AiiDACode"""
 
     identifier = "AiiDACode"
@@ -167,7 +167,7 @@ class AiiDACode(Node):
         }
 
 
-class AiiDAAdd(Node):
+class AiiDAAdd(WorkNode):
 
     identifier: str = "AiiDAAdd"
     name = "AiiDAAdd"
@@ -196,7 +196,7 @@ class AiiDAAdd(Node):
         }
 
 
-class AiiDAGreater(Node):
+class AiiDAGreater(WorkNode):
 
     identifier: str = "AiiDAGreater"
     name = "AiiDAGreater"
@@ -221,7 +221,7 @@ class AiiDAGreater(Node):
         }
 
 
-class AiiDASumDiff(Node):
+class AiiDASumDiff(WorkNode):
 
     identifier: str = "AiiDASumDiff"
     name = "AiiDASumDiff"
@@ -251,7 +251,7 @@ class AiiDASumDiff(Node):
         }
 
 
-class AiiDAArithmeticMultiplyAdd(Node):
+class AiiDAArithmeticMultiplyAdd(WorkNode):
 
     identifier: str = "AiiDAArithmeticMultiplyAdd"
     name = "AiiDAArithmeticMultiplyAdd"
