@@ -460,8 +460,8 @@ class NodeDecoratorCollection:
     graph_builder = decorator_graph_builder
 
     def __call__(self, *args, **kwargs):
-        # This allows using '@node' to directly apply the decorator_node functionality
+        # This allows using '@worknode directly apply the decorator_node functionality
         return self.decorator_node(*args, **kwargs)
 
 
-node = NodeDecoratorCollection()
+worknode = NodeDecoratorCollection()

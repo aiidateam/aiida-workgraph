@@ -23,7 +23,7 @@ Create and use `node`.
 .. code:: python
 
     # define add calcfunction node
-    @node.calcfunction()
+    @worknode.calcfunction()
     def add(x, y):
        return x + y
 

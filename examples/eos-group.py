@@ -1,5 +1,5 @@
 from aiida import load_profile
-from aiida_workgraph import build_node, WorkGraph, node
+from aiida_workgraph import build_node, WorkGraph, worknode
 from aiida.orm import Dict, KpointsData, StructureData, load_code, load_group
 from ase.build import bulk
 
@@ -11,14 +11,14 @@ PwCalculation = build_node(
 )
 
 
-@node.calcfunction()
+@worknode.calcfunction()
 def scale_structure(structure, scale):
     atoms = structure.get_ase()
     atoms.set_cell(atoms.cell * scale, scale_atoms=True)
     return StructureData(ase=atoms)
 
 
-@node.calcfunction()
+@worknode.calcfunction()
 # because this is a calcfunction, and the input datas are dynamic, we need use **datas.
 def eos(**datas):
     from ase.eos import EquationOfState
@@ -44,7 +44,7 @@ def eos(**datas):
     return eos
 
 
-@node.graph_builder()
+@worknode.graph_builder()
 def eos_workgraph(structure=None, inputs=None, run_relax=True, scales=None):
     wg = WorkGraph()
     wg.context = {"current_structure": structure}

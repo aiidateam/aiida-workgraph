@@ -1,4 +1,4 @@
-from aiida_workgraph import node, WorkGraph, build_node
+from aiida_workgraph import worknode, WorkGraph, build_node
 from aiida import load_profile
 import pathlib
 import shlex
@@ -15,7 +15,7 @@ load_profile()
 shelljob = build_node({"path": "aiida_shell.calculations.shell.ShellJob"})
 
 
-@node.graph_builder(
+@worknode.graph_builder(
     outputs=[
         ["shelljob1.stdout", "stdout"],
         ["shelljob1.stderr", "stderr"],
@@ -85,7 +85,7 @@ def launch_shell_job(  # noqa: PLR0913
     return wg
 
 
-@node()
+@worknode()
 def generate_nodes(file):
     """Prepare the nodes"""
     return {"pdb": file}

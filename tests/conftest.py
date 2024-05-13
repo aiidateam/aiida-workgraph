@@ -1,5 +1,5 @@
 import pytest
-from aiida_workgraph import node, WorkGraph
+from aiida_workgraph import worknode, WorkGraph
 from aiida.engine import calcfunction, workfunction
 from aiida.orm import Float, Int, load_code, StructureData
 from aiida.calculations.arithmetic.add import ArithmeticAddCalculation
@@ -72,7 +72,7 @@ def wg_workchain() -> WorkGraph:
 def decorated_normal_add() -> Callable:
     """Generate a decorated node for test."""
 
-    @node()
+    @worknode()
     def add(x: Any, y: Any) -> Any:
         return x + y
 
@@ -127,7 +127,7 @@ def decorated_compare() -> Callable:
     """Generate a decorated node for test."""
 
     # define compare node
-    @node()
+    @worknode()
     def compare(x, y):
         return x < y
 
@@ -152,7 +152,7 @@ def decorated_add_multiply(decorated_add, decorated_multiply) -> Callable:
 def decorated_add_multiply_group(decorated_add, decorated_multiply) -> Callable:
     """Generate a decorated node for test."""
 
-    @node.graph_builder(outputs=[["multiply1.result", "result"]])
+    @worknode.graph_builder(outputs=[["multiply1.result", "result"]])
     def add_multiply_group(x, y, z):
         wg = WorkGraph("add_multiply_group")
         add1 = wg.nodes.new(decorated_add, name="add1", x=x, y=y)

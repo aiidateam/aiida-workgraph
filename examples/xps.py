@@ -1,4 +1,4 @@
-from aiida_workgraph import build_node, WorkGraph, node
+from aiida_workgraph import build_node, WorkGraph, worknode
 from aiida import orm
 from aiida.orm import Kind, Site, StructureData, KpointsData
 from aiida import load_profile
@@ -7,7 +7,7 @@ from ase.build import molecule
 load_profile()
 
 
-@node.calcfunction(outputs=[["General", "structures"], ["General", "site_info"]])
+@worknode.calcfunction(outputs=[["General", "structures"], ["General", "site_info"]])
 def get_marked_structures(structure, atoms_list, marker="X"):
     """"""
     structures = {}
@@ -44,7 +44,7 @@ def get_marked_structures(structure, atoms_list, marker="X"):
 
 
 # the structures is used to generate the workgraph dynamically.
-@node.graph_builder(outputs=[["context", "scf", "result"]])
+@worknode.graph_builder(outputs=[["context", "scf", "result"]])
 def run_scf(
     structure,
     marked_structures,
@@ -106,7 +106,7 @@ def run_scf(
 
 
 # set link limit to a large value so that it can gather the result.
-@node.calcfunction()
+@worknode.calcfunction()
 def get_spectra(site_info, correction_energies={}, orbital="1s", **pw_outputs):
 
     binding_energies = {}
@@ -127,7 +127,7 @@ def get_spectra(site_info, correction_energies={}, orbital="1s", **pw_outputs):
     return orm.Dict(binding_energies)
 
 
-@node.graph_builder(outputs=[["get_spectra1", "result", "result"]])
+@worknode.graph_builder(outputs=[["get_spectra1", "result", "result"]])
 def xps(
     structure,
     code,

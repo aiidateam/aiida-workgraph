@@ -6,9 +6,9 @@ aiida.load_profile()
 
 
 def test_args() -> None:
-    from aiida_workgraph import node
+    from aiida_workgraph import worknode
 
-    @node.calcfunction()
+    @worknode.calcfunction()
     def test(a, b=1, **c):
         print(a, b, c)
 

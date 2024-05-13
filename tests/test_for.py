@@ -1,4 +1,4 @@
-from aiida_workgraph import node, WorkGraph
+from aiida_workgraph import worknode, WorkGraph
 from aiida import load_profile, orm
 from typing import Callable
 
@@ -7,7 +7,7 @@ load_profile()
 
 def test_for(decorated_add: Callable, decorated_multiply: Callable) -> None:
     # Create a WorkGraph will loop the a sequence
-    @node.graph_builder(outputs=[["context.total", "result"]])
+    @worknode.graph_builder(outputs=[["context.total", "result"]])
     def add_multiply_for(sequence):
         wg = WorkGraph("add_multiply_for")
         # tell the engine that this is a `for` workgraph

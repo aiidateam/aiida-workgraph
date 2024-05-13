@@ -1,4 +1,4 @@
-from aiida_workgraph import node, WorkGraph
+from aiida_workgraph import worknode, WorkGraph
 from aiida import load_profile, orm
 
 load_profile()
@@ -24,7 +24,7 @@ def test_while(decorated_add, decorated_multiply, decorated_compare):
 
 def test_while_graph_builder(decorated_add, decorated_multiply, decorated_compare):
     # Create a WorkGraph will repeat itself based on the conditions
-    @node.graph_builder(outputs=[["context.n", "result"]])
+    @worknode.graph_builder(outputs=[["context.n", "result"]])
     def my_while(n=0, limit=100):
         wg = WorkGraph("while_workgraph")
         wg.workgraph_type = "WHILE"
@@ -54,7 +54,7 @@ def test_while_graph_builder(decorated_add, decorated_multiply, decorated_compar
 
 def test_while_max_iteration(decorated_add, decorated_multiply, decorated_compare):
     # Create a WorkGraph will repeat itself based on the conditions
-    @node.graph_builder(outputs=[["context.n", "result"]])
+    @worknode.graph_builder(outputs=[["context.n", "result"]])
     def my_while(n=0, limit=100):
         wg = WorkGraph("while_workgraph")
         wg.workgraph_type = "WHILE"

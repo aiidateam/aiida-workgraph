@@ -1,9 +1,9 @@
 from typing import Dict
-from aiida_workgraph import node
+from aiida_workgraph import worknode
 from aiida.orm import StructureData, UpfData
 
 
-@node(
+@worknode(
     inputs=[["String", "pseudo_family"], [StructureData, "structure"]],
     outputs=[[UpfData, "Pseudo"]],
 )

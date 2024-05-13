@@ -1,4 +1,4 @@
-from aiida_workgraph import node, WorkGraph
+from aiida_workgraph import worknode, WorkGraph
 from aiida.orm import Int, load_code
 from aiida.calculations.arithmetic.add import ArithmeticAddCalculation
 from aiida import load_profile
@@ -6,7 +6,7 @@ from aiida import load_profile
 load_profile()
 
 
-@node.calcfunction()
+@worknode.calcfunction()
 def decorated_add(x, y, t=1):
     import time
 
@@ -14,7 +14,7 @@ def decorated_add(x, y, t=1):
     return x + y
 
 
-@node.calcfunction()
+@worknode.calcfunction()
 def decorated_multiply(x, y, t=1):
     import time
 
@@ -22,7 +22,7 @@ def decorated_multiply(x, y, t=1):
     return x * y
 
 
-@node.graph_builder(outputs=[["multiply.result", "result"]])
+@worknode.graph_builder(outputs=[["multiply.result", "result"]])
 def add_multiply_group(x, y, z, t=2):
     wg = WorkGraph("add_multiply_group")
     add1 = wg.nodes.new(decorated_add, name="add1", x=x, y=y, t=t)

@@ -25,7 +25,7 @@ def test_shell_date():
 
 
 def test_shell_workflow():
-    from aiida_workgraph import node, WorkGraph
+    from aiida_workgraph import worknode, WorkGraph
     from aiida_shell.launch import prepare_code
     from aiida.orm import Int
     from aiida_shell.data import PickledData
@@ -39,12 +39,12 @@ def test_shell_workflow():
 
         return {"result": Int((dirpath / "stdout").read_text().strip())}
 
-    @node()
+    @worknode()
     def prepare_bc_nodes(file):
         """Prepare the nodes for the bc calculation."""
         return {"result": {"expression": file}}
 
-    @node()
+    @worknode()
     def prepare_echo_nodes(result, z):
         """Prepare the nodes for the echo calculation."""
         return {

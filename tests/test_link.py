@@ -6,10 +6,10 @@ aiida.load_profile()
 def test_multiply_link() -> None:
     """Test multiply link."""
 
-    from aiida_workgraph import node, WorkGraph
+    from aiida_workgraph import worknode, WorkGraph
     from aiida.orm import Float, load_node
 
-    @node.calcfunction()
+    @worknode.calcfunction()
     def sum(datas):
         total = 0
         for data in datas:

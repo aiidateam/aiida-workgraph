@@ -1,4 +1,4 @@
-from aiida_workgraph import node, WorkGraph
+from aiida_workgraph import worknode, WorkGraph
 from aiida import load_profile
 from aiida.orm import load_code
 
@@ -10,7 +10,7 @@ pdb_delhetatm = load_code("pdb_delhetatm")
 pdb_tidy = load_code("pdb_tidy")
 
 
-@node()
+@worknode()
 def generate_nodes(file):
     """Prepare the nodes"""
     return {"pdb": file}

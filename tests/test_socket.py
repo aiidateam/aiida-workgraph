@@ -6,9 +6,9 @@ aiida.load_profile()
 
 
 def test_socket(decorated_multiply) -> None:
-    from aiida_workgraph import node
+    from aiida_workgraph import worknode
 
-    @node(
+    @worknode(
         inputs=[[int, "x"], [float, "y"]],
         outputs=[[float, "result"]],
     )
@@ -35,10 +35,10 @@ def test_socket(decorated_multiply) -> None:
 
 
 def test_AiiDA_socket():
-    from aiida_workgraph import node
+    from aiida_workgraph import worknode
     from aiida import orm
 
-    @node.calcfunction(
+    @worknode.calcfunction(
         inputs=[[orm.Int, "x"], [orm.Float, "y"]],
         outputs=[[orm.Float, "result"]],
     )
