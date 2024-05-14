@@ -117,11 +117,11 @@ def build_node_from_callable(
     """
     import inspect
 
-    # if it is already a node, return it
+    # if it is already a WorkNode, return it
     if (
-        hasattr(executor, "node")
-        and inspect.isclass(executor.node)
-        and issubclass(executor.node, WorkNode)
+        hasattr(executor, "worknode")
+        and inspect.isclass(executor.worknode)
+        and issubclass(executor.worknode, WorkNode)
         or inspect.isclass(executor)
         and issubclass(executor, WorkNode)
     ):
@@ -158,7 +158,7 @@ def build_node_from_function(
     """Build node from function."""
     return NodeDecoratorCollection.decorator_node(inputs=inputs, outputs=outputs)(
         executor
-    ).node
+    ).worknode
 
 
 def build_node_from_AiiDA(
@@ -360,6 +360,7 @@ class NodeDecoratorCollection:
             node = create_node(ndata)
             func.identifier = identifier
             func.node = node
+            func.worknode = node
             return func
 
         return decorator
@@ -409,6 +410,7 @@ class NodeDecoratorCollection:
             node.group_inputs = inputs
             node.group_outputs = outputs
             func.node = node
+            func.worknode = node
             return func
 
         return decorator
@@ -427,6 +429,7 @@ class NodeDecoratorCollection:
             identifier = kwargs.get("identifier", None)
             func.identifier = identifier if identifier else func.__name__
             func.node = node_decorated
+            func.worknode = node_decorated
             return func
 
         return decorator
@@ -444,6 +447,7 @@ class NodeDecoratorCollection:
             identifier = kwargs.get("identifier", None)
             func.identifier = identifier if identifier else func.__name__
             func.node = node_decorated
+            func.worknode = node_decorated
 
             return func
 

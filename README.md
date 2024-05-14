@@ -57,16 +57,15 @@ Check the [docs](https://aiida-workgraph.readthedocs.io/en/latest/) and learn ab
 Suppose we want to calculate ```(x + y) * z ``` in two steps. First, add `x` and `y`, then multiply the result with `z`.
 
 ```python
-from aiida.engine import calcfunction
-from aiida_workgraph import WorkGraph
+from aiida_workgraph import WorkGraph, worknode
 
-# define add calcfunction
-@calcfunction
+# define add worknode
+@worknode.calcfunction()
 def add(x, y):
     return x + y
 
-# define multiply calcfunction
-@calcfunction
+# define multiply worknode
+@worknode.calcfunction()
 def multiply(x, y):
     return x*y
 
