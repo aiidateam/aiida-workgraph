@@ -1,5 +1,5 @@
 from typing import Dict
-from aiida_workgraph.node import WorkNode
+from aiida_workgraph.worknode import WorkNode
 
 
 class AiiDAInt(WorkNode):

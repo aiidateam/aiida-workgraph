@@ -6,7 +6,7 @@ from aiida.orm.nodes.process.workflow.workfunction import WorkFunctionNode
 from aiida.engine.processes.ports import PortNamespace
 from node_graph.decorator import create_node
 import cloudpickle as pickle
-from aiida_workgraph.node import WorkNode
+from aiida_workgraph import WorkNode
 
 node_types = {
     CalcFunctionNode: "CALCFUNCTION",

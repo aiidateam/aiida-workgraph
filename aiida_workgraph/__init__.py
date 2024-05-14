@@ -1,5 +1,5 @@
 from .workgraph import WorkGraph
-from .node import WorkNode
+from .worknode import WorkNode
 from .decorator import worknode, build_node
 
 
