@@ -183,10 +183,13 @@ def build_node_from_AiiDA(
     for _key, port in spec.outputs.ports.items():
         add_output_recursive(outputs, port, required=port.required)
     if spec.inputs.dynamic:
-        name = (
-            executor.process_class._var_keyword
-            or executor.process_class._var_positional
-        )
+        if hasattr(executor.process_class, "_varargs"):
+            name = executor.process_class._varargs
+        else:
+            name = (
+                executor.process_class._var_keyword
+                or executor.process_class._var_positional
+            )
         ndata["var_kwargs"] = name
         inputs.append(["General", name, {"property": ["General", {"default": {}}]}])
     if ndata["node_type"].upper() in ["CALCFUNCTION", "WORKFUNCTION"]:
