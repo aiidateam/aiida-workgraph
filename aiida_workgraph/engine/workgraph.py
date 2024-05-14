@@ -283,7 +283,7 @@ class WorkGraph(Process, metaclass=Protect):
         except _PropagateReturn as exception:
             finished, result = True, exception.exit_code
         else:
-            finished = self.is_workgraph_finished()
+            finished, result = self.is_workgraph_finished()
 
         # If the workgraph is finished or the result is an ExitCode, we exit by returning
         if finished:
@@ -473,7 +473,7 @@ class WorkGraph(Process, metaclass=Protect):
         if node.get("process"):
             # print(f"set node result: {name} process")
             state = node["process"].process_state.value.upper()
-            if state == "FINISHED":
+            if node["process"].is_finished_ok:
                 node["state"] = state
                 if node["metadata"]["node_type"].upper() == "GRAPH_BUILDER":
                     # expose the outputs of workgraph
@@ -496,7 +496,8 @@ class WorkGraph(Process, metaclass=Protect):
                 self.ctx.nodes[name]["state"] = "FINISHED"
                 self.node_to_context(name)
                 self.report(f"Node: {name} finished.")
-            elif state == "EXCEPTED":
+            # all other states are considered as failed
+            else:
                 node["state"] = state
                 node["results"] = node["process"].outputs
                 # self.ctx.new_data[name] = node["results"]
@@ -560,7 +561,7 @@ class WorkGraph(Process, metaclass=Protect):
         self.run_nodes(node_to_run)
 
     def update_node_state(self, name: str) -> None:
-        """Update ndoe state if node is a Awaitable."""
+        """Update node state if node is a Awaitable."""
         print("update node state: ", name)
         node = self.ctx.nodes[name]
         if (
@@ -581,11 +582,14 @@ class WorkGraph(Process, metaclass=Protect):
         """Check if the workgraph is finished.
         For `while` workgraph, we need check its conditions"""
         is_finished = True
+        failed_nodes = []
         for name, node in self.ctx.nodes.items():
             # self.update_node_state(name)
             print("node: ", name, node["state"])
             if node["state"] in ["RUNNING", "CREATED", "READY"]:
                 is_finished = False
+            elif node["state"] == "FAILED":
+                failed_nodes.append(name)
         if is_finished:
             if self.ctx.workgraph["workgraph_type"].upper() == "WHILE":
                 should_run = self.check_while_conditions()
@@ -594,7 +598,13 @@ class WorkGraph(Process, metaclass=Protect):
                 should_run = self.check_for_conditions()
                 is_finished = not should_run
         print("is workgraph finished: ", is_finished)
-        return is_finished
+        if is_finished and len(failed_nodes) > 0:
+            message = f"WorkGraph finished, but nodes: {failed_nodes} failed."
+            self.report(message)
+            result = ExitCode(302, message)
+        else:
+            result = None
+        return is_finished, result
 
     def check_while_conditions(self) -> bool:
         """Check while conditions.
@@ -955,12 +965,15 @@ class WorkGraph(Process, metaclass=Protect):
     def node_to_context(self, name: str) -> None:
         """Export node result to context."""
         from aiida_workgraph.utils import update_nested_dict
+        from aiida.common.exceptions import NotExistentKeyError
 
         items = self.ctx.nodes[name]["to_context"]
         for item in items:
-            update_nested_dict(
-                self.ctx, item[1], self.ctx.nodes[name]["results"][item[0]]
-            )
+            try:
+                result = self.ctx.nodes[name]["results"][item[0]]
+                update_nested_dict(self.ctx, item[1], result)
+            except NotExistentKeyError as e:
+                print(f"Warning: {e}. Skipping update for item {item[0]}")
 
     def check_node_state(self, name: str) -> None:
         """Check node states.
