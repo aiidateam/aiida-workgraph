@@ -16,7 +16,7 @@ node_types = {
     WorkChain: "WORKCHAIN",
 }
 
-socket_types = {
+aiida_socket_maping = {
     orm.Int: "AiiDAInt",
     orm.Float: "AiiDAFloat",
     orm.Str: "AiiDAString",
@@ -59,11 +59,13 @@ def add_input_recursive(
         if port_name not in input_names:
             # port.valid_type can be a single type or a tuple of types,
             # we only support single type for now
-            if isinstance(port.valid_type, tuple):
+            if isinstance(port.valid_type, tuple) and len(port.valid_type) > 1:
                 socket_type = "General"
+            if isinstance(port.valid_type, tuple) and len(port.valid_type) == 1:
+                socket_type = aiida_socket_maping.get(port.valid_type[0], "General")
             else:
-                socket_type = socket_types.get(port.valid_type, "General")
-            inputs.append([socket_types.get(socket_type, "General"), port_name])
+                socket_type = aiida_socket_maping.get(port.valid_type, "General")
+            inputs.append([socket_type, port_name])
         if required:
             args.append(port_name)
         else:

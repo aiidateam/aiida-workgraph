@@ -39,14 +39,18 @@ class AiiDAIntProperty(NodeProperty, SerializeJson):
         self,
         name: str,
         description: str = "",
-        default: Union[int, None] = 0,
+        default: Union[int, None] = None,
         update: Callable = None,
     ) -> None:
         super().__init__(name, description, default, update)
 
     def set_value(self, value: Union[int, orm.Int, str]) -> None:
         # run the callback function
-        if isinstance(value, int):
+        if value is None:
+            self._value = value
+            if self.update is not None:
+                self.update()
+        elif isinstance(value, int):
             self._value = orm.Int(value)
             if self.update is not None:
                 self.update()
@@ -74,14 +78,18 @@ class AiiDAFloatProperty(NodeProperty, SerializeJson):
         self,
         name: str,
         description: str = "",
-        default: Union[int, None] = 0.0,
+        default: Union[int, None] = None,
         update: Callable = None,
     ) -> None:
         super().__init__(name, description, default, update)
 
     def set_value(self, value: Union[float, orm.Float, int, orm.Int, str]) -> None:
         # run the callback function
-        if isinstance(value, (int, float)):
+        if value is None:
+            self._value = value
+            if self.update is not None:
+                self.update()
+        elif isinstance(value, (int, float)):
             self._value = orm.Float(value)
             if self.update is not None:
                 self.update()
@@ -109,14 +117,18 @@ class AiiDABoolProperty(NodeProperty, SerializeJson):
         self,
         name: str,
         description: str = "",
-        default: Union[bool, None] = True,
+        default: Union[bool, None] = None,
         update: Callable = None,
     ) -> None:
         super().__init__(name, description, default, update)
 
     def set_value(self, value: Union[bool, orm.Bool, int, str]) -> None:
         # run the callback function
-        if isinstance(value, (bool, int)):
+        if value is None:
+            self._value = value
+            if self.update is not None:
+                self.update()
+        elif isinstance(value, (bool, int)):
             self._value = orm.Bool(value)
             if self.update is not None:
                 self.update()
@@ -144,13 +156,17 @@ class AiiDAStringProperty(NodeProperty, SerializeJson):
         self,
         name: str,
         description: str = "",
-        default: Union[str, orm.Str, None] = True,
+        default: Union[str, orm.Str, None] = None,
         update: Callable = None,
     ) -> None:
         super().__init__(name, description, default, update)
 
     def set_value(self, value: Union[str, orm.Str]) -> None:
-        if isinstance(value, str):
+        if value is None:
+            self._value = value
+            if self.update is not None:
+                self.update()
+        elif isinstance(value, str):
             self._value = orm.Str(value)
             if self.update is not None:
                 self.update()
@@ -184,7 +200,11 @@ class AiiDADictProperty(NodeProperty, SerializeJson):
         super().__init__(name, description, default, update)
 
     def set_value(self, value: Union[Dict, orm.Dict, str]) -> None:
-        if isinstance(value, dict):
+        if value is None:
+            self._value = value
+            if self.update is not None:
+                self.update()
+        elif isinstance(value, dict):
             self._value = orm.Dict(value)
             if self.update is not None:
                 self.update()
@@ -220,7 +240,11 @@ class AiiDAIntVectorProperty(VectorProperty):
 
     def set_value(self, value: List[int]) -> None:
         # run the callback function
-        if len(value) == self.size:
+        if value is None:
+            self._value = value
+            if self.update is not None:
+                self.update()
+        elif len(value) == self.size:
             for i in range(self.size):
                 if isinstance(value[i], int):
                     self._value[i] = value[i]
@@ -254,7 +278,11 @@ class AiiDAFloatVectorProperty(VectorProperty):
 
     def set_value(self, value: List[Union[int, float]]) -> None:
         # run the callback function
-        if len(value) == self.size:
+        if value is None:
+            self._value = value
+            if self.update is not None:
+                self.update()
+        elif len(value) == self.size:
             for i in range(self.size):
                 if isinstance(value[i], (int, float)):
                     self._value[i] = value[i]
@@ -294,7 +322,11 @@ class BoolVectorProperty(VectorProperty):
 
     def set_value(self, value: List[Union[bool, int]]) -> None:
         # run the callback function
-        if len(value) == self.size:
+        if value is None:
+            self._value = value
+            if self.update is not None:
+                self.update()
+        elif len(value) == self.size:
             for i in range(self.size):
                 if isinstance(value[i], (bool, int)):
                     self._value[i] = value[i]
