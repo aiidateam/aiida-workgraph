@@ -2,6 +2,10 @@ from typing import Optional, Any
 from aiida_workgraph.socket import NodeSocket
 from node_graph.serializer import SerializeJson, SerializePickle
 from node_graph.sockets.builtin import (
+    SocketInt,
+    SocketFloat,
+    SocketString,
+    SocketBool,
     SocketBaseDict,
     SocketBaseList,
 )
@@ -135,6 +139,10 @@ class SocketAiiDAFloatVector(NodeSocket, SerializeJson):
 
 socket_list = [
     SocketGeneral,
+    SocketInt,
+    SocketFloat,
+    SocketString,
+    SocketBool,
     SocketBaseDict,
     SocketBaseList,
     SocketAiiDAInt,

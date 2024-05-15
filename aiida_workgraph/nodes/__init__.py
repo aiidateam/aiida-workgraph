@@ -17,9 +17,6 @@ from .qe import (
     AiiDAKpoint,
     AiiDAPWPseudo,
     AiiDAStructure,
-    AiiDAPW,
-    AiiDADos,
-    AiiDAProjwfc,
 )
 
 node_list = [
@@ -41,9 +38,6 @@ node_list = [
     AiiDAKpoint,
     AiiDAPWPseudo,
     AiiDAStructure,
-    AiiDAPW,
-    AiiDADos,
-    AiiDAProjwfc,
 ]
 
 

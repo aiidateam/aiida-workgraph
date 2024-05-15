@@ -1,6 +1,7 @@
 from typing import Any, Callable, Dict, List, Optional, Union, Tuple
 from aiida_workgraph.utils import get_executor
 from aiida.engine import calcfunction, workfunction, CalcJob, WorkChain
+from aiida import orm
 from aiida.orm.nodes.process.calculation.calcfunction import CalcFunctionNode
 from aiida.orm.nodes.process.workflow.workfunction import WorkFunctionNode
 from aiida.engine.processes.ports import PortNamespace
@@ -13,6 +14,13 @@ node_types = {
     WorkFunctionNode: "WORKFUNCTION",
     CalcJob: "CALCJOB",
     WorkChain: "WORKCHAIN",
+}
+
+aiida_socket_maping = {
+    orm.Int: "AiiDAInt",
+    orm.Float: "AiiDAFloat",
+    orm.Str: "AiiDAString",
+    orm.Bool: "AiiDABool",
 }
 
 
@@ -49,7 +57,15 @@ def add_input_recursive(
             )
     else:
         if port_name not in input_names:
-            inputs.append(["General", port_name])
+            # port.valid_type can be a single type or a tuple of types,
+            # we only support single type for now
+            if isinstance(port.valid_type, tuple) and len(port.valid_type) > 1:
+                socket_type = "General"
+            if isinstance(port.valid_type, tuple) and len(port.valid_type) == 1:
+                socket_type = aiida_socket_maping.get(port.valid_type[0], "General")
+            else:
+                socket_type = aiida_socket_maping.get(port.valid_type, "General")
+            inputs.append([socket_type, port_name])
         if required:
             args.append(port_name)
         else:
@@ -133,7 +149,6 @@ def build_node_from_callable(
         if getattr(executor, "node_class", False):
             ndata["node_type"] = node_types.get(executor.node_class, "NORMAL")
             ndata["executor"] = executor
-            print("ndata: ", ndata)
             return build_node_from_AiiDA(ndata, inputs=inputs, outputs=outputs)
         else:
             ndata["node_type"] = "NORMAL"
@@ -424,17 +439,17 @@ class NodeDecoratorCollection:
     def calcfunction(**kwargs: Any) -> Callable:
         def decorator(func):
             # First, apply the calcfunction decorator
-            calcfunc_decorated = calcfunction(func)
+            func_decorated = calcfunction(func)
             # Then, apply node decorator
             node_decorated = build_node_from_callable(
-                calcfunc_decorated,
+                func_decorated,
                 inputs=kwargs.get("inputs", []),
                 outputs=kwargs.get("outputs", []),
             )
             identifier = kwargs.get("identifier", None)
-            func.identifier = identifier if identifier else func.__name__
-            func.node = node_decorated
-            return func
+            func_decorated.identifier = identifier if identifier else func.__name__
+            func_decorated.node = node_decorated
+            return func_decorated
 
         return decorator
 
@@ -442,17 +457,17 @@ class NodeDecoratorCollection:
     def workfunction(**kwargs: Any) -> Callable:
         def decorator(func):
             # First, apply the workfunction decorator
-            calcfunc_decorated = workfunction(func)
+            func_decorated = workfunction(func)
             node_decorated = build_node_from_callable(
-                calcfunc_decorated,
+                func_decorated,
                 inputs=kwargs.get("inputs", []),
                 outputs=kwargs.get("outputs", []),
             )
             identifier = kwargs.get("identifier", None)
-            func.identifier = identifier if identifier else func.__name__
-            func.node = node_decorated
+            func_decorated.identifier = identifier if identifier else func.__name__
+            func_decorated.node = node_decorated
 
-            return func
+            return func_decorated
 
         return decorator
 

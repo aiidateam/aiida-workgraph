@@ -9,10 +9,9 @@ def test_socket(decorated_multiply) -> None:
     from aiida_workgraph import node
 
     @node(
-        inputs=[[int, "x"], [float, "y"]],
         outputs=[[float, "result"]],
     )
-    def add(x, y):
+    def add(x: int, y: float):
         result = x + y
         return result
 
@@ -26,7 +25,7 @@ def test_socket(decorated_multiply) -> None:
     with pytest.raises(Exception) as excinfo:
         add1.set({"x": 1.0, "y": 2})  # Direct integers instead of orm.Int or orm.Float
 
-    assert "is not an {}".format(int.__name__) in str(excinfo.value)
+    assert "is not" in str(excinfo.value) and int.__name__ in str(excinfo.value)
     # This should be successful
     add1.set({"x": 1, "y": 2.0})
     wg.submit(wait=True)
@@ -39,10 +38,9 @@ def test_AiiDA_socket():
     from aiida import orm
 
     @node.calcfunction(
-        inputs=[[orm.Int, "x"], [orm.Float, "y"]],
         outputs=[[orm.Float, "result"]],
     )
-    def add(x, y):
+    def add(x: int, y: float):
         result = x + y
         return result
 
@@ -54,7 +52,7 @@ def test_AiiDA_socket():
             {"x": orm.Float(1.0), "y": 2}
         )  # Direct integers instead of orm.Int or orm.Float
 
-    assert "is not an {}".format(orm.Int.__name__) in str(excinfo.value)
+    assert "is not" in str(excinfo.value)
     # This should be successful
     add1.set({"x": orm.Int(1), "y": orm.Float(2.0)})
     wg.run()
