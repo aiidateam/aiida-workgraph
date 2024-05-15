@@ -133,7 +133,6 @@ def build_node_from_callable(
         if getattr(executor, "node_class", False):
             ndata["node_type"] = node_types.get(executor.node_class, "NORMAL")
             ndata["executor"] = executor
-            print("ndata: ", ndata)
             return build_node_from_AiiDA(ndata, inputs=inputs, outputs=outputs)
         else:
             ndata["node_type"] = "NORMAL"
