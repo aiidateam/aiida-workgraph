@@ -41,7 +41,7 @@ MAX_NUMBER_AWAITABLES_MSG = "The maximum number of subprocesses has been reached
 
 
 @auto_persist("_awaitables")
-class WorkGraph(Process, metaclass=Protect):
+class WorkGraphEngine(Process, metaclass=Protect):
     """The `WorkGraph` class is used to construct workflows in AiiDA."""
 
     # used to create a process node that represents what happened in this process.
@@ -812,7 +812,7 @@ class WorkGraph(Process, metaclass=Protect):
                 merge_properties(wgdata)
                 metadata = {"call_link_label": name}
                 inputs = {"wg": wgdata, "metadata": metadata}
-                process_inited = WorkGraph(inputs=inputs)
+                process_inited = WorkGraphEngine(inputs=inputs)
                 process_inited.runner.persister.save_checkpoint(process_inited)
                 saver = WorkGraphSaver(process_inited.node, wgdata)
                 saver.save()
