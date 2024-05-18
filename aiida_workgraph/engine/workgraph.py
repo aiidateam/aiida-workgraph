@@ -573,6 +573,7 @@ class WorkGraphEngine(Process, metaclass=Protect):
                 "WORKCHAIN",
                 "GRAPH_BUILDER",
                 "WORKGRAPH",
+                "PYTHON",
             ]
             and node["state"] == "RUNNING"
         ):
@@ -679,6 +680,7 @@ class WorkGraphEngine(Process, metaclass=Protect):
                 "WORKCHAIN",
                 "GRAPH_BUILDER",
                 "WORKGRAPH",
+                "PYTHON",
             ]:
                 if len(self._awaitables) > self.ctx.max_number_awaitables:
                     print(
@@ -818,6 +820,34 @@ class WorkGraphEngine(Process, metaclass=Protect):
                 saver.save()
                 print("submit workgraph: ")
                 process = self.submit(process_inited)
+                node["process"] = process
+                self.ctx.nodes[name]["state"] = "RUNNING"
+                self.to_context(**{name: process})
+            elif node["metadata"]["node_type"].upper() in ["PYTHON"]:
+                from aiida_workgraph.calculations.python import PythonCalculation
+                from aiida_workgraph.calculations.general_data import GeneralData
+
+                print("node  type: Python.")
+                # normal function does not have a process
+                code = kwargs.pop("_code")
+                function = GeneralData(executor)
+                inputs = {}
+                for key, value in kwargs.items():
+                    inputs[key] = GeneralData(value)
+                #
+                kwargs.setdefault("metadata", {})
+                kwargs["metadata"].update({"call_link_label": name})
+                # transfer the args to kwargs
+                process = self.submit(
+                    PythonCalculation,
+                    inputs={
+                        "function": function,
+                        "code": code,
+                        "kwargs": inputs,
+                        "metadata": {"call_link_label": name},
+                    },
+                )
+                process.label = name
                 node["process"] = process
                 self.ctx.nodes[name]["state"] = "RUNNING"
                 self.to_context(**{name: process})

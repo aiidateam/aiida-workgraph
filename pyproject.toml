@@ -70,6 +70,15 @@ workgraph = "aiida_workgraph.cli.cmd_workgraph:workgraph"
 [project.entry-points."aiida.cmdline"]
 "workgraph" = "aiida_workgraph.cli.cmd_workgraph:workgraph"
 
+[project.entry-points."aiida.calculations"]
+"workgraph.python" = "aiida_workgraph.calculations.python:PythonCalculation"
+
+[project.entry-points."aiida.parsers"]
+"workgraph.python" = "aiida_workgraph.calculations.python_parser:PythonParser"
+
+[project.entry-points."aiida.data"]
+"workgraph.general" = "aiida_workgraph.calculations.general_data:GeneralData"
+
 [project.entry-points."aiida.node"]
 "process.workflow.workgraph" = "aiida_workgraph.orm.workgraph:WorkgraphNode"
 

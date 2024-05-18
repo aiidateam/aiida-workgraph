@@ -16,10 +16,18 @@ class WorkGraphNodeCollection(NodeCollection):
         **kwargs: Any
     ) -> Any:
         from aiida_workgraph.decorator import build_node_from_callable
+        import inspect
 
         # build the node on the fly if the identifier is a callable
         if callable(identifier):
+            print("callable")
             identifier = build_node_from_callable(identifier)
+            # if identifier is a function, and code is provided, then it is a PythonCalculation
+            if inspect.isfunction(identifier) and "_code" in kwargs:
+                print("PythonCalculation")
+                print("node_type", identifier.node.node_type)
+                identifier.node.node_type = "PYTHON"
+                print("node_type", identifier.node.node_type)
         # Call the original new method
         return super().new(identifier, name, uuid, **kwargs)
 

@@ -231,6 +231,7 @@ class WorkGraph(node_graph.NodeGraph):
                 self.nodes[link.link_label].mtime = node.mtime
                 if self.nodes[link.link_label].state == "FINISHED":
                     # update the output sockets
+                    i = 0
                     for socket in self.nodes[link.link_label].outputs:
                         if self.nodes[link.link_label].node_type == "graph_builder":
                             if not getattr(node.outputs, "group_outputs", False):
@@ -238,8 +239,23 @@ class WorkGraph(node_graph.NodeGraph):
                             socket.value = getattr(
                                 node.outputs.group_outputs, socket.name, None
                             )
+                        elif self.nodes[link.link_label].node_type.upper() == "PYTHON":
+                            results = node.outputs.results.value
+                            if isinstance(results, tuple):
+                                if len(self.nodes[link.link_label].outputs) != len(
+                                    results
+                                ):
+                                    raise ValueError(
+                                        "The number of results does not match the number of outputs."
+                                    )
+                                socket.value = results[i]
+                            elif isinstance(results, dict):
+                                socket.value = results.get(socket.name, None)
+                            else:
+                                socket.value = results
                         else:
                             socket.value = getattr(node.outputs, socket.name, None)
+                        i += 1
             elif isinstance(node, aiida.orm.Data):
                 if link.link_label.startswith(
                     "group_outputs__"

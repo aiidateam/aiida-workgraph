@@ -263,6 +263,7 @@ def build_node_from_workgraph(wg: any) -> Node:
     outputs.append(["General", "_outputs"])
     outputs.append(["General", "_wait"])
     inputs.append(["General", "_wait", {"link_limit": 1e6}])
+    inputs.append(["General", "_code"])
     ndata["node_class"] = Node
     ndata["kwargs"] = kwargs
     ndata["inputs"] = inputs
@@ -314,6 +315,8 @@ def generate_ndata(
     node_outputs = outputs
     # add built-in sockets
     _inputs.append(["General", "_wait", {"link_limit": 1e6}])
+    _inputs.append(["General", "_code"])
+    kwargs.append("_code")
     node_outputs.append(["General", "_wait"])
     node_outputs.append(["General", "_outputs"])
     ndata = {

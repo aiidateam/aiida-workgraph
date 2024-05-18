@@ -1,0 +1,7 @@
+---
+label: python
+description: Python code
+default_calc_job_plugin: workgraph.python
+computer: localhost
+prepend_text: ' '
+append_text: ' '
