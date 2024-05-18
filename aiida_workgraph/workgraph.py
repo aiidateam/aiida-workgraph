@@ -16,7 +16,7 @@ from typing import Any, Dict, List, Optional
 
 
 class WorkGraph(node_graph.NodeGraph):
-    """Build a node-based workflow AiiDA's workgraph engine.
+    """Build a node-based workflow AiiDA's workgraph.
 
     The class extends from NodeGraph and provides methods to run,
     submit tasks, wait for tasks to finish, and update the process status.
@@ -61,7 +61,7 @@ class WorkGraph(node_graph.NodeGraph):
         Run the AiiDA workgraph process and update the process status. The method uses AiiDA's engine to run
         the process and then calls the update method to update the state of the process.
         """
-        from aiida_workgraph.engine.workgraph import WorkGraph as WorkGraphEngine
+        from aiida_workgraph.engine.workgraph import WorkGraphEngine
         from aiida_workgraph.utils import merge_properties
 
         # set node inputs
@@ -136,7 +136,7 @@ class WorkGraph(node_graph.NodeGraph):
         This is only used for a running workgraph.
         Save the AiiDA workgraph process and update the process status.
         """
-        from aiida_workgraph.engine.workgraph import WorkGraph as WorkGraphEngine
+        from aiida_workgraph.engine.workgraph import WorkGraphEngine
         from aiida_workgraph.utils import merge_properties
 
         wgdata = self.to_dict()

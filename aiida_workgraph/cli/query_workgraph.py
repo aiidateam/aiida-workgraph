@@ -137,7 +137,7 @@ class WorkGraphQueryBuilder:
 
         from aiida import orm
         from aiida.common import timezone
-        from aiida_workgraph.engine.workgraph import WorkGraph
+        from aiida_workgraph.engine.workgraph import WorkGraphEngine
 
         # Define the list of projections for the QueryBuilder, which are all valid minus the compound projections
         projected_attributes = [
@@ -157,7 +157,7 @@ class WorkGraphQueryBuilder:
 
         builder = orm.QueryBuilder()
         builder.append(
-            WorkGraph, filters=filters, project=unique_projections, tag="process"
+            WorkGraphEngine, filters=filters, project=unique_projections, tag="process"
         )
 
         if relationships is not None:
