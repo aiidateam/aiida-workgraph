@@ -1,5 +1,6 @@
 """Parser for an `PythonCalculation` job."""
 from aiida.parsers.parser import Parser
+from .general_data import GeneralData
 
 
 class PythonParser(Parser):
@@ -8,7 +9,6 @@ class PythonParser(Parser):
     def parse(self, **kwargs):
         """Parse the contents of the output files stored in the `retrieved` output node."""
         import pickle
-        from aiida_ase.data.general import GeneralData
 
         try:
             with self.retrieved.base.repository.open("results.pickle", "rb") as handle:

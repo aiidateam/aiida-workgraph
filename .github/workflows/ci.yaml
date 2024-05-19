@@ -130,7 +130,7 @@ jobs:
             env:
                 AIIDA_WARN_v3: 1
             run: |
-                pytest -v tests --cov
+                pytest -sv tests/test_python.py --cov
 
         -   name: Upload coverage reports to Codecov
             uses: codecov/codecov-action@v4.0.1

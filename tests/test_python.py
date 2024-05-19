@@ -1,5 +1,6 @@
 import aiida
 from aiida_workgraph import WorkGraph, node
+import os
 
 aiida.load_profile()
 
@@ -15,6 +16,8 @@ def test_python():
     wg = WorkGraph("test_python_node")
     wg.nodes.new(add, name="add", x=1, y=2, _code=code)
     wg.submit(wait=True)
+    os.system("verdi process report {}".format(wg.pk))
+    os.system("verdi process report {}".format(wg.nodes["add"].pk))
     assert wg.nodes["add"].outputs["result"].value.value == 3
 
 
