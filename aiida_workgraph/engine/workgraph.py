@@ -834,6 +834,8 @@ class WorkGraphEngine(Process, metaclass=Protect):
                 inputs = {}
                 for key, value in kwargs.items():
                     inputs[key] = GeneralData(value)
+                # outputs
+                outputs = [output["name"] for output in node["outputs"]]
                 #
                 kwargs.setdefault("metadata", {})
                 kwargs["metadata"].update({"call_link_label": name})
@@ -844,6 +846,7 @@ class WorkGraphEngine(Process, metaclass=Protect):
                         "function": function,
                         "code": code,
                         "kwargs": inputs,
+                        "outputs": GeneralData(outputs),
                         "metadata": {"call_link_label": name},
                     },
                 )

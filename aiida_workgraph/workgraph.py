@@ -239,20 +239,6 @@ class WorkGraph(node_graph.NodeGraph):
                             socket.value = getattr(
                                 node.outputs.group_outputs, socket.name, None
                             )
-                        elif self.nodes[link.link_label].node_type.upper() == "PYTHON":
-                            results = node.outputs.results.value
-                            if isinstance(results, tuple):
-                                if len(self.nodes[link.link_label].outputs) != len(
-                                    results
-                                ):
-                                    raise ValueError(
-                                        "The number of results does not match the number of outputs."
-                                    )
-                                socket.value = results[i]
-                            elif isinstance(results, dict):
-                                socket.value = results.get(socket.name, None)
-                            else:
-                                socket.value = results
                         else:
                             socket.value = getattr(node.outputs, socket.name, None)
                         i += 1

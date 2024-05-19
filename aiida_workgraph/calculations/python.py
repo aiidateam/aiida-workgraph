@@ -34,7 +34,11 @@ class PythonCalculation(CalcJob):
             required=True,
             help="Python executable to run the script with.",
         )
-        spec.output("results", required=True)
+        spec.input(
+            "outputs",
+            required=False,
+        )
+        spec.outputs.dynamic = True
         # set default options (optional)
         spec.inputs["metadata"]["options"]["parser_name"].default = "workgraph.python"
         spec.inputs["metadata"]["options"]["input_filename"].default = "script.py"
@@ -99,7 +103,7 @@ with open('inputs.pickle', 'rb') as handle:
 # run the function
 result = {function.__name__}(**inputs)
 # save the result as a pickle file
-with open('result.pickle', 'wb') as handle:
+with open('results.pickle', 'wb') as handle:
     pickle.dump(result, handle)
 """
         # write the script to the folder
@@ -133,6 +137,6 @@ with open('result.pickle', 'wb') as handle:
         calcinfo = CalcInfo()
         calcinfo.codes_info = [codeinfo]
         calcinfo.local_copy_list = local_copy_list
-        calcinfo.retrieve_list = ["result.pickle", self.options.output_filename]
+        calcinfo.retrieve_list = ["results.pickle", self.options.output_filename]
 
         return calcinfo
