@@ -1,10 +1,10 @@
-"""Parser for an `PythonCalculation` job."""
+"""Parser for an `PythonJob` job."""
 from aiida.parsers.parser import Parser
 from .general_data import GeneralData
 
 
 class PythonParser(Parser):
-    """Parser for an `PythonCalculation` job."""
+    """Parser for an `PythonJob` job."""
 
     def parse(self, **kwargs):
         """Parse the contents of the output files stored in the `retrieved` output node."""

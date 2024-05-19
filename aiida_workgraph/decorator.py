@@ -287,11 +287,19 @@ def build_node_from_workgraph(wg: any) -> Node:
 def serialize_function(func: Callable) -> Dict[str, Any]:
     """Serialize a function for storage or transmission."""
     import cloudpickle as pickle
+    import inspect
+    import textwrap
+
+    source_code = inspect.getsource(func)
+    source_code_lines = source_code.split("\n")
+    function_source_code = "\n".join(source_code_lines[1:])
+    function_source_code = textwrap.dedent(function_source_code)
 
     return {
         "executor": pickle.dumps(func),
         "type": "function",
         "is_pickle": True,
+        "function_source_code": function_source_code,
     }
 
 

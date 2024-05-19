@@ -824,16 +824,26 @@ class WorkGraphEngine(Process, metaclass=Protect):
                 self.ctx.nodes[name]["state"] = "RUNNING"
                 self.to_context(**{name: process})
             elif node["metadata"]["node_type"].upper() in ["PYTHON"]:
-                from aiida_workgraph.calculations.python import PythonCalculation
+                from aiida_workgraph.calculations.python import PythonJob
                 from aiida_workgraph.calculations.general_data import GeneralData
 
                 print("node  type: Python.")
                 # normal function does not have a process
                 code = kwargs.pop("_code")
-                function = GeneralData(executor)
+                # get the source code of the function
+                function_name = executor.__name__
+                function_source_code = node["executor"]["function_source_code"]
                 inputs = {}
+                # save all kwargs to inputs port
                 for key, value in kwargs.items():
-                    inputs[key] = GeneralData(value)
+                    if isinstance(value, orm.Node):
+                        if not hasattr(value, "value"):
+                            raise ValueError(
+                                "Only AiiDA data Node with a value attribute is allowed."
+                            )
+                        inputs[key] = value
+                    else:
+                        inputs[key] = GeneralData(value)
                 # outputs
                 outputs = [output["name"] for output in node["outputs"]]
                 #
@@ -841,9 +851,10 @@ class WorkGraphEngine(Process, metaclass=Protect):
                 kwargs["metadata"].update({"call_link_label": name})
                 # transfer the args to kwargs
                 process = self.submit(
-                    PythonCalculation,
+                    PythonJob,
                     inputs={
-                        "function": function,
+                        "function_source_code": orm.Str(function_source_code),
+                        "function_name": orm.Str(function_name),
                         "code": code,
                         "kwargs": inputs,
                         "outputs": GeneralData(outputs),

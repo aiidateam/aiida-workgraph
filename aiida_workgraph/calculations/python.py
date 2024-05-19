@@ -11,10 +11,10 @@ from aiida.orm import Data, SinglefileData
 
 from .general_data import GeneralData
 
-__all__ = ("PythonCalculation",)
+__all__ = ("PythonJob",)
 
 
-class PythonCalculation(CalcJob):
+class PythonJob(CalcJob):
     """Calcjob to run a Python function on a remote computer."""
 
     _DEFAULT_INPUT_FILE = "script.py"
@@ -27,7 +27,8 @@ class PythonCalculation(CalcJob):
         :param spec: the calculation job process spec to define.
         """
         super().define(spec)
-        spec.input("function", required=True)
+        spec.input("function_source_code", required=True)
+        spec.input("function_name", required=True)
         spec.input_namespace("kwargs", valid_type=Data, required=False)
         spec.input(
             "code",
@@ -62,6 +63,13 @@ class PythonCalculation(CalcJob):
             message="The output file contains invalid output.",
         )
 
+    def _build_process_label(self) -> str:
+        """Use the function name as the process label.
+
+        :returns: The process label to use for ``ProcessNode`` instances.
+        """
+        return f"PythonJob<{self.inputs.function_name.value}>"
+
     def prepare_for_submission(self, folder: Folder) -> CalcInfo:
         """Prepare the calculation for submission.
 
@@ -71,9 +79,7 @@ class PythonCalculation(CalcJob):
         :param folder: A temporary folder on the local file system.
         :returns: A :class:`aiida.common.datastructures.CalcInfo` instance.
         """
-        import inspect
         import cloudpickle as pickle
-        import textwrap
 
         dirpath = pathlib.Path(folder._abspath)
         inputs: dict[str, t.Any]
@@ -83,12 +89,7 @@ class PythonCalculation(CalcJob):
         else:
             inputs = {}
         # get the value of pickled function
-        function = self.inputs.function.value
-        # get the source code of the function
-        source_code = inspect.getsource(function)
-        source_code_lines = source_code.split("\n")
-        function_source_code = "\n".join(source_code_lines[1:])
-        function_source_code = textwrap.dedent(function_source_code)
+        function_source_code = self.inputs.function_source_code.value
         # create python script to run the function
         script = f"""
 import pickle
@@ -101,7 +102,7 @@ with open('inputs.pickle', 'rb') as handle:
     inputs = pickle.load(handle)
 
 # run the function
-result = {function.__name__}(**inputs)
+result = {self.inputs.function_name.value}(**inputs)
 # save the result as a pickle file
 with open('results.pickle', 'wb') as handle:
     pickle.dump(result, handle)
