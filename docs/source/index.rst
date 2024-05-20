@@ -50,6 +50,7 @@ Here is a detailed comparison between the ``WorkGraph`` with two AiiDA built-in 
    zero_to_hero
    tutorial/index
    howto/index
+   built-in/index
    blog/index
    concept/index
    faqs
