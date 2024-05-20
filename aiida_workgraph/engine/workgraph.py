@@ -831,6 +831,8 @@ class WorkGraphEngine(Process, metaclass=Protect):
                 # normal function does not have a process
                 code = kwargs.pop("code")
                 parent_folder = kwargs.pop("parent_folder", None)
+                metadata = kwargs.pop("metadata", {})
+                metadata.update({"call_link_label": name})
                 # get the source code of the function
                 function_name = executor.__name__
                 function_source_code = node["executor"]["function_source_code"]
@@ -848,9 +850,7 @@ class WorkGraphEngine(Process, metaclass=Protect):
                 print("inputs: ", inputs)
                 # outputs
                 output_name_list = [output["name"] for output in node["outputs"]]
-                #
-                kwargs.setdefault("metadata", {})
-                kwargs["metadata"].update({"call_link_label": name})
+
                 # transfer the args to kwargs
                 process = self.submit(
                     PythonJob,
@@ -861,7 +861,7 @@ class WorkGraphEngine(Process, metaclass=Protect):
                         "kwargs": inputs,
                         "output_name_list": orm.List(output_name_list),
                         "parent_folder": parent_folder,
-                        "metadata": {"call_link_label": name},
+                        "metadata": metadata,
                     },
                 )
                 process.label = name

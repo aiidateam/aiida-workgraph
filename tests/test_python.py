@@ -25,10 +25,16 @@ def test_python_job():
     wg.nodes.new(
         "PythonJob", function=multiply, name="multiply", x=wg.nodes["add"].outputs[0]
     )
+    #
+    metadata = {
+        "options": {
+            "custom_scheduler_commands": "# test",
+        }
+    }
     wg.submit(
         inputs={
-            "add": {"x": 2, "y": 3, "code": code},
-            "multiply": {"y": 4, "code": code},
+            "add": {"x": 2, "y": 3, "code": code, "metadata": metadata},
+            "multiply": {"y": 4, "code": code, "metadata": metadata},
         },
         wait=True,
     )
