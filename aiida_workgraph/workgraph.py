@@ -231,6 +231,7 @@ class WorkGraph(node_graph.NodeGraph):
                 self.nodes[link.link_label].mtime = node.mtime
                 if self.nodes[link.link_label].state == "FINISHED":
                     # update the output sockets
+                    i = 0
                     for socket in self.nodes[link.link_label].outputs:
                         if self.nodes[link.link_label].node_type == "graph_builder":
                             if not getattr(node.outputs, "group_outputs", False):
@@ -240,6 +241,7 @@ class WorkGraph(node_graph.NodeGraph):
                             )
                         else:
                             socket.value = getattr(node.outputs, socket.name, None)
+                        i += 1
             elif isinstance(node, aiida.orm.Data):
                 if link.link_label.startswith(
                     "group_outputs__"

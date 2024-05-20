@@ -573,6 +573,7 @@ class WorkGraphEngine(Process, metaclass=Protect):
                 "WORKCHAIN",
                 "GRAPH_BUILDER",
                 "WORKGRAPH",
+                "PYTHONJOB",
             ]
             and node["state"] == "RUNNING"
         ):
@@ -679,6 +680,7 @@ class WorkGraphEngine(Process, metaclass=Protect):
                 "WORKCHAIN",
                 "GRAPH_BUILDER",
                 "WORKGRAPH",
+                "PYTHONJOB",
             ]:
                 if len(self._awaitables) > self.ctx.max_number_awaitables:
                     print(
@@ -818,6 +820,51 @@ class WorkGraphEngine(Process, metaclass=Protect):
                 saver.save()
                 print("submit workgraph: ")
                 process = self.submit(process_inited)
+                node["process"] = process
+                self.ctx.nodes[name]["state"] = "RUNNING"
+                self.to_context(**{name: process})
+            elif node["metadata"]["node_type"].upper() in ["PYTHONJOB"]:
+                from aiida_workgraph.calculations.python import PythonJob
+                from aiida_workgraph.calculations.general_data import GeneralData
+
+                print("node  type: Python.")
+                # normal function does not have a process
+                code = kwargs.pop("code")
+                parent_folder = kwargs.pop("parent_folder", None)
+                metadata = kwargs.pop("metadata", {})
+                metadata.update({"call_link_label": name})
+                # get the source code of the function
+                function_name = executor.__name__
+                function_source_code = node["executor"]["function_source_code"]
+                inputs = {}
+                # save all kwargs to inputs port
+                for key, value in kwargs.items():
+                    if isinstance(value, orm.Node):
+                        if not hasattr(value, "value"):
+                            raise ValueError(
+                                "Only AiiDA data Node with a value attribute is allowed."
+                            )
+                        inputs[key] = value
+                    else:
+                        inputs[key] = GeneralData(value)
+                print("inputs: ", inputs)
+                # outputs
+                output_name_list = [output["name"] for output in node["outputs"]]
+
+                # transfer the args to kwargs
+                process = self.submit(
+                    PythonJob,
+                    inputs={
+                        "function_source_code": orm.Str(function_source_code),
+                        "function_name": orm.Str(function_name),
+                        "code": code,
+                        "kwargs": inputs,
+                        "output_name_list": orm.List(output_name_list),
+                        "parent_folder": parent_folder,
+                        "metadata": metadata,
+                    },
+                )
+                process.label = name
                 node["process"] = process
                 self.ctx.nodes[name]["state"] = "RUNNING"
                 self.to_context(**{name: process})

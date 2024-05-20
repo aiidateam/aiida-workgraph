@@ -14,6 +14,7 @@ This section contains a collection of HowTos for various topics.
    for
    while
    context
+   aiida_python
    aiida_shell
    wait
    combine_workgraph

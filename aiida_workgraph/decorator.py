@@ -149,7 +149,7 @@ def build_node_from_callable(
         if getattr(executor, "node_class", False):
             ndata["node_type"] = node_types.get(executor.node_class, "NORMAL")
             ndata["executor"] = executor
-            return build_node_from_AiiDA(ndata, inputs=inputs, outputs=outputs)
+            return build_node_from_AiiDA(ndata, inputs=inputs, outputs=outputs)[0]
         else:
             ndata["node_type"] = "NORMAL"
             ndata["executor"] = executor
@@ -158,11 +158,11 @@ def build_node_from_callable(
         if issubclass(executor, CalcJob):
             ndata["node_type"] = "CALCJOB"
             ndata["executor"] = executor
-            return build_node_from_AiiDA(ndata, inputs=inputs, outputs=outputs)
+            return build_node_from_AiiDA(ndata, inputs=inputs, outputs=outputs)[0]
         elif issubclass(executor, WorkChain):
             ndata["node_type"] = "WORKCHAIN"
             ndata["executor"] = executor
-            return build_node_from_AiiDA(ndata, inputs=inputs, outputs=outputs)
+            return build_node_from_AiiDA(ndata, inputs=inputs, outputs=outputs)[0]
     raise ValueError("The executor is not supported.")
 
 
@@ -230,7 +230,34 @@ def build_node_from_AiiDA(
     }
     ndata["executor"] = executor
     node = create_node(ndata)
-    return node
+    return node, ndata
+
+
+def build_PythonJob_node(func: Callable) -> Node:
+    """Build PythonJob node from function."""
+    from aiida_workgraph.calculations.python import PythonJob
+
+    ndata = {"executor": PythonJob, "node_type": "CALCJOB"}
+    _, ndata_py = build_node_from_AiiDA(ndata)
+    ndata = func.ndata
+    # merge the inputs and outputs from the PythonJob node to the function node
+    # skip the already existed inputs and outputs
+    inputs = ndata["inputs"]
+    outputs = ndata["outputs"]
+    for input in ndata_py["inputs"]:
+        if input not in inputs:
+            inputs.append(input)
+    for output in ndata_py["outputs"]:
+        if output not in outputs:
+            outputs.append(output)
+    # append the kwargs of the PythonJob node to the function node
+    kwargs = ndata["kwargs"]
+    kwargs.extend(ndata_py["kwargs"])
+    ndata["inputs"] = inputs
+    ndata["outputs"] = outputs
+    ndata["kwargs"] = kwargs
+    ndata["node_type"] = "PYTHONJOB"
+    return create_node(ndata)
 
 
 def build_node_from_workgraph(wg: any) -> Node:
@@ -263,6 +290,7 @@ def build_node_from_workgraph(wg: any) -> Node:
     outputs.append(["General", "_outputs"])
     outputs.append(["General", "_wait"])
     inputs.append(["General", "_wait", {"link_limit": 1e6}])
+    inputs.append(["General", "_code"])
     ndata["node_class"] = Node
     ndata["kwargs"] = kwargs
     ndata["inputs"] = inputs
@@ -286,11 +314,19 @@ def build_node_from_workgraph(wg: any) -> Node:
 def serialize_function(func: Callable) -> Dict[str, Any]:
     """Serialize a function for storage or transmission."""
     import cloudpickle as pickle
+    import inspect
+    import textwrap
+
+    source_code = inspect.getsource(func)
+    source_code_lines = source_code.split("\n")
+    function_source_code = "\n".join(source_code_lines[1:])
+    function_source_code = textwrap.dedent(function_source_code)
 
     return {
         "executor": pickle.dumps(func),
         "type": "function",
         "is_pickle": True,
+        "function_source_code": function_source_code,
     }
 
 
@@ -314,6 +350,8 @@ def generate_ndata(
     node_outputs = outputs
     # add built-in sockets
     _inputs.append(["General", "_wait", {"link_limit": 1e6}])
+    _inputs.append(["General", "_code"])
+    kwargs.append("_code")
     node_outputs.append(["General", "_wait"])
     node_outputs.append(["General", "_outputs"])
     ndata = {
@@ -382,6 +420,7 @@ class NodeDecoratorCollection:
             node = create_node(ndata)
             func.identifier = identifier
             func.node = node
+            func.ndata = ndata
             return func
 
         return decorator
