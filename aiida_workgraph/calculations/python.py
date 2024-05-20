@@ -7,7 +7,15 @@ import typing as t
 from aiida.common.datastructures import CalcInfo, CodeInfo
 from aiida.common.folders import Folder
 from aiida.engine import CalcJob, CalcJobProcessSpec
-from aiida.orm import Data, SinglefileData
+from aiida.orm import (
+    Data,
+    SinglefileData,
+    Str,
+    List,
+    FolderData,
+    RemoteData,
+)
+
 
 from .general_data import GeneralData
 
@@ -17,8 +25,18 @@ __all__ = ("PythonJob",)
 class PythonJob(CalcJob):
     """Calcjob to run a Python function on a remote computer."""
 
+    # Default name of the subfolder that you want to create in the working directory,
+    # in which you want to place the files taken from parent_folder
+    _PARENT_SUBFOLDER = "./parent_folder/"
+
+    _internal_retrieve_list = []
+    _retrieve_singlefile_list = []
+    _retrieve_temporary_list = []
+
     _DEFAULT_INPUT_FILE = "script.py"
     _DEFAULT_OUTPUT_FILE = "aiida.out"
+
+    _default_parser = "workgraph.python"
 
     @classmethod
     def define(cls, spec: CalcJobProcessSpec) -> None:  # type: ignore[override]
@@ -27,17 +45,34 @@ class PythonJob(CalcJob):
         :param spec: the calculation job process spec to define.
         """
         super().define(spec)
-        spec.input("function_source_code", required=True)
-        spec.input("function_name", required=True)
+        spec.input("function_source_code", required=False)
+        spec.input("function_name", required=False)
         spec.input_namespace("kwargs", valid_type=Data, required=False)
         spec.input(
-            "code",
-            required=True,
-            help="Python executable to run the script with.",
+            "output_name_list",
+            valid_type=List,
+            required=False,
+            help="The names of the output ports",
         )
         spec.input(
-            "outputs",
+            "parent_folder",
+            valid_type=(RemoteData, FolderData, SinglefileData),
             required=False,
+            help="Use a local or remote folder as parent folder (for restarts and similar)",
+        )
+        spec.input(
+            "parent_output_folder",
+            valid_type=(Str),
+            default=None,
+            required=False,
+            help="Name of the subfolder inside 'parent_folder' from which you want to copy the files",
+        )
+        spec.input(
+            "additional_retrieve_list",
+            valid_type=List,
+            default=None,
+            required=False,
+            help="The names of the files to retrieve",
         )
         spec.outputs.dynamic = True
         # set default options (optional)
@@ -48,7 +83,6 @@ class PythonJob(CalcJob):
             "num_machines": 1,
             "num_mpiprocs_per_machine": 1,
         }
-
         # start exit codes - marker for docs
         spec.exit_code(
             310,
@@ -110,8 +144,36 @@ with open('results.pickle', 'wb') as handle:
         # write the script to the folder
         with folder.open(self.options.input_filename, "w", encoding="utf8") as handle:
             handle.write(script)
+        # symlink = settings.pop('PARENT_FOLDER_SYMLINK', False)
+        symlink = True
 
+        remote_copy_list = []
         local_copy_list = []
+        remote_symlink_list = []
+        remote_list = remote_symlink_list if symlink else remote_copy_list
+
+        source = self.inputs.get("parent_folder", None)
+
+        if source is not None:
+            if isinstance(source, RemoteData):
+                dirpath = pathlib.Path(source.get_remote_path())
+                if self.inputs.parent_output_folder is not None:
+                    dirpath = (
+                        pathlib.Path(source.get_remote_path())
+                        / self.inputs.parent_output_folder
+                    )
+                remote_list.append(
+                    (source.computer.uuid, str(dirpath), self._PARENT_SUBFOLDER)
+                )
+            elif isinstance(source, FolderData):
+                dirname = (
+                    self.inputs.parent_output_folder.value
+                    if self.inputs.parent_output_folder is not None
+                    else ""
+                )
+                local_copy_list.append((source.uuid, dirname, self._PARENT_SUBFOLDER))
+            elif isinstance(source, SinglefileData):
+                local_copy_list.append((source.uuid, source.filename, source.filename))
         # create pickle file for the inputs
         input_values = {}
         for key, value in inputs.items():
@@ -131,13 +193,19 @@ with open('results.pickle', 'wb') as handle:
         codeinfo = CodeInfo()
         codeinfo.stdin_name = self.options.input_filename
         codeinfo.stdout_name = self.options.output_filename
-
-        if "code" in self.inputs:
-            codeinfo.code_uuid = self.inputs.code.uuid
+        codeinfo.code_uuid = self.inputs.code.uuid
 
         calcinfo = CalcInfo()
         calcinfo.codes_info = [codeinfo]
         calcinfo.local_copy_list = local_copy_list
+        calcinfo.remote_copy_list = remote_copy_list
+        calcinfo.remote_symlink_list = remote_symlink_list
         calcinfo.retrieve_list = ["results.pickle", self.options.output_filename]
+        if self.inputs.additional_retrieve_list is not None:
+            calcinfo.retrieve_list += self.inputs.additional_retrieve_list.get_list()
+        calcinfo.retrieve_list += self._internal_retrieve_list
+
+        calcinfo.retrieve_temporary_list = self._retrieve_temporary_list
+        calcinfo.retrieve_singlefile_list = self._retrieve_singlefile_list
 
         return calcinfo

@@ -573,7 +573,7 @@ class WorkGraphEngine(Process, metaclass=Protect):
                 "WORKCHAIN",
                 "GRAPH_BUILDER",
                 "WORKGRAPH",
-                "PYTHON",
+                "PYTHONJOB",
             ]
             and node["state"] == "RUNNING"
         ):
@@ -680,7 +680,7 @@ class WorkGraphEngine(Process, metaclass=Protect):
                 "WORKCHAIN",
                 "GRAPH_BUILDER",
                 "WORKGRAPH",
-                "PYTHON",
+                "PYTHONJOB",
             ]:
                 if len(self._awaitables) > self.ctx.max_number_awaitables:
                     print(
@@ -823,13 +823,14 @@ class WorkGraphEngine(Process, metaclass=Protect):
                 node["process"] = process
                 self.ctx.nodes[name]["state"] = "RUNNING"
                 self.to_context(**{name: process})
-            elif node["metadata"]["node_type"].upper() in ["PYTHON"]:
+            elif node["metadata"]["node_type"].upper() in ["PYTHONJOB"]:
                 from aiida_workgraph.calculations.python import PythonJob
                 from aiida_workgraph.calculations.general_data import GeneralData
 
                 print("node  type: Python.")
                 # normal function does not have a process
-                code = kwargs.pop("_code")
+                code = kwargs.pop("code")
+                parent_folder = kwargs.pop("parent_folder", None)
                 # get the source code of the function
                 function_name = executor.__name__
                 function_source_code = node["executor"]["function_source_code"]
@@ -844,8 +845,9 @@ class WorkGraphEngine(Process, metaclass=Protect):
                         inputs[key] = value
                     else:
                         inputs[key] = GeneralData(value)
+                print("inputs: ", inputs)
                 # outputs
-                outputs = [output["name"] for output in node["outputs"]]
+                output_name_list = [output["name"] for output in node["outputs"]]
                 #
                 kwargs.setdefault("metadata", {})
                 kwargs["metadata"].update({"call_link_label": name})
@@ -857,7 +859,8 @@ class WorkGraphEngine(Process, metaclass=Protect):
                         "function_name": orm.Str(function_name),
                         "code": code,
                         "kwargs": inputs,
-                        "outputs": GeneralData(outputs),
+                        "output_name_list": orm.List(output_name_list),
+                        "parent_folder": parent_folder,
                         "metadata": {"call_link_label": name},
                     },
                 )

@@ -21,14 +21,14 @@ def test_python_job():
         return x * y
 
     wg = WorkGraph("test_python_job")
-    wg.nodes.new(add, name="add", on_remote=True)
+    wg.nodes.new("PythonJob", function=add, name="add")
     wg.nodes.new(
-        multiply, name="multiply", on_remote=True, x=wg.nodes["add"].outputs[0]
+        "PythonJob", function=multiply, name="multiply", x=wg.nodes["add"].outputs[0]
     )
     wg.submit(
         inputs={
-            "add": {"x": 2, "y": 3, "_code": code},
-            "multiply": {"y": 4, "_code": code},
+            "add": {"x": 2, "y": 3, "code": code},
+            "multiply": {"y": 4, "code": code},
         },
         wait=True,
     )
@@ -44,7 +44,49 @@ def test_python_job_outputs():
         return {"sum": x + y, "diff": x - y}
 
     wg = WorkGraph("test_python_job_outputs")
-    wg.nodes.new(add, name="add", on_remote=True, x=1, y=2, _code=code)
+    wg.nodes.new("PythonJob", function=add, name="add", x=1, y=2, code=code)
     wg.submit(wait=True)
     assert wg.nodes["add"].outputs["sum"].value.value == 3
     assert wg.nodes["add"].outputs["diff"].value.value == -1
+
+
+def test_python_job_parent_folder():
+    from aiida_workgraph import WorkGraph, node
+    from aiida import orm, load_profile
+
+    load_profile()
+
+    # define add node
+    @node()
+    def add(x, y):
+        z = x + y
+        with open("result.txt", "w") as f:
+            f.write(str(z))
+        return x + y
+
+    # define multiply node
+    @node()
+    def multiply(x, y):
+        with open("parent_folder/result.txt", "r") as f:
+            z = int(f.read())
+        return x * y + z
+
+    wg = WorkGraph("first_workflow")
+    wg.nodes.new("PythonJob", function=add, name="add")
+    wg.nodes.new(
+        "PythonJob",
+        function=multiply,
+        name="multiply",
+        parent_folder=wg.nodes["add"].outputs["remote_folder"],
+    )
+
+    # ------------------------- Submit the calculation -------------------
+    code = orm.load_code("python@localhost")
+    wg.submit(
+        inputs={
+            "add": {"x": 2, "y": 3, "code": code},
+            "multiply": {"x": 3, "y": 4, "code": code},
+        },
+        wait=True,
+    )
+    assert wg.nodes["multiply"].outputs["result"].value.value == 17
