@@ -243,6 +243,14 @@ def build_PythonJob_node(func: Callable) -> Node:
     # merge the inputs and outputs from the PythonJob node to the function node
     # skip the already existed inputs and outputs
     inputs = ndata["inputs"]
+    inputs.extend(
+        [
+            ["String", "computer"],
+            ["String", "python_label"],
+            ["String", "python_path"],
+            ["String", "prepend_text"],
+        ]
+    )
     outputs = ndata["outputs"]
     for input in ndata_py["inputs"]:
         if input not in inputs:
@@ -252,6 +260,7 @@ def build_PythonJob_node(func: Callable) -> Node:
             outputs.append(output)
     # append the kwargs of the PythonJob node to the function node
     kwargs = ndata["kwargs"]
+    kwargs.extend(["computer", "python_label", "python_path", "prepend_text"])
     kwargs.extend(ndata_py["kwargs"])
     ndata["inputs"] = inputs
     ndata["outputs"] = outputs

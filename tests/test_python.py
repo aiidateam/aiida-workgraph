@@ -8,8 +8,6 @@ def test_python_job():
     """Test a simple python node."""
     from aiida_workgraph import node, WorkGraph
 
-    code = aiida.orm.load_code("python@localhost")
-
     # define add node
     @node()
     def add(x, y):
@@ -21,20 +19,21 @@ def test_python_job():
         return x * y
 
     wg = WorkGraph("test_python_job")
-    wg.nodes.new("PythonJob", function=add, name="add")
+    wg.nodes.new(add, name="add", run_remotely=True)
     wg.nodes.new(
-        "PythonJob", function=multiply, name="multiply", x=wg.nodes["add"].outputs[0]
+        multiply, name="multiply", run_remotely=True, x=wg.nodes["add"].outputs[0]
     )
     #
     metadata = {
         "options": {
             "custom_scheduler_commands": "# test",
+            # "custom_scheduler_commands": 'module load anaconda\nconda activate py3.11\n',
         }
     }
     wg.submit(
         inputs={
-            "add": {"x": 2, "y": 3, "code": code, "metadata": metadata},
-            "multiply": {"y": 4, "code": code, "metadata": metadata},
+            "add": {"x": 2, "y": 3, "computer": "localhost", "metadata": metadata},
+            "multiply": {"y": 4, "computer": "localhost", "metadata": metadata},
         },
         wait=True,
     )
@@ -43,14 +42,21 @@ def test_python_job():
 
 def test_python_job_outputs():
     """Test a simple python node."""
-    code = aiida.orm.load_code("python@localhost")
 
     @node(outputs=[["General", "sum"], ["General", "diff"]])
     def add(x, y):
         return {"sum": x + y, "diff": x - y}
 
     wg = WorkGraph("test_python_job_outputs")
-    wg.nodes.new("PythonJob", function=add, name="add", x=1, y=2, code=code)
+    wg.nodes.new(
+        add,
+        name="add",
+        x=1,
+        y=2,
+        run_remotely=True,
+        #  code=code,
+        computer="localhost",
+    )
     wg.submit(wait=True)
     assert wg.nodes["add"].outputs["sum"].value.value == 3
     assert wg.nodes["add"].outputs["diff"].value.value == -1
@@ -58,7 +64,7 @@ def test_python_job_outputs():
 
 def test_python_job_parent_folder():
     from aiida_workgraph import WorkGraph, node
-    from aiida import orm, load_profile
+    from aiida import load_profile
 
     load_profile()
 
@@ -78,20 +84,29 @@ def test_python_job_parent_folder():
         return x * y + z
 
     wg = WorkGraph("first_workflow")
-    wg.nodes.new("PythonJob", function=add, name="add")
+    wg.nodes.new(add, name="add", run_remotely=True)
     wg.nodes.new(
-        "PythonJob",
-        function=multiply,
+        multiply,
         name="multiply",
         parent_folder=wg.nodes["add"].outputs["remote_folder"],
+        run_remotely=True,
     )
 
     # ------------------------- Submit the calculation -------------------
-    code = orm.load_code("python@localhost")
     wg.submit(
         inputs={
-            "add": {"x": 2, "y": 3, "code": code},
-            "multiply": {"x": 3, "y": 4, "code": code},
+            "add": {
+                "x": 2,
+                "y": 3,
+                # "code": code,
+                "computer": "localhost",
+            },
+            "multiply": {
+                "x": 3,
+                "y": 4,
+                #  "code": code,
+                "computer": "localhost",
+            },
         },
         wait=True,
     )
