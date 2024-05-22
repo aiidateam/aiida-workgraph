@@ -2,8 +2,6 @@
 
 from aiida.orm import Data
 
-__all__ = ("GeneralData",)
-
 
 class GeneralData(Data):
     """`Data to represent a pickled value."""

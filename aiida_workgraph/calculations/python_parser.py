@@ -1,6 +1,6 @@
 """Parser for an `PythonJob` job."""
 from aiida.parsers.parser import Parser
-from .general_data import GeneralData
+from aiida_workgraph.orm import GeneralData
 
 
 class PythonParser(Parser):
