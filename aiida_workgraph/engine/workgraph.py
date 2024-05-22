@@ -832,15 +832,15 @@ class WorkGraphEngine(Process, metaclass=Protect):
                 # normal function does not have a process
                 code = kwargs.pop("code", None)
                 computer = kwargs.pop("computer", None)
-                python_label = kwargs.pop("python_label", None)
-                python_path = kwargs.pop("python_path", None)
+                code_label = kwargs.pop("code_label", None)
+                code_path = kwargs.pop("code_path", None)
                 prepend_text = kwargs.pop("prepend_text", None)
                 #
                 if code is None:
                     code = get_or_create_code(
                         computer=computer or "localhost",
-                        python_label=python_label or "python3",
-                        python_path=python_path,
+                        code_label=code_label or "python3",
+                        code_path=code_path,
                         prepend_text=prepend_text,
                     )
                 parent_folder = kwargs.pop("parent_folder", None)

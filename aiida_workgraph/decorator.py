@@ -236,18 +236,19 @@ def build_node_from_AiiDA(
 def build_PythonJob_node(func: Callable) -> Node:
     """Build PythonJob node from function."""
     from aiida_workgraph.calculations.python import PythonJob
+    from copy import deepcopy
 
     ndata = {"executor": PythonJob, "node_type": "CALCJOB"}
     _, ndata_py = build_node_from_AiiDA(ndata)
-    ndata = func.ndata
+    ndata = deepcopy(func.ndata)
     # merge the inputs and outputs from the PythonJob node to the function node
     # skip the already existed inputs and outputs
     inputs = ndata["inputs"]
     inputs.extend(
         [
             ["String", "computer"],
-            ["String", "python_label"],
-            ["String", "python_path"],
+            ["String", "code_label"],
+            ["String", "code_path"],
             ["String", "prepend_text"],
         ]
     )
@@ -260,7 +261,7 @@ def build_PythonJob_node(func: Callable) -> Node:
             outputs.append(output)
     # append the kwargs of the PythonJob node to the function node
     kwargs = ndata["kwargs"]
-    kwargs.extend(["computer", "python_label", "python_path", "prepend_text"])
+    kwargs.extend(["computer", "code_label", "code_path", "prepend_text"])
     kwargs.extend(ndata_py["kwargs"])
     ndata["inputs"] = inputs
     ndata["outputs"] = outputs
