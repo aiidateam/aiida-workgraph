@@ -826,10 +826,23 @@ class WorkGraphEngine(Process, metaclass=Protect):
             elif node["metadata"]["node_type"].upper() in ["PYTHONJOB"]:
                 from aiida_workgraph.calculations.python import PythonJob
                 from aiida_workgraph.calculations.general_data import GeneralData
+                from aiida_workgraph.utils import get_or_create_code
 
                 print("node  type: Python.")
                 # normal function does not have a process
-                code = kwargs.pop("code")
+                code = kwargs.pop("code", None)
+                computer = kwargs.pop("computer", None)
+                code_label = kwargs.pop("code_label", None)
+                code_path = kwargs.pop("code_path", None)
+                prepend_text = kwargs.pop("prepend_text", None)
+                #
+                if code is None:
+                    code = get_or_create_code(
+                        computer=computer or "localhost",
+                        code_label=code_label or "python3",
+                        code_path=code_path,
+                        prepend_text=prepend_text,
+                    )
                 parent_folder = kwargs.pop("parent_folder", None)
                 metadata = kwargs.pop("metadata", {})
                 metadata.update({"call_link_label": name})
@@ -847,7 +860,6 @@ class WorkGraphEngine(Process, metaclass=Protect):
                         inputs[key] = value
                     else:
                         inputs[key] = GeneralData(value)
-                print("inputs: ", inputs)
                 # outputs
                 output_name_list = [output["name"] for output in node["outputs"]]
 

@@ -1,6 +1,7 @@
 from typing import Any, Dict, Optional, Union
 from aiida.engine.processes import Process
 from aiida import orm
+from aiida.common.exceptions import NotExistent
 
 
 def get_executor(data: Dict[str, Any]) -> Union[Process, Any]:
@@ -236,3 +237,31 @@ def get_processes_latest(pk: int) -> Dict[str, Dict[str, Union[int, str]]]:
                         "mtime": nodes.mtime,
                     }
     return nodes
+
+
+def get_or_create_code(
+    computer: str = "localhost",
+    code_label: str = "python3",
+    code_path: str = None,
+    prepend_text: str = "",
+):
+    """Try to load code, create if not exit."""
+    from aiida.orm.nodes.data.code.installed import InstalledCode
+
+    try:
+        return orm.load_code(f"{code_label}@{computer}")
+    except NotExistent:
+        description = f"Python code on computer: {computer}"
+        computer = orm.load_computer(computer)
+        code_path = code_path or code_label
+        code = InstalledCode(
+            computer=computer,
+            label=code_label,
+            description=description,
+            filepath_executable=code_path,
+            default_calc_job_plugin="workgraph.python",
+            prepend_text=prepend_text,
+        )
+
+        code.store()
+        return code

@@ -24,6 +24,9 @@ class WorkGraphNodeCollection(NodeCollection):
         # build the node on the fly if the identifier is a callable
         if callable(identifier):
             identifier = build_node_from_callable(identifier)
+            if kwargs.pop("run_remotely", False):
+                # this is a PythonJob
+                identifier = build_PythonJob_node(identifier)
         if isinstance(identifier, str) and identifier.upper() == "PYTHONJOB":
             # copy the inputs and outputs from the function node to the PythonJob node
             identifier = build_PythonJob_node(kwargs.pop("function"))

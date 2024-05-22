@@ -14,6 +14,7 @@ from aiida.orm import (
     List,
     FolderData,
     RemoteData,
+    to_aiida_type,
 )
 
 
@@ -45,13 +46,21 @@ class PythonJob(CalcJob):
         :param spec: the calculation job process spec to define.
         """
         super().define(spec)
-        spec.input("function_source_code", required=False)
-        spec.input("function_name", required=False)
+        spec.input(
+            "function_source_code",
+            valid_type=Str,
+            serializer=to_aiida_type,
+            required=False,
+        )
+        spec.input(
+            "function_name", valid_type=Str, serializer=to_aiida_type, required=False
+        )
         spec.input_namespace("kwargs", valid_type=Data, required=False)
         spec.input(
             "output_name_list",
             valid_type=List,
             required=False,
+            serializer=to_aiida_type,
             help="The names of the output ports",
         )
         spec.input(
@@ -62,9 +71,10 @@ class PythonJob(CalcJob):
         )
         spec.input(
             "parent_output_folder",
-            valid_type=(Str),
+            valid_type=Str,
             default=None,
             required=False,
+            serializer=to_aiida_type,
             help="Name of the subfolder inside 'parent_folder' from which you want to copy the files",
         )
         spec.input(
@@ -72,6 +82,7 @@ class PythonJob(CalcJob):
             valid_type=List,
             default=None,
             required=False,
+            serializer=to_aiida_type,
             help="The names of the files to retrieve",
         )
         spec.outputs.dynamic = True
