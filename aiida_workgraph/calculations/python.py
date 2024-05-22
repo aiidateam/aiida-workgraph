@@ -193,7 +193,7 @@ with open('results.pickle', 'wb') as handle:
                 input_values[key] = value.value
             else:
                 raise ValueError(
-                    "Only AiiDA data Node with a value attribute is allowed."
+                    f"Input data {value} is not supported. Only AiiDA data Node with a value attribute is allowed. "
                 )
         # save the value as a pickle file, the path is absolute
         filename = "inputs.pickle"

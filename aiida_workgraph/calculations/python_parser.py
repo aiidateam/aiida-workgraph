@@ -1,6 +1,6 @@
 """Parser for an `PythonJob` job."""
 from aiida.parsers.parser import Parser
-from aiida_workgraph.orm import GeneralData
+from aiida_workgraph.orm import general_serializer
 
 
 class PythonParser(Parser):
@@ -14,18 +14,36 @@ class PythonParser(Parser):
             with self.retrieved.base.repository.open("results.pickle", "rb") as handle:
                 results = pickle.load(handle)
                 output_name_list = self.node.inputs.output_name_list.get_list()
+                # output_name_list exclude ['_wait', '_outputs', 'remote_folder', 'remote_stash', 'retrieved']
+                output_name_list = [
+                    name
+                    for name in output_name_list
+                    if name
+                    not in [
+                        "_wait",
+                        "_outputs",
+                        "remote_folder",
+                        "remote_stash",
+                        "retrieved",
+                    ]
+                ]
+                outputs = {}
                 if isinstance(results, tuple):
                     if len(output_name_list) != len(results):
                         raise ValueError(
                             "The number of results does not match the number of output_name_list."
                         )
                     for i in range(len(output_name_list)):
-                        self.out(output_name_list[i].name, GeneralData(results[i]))
-                elif isinstance(results, dict):
-                    for key, value in results.items():
-                        self.out(key, GeneralData(value))
+                        outputs[output_name_list[i].name] = results[i]
+                        outputs = general_serializer(outputs)
+                elif isinstance(results, dict) and len(results) == len(
+                    output_name_list
+                ):
+                    outputs = general_serializer(results)
                 else:
-                    self.out("result", GeneralData(results))
+                    outputs = general_serializer({"result": results})
+                for key, value in outputs.items():
+                    self.out(key, value)
         except OSError:
             return self.exit_codes.ERROR_READING_OUTPUT_FILE
         except ValueError:

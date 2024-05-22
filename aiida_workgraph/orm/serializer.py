@@ -30,7 +30,7 @@ def general_serializer(inputs):
         else:
             # try to get the serializer from the entry points
             value_type = type(value)
-            ep_key = f"{value_type.__module__}.{value_type.__class__.__name__}"
+            ep_key = f"{value_type.__module__}.{value_type.__name__}"
             # search for the key in the entry points
             if ep_key in eps:
                 try:
