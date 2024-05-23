@@ -35,8 +35,10 @@ def test_new_node(wg_calcjob):
 def test_save_load(wg_calcjob):
     """Save the workgraph"""
     wg = wg_calcjob
+    wg.name = "test_save_load"
     wg.save()
     assert wg.process.process_state.value.upper() == "CREATED"
+    assert wg.process.process_label == "WorkGraph<test_save_load>"
     wg2 = WorkGraph.load(wg.process.pk)
     assert len(wg.nodes) == len(wg2.nodes)
 
