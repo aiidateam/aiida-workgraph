@@ -1,11 +1,21 @@
 """`Data` sub class to represent any data using pickle."""
 
-from aiida.orm import Data
-
-__all__ = ("GeneralData",)
+from aiida import orm
 
 
-class GeneralData(Data):
+class Dict(orm.Dict):
+    @property
+    def value(self):
+        return self.get_dict()
+
+
+class List(orm.List):
+    @property
+    def value(self):
+        return self.get_list()
+
+
+class GeneralData(orm.Data):
     """`Data to represent a pickled value."""
 
     def __init__(self, value=None, **kwargs):

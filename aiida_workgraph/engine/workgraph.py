@@ -825,7 +825,7 @@ class WorkGraphEngine(Process, metaclass=Protect):
                 self.to_context(**{name: process})
             elif node["metadata"]["node_type"].upper() in ["PYTHONJOB"]:
                 from aiida_workgraph.calculations.python import PythonJob
-                from aiida_workgraph.calculations.general_data import GeneralData
+                from aiida_workgraph.orm.serializer import general_serializer
                 from aiida_workgraph.utils import get_or_create_code
 
                 print("node  type: Python.")
@@ -849,20 +849,10 @@ class WorkGraphEngine(Process, metaclass=Protect):
                 # get the source code of the function
                 function_name = executor.__name__
                 function_source_code = node["executor"]["function_source_code"]
-                inputs = {}
-                # save all kwargs to inputs port
-                for key, value in kwargs.items():
-                    if isinstance(value, orm.Node):
-                        if not hasattr(value, "value"):
-                            raise ValueError(
-                                "Only AiiDA data Node with a value attribute is allowed."
-                            )
-                        inputs[key] = value
-                    else:
-                        inputs[key] = GeneralData(value)
                 # outputs
                 output_name_list = [output["name"] for output in node["outputs"]]
-
+                # serialize the kwargs into AiiDA Data
+                inputs = general_serializer(kwargs)
                 # transfer the args to kwargs
                 process = self.submit(
                     PythonJob,

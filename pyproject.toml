@@ -77,7 +77,15 @@ workgraph = "aiida_workgraph.cli.cmd_workgraph:workgraph"
 "workgraph.python" = "aiida_workgraph.calculations.python_parser:PythonParser"
 
 [project.entry-points."aiida.data"]
-"workgraph.general" = "aiida_workgraph.calculations.general_data:GeneralData"
+"workgraph.general" = "aiida_workgraph.orm.general_data:GeneralData"
+"ase.atoms.Atoms" = "aiida_workgraph.orm.atoms:AtomsData"
+"builtins.int" = "aiida.orm.nodes.data.int:Int"
+"builtins.float" = "aiida.orm.nodes.data.float:Float"
+"builtins.str" = "aiida.orm.nodes.data.str:Str"
+"builtins.bool" = "aiida.orm.nodes.data.bool:Bool"
+"builtins.list"="aiida_workgraph.orm.general_data:List"
+"builtins.dict"="aiida_workgraph.orm.general_data:Dict"
+
 
 [project.entry-points."aiida.node"]
 "process.workflow.workgraph" = "aiida_workgraph.orm.workgraph:WorkgraphNode"

@@ -18,8 +18,6 @@ from aiida.orm import (
 )
 
 
-from .general_data import GeneralData
-
 __all__ = ("PythonJob",)
 
 
@@ -55,7 +53,9 @@ class PythonJob(CalcJob):
         spec.input(
             "function_name", valid_type=Str, serializer=to_aiida_type, required=False
         )
-        spec.input_namespace("kwargs", valid_type=Data, required=False)
+        spec.input_namespace(
+            "kwargs", valid_type=Data, required=False
+        )  # , serializer=general_serializer)
         spec.input(
             "output_name_list",
             valid_type=List,
@@ -188,12 +188,14 @@ with open('results.pickle', 'wb') as handle:
         # create pickle file for the inputs
         input_values = {}
         for key, value in inputs.items():
-            if isinstance(value, GeneralData):
+            if isinstance(value, Data) and hasattr(value, "value"):
                 # get the value of the pickled data
                 input_values[key] = value.value
             else:
-                raise ValueError(f"Unsupported data type: {type(value)}")
-            # save the value as a pickle file, the path is absolute
+                raise ValueError(
+                    f"Input data {value} is not supported. Only AiiDA data Node with a value attribute is allowed. "
+                )
+        # save the value as a pickle file, the path is absolute
         filename = "inputs.pickle"
         with folder.open(filename, "wb") as handle:
             pickle.dump(input_values, handle)
