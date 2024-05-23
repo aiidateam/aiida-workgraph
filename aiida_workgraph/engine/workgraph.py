@@ -394,6 +394,10 @@ class WorkGraphEngine(Process, metaclass=Protect):
         except Exception as e:
             print(e)
 
+    def _build_process_label(self) -> str:
+        """Use the workgraph name as the process label."""
+        return f"WorkGraph<{self.inputs.wg['name']}>"
+
     def setup(self) -> None:
         # track if the awaitable callback is added to the runner
         self.ctx._awaitable_actions = []
@@ -404,7 +408,6 @@ class WorkGraphEngine(Process, metaclass=Protect):
         self.init_ctx(wgdata)
         #
         self.ctx.msgs = []
-        self.node.set_process_label(f"WorkGraph: {self.ctx.workgraph['name']}")
         self.ctx._execution_count = 0
         # init node results
         self.set_node_results()
