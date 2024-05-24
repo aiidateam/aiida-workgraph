@@ -830,6 +830,7 @@ class WorkGraphEngine(Process, metaclass=Protect):
                 from aiida_workgraph.calculations.python import PythonJob
                 from aiida_workgraph.orm.serializer import general_serializer
                 from aiida_workgraph.utils import get_or_create_code
+                import os
 
                 print("node  type: Python.")
                 # normal function does not have a process
@@ -838,6 +839,24 @@ class WorkGraphEngine(Process, metaclass=Protect):
                 code_label = kwargs.pop("code_label", None)
                 code_path = kwargs.pop("code_path", None)
                 prepend_text = kwargs.pop("prepend_text", None)
+                upload_files = kwargs.pop("upload_files", {})
+                new_upload_files = {}
+                # change the string in the upload files to SingleFileData, or FolderData
+                for key, source in upload_files.items():
+                    # only alphanumeric and underscores are allowed in the key
+                    # replace all "." with "_dot_"
+                    new_key = key.replace(".", "_dot_")
+                    if isinstance(source, str):
+                        if os.path.isfile(source):
+                            new_upload_files[new_key] = orm.SinglefileData(file=source)
+                        elif os.path.isdir(source):
+                            new_upload_files[new_key] = orm.FolderData(tree=source)
+                    elif isinstance(source, (orm.SinglefileData, orm.FolderData)):
+                        new_upload_files[new_key] = source
+                    else:
+                        raise ValueError(
+                            f"Invalid upload file type: {type(source)}, {source}"
+                        )
                 #
                 if code is None:
                     code = get_or_create_code(
@@ -864,6 +883,7 @@ class WorkGraphEngine(Process, metaclass=Protect):
                         "function_name": orm.Str(function_name),
                         "code": code,
                         "kwargs": inputs,
+                        "upload_files": new_upload_files,
                         "output_name_list": orm.List(output_name_list),
                         "parent_folder": parent_folder,
                         "metadata": metadata,

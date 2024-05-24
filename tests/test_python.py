@@ -111,3 +111,50 @@ def test_python_job_parent_folder():
         wait=True,
     )
     assert wg.nodes["multiply"].outputs["result"].value.value == 17
+
+
+def test_python_job_upload_files():
+    from aiida_workgraph import WorkGraph, node
+
+    # create a temporary file "input.txt" in the current directory
+    with open("input.txt", "w") as f:
+        f.write("2")
+
+    # create a temporary folder "inputs_folder" in the current directory
+    # and add a file "another_input.txt" in the folder
+    import os
+
+    os.makedirs("inputs_folder", exist_ok=True)
+    with open("inputs_folder/another_input.txt", "w") as f:
+        f.write("3")
+
+    # define add node
+    @node()
+    def add():
+        with open("input.txt", "r") as f:
+            a = int(f.read())
+        with open("inputs_folder/another_input.txt", "r") as f:
+            b = int(f.read())
+        return a + b
+
+    wg = WorkGraph("first_workflow")
+    wg.nodes.new(add, name="add", run_remotely=True)
+
+    # ------------------------- Submit the calculation -------------------
+    # we need use full path to the file
+    input_file = os.path.abspath("input.txt")
+    input_folder = os.path.abspath("inputs_folder")
+
+    wg.run(
+        inputs={
+            "add": {
+                "computer": "localhost",
+                "upload_files": {
+                    "input.txt": input_file,
+                    "inputs_folder": input_folder,
+                },
+            },
+        },
+    )
+    # wait=True)
+    assert wg.nodes["add"].outputs["result"].value.value == 5
