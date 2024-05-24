@@ -44,7 +44,7 @@ class Node(GraphNode):
         self.pk = pk
         self._widget = NodeGraphWidget(
             settings={"minmap": False},
-            style={"width": "40%", "height": "600px"},
+            style={"width": "80%", "height": "600px"},
         )
 
     def to_dict(self) -> Dict[str, Any]:

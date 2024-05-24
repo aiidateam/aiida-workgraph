@@ -77,6 +77,13 @@ class PythonJob(CalcJob):
             serializer=to_aiida_type,
             help="Name of the subfolder inside 'parent_folder' from which you want to copy the files",
         )
+        spec.input_namespace(
+            "upload_files",
+            valid_type=(FolderData, SinglefileData),
+            default=None,
+            required=False,
+            help="The folder/files to upload",
+        )
         spec.input(
             "additional_retrieve_list",
             valid_type=List,
@@ -185,6 +192,22 @@ with open('results.pickle', 'wb') as handle:
                 local_copy_list.append((source.uuid, dirname, self._PARENT_SUBFOLDER))
             elif isinstance(source, SinglefileData):
                 local_copy_list.append((source.uuid, source.filename, source.filename))
+        if self.inputs.upload_files:
+            upload_files = self.inputs.upload_files
+            for key, source in upload_files.items():
+                # replace "_dot_" with "." in the key
+                key = key.replace("_dot_", ".")
+                if isinstance(source, FolderData):
+                    local_copy_list.append((source.uuid, "", key))
+                elif isinstance(source, SinglefileData):
+                    local_copy_list.append(
+                        (source.uuid, source.filename, source.filename)
+                    )
+                else:
+                    raise ValueError(
+                        f"""Input folder/file: {source} is not supported.
+Only AiiDA SinglefileData and FolderData are allowed."""
+                    )
         # create pickle file for the inputs
         input_values = {}
         for key, value in inputs.items():
