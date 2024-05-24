@@ -6,6 +6,7 @@ import typing as t
 
 from aiida.common.datastructures import CalcInfo, CodeInfo
 from aiida.common.folders import Folder
+from aiida.common.extendeddicts import AttributeDict
 from aiida.engine import CalcJob, CalcJobProcessSpec
 from aiida.orm import (
     Data,
@@ -214,6 +215,10 @@ Only AiiDA SinglefileData and FolderData are allowed."""
             if isinstance(value, Data) and hasattr(value, "value"):
                 # get the value of the pickled data
                 input_values[key] = value.value
+            # TODO: should check this recursively
+            elif isinstance(value, (AttributeDict, dict)):
+                # if the value is an AttributeDict, use recursively
+                input_values[key] = {k: v.value for k, v in value.items()}
             else:
                 raise ValueError(
                     f"Input data {value} is not supported. Only AiiDA data Node with a value attribute is allowed. "

@@ -25,6 +25,10 @@ class WorkGraphNodeCollection(NodeCollection):
         if callable(identifier):
             identifier = build_node_from_callable(identifier)
             if kwargs.pop("run_remotely", False):
+                if identifier.node.node_type.upper() == "GRAPH_BUILDER":
+                    raise ValueError(
+                        "GraphBuilder nodes cannot be run remotely. Please set run_remotely=False."
+                    )
                 # this is a PythonJob
                 identifier = build_PythonJob_node(identifier)
         if isinstance(identifier, str) and identifier.upper() == "PYTHONJOB":

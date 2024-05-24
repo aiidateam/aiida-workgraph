@@ -1,13 +1,14 @@
 from .general_data import GeneralData
-from aiida import orm
+from aiida import orm, common
 from importlib.metadata import entry_points
+from aiida.common import exceptions
 
 
 # Retrieve the entry points for 'aiida.data' and store them in a dictionary
 eps = {ep.name: ep for ep in entry_points().get("aiida.data", [])}
 
 
-def general_serializer(inputs):
+def general_serializer(inputs: dict = None):
     """Serialize the inputs to a dictionary of AiiDA data nodes.
 
     Args:
@@ -25,6 +26,9 @@ def general_serializer(inputs):
                     "Only AiiDA data Node with a value attribute is allowed."
                 )
             new_inputs[key] = value
+        elif isinstance(value, common.extendeddicts.AttributeDict):
+            # if the value is an AttributeDict, use it directly
+            new_inputs[key] = value
         # if value is a class instance, get its __module__ and class name as a string
         # for example, an Atoms will have ase.atoms.Atoms
         else:
@@ -34,13 +38,25 @@ def general_serializer(inputs):
             # search for the key in the entry points
             if ep_key in eps:
                 try:
-                    new_inputs[key] = eps[ep_key].load()(value)
+                    new_node = eps[ep_key].load()(value)
                 except Exception as e:
                     raise ValueError(f"Error in serializing {key}: {e}")
+                finally:
+                    # try to save the node to da
+                    try:
+                        new_node.store()
+                        new_inputs[key] = new_node
+                    except exceptions.ValidationError:
+                        # try to serialize the value as a GeneralData
+                        try:
+                            new_inputs[key] = GeneralData(value)
+                        except Exception as e:
+                            raise ValueError(f"Error in serializing {key}: {e}")
             else:
                 # try to serialize the value as a GeneralData
                 try:
                     new_inputs[key] = GeneralData(value)
+                    new_inputs[key].store()
                 except Exception as e:
                     raise ValueError(f"Error in serializing {key}: {e}")
 
