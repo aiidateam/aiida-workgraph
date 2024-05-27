@@ -325,12 +325,20 @@ def build_node_from_workgraph(wg: any) -> Node:
 
 def get_required_imports(func):
     """Retrieve type hints and the corresponding module"""
-    from typing import get_type_hints
+    from typing import get_type_hints, _SpecialForm
 
     type_hints = get_type_hints(func)
     imports = {}
-    for name, type_hint in type_hints.items():
-        if hasattr(type_hint, "__module__"):
+    for _, type_hint in type_hints.items():
+        if isinstance(
+            type_hint, _SpecialForm
+        ):  # Handle special forms like Any, Union, Optional
+            module_name = "typing"
+            type_name = type_hint._name or str(type_hint)
+            if module_name not in imports:
+                imports[module_name] = set()
+            imports[module_name].add(type_name)
+        elif hasattr(type_hint, "__module__"):
             module_name = type_hint.__module__
             type_name = type_hint.__name__
             if module_name not in imports:
@@ -352,7 +360,11 @@ def serialize_function(func: Callable) -> Dict[str, Any]:
     function_source_code = "\n".join(source_code_lines[1:])
     function_source_code = textwrap.dedent(function_source_code)
     # we also need to include the necessary imports for the types used in the type hints.
-    required_imports = get_required_imports(func)
+    try:
+        required_imports = get_required_imports(func)
+    except Exception as e:
+        required_imports = {}
+        print(f"Failed to get required imports for function {func.__name__}: {e}")
     # Generate import statements
     import_statements = "\n".join(
         f"from {module} import {', '.join(types)}"
