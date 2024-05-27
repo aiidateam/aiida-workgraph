@@ -20,6 +20,7 @@ class Node(GraphNode):
 
     property_pool = property_pool
     socket_pool = socket_pool
+    is_aiida_component = False
 
     def __init__(
         self,
@@ -55,6 +56,7 @@ class Node(GraphNode):
         ]
         ndata["process"] = self.process.uuid if self.process else None
         ndata["metadata"]["pk"] = self.process.pk if self.process else None
+        ndata["metadata"]["is_aiida_component"] = self.is_aiida_component
 
         return ndata
 

@@ -30,10 +30,10 @@ class WorkGraphNodeCollection(NodeCollection):
                         "GraphBuilder nodes cannot be run remotely. Please set run_remotely=False."
                     )
                 # this is a PythonJob
-                identifier = build_PythonJob_node(identifier)
+                identifier, _ = build_PythonJob_node(identifier)
         if isinstance(identifier, str) and identifier.upper() == "PYTHONJOB":
             # copy the inputs and outputs from the function node to the PythonJob node
-            identifier = build_PythonJob_node(kwargs.pop("function"))
+            identifier, _ = build_PythonJob_node(kwargs.pop("function"))
         # Call the original new method
         return super().new(identifier, name, uuid, **kwargs)
 

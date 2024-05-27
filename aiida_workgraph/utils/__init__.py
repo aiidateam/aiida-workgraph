@@ -265,3 +265,24 @@ def get_or_create_code(
 
         code.store()
         return code
+
+
+def serialize_properties(wgdata):
+    """Serialize the properties."""
+    from aiida_workgraph.orm.serializer import general_serializer
+
+    for _, node in wgdata["nodes"].items():
+        print("is_aiida_component", node["metadata"]["is_aiida_component"])
+        if not node["metadata"]["is_aiida_component"]:
+            continue
+        for name, prop in node["properties"].items():
+            # we don't need to serilize the metadata
+            if "metadata" in name:
+                continue
+            # if value is not None, not {}
+            if not (
+                prop["value"] is None
+                or isinstance(prop["value"], dict)
+                and prop["value"] == {}
+            ):
+                prop["value"] = general_serializer(prop["value"])

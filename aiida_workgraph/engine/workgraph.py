@@ -16,6 +16,7 @@ from aiida.common.lang import override
 from aiida import orm
 from aiida.orm import Node, ProcessNode, WorkChainNode
 from aiida.orm.utils import load_node
+from aiida_workgraph.orm.serializer import serialize_to_aiida_nodes
 
 
 from aiida.engine.processes.exit_code import ExitCode
@@ -702,9 +703,9 @@ class WorkGraphEngine(Process, metaclass=Protect):
                 kwargs[key] = args[i]
             # update the port namespace
             kwargs = update_nested_dict_with_special_keys(kwargs)
-            # print("args: ", args)
-            # print("kwargs: ", kwargs)
-            # print("var_kwargs: ", var_kwargs)
+            print("args: ", args)
+            print("kwargs: ", kwargs)
+            print("var_kwargs: ", var_kwargs)
             # kwargs["meta.label"] = name
             # output must be a Data type or a mapping of {string: Data}
             node["results"] = {}
@@ -828,12 +829,17 @@ class WorkGraphEngine(Process, metaclass=Protect):
                 self.to_context(**{name: process})
             elif node["metadata"]["node_type"].upper() in ["PYTHONJOB"]:
                 from aiida_workgraph.calculations.python import PythonJob
-                from aiida_workgraph.orm.serializer import general_serializer
                 from aiida_workgraph.utils import get_or_create_code
                 import os
 
                 print("node  type: Python.")
-                # normal function does not have a process
+                # get the names kwargs for the PythonJob, which are the inputs before _wait
+                input_kwargs = {}
+                for input in node["inputs"]:
+                    if input["name"] == "_wait":
+                        break
+                    input_kwargs[input["name"]] = kwargs.pop(input["name"], None)
+                # setup code
                 code = kwargs.pop("code", None)
                 computer = kwargs.pop("computer", None)
                 code_label = kwargs.pop("code_label", None)
@@ -860,10 +866,10 @@ class WorkGraphEngine(Process, metaclass=Protect):
                 #
                 if code is None:
                     code = get_or_create_code(
-                        computer=computer or "localhost",
-                        code_label=code_label or "python3",
-                        code_path=code_path,
-                        prepend_text=prepend_text,
+                        computer=computer.value if computer else "localhost",
+                        code_label=code_label.value if code_label.value else "python3",
+                        code_path=code_path.value if code_path.value else None,
+                        prepend_text=prepend_text.value if prepend_text.value else None,
                     )
                 parent_folder = kwargs.pop("parent_folder", None)
                 metadata = kwargs.pop("metadata", {})
@@ -874,7 +880,7 @@ class WorkGraphEngine(Process, metaclass=Protect):
                 # outputs
                 output_name_list = [output["name"] for output in node["outputs"]]
                 # serialize the kwargs into AiiDA Data
-                inputs = general_serializer(kwargs)
+                input_kwargs = serialize_to_aiida_nodes(input_kwargs)
                 # transfer the args to kwargs
                 process = self.submit(
                     PythonJob,
@@ -882,11 +888,12 @@ class WorkGraphEngine(Process, metaclass=Protect):
                         "function_source_code": orm.Str(function_source_code),
                         "function_name": orm.Str(function_name),
                         "code": code,
-                        "kwargs": inputs,
+                        "kwargs": input_kwargs,
                         "upload_files": new_upload_files,
                         "output_name_list": orm.List(output_name_list),
                         "parent_folder": parent_folder,
                         "metadata": metadata,
+                        **kwargs,
                     },
                 )
                 process.label = name

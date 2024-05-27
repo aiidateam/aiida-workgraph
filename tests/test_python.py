@@ -30,12 +30,12 @@ def test_python_job():
             # "custom_scheduler_commands": 'module load anaconda\nconda activate py3.11\n',
         }
     }
-    wg.submit(
+    wg.run(
         inputs={
             "add": {"x": 2, "y": 3, "computer": "localhost", "metadata": metadata},
             "multiply": {"y": 4, "computer": "localhost", "metadata": metadata},
         },
-        wait=True,
+        # wait=True,
     )
     assert wg.nodes["multiply"].outputs["result"].value.value == 20
 

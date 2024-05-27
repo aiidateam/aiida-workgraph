@@ -56,7 +56,7 @@ class PythonJob(CalcJob):
         )
         spec.input_namespace(
             "kwargs", valid_type=Data, required=False
-        )  # , serializer=general_serializer)
+        )  # , serializer=serialize_to_aiida_nodes)
         spec.input(
             "output_name_list",
             valid_type=List,
