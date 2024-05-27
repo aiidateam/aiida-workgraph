@@ -1,7 +1,7 @@
 from .general_data import GeneralData
-from .serializer import general_serializer
+from .serializer import serialize_to_aiida_nodes
 
 __all__ = (
     "GeneralData",
-    "general_serializer",
+    "serialize_to_aiida_nodes",
 )

@@ -1,6 +1,6 @@
 """Parser for an `PythonJob` job."""
 from aiida.parsers.parser import Parser
-from aiida_workgraph.orm import general_serializer
+from aiida_workgraph.orm import serialize_to_aiida_nodes
 
 
 class PythonParser(Parser):
@@ -35,13 +35,13 @@ class PythonParser(Parser):
                         )
                     for i in range(len(output_name_list)):
                         outputs[output_name_list[i].name] = results[i]
-                        outputs = general_serializer(outputs)
+                        outputs = serialize_to_aiida_nodes(outputs)
                 elif isinstance(results, dict) and len(results) == len(
                     output_name_list
                 ):
-                    outputs = general_serializer(results)
+                    outputs = serialize_to_aiida_nodes(results)
                 else:
-                    outputs = general_serializer({"result": results})
+                    outputs = serialize_to_aiida_nodes({"result": results})
                 for key, value in outputs.items():
                     self.out(key, value)
         except OSError:

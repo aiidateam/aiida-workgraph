@@ -265,3 +265,27 @@ def get_or_create_code(
 
         code.store()
         return code
+
+
+def serialize_pythonjob_properties(wgdata):
+    """Serialize the PythonJob properties."""
+    from aiida_workgraph.orm.serializer import general_serializer
+
+    for _, node in wgdata["nodes"].items():
+        if not node["metadata"]["node_type"].upper() == "PYTHONJOB":
+            continue
+        # get the names kwargs for the PythonJob, which are the inputs before _wait
+        input_kwargs = []
+        for input in node["inputs"]:
+            if input["name"] == "_wait":
+                break
+            input_kwargs.append(input["name"])
+        for name in input_kwargs:
+            prop = node["properties"][name]
+            # if value is not None, not {}
+            if not (
+                prop["value"] is None
+                or isinstance(prop["value"], dict)
+                and prop["value"] == {}
+            ):
+                prop["value"] = general_serializer(prop["value"])

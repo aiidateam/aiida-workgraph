@@ -133,3 +133,4 @@ dmypy.json
 *.pdf
 tests/work
 /tests/**/*.png
+/tests/**/*txt

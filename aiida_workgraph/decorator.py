@@ -230,6 +230,7 @@ def build_node_from_AiiDA(
     }
     ndata["executor"] = executor
     node = create_node(ndata)
+    node.is_aiida_component = True
     return node, ndata
 
 
@@ -267,7 +268,9 @@ def build_PythonJob_node(func: Callable) -> Node:
     ndata["outputs"] = outputs
     ndata["kwargs"] = kwargs
     ndata["node_type"] = "PYTHONJOB"
-    return create_node(ndata)
+    node = create_node(ndata)
+    node.is_aiida_component = True
+    return node, ndata
 
 
 def build_node_from_workgraph(wg: any) -> Node:
@@ -300,7 +303,6 @@ def build_node_from_workgraph(wg: any) -> Node:
     outputs.append(["General", "_outputs"])
     outputs.append(["General", "_wait"])
     inputs.append(["General", "_wait", {"link_limit": 1e6}])
-    inputs.append(["General", "_code"])
     ndata["node_class"] = Node
     ndata["kwargs"] = kwargs
     ndata["inputs"] = inputs
@@ -360,8 +362,6 @@ def generate_ndata(
     node_outputs = outputs
     # add built-in sockets
     _inputs.append(["General", "_wait", {"link_limit": 1e6}])
-    _inputs.append(["General", "_code"])
-    kwargs.append("_code")
     node_outputs.append(["General", "_wait"])
     node_outputs.append(["General", "_outputs"])
     ndata = {

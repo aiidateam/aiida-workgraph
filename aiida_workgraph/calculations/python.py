@@ -6,6 +6,7 @@ import typing as t
 
 from aiida.common.datastructures import CalcInfo, CodeInfo
 from aiida.common.folders import Folder
+from aiida.common.extendeddicts import AttributeDict
 from aiida.engine import CalcJob, CalcJobProcessSpec
 from aiida.orm import (
     Data,
@@ -55,7 +56,7 @@ class PythonJob(CalcJob):
         )
         spec.input_namespace(
             "kwargs", valid_type=Data, required=False
-        )  # , serializer=general_serializer)
+        )  # , serializer=serialize_to_aiida_nodes)
         spec.input(
             "output_name_list",
             valid_type=List,
@@ -80,7 +81,6 @@ class PythonJob(CalcJob):
         spec.input_namespace(
             "upload_files",
             valid_type=(FolderData, SinglefileData),
-            default=None,
             required=False,
             help="The folder/files to upload",
         )
@@ -214,6 +214,10 @@ Only AiiDA SinglefileData and FolderData are allowed."""
             if isinstance(value, Data) and hasattr(value, "value"):
                 # get the value of the pickled data
                 input_values[key] = value.value
+            # TODO: should check this recursively
+            elif isinstance(value, (AttributeDict, dict)):
+                # if the value is an AttributeDict, use recursively
+                input_values[key] = {k: v.value for k, v in value.items()}
             else:
                 raise ValueError(
                     f"Input data {value} is not supported. Only AiiDA data Node with a value attribute is allowed. "

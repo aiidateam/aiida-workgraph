@@ -62,7 +62,10 @@ class WorkGraph(node_graph.NodeGraph):
         the process and then calls the update method to update the state of the process.
         """
         from aiida_workgraph.engine.workgraph import WorkGraphEngine
-        from aiida_workgraph.utils import merge_properties
+        from aiida_workgraph.utils import (
+            merge_properties,
+            serialize_pythonjob_properties,
+        )
 
         # set node inputs
         if inputs is not None:
@@ -77,6 +80,7 @@ class WorkGraph(node_graph.NodeGraph):
             return
         wgdata = self.to_dict()
         merge_properties(wgdata)
+        serialize_pythonjob_properties(wgdata)
         inputs = {"wg": wgdata}
         # init a process
         runner = get_manager().get_runner()
@@ -137,10 +141,14 @@ class WorkGraph(node_graph.NodeGraph):
         Save the AiiDA workgraph process and update the process status.
         """
         from aiida_workgraph.engine.workgraph import WorkGraphEngine
-        from aiida_workgraph.utils import merge_properties
+        from aiida_workgraph.utils import (
+            merge_properties,
+            serialize_pythonjob_properties,
+        )
 
         wgdata = self.to_dict()
         merge_properties(wgdata)
+        serialize_pythonjob_properties(wgdata)
         metadata = metadata or {}
         inputs = {"wg": wgdata, "metadata": metadata}
         if self.process is None:
