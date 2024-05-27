@@ -866,10 +866,10 @@ class WorkGraphEngine(Process, metaclass=Protect):
                 #
                 if code is None:
                     code = get_or_create_code(
-                        computer=computer.value if computer else "localhost",
-                        code_label=code_label.value if code_label.value else "python3",
-                        code_path=code_path.value if code_path.value else None,
-                        prepend_text=prepend_text.value if prepend_text.value else None,
+                        computer=computer if computer else "localhost",
+                        code_label=code_label if code_label else "python3",
+                        code_path=code_path if code_path else None,
+                        prepend_text=prepend_text if prepend_text else None,
                     )
                 parent_folder = kwargs.pop("parent_folder", None)
                 metadata = kwargs.pop("metadata", {})

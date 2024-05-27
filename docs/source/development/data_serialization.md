@@ -19,3 +19,7 @@ One may argue that, why don't we serialize all data in the `wg` namespace? We ch
 - For AiiDA components (e.g. `CalcJob`, `WorkChain`), they may already define the serialization method for some input port explicity, thus, we need to respect this serialization method.
 
 However, it still good to check if all data inside the `wg` namespace are json-serializable, to make sure that the checkpoint can be saved and loaded correctly.
+
+PythonJob
++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+A special case is the `PythonJob`, which is a `CalcJob` that runs a Python function on a remote computer. The input data of the function to be fun is not required to be AiiDA data type, and the users are not required to provide the AiiDA data type as input. When the WorkGraph launches the `PythonJob`, it will serialize all input data of the function. However, if user use non-json-serializable data as input, the checkpoint will fail. Thus, we need to serialize all input data of the function when initializing the WorkGraph process, that is to say we need to serialize the inside the `wgdata`.
