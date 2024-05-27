@@ -39,16 +39,16 @@ def test_max_number_jobs() -> None:
     code = load_code("add@localhost")
 
     wg = WorkGraph("test_max_number_jobs")
-    N = 15
+    N = 9
     # Create N nodes
     for i in range(N):
         temp = wg.nodes.new(
             ArithmeticAddCalculation, name=f"add{i}", x=Int(1), y=Int(1), code=code
         )
         # Set a sleep option for each job (e.g., 2 seconds per job)
-        temp.set({"metadata.options.sleep": 2})
+        temp.set({"metadata.options.sleep": 1})
 
     # Set the maximum number of running jobs inside the WorkGraph
-    wg.max_number_jobs = 5
-    wg.submit(wait=True)
-    wg.nodes["add2"].ctime < wg.nodes["add10"].ctime
+    wg.max_number_jobs = 3
+    wg.submit(wait=True, timeout=100)
+    wg.nodes["add1"].ctime < wg.nodes["add8"].ctime

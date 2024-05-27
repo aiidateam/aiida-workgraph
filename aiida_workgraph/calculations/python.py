@@ -81,7 +81,6 @@ class PythonJob(CalcJob):
         spec.input_namespace(
             "upload_files",
             valid_type=(FolderData, SinglefileData),
-            default=None,
             required=False,
             help="The folder/files to upload",
         )

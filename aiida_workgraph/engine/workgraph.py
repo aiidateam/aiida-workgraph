@@ -882,19 +882,21 @@ class WorkGraphEngine(Process, metaclass=Protect):
                 # serialize the kwargs into AiiDA Data
                 input_kwargs = serialize_to_aiida_nodes(input_kwargs)
                 # transfer the args to kwargs
+                inputs = {
+                    "function_source_code": orm.Str(function_source_code),
+                    "function_name": orm.Str(function_name),
+                    "code": code,
+                    "kwargs": input_kwargs,
+                    "upload_files": new_upload_files,
+                    "output_name_list": orm.List(output_name_list),
+                    "parent_folder": parent_folder,
+                    "metadata": metadata,
+                    **kwargs,
+                }
+                # since aiida 2.5.0, we can pass inputs directly to the submit, no need to use **inputs
                 process = self.submit(
                     PythonJob,
-                    inputs={
-                        "function_source_code": orm.Str(function_source_code),
-                        "function_name": orm.Str(function_name),
-                        "code": code,
-                        "kwargs": input_kwargs,
-                        "upload_files": new_upload_files,
-                        "output_name_list": orm.List(output_name_list),
-                        "parent_folder": parent_folder,
-                        "metadata": metadata,
-                        **kwargs,
-                    },
+                    **inputs,
                 )
                 process.label = name
                 node["process"] = process

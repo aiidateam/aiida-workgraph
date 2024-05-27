@@ -32,14 +32,17 @@ def clean_dict_key(data):
     return data
 
 
-def general_serializer(data: Any) -> orm.Node:
+def general_serializer(data: Any, check_value=True) -> orm.Node:
     """Serialize the data to an AiiDA data node."""
     if isinstance(data, orm.Data):
-        if not hasattr(data, "value"):
+        if check_value and not hasattr(data, "value"):
             raise ValueError("Only AiiDA data Node with a value attribute is allowed.")
         return data
     elif isinstance(data, common.extendeddicts.AttributeDict):
         # if the data is an AttributeDict, use it directly
+        return data
+    # if is string with syntax {{}}, this is a port will read data from ctx
+    elif isinstance(data, str) and data.startswith("{{") and data.endswith("}}"):
         return data
     # if data is a class instance, get its __module__ and class name as a string
     # for example, an Atoms will have ase.atoms.Atoms

@@ -10,6 +10,7 @@ def test_while(decorated_add, decorated_multiply, decorated_compare):
     wg.workgraph_type = "WHILE"
     wg.conditions = ["compare1.result"]
     wg.context = {"n": 1}
+    wg.max_iteration = 10
     wg.nodes.new(decorated_compare, name="compare1", x="{{n}}", y=50)
     multiply1 = wg.nodes.new(
         decorated_multiply, name="multiply1", x="{{ n }}", y=orm.Int(2)
@@ -30,6 +31,7 @@ def test_while_graph_builder(decorated_add, decorated_multiply, decorated_compar
         wg.workgraph_type = "WHILE"
         wg.conditions = ["compare1.result"]
         wg.context = {"n": n}
+        wg.max_iteration = 10
         wg.nodes.new(decorated_compare, name="compare1", x="{{n}}", y=orm.Int(limit))
         multiply1 = wg.nodes.new(
             decorated_multiply, name="multiply1", x="{{ n }}", y=orm.Int(2)

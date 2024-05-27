@@ -272,7 +272,6 @@ def serialize_properties(wgdata):
     from aiida_workgraph.orm.serializer import general_serializer
 
     for _, node in wgdata["nodes"].items():
-        print("is_aiida_component", node["metadata"]["is_aiida_component"])
         if not node["metadata"]["is_aiida_component"]:
             continue
         for name, prop in node["properties"].items():
