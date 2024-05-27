@@ -10,7 +10,7 @@ def test_python_job():
 
     # define add node
     @node()
-    def add(x, y):
+    def add(x: float, y: float) -> float:
         return x + y
 
     # define multiply node
