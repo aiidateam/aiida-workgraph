@@ -799,7 +799,7 @@ class WorkGraphEngine(Process, metaclass=Protect):
                 from .utils import prepare_for_workgraph_node
                 from aiida_workgraph.utils.analysis import WorkGraphSaver
 
-                inputs, wgdata = prepare_for_workgraph_node()
+                inputs, wgdata = prepare_for_workgraph_node(node, kwargs)
                 process_inited = WorkGraphEngine(inputs=inputs)
                 process_inited.runner.persister.save_checkpoint(process_inited)
                 saver = WorkGraphSaver(process_inited.node, wgdata)
