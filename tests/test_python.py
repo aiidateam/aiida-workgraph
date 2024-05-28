@@ -1,21 +1,23 @@
 import aiida
 from aiida_workgraph import WorkGraph, node
+from typing import Any
 
 aiida.load_profile()
 
 
-def test_python_job():
+def test_python_job_typing():
     """Test a simple python node."""
     from aiida_workgraph import node, WorkGraph
+    from numpy import array
 
     # define add node
     @node()
-    def add(x, y):
+    def add(x: array, y: array) -> array:
         return x + y
 
     # define multiply node
     @node()
-    def multiply(x, y):
+    def multiply(x: Any, y: Any) -> Any:
         return x * y
 
     wg = WorkGraph("test_python_job")
@@ -32,12 +34,17 @@ def test_python_job():
     }
     wg.run(
         inputs={
-            "add": {"x": 2, "y": 3, "computer": "localhost", "metadata": metadata},
+            "add": {
+                "x": array([1, 2]),
+                "y": array([2, 3]),
+                "computer": "localhost",
+                "metadata": metadata,
+            },
             "multiply": {"y": 4, "computer": "localhost", "metadata": metadata},
         },
         # wait=True,
     )
-    assert wg.nodes["multiply"].outputs["result"].value.value == 20
+    assert (wg.nodes["multiply"].outputs["result"].value.value == array([12, 20])).all()
 
 
 def test_python_job_outputs():

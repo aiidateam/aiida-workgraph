@@ -323,6 +323,30 @@ def build_node_from_workgraph(wg: any) -> Node:
     return node
 
 
+def get_required_imports(func):
+    """Retrieve type hints and the corresponding module"""
+    from typing import get_type_hints, _SpecialForm
+
+    type_hints = get_type_hints(func)
+    imports = {}
+    for _, type_hint in type_hints.items():
+        if isinstance(
+            type_hint, _SpecialForm
+        ):  # Handle special forms like Any, Union, Optional
+            module_name = "typing"
+            type_name = type_hint._name or str(type_hint)
+            if module_name not in imports:
+                imports[module_name] = set()
+            imports[module_name].add(type_name)
+        elif hasattr(type_hint, "__module__"):
+            module_name = type_hint.__module__
+            type_name = type_hint.__name__
+            if module_name not in imports:
+                imports[module_name] = set()
+            imports[module_name].add(type_name)
+    return imports
+
+
 def serialize_function(func: Callable) -> Dict[str, Any]:
     """Serialize a function for storage or transmission."""
     import cloudpickle as pickle
@@ -331,14 +355,27 @@ def serialize_function(func: Callable) -> Dict[str, Any]:
 
     source_code = inspect.getsource(func)
     source_code_lines = source_code.split("\n")
+    # we need save the source code explicitly, because in the case of jupyter notebook,
+    # the source code is not saved in the pickle file
     function_source_code = "\n".join(source_code_lines[1:])
     function_source_code = textwrap.dedent(function_source_code)
-
+    # we also need to include the necessary imports for the types used in the type hints.
+    try:
+        required_imports = get_required_imports(func)
+    except Exception as e:
+        required_imports = {}
+        print(f"Failed to get required imports for function {func.__name__}: {e}")
+    # Generate import statements
+    import_statements = "\n".join(
+        f"from {module} import {', '.join(types)}"
+        for module, types in required_imports.items()
+    )
     return {
         "executor": pickle.dumps(func),
         "type": "function",
         "is_pickle": True,
         "function_source_code": function_source_code,
+        "import_statements": import_statements,
     }
 
 

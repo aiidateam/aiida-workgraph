@@ -876,7 +876,11 @@ class WorkGraphEngine(Process, metaclass=Protect):
                 metadata.update({"call_link_label": name})
                 # get the source code of the function
                 function_name = executor.__name__
-                function_source_code = node["executor"]["function_source_code"]
+                function_source_code = (
+                    node["executor"]["import_statements"]
+                    + "\n"
+                    + node["executor"]["function_source_code"]
+                )
                 # outputs
                 output_name_list = [output["name"] for output in node["outputs"]]
                 # serialize the kwargs into AiiDA Data
