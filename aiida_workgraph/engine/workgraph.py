@@ -834,11 +834,17 @@ class WorkGraphEngine(Process, metaclass=Protect):
 
                 print("node  type: Python.")
                 # get the names kwargs for the PythonJob, which are the inputs before _wait
-                input_kwargs = {}
+                function_kwargs = {}
                 for input in node["inputs"]:
                     if input["name"] == "_wait":
                         break
-                    input_kwargs[input["name"]] = kwargs.pop(input["name"], None)
+                    function_kwargs[input["name"]] = kwargs.pop(input["name"], None)
+                # if the var_kwargs is not None, we need to pop the var_kwargs from the kwargs
+                # then update the function_kwargs if var_kwargs is not None
+                if node["metadata"]["var_kwargs"] is not None:
+                    function_kwargs.pop(node["metadata"]["var_kwargs"], None)
+                    if var_kwargs:
+                        function_kwargs.update(var_kwargs.value)
                 # setup code
                 code = kwargs.pop("code", None)
                 computer = kwargs.pop("computer", None)
@@ -884,13 +890,13 @@ class WorkGraphEngine(Process, metaclass=Protect):
                 # outputs
                 output_name_list = [output["name"] for output in node["outputs"]]
                 # serialize the kwargs into AiiDA Data
-                input_kwargs = serialize_to_aiida_nodes(input_kwargs)
+                function_kwargs = serialize_to_aiida_nodes(function_kwargs)
                 # transfer the args to kwargs
                 inputs = {
                     "function_source_code": orm.Str(function_source_code),
                     "function_name": orm.Str(function_name),
                     "code": code,
-                    "kwargs": input_kwargs,
+                    "function_kwargs": function_kwargs,
                     "upload_files": new_upload_files,
                     "output_name_list": orm.List(output_name_list),
                     "parent_folder": parent_folder,

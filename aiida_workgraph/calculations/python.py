@@ -55,7 +55,7 @@ class PythonJob(CalcJob):
             "function_name", valid_type=Str, serializer=to_aiida_type, required=False
         )
         spec.input_namespace(
-            "kwargs", valid_type=Data, required=False
+            "function_kwargs", valid_type=Data, required=False
         )  # , serializer=serialize_to_aiida_nodes)
         spec.input(
             "output_name_list",
@@ -136,8 +136,8 @@ class PythonJob(CalcJob):
         dirpath = pathlib.Path(folder._abspath)
         inputs: dict[str, t.Any]
 
-        if self.inputs.kwargs:
-            inputs = dict(self.inputs.kwargs)
+        if self.inputs.function_kwargs:
+            inputs = dict(self.inputs.function_kwargs)
         else:
             inputs = {}
         # get the value of pickled function
