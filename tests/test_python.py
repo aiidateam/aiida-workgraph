@@ -5,8 +5,33 @@ from typing import Any
 aiida.load_profile()
 
 
-def test_python_job_typing():
-    """Test a simple python node."""
+def test_pythonjob_kwargs():
+    """Test function with kwargs."""
+    from aiida_workgraph import node, WorkGraph
+
+    # define add node
+    @node()
+    def add(x, **kwargs):
+        for value in kwargs.values():
+            x += value
+        return x
+
+    wg = WorkGraph("test_pythonjob")
+    wg.nodes.new(add, name="add", run_remotely=True)
+    wg.run(
+        inputs={
+            "add": {
+                "x": 1,
+                "kwargs": {"y": 2, "z": 3},
+                "computer": "localhost",
+            },
+        },
+    )
+    assert wg.nodes["add"].outputs["result"].value.value == 6
+
+
+def test_pythonjob_typing():
+    """Test function with typing."""
     from aiida_workgraph import node, WorkGraph
     from numpy import array
 
@@ -20,7 +45,7 @@ def test_python_job_typing():
     def multiply(x: Any, y: Any) -> Any:
         return x * y
 
-    wg = WorkGraph("test_python_job")
+    wg = WorkGraph("test_pythonjob")
     wg.nodes.new(add, name="add", run_remotely=True)
     wg.nodes.new(
         multiply, name="multiply", run_remotely=True, x=wg.nodes["add"].outputs[0]
@@ -47,14 +72,14 @@ def test_python_job_typing():
     assert (wg.nodes["multiply"].outputs["result"].value.value == array([12, 20])).all()
 
 
-def test_python_job_outputs():
-    """Test a simple python node."""
+def test_pythonjob_outputs():
+    """Test function with multiple outputs."""
 
     @node(outputs=[["General", "sum"], ["General", "diff"]])
     def add(x, y):
         return {"sum": x + y, "diff": x - y}
 
-    wg = WorkGraph("test_python_job_outputs")
+    wg = WorkGraph("test_pythonjob_outputs")
     wg.nodes.new(
         add,
         name="add",
@@ -69,7 +94,8 @@ def test_python_job_outputs():
     assert wg.nodes["add"].outputs["diff"].value.value == -1
 
 
-def test_python_job_parent_folder():
+def test_pythonjob_parent_folder():
+    """Test function with parent folder."""
     from aiida_workgraph import WorkGraph, node
     from aiida import load_profile
 
@@ -120,7 +146,8 @@ def test_python_job_parent_folder():
     assert wg.nodes["multiply"].outputs["result"].value.value == 17
 
 
-def test_python_job_upload_files():
+def test_pythonjob_upload_files():
+    """Test function with upload files."""
     from aiida_workgraph import WorkGraph, node
 
     # create a temporary file "input.txt" in the current directory
