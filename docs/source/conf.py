@@ -12,6 +12,8 @@
 #
 import os
 import sys
+import shutil
+from pathlib import Path
 
 sys.path.insert(0, os.path.abspath("../.."))
 
@@ -61,3 +63,22 @@ html_theme = "sphinx_rtd_theme"
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
 html_static_path = ["_static"]
+
+
+# Function to copy HTML files
+def copy_html_files(src, dst):
+    """
+    Copy all .html files from src to dst, maintaining the directory structure.
+    """
+    src_path = Path(src)
+    for html_file in src_path.rglob("*.html"):
+        relative_path = html_file.relative_to(src_path)
+        destination_file = Path(dst) / relative_path
+        destination_file.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy(html_file, destination_file)
+
+
+def setup(app):
+    app.connect(
+        "build-finished", lambda app, exception: copy_html_files("source", app.outdir)
+    )

@@ -381,3 +381,8 @@ class WorkGraph(node_graph.NodeGraph):
             return self._widget._repr_mimebundle_(*args, **kwargs)
         else:
             return self._widget._ipython_display_(*args, **kwargs)
+
+    def to_html(self, output: str = None, **kwargs):
+        """Write a standalone html file to visualize the workgraph."""
+        self._widget.from_workgraph(self)
+        return self._widget.to_html(output=output, **kwargs)
