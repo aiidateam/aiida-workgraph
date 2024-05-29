@@ -19,6 +19,7 @@ class WorkGraphNodeCollection(NodeCollection):
         from aiida_workgraph.decorator import (
             build_node_from_callable,
             build_PythonJob_node,
+            build_ShellJob_node,
         )
 
         # build the node on the fly if the identifier is a callable
@@ -34,6 +35,9 @@ class WorkGraphNodeCollection(NodeCollection):
         if isinstance(identifier, str) and identifier.upper() == "PYTHONJOB":
             # copy the inputs and outputs from the function node to the PythonJob node
             identifier, _ = build_PythonJob_node(kwargs.pop("function"))
+        if isinstance(identifier, str) and identifier.upper() == "SHELLJOB":
+            # copy the inputs and outputs from the function node to the SHELLJob node
+            identifier, _ = build_ShellJob_node(kwargs.pop("add_outputs", None))
         # Call the original new method
         return super().new(identifier, name, uuid, **kwargs)
 

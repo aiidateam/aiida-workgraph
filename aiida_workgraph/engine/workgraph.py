@@ -16,7 +16,6 @@ from aiida.common.lang import override
 from aiida import orm
 from aiida.orm import Node, ProcessNode, WorkChainNode
 from aiida.orm.utils import load_node
-from aiida_workgraph.orm.serializer import serialize_to_aiida_nodes
 
 
 from aiida.engine.processes.exit_code import ExitCode
@@ -578,6 +577,7 @@ class WorkGraphEngine(Process, metaclass=Protect):
                 "GRAPH_BUILDER",
                 "WORKGRAPH",
                 "PYTHONJOB",
+                "SHELLJOB",
             ]
             and node["state"] == "RUNNING"
         ):
@@ -685,6 +685,7 @@ class WorkGraphEngine(Process, metaclass=Protect):
                 "GRAPH_BUILDER",
                 "WORKGRAPH",
                 "PYTHONJOB",
+                "SHELLJOB",
             ]:
                 if len(self._awaitables) > self.ctx.max_number_awaitables:
                     print(
@@ -797,27 +798,10 @@ class WorkGraphEngine(Process, metaclass=Protect):
                 self.ctx.nodes[name]["state"] = "RUNNING"
                 self.to_context(**{name: process})
             elif node["metadata"]["node_type"].upper() in ["WORKGRAPH"]:
-                from aiida_workgraph.utils import merge_properties
+                from .utils import prepare_for_workgraph_node
                 from aiida_workgraph.utils.analysis import WorkGraphSaver
 
-                print("node  type: workgraph.")
-                wgdata = node["executor"]["wgdata"]
-                wgdata["name"] = name
-                wgdata["metadata"]["group_outputs"] = self.ctx.nodes[name]["metadata"][
-                    "group_outputs"
-                ]
-                # update the workgraph data by kwargs
-                for node_name, data in kwargs.items():
-                    # because kwargs is updated using update_nested_dict_with_special_keys
-                    # which means the data is grouped by the node name
-                    for socket_name, value in data.items():
-                        wgdata["nodes"][node_name]["properties"][socket_name][
-                            "value"
-                        ] = value
-                # merge the properties
-                merge_properties(wgdata)
-                metadata = {"call_link_label": name}
-                inputs = {"wg": wgdata, "metadata": metadata}
+                inputs, wgdata = prepare_for_workgraph_node(node, kwargs)
                 process_inited = WorkGraphEngine(inputs=inputs)
                 process_inited.runner.persister.save_checkpoint(process_inited)
                 saver = WorkGraphSaver(process_inited.node, wgdata)
@@ -829,83 +813,26 @@ class WorkGraphEngine(Process, metaclass=Protect):
                 self.to_context(**{name: process})
             elif node["metadata"]["node_type"].upper() in ["PYTHONJOB"]:
                 from aiida_workgraph.calculations.python import PythonJob
-                from aiida_workgraph.utils import get_or_create_code
-                import os
+                from .utils import prepare_for_pythonjob
 
-                print("node  type: Python.")
-                # get the names kwargs for the PythonJob, which are the inputs before _wait
-                function_kwargs = {}
-                for input in node["inputs"]:
-                    if input["name"] == "_wait":
-                        break
-                    function_kwargs[input["name"]] = kwargs.pop(input["name"], None)
-                # if the var_kwargs is not None, we need to pop the var_kwargs from the kwargs
-                # then update the function_kwargs if var_kwargs is not None
-                if node["metadata"]["var_kwargs"] is not None:
-                    function_kwargs.pop(node["metadata"]["var_kwargs"], None)
-                    if var_kwargs:
-                        function_kwargs.update(var_kwargs.value)
-                # setup code
-                code = kwargs.pop("code", None)
-                computer = kwargs.pop("computer", None)
-                code_label = kwargs.pop("code_label", None)
-                code_path = kwargs.pop("code_path", None)
-                prepend_text = kwargs.pop("prepend_text", None)
-                upload_files = kwargs.pop("upload_files", {})
-                new_upload_files = {}
-                # change the string in the upload files to SingleFileData, or FolderData
-                for key, source in upload_files.items():
-                    # only alphanumeric and underscores are allowed in the key
-                    # replace all "." with "_dot_"
-                    new_key = key.replace(".", "_dot_")
-                    if isinstance(source, str):
-                        if os.path.isfile(source):
-                            new_upload_files[new_key] = orm.SinglefileData(file=source)
-                        elif os.path.isdir(source):
-                            new_upload_files[new_key] = orm.FolderData(tree=source)
-                    elif isinstance(source, (orm.SinglefileData, orm.FolderData)):
-                        new_upload_files[new_key] = source
-                    else:
-                        raise ValueError(
-                            f"Invalid upload file type: {type(source)}, {source}"
-                        )
-                #
-                if code is None:
-                    code = get_or_create_code(
-                        computer=computer if computer else "localhost",
-                        code_label=code_label if code_label else "python3",
-                        code_path=code_path if code_path else None,
-                        prepend_text=prepend_text if prepend_text else None,
-                    )
-                parent_folder = kwargs.pop("parent_folder", None)
-                metadata = kwargs.pop("metadata", {})
-                metadata.update({"call_link_label": name})
-                # get the source code of the function
-                function_name = executor.__name__
-                function_source_code = (
-                    node["executor"]["import_statements"]
-                    + "\n"
-                    + node["executor"]["function_source_code"]
-                )
-                # outputs
-                output_name_list = [output["name"] for output in node["outputs"]]
-                # serialize the kwargs into AiiDA Data
-                function_kwargs = serialize_to_aiida_nodes(function_kwargs)
-                # transfer the args to kwargs
-                inputs = {
-                    "function_source_code": orm.Str(function_source_code),
-                    "function_name": orm.Str(function_name),
-                    "code": code,
-                    "function_kwargs": function_kwargs,
-                    "upload_files": new_upload_files,
-                    "output_name_list": orm.List(output_name_list),
-                    "parent_folder": parent_folder,
-                    "metadata": metadata,
-                    **kwargs,
-                }
+                inputs = prepare_for_pythonjob(node, kwargs, var_kwargs)
                 # since aiida 2.5.0, we can pass inputs directly to the submit, no need to use **inputs
                 process = self.submit(
                     PythonJob,
+                    **inputs,
+                )
+                process.label = name
+                node["process"] = process
+                self.ctx.nodes[name]["state"] = "RUNNING"
+                self.to_context(**{name: process})
+            elif node["metadata"]["node_type"].upper() in ["SHELLJOB"]:
+                from aiida_shell.calculations.shell import ShellJob
+                from .utils import prepare_for_shelljob
+
+                inputs = prepare_for_shelljob(node, kwargs)
+                # since aiida 2.5.0, we can pass inputs directly to the submit, no need to use **inputs
+                process = self.submit(
+                    ShellJob,
                     **inputs,
                 )
                 process.label = name

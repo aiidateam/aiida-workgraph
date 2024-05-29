@@ -273,6 +273,34 @@ def build_PythonJob_node(func: Callable) -> Node:
     return node, ndata
 
 
+def build_ShellJob_node(outputs=None) -> Node:
+    """Build PythonJob node from function."""
+    from aiida_shell.calculations.shell import ShellJob
+
+    ndata = {"executor": ShellJob, "node_type": "CALCJOB"}
+    _, ndata = build_node_from_AiiDA(ndata)
+    # Extend the outputs
+    ndata["outputs"].extend([["General", "stdout"], ["General", "stderr"]])
+    outputs = [] if outputs is None else outputs
+    # add user defined outputs
+    for output in outputs:
+        if output not in ndata["outputs"]:
+            ndata["outputs"].append(output)
+    #
+    ndata["identifier"] = "ShellJob"
+    ndata["inputs"].extend(
+        [
+            ["General", "command"],
+            ["General", "resolve_command"],
+        ]
+    )
+    ndata["kwargs"].extend(["command", "resolve_command"])
+    ndata["node_type"] = "SHELLJOB"
+    node = create_node(ndata)
+    node.is_aiida_component = True
+    return node, ndata
+
+
 def build_node_from_workgraph(wg: any) -> Node:
     """Build node from workgraph."""
     from aiida_workgraph.node import Node
@@ -374,6 +402,7 @@ def serialize_function(func: Callable) -> Dict[str, Any]:
         "executor": pickle.dumps(func),
         "type": "function",
         "is_pickle": True,
+        "function_name": func.__name__,
         "function_source_code": function_source_code,
         "import_statements": import_statements,
     }
