@@ -2,7 +2,7 @@ from aiida_workgraph.orm.serializer import serialize_to_aiida_nodes
 from aiida import orm
 
 
-def prepare_for_workgraph_node(node, kwargs):
+def prepare_for_workgraph_node(node: dict, kwargs: dict) -> tuple:
     """Prepare the inputs for WorkGraph node"""
     from aiida_workgraph.utils import merge_properties
 
@@ -23,7 +23,7 @@ def prepare_for_workgraph_node(node, kwargs):
     return inputs, wgdata
 
 
-def prepare_for_pythonjob(node, executor, args, kwargs, var_args, var_kwargs):
+def prepare_for_pythonjob(node: dict, kwargs: dict, var_kwargs: dict) -> dict:
     """Prepare the inputs for PythonJob"""
     from aiida_workgraph.utils import get_or_create_code
     import os
@@ -75,7 +75,7 @@ def prepare_for_pythonjob(node, executor, args, kwargs, var_args, var_kwargs):
     metadata = kwargs.pop("metadata", {})
     metadata.update({"call_link_label": node["name"]})
     # get the source code of the function
-    function_name = executor.__name__
+    function_name = node["executor"]["function_name"]
     function_source_code = (
         node["executor"]["import_statements"]
         + "\n"
@@ -96,5 +96,35 @@ def prepare_for_pythonjob(node, executor, args, kwargs, var_args, var_kwargs):
         "parent_folder": parent_folder,
         "metadata": metadata,
         **kwargs,
+    }
+    return inputs
+
+
+def prepare_for_shelljob(node: dict, kwargs: dict) -> dict:
+    """Prepare the inputs for ShellJob"""
+    from aiida_shell.launch import prepare_code, convert_nodes_single_file_data
+    from aiida.common import lang
+    from aiida.orm import AbstractCode
+
+    print("node  type: ShellJob.")
+    command = kwargs.pop("command", None)
+    resolve_command = kwargs.pop("resolve_command", False)
+    metadata = kwargs.pop("metadata", {})
+    # setup code
+    if isinstance(command, str):
+        computer = (metadata or {}).get("options", {}).pop("computer", None)
+        code = prepare_code(command, computer, resolve_command)
+    else:
+        lang.type_check(command, AbstractCode)
+        code = command
+    metadata.update({"call_link_label": node["name"]})
+    inputs = {
+        "code": code,
+        "nodes": convert_nodes_single_file_data(kwargs.pop("nodes", {})),
+        "filenames": kwargs.pop("filenames", {}),
+        "arguments": kwargs.pop("arguments", []),
+        "outputs": kwargs.pop("outputs", []),
+        "parser": kwargs.pop("parser", None),
+        "metadata": metadata or {},
     }
     return inputs

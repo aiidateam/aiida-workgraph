@@ -6,14 +6,30 @@ from aiida.orm import SinglefileData
 aiida.load_profile()
 
 
-def test_shell_date():
-    # Create a code on the local computer
-    cat_code = prepare_code("cat")
-    # Create a workgraph
-    wg = WorkGraph(name="test_shell_cat_with_file_arguments")
+def test_shell_command():
+    """Test the ShellJob with command as a string."""
+    wg = WorkGraph(name="test_shell_command")
     job1 = wg.nodes.new(
-        "AiiDAShell",
-        code=cat_code,
+        "ShellJob",
+        command="cat",
+        resolve_command=True,
+        arguments=["{file_a}", "{file_b}"],
+        nodes={
+            "file_a": SinglefileData.from_string("string a"),
+            "file_b": SinglefileData.from_string("string b"),
+        },
+    )
+    wg.submit(wait=True)
+    assert job1.node.outputs.stdout.get_content() == "string astring b"
+
+
+def test_shell_code():
+    """Test the ShellJob with code."""
+    cat_code = prepare_code("cat")
+    wg = WorkGraph(name="test_shell_code")
+    job1 = wg.nodes.new(
+        "ShellJob",
+        command=cat_code,
         arguments=["{file_a}", "{file_b}"],
         nodes={
             "file_a": SinglefileData.from_string("string a"),
@@ -26,13 +42,9 @@ def test_shell_date():
 
 def test_shell_workflow():
     from aiida_workgraph import node, WorkGraph
-    from aiida_shell.launch import prepare_code
     from aiida.orm import Int
     from aiida_shell.data import PickledData
     import os
-
-    echo_code = prepare_code("echo")
-    bc_code = prepare_code("bc")
 
     def parser(self, dirpath):
         from aiida.orm import Int
@@ -58,9 +70,9 @@ def test_shell_workflow():
     wg = WorkGraph(name="shell_add_mutiply_workflow")
     # echo x + y expression
     job1 = wg.nodes.new(
-        "AiiDAShell",
+        "ShellJob",
         name="job1",
-        code=echo_code,
+        command="echo",
         arguments=["{x}", "+", "{y}"],
         nodes={
             "x": Int(2),
@@ -69,33 +81,35 @@ def test_shell_workflow():
     )
     # bc command to calculate the expression
     job2 = wg.nodes.new(
-        "AiiDAShell",
+        "ShellJob",
         name="job2",
-        code=bc_code,
+        command="bc",
         arguments=["{expression}"],
         filenames={"expression": "input.txt"},
         parser=PickledData(parser),
+        add_outputs=[
+            ["General", "result"]
+        ],  # add a "result" output socket from the parser
     )
-    # add a "result" output socket from the parser
-    job2.outputs.new("General", "result")
     # echo result + y expression
     job3 = wg.nodes.new(
-        "AiiDAShell",
+        "ShellJob",
         name="job3",
-        code=echo_code,
+        command="echo",
         arguments=["{result}", "*", "{z}"],
     )
     # bc command to calculate the expression
     job4 = wg.nodes.new(
-        "AiiDAShell",
+        "ShellJob",
         name="job4",
-        code=bc_code,
+        command="bc",
         arguments=["{expression}"],
         filenames={"expression": "input.txt"},
         parser=PickledData(parser),
+        add_outputs=[
+            ["General", "result"]
+        ],  # add a "result" output socket from the parser
     )
-    # add a "result" output socket from the parser
-    job4.outputs.new("General", "result")
     # prepare the nodes for the bc calculation
     nodes1 = wg.nodes.new(prepare_bc_nodes, name="prepare_bc_nodes1")
     nodes2 = wg.nodes.new(prepare_echo_nodes, name="prepare_echo_nodes", z=Int(4))

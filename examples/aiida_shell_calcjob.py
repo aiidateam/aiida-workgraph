@@ -18,10 +18,10 @@ def generate_nodes(file):
 
 # Create a workgraph
 wg = WorkGraph(name="test_aiida_shell_calcjob")
-job1 = wg.nodes.new("AiiDAShell", code=pdb_fetch, arguments=["1brs"])
-job2 = wg.nodes.new("AiiDAShell", code=pdb_selchain, arguments=["-A,D", "{pdb}"])
-job3 = wg.nodes.new("AiiDAShell", code=pdb_delhetatm, arguments=["{pdb}"])
-job4 = wg.nodes.new("AiiDAShell", code=pdb_tidy, arguments=["{pdb}"])
+job1 = wg.nodes.new("ShellJob", code=pdb_fetch, arguments=["1brs"])
+job2 = wg.nodes.new("ShellJob", code=pdb_selchain, arguments=["-A,D", "{pdb}"])
+job3 = wg.nodes.new("ShellJob", code=pdb_delhetatm, arguments=["{pdb}"])
+job4 = wg.nodes.new("ShellJob", code=pdb_tidy, arguments=["{pdb}"])
 generate_nodes1 = wg.nodes.new(generate_nodes)
 generate_nodes2 = wg.nodes.new(generate_nodes)
 generate_nodes3 = wg.nodes.new(generate_nodes)

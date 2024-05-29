@@ -577,6 +577,7 @@ class WorkGraphEngine(Process, metaclass=Protect):
                 "GRAPH_BUILDER",
                 "WORKGRAPH",
                 "PYTHONJOB",
+                "SHELLJOB",
             ]
             and node["state"] == "RUNNING"
         ):
@@ -684,6 +685,7 @@ class WorkGraphEngine(Process, metaclass=Protect):
                 "GRAPH_BUILDER",
                 "WORKGRAPH",
                 "PYTHONJOB",
+                "SHELLJOB",
             ]:
                 if len(self._awaitables) > self.ctx.max_number_awaitables:
                     print(
@@ -813,12 +815,24 @@ class WorkGraphEngine(Process, metaclass=Protect):
                 from aiida_workgraph.calculations.python import PythonJob
                 from .utils import prepare_for_pythonjob
 
-                inputs = prepare_for_pythonjob(
-                    node, executor, args, kwargs, var_args, var_kwargs
-                )
+                inputs = prepare_for_pythonjob(node, kwargs, var_kwargs)
                 # since aiida 2.5.0, we can pass inputs directly to the submit, no need to use **inputs
                 process = self.submit(
                     PythonJob,
+                    **inputs,
+                )
+                process.label = name
+                node["process"] = process
+                self.ctx.nodes[name]["state"] = "RUNNING"
+                self.to_context(**{name: process})
+            elif node["metadata"]["node_type"].upper() in ["SHELLJOB"]:
+                from aiida_shell.calculations.shell import ShellJob
+                from .utils import prepare_for_shelljob
+
+                inputs = prepare_for_shelljob(node, kwargs)
+                # since aiida 2.5.0, we can pass inputs directly to the submit, no need to use **inputs
+                process = self.submit(
+                    ShellJob,
                     **inputs,
                 )
                 process.label = name
