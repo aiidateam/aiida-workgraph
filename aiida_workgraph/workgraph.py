@@ -202,6 +202,7 @@ class WorkGraph(node_graph.NodeGraph):
         start = time.time()
         self.update()
         while self.state not in (
+            "KILLED",
             "PAUSED",
             "FINISHED",
             "FAILED",
