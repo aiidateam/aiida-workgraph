@@ -9,3 +9,4 @@ This section contains a collection of blogs for various topics.
    :caption: Contents:
 
    workgraph_vs_workchain
+   aiida_python
