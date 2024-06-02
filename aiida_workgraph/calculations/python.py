@@ -69,7 +69,7 @@ class PythonJob(CalcJob):
         spec.input(
             "parent_folder_name",
             valid_type=Str,
-            default=Str("./parent_folder/"),
+            default=lambda: Str("./parent_folder/"),
             required=False,
             serializer=to_aiida_type,
             help="""Default name of the subfolder that you want to create in the working directory,
