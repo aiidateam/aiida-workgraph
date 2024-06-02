@@ -25,10 +25,6 @@ __all__ = ("PythonJob",)
 class PythonJob(CalcJob):
     """Calcjob to run a Python function on a remote computer."""
 
-    # Default name of the subfolder that you want to create in the working directory,
-    # in which you want to place the files taken from parent_folder
-    _PARENT_SUBFOLDER = "./parent_folder/"
-
     _internal_retrieve_list = []
     _retrieve_singlefile_list = []
     _retrieve_temporary_list = []
@@ -69,6 +65,15 @@ class PythonJob(CalcJob):
             valid_type=(RemoteData, FolderData, SinglefileData),
             required=False,
             help="Use a local or remote folder as parent folder (for restarts and similar)",
+        )
+        spec.input(
+            "parent_folder_name",
+            valid_type=Str,
+            default=Str("./parent_folder/"),
+            required=False,
+            serializer=to_aiida_type,
+            help="""Default name of the subfolder that you want to create in the working directory,
+            in which you want to place the files taken from parent_folder""",
         )
         spec.input(
             "parent_output_folder",
@@ -178,10 +183,14 @@ with open('results.pickle', 'wb') as handle:
                 if self.inputs.parent_output_folder is not None:
                     dirpath = (
                         pathlib.Path(source.get_remote_path())
-                        / self.inputs.parent_output_folder
+                        / self.inputs.parent_output_folder.value
                     )
                 remote_list.append(
-                    (source.computer.uuid, str(dirpath), self._PARENT_SUBFOLDER)
+                    (
+                        source.computer.uuid,
+                        str(dirpath),
+                        self.inputs.parent_folder_name.value,
+                    )
                 )
             elif isinstance(source, FolderData):
                 dirname = (
@@ -189,7 +198,9 @@ with open('results.pickle', 'wb') as handle:
                     if self.inputs.parent_output_folder is not None
                     else ""
                 )
-                local_copy_list.append((source.uuid, dirname, self._PARENT_SUBFOLDER))
+                local_copy_list.append(
+                    (source.uuid, dirname, self.inputs.parent_folder_name.value)
+                )
             elif isinstance(source, SinglefileData):
                 local_copy_list.append((source.uuid, source.filename, source.filename))
         if self.inputs.upload_files:
@@ -224,6 +235,7 @@ Only AiiDA SinglefileData and FolderData are allowed."""
                 )
         # save the value as a pickle file, the path is absolute
         filename = "inputs.pickle"
+        dirpath = pathlib.Path(folder._abspath)
         with folder.open(filename, "wb") as handle:
             pickle.dump(input_values, handle)
             # create a singlefiledata object for the pickled data

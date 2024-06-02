@@ -1,7 +1,6 @@
 from .general_data import GeneralData
 from aiida import orm, common
 from importlib.metadata import entry_points
-from aiida.common import exceptions
 from typing import Any
 
 
@@ -62,7 +61,7 @@ def general_serializer(data: Any, check_value=True) -> orm.Node:
                 try:
                     new_node.store()
                     return new_node
-                except exceptions.ValidationError:
+                except Exception:
                     # try to serialize the value as a GeneralData
                     try:
                         new_node = GeneralData(data)

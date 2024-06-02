@@ -71,7 +71,6 @@ def prepare_for_pythonjob(node: dict, kwargs: dict, var_kwargs: dict) -> dict:
             code_path=code_path if code_path else None,
             prepend_text=prepend_text if prepend_text else None,
         )
-    parent_folder = kwargs.pop("parent_folder", None)
     metadata = kwargs.pop("metadata", {})
     metadata.update({"call_link_label": node["name"]})
     # get the source code of the function
@@ -93,7 +92,6 @@ def prepare_for_pythonjob(node: dict, kwargs: dict, var_kwargs: dict) -> dict:
         "function_kwargs": function_kwargs,
         "upload_files": new_upload_files,
         "output_name_list": orm.List(output_name_list),
-        "parent_folder": parent_folder,
         "metadata": metadata,
         **kwargs,
     }

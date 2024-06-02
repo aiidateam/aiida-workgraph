@@ -116,7 +116,7 @@ def test_pythonjob_parent_folder():
             z = int(f.read())
         return x * y + z
 
-    wg = WorkGraph("first_workflow")
+    wg = WorkGraph("test_pythonjob_parent_folder")
     wg.nodes.new(add, name="add", run_remotely=True)
     wg.nodes.new(
         multiply,
@@ -131,13 +131,11 @@ def test_pythonjob_parent_folder():
             "add": {
                 "x": 2,
                 "y": 3,
-                # "code": code,
                 "computer": "localhost",
             },
             "multiply": {
                 "x": 3,
                 "y": 4,
-                #  "code": code,
                 "computer": "localhost",
             },
         },
@@ -171,7 +169,7 @@ def test_pythonjob_upload_files():
             b = int(f.read())
         return a + b
 
-    wg = WorkGraph("first_workflow")
+    wg = WorkGraph("test_pythonjob_upload_files")
     wg.nodes.new(add, name="add", run_remotely=True)
 
     # ------------------------- Submit the calculation -------------------
