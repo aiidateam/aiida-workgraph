@@ -190,3 +190,64 @@ def test_pythonjob_upload_files():
     )
     # wait=True)
     assert wg.nodes["add"].outputs["result"].value.value == 5
+
+
+def test_pythonjob_copy_files():
+    """Test function with copy files."""
+    from aiida_workgraph import WorkGraph, node
+
+    # define add node
+    @node()
+    def add(x, y):
+        z = x + y
+        with open("result.txt", "w") as f:
+            f.write(str(z))
+        return x + y
+
+    # define multiply node
+    @node()
+    def multiply(x_folder_name, y_folder_name):
+        with open(f"{x_folder_name}/result.txt", "r") as f:
+            x = int(f.read())
+        with open(f"{y_folder_name}/result.txt", "r") as f:
+            y = int(f.read())
+        return x * y
+
+    wg = WorkGraph("test_pythonjob_parent_folder")
+    wg.nodes.new(add, name="add1", run_remotely=True)
+    wg.nodes.new(add, name="add2", run_remotely=True)
+    wg.nodes.new(
+        multiply,
+        name="multiply",
+        run_remotely=True,
+    )
+    wg.links.new(
+        wg.nodes["add1"].outputs["remote_folder"],
+        wg.nodes["multiply"].inputs["copy_files"],
+    )
+    wg.links.new(
+        wg.nodes["add2"].outputs["remote_folder"],
+        wg.nodes["multiply"].inputs["copy_files"],
+    )
+    # ------------------------- Submit the calculation -------------------
+    wg.submit(
+        inputs={
+            "add1": {
+                "x": 2,
+                "y": 3,
+                "computer": "localhost",
+            },
+            "add2": {
+                "x": 2,
+                "y": 3,
+                "computer": "localhost",
+            },
+            "multiply": {
+                "x_folder_name": "add1_remote_folder",
+                "y_folder_name": "add2_remote_folder",
+                "computer": "localhost",
+            },
+        },
+        wait=True,
+    )
+    assert wg.nodes["multiply"].outputs["result"].value.value == 25
