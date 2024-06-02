@@ -89,6 +89,12 @@ class PythonJob(CalcJob):
             required=False,
             help="The folder/files to upload",
         )
+        spec.input_namespace(
+            "copy_files",
+            valid_type=(RemoteData,),
+            required=False,
+            help="The folder/files to copy from the remote computer",
+        )
         spec.input(
             "additional_retrieve_list",
             valid_type=List,
@@ -219,6 +225,13 @@ with open('results.pickle', 'wb') as handle:
                         f"""Input folder/file: {source} is not supported.
 Only AiiDA SinglefileData and FolderData are allowed."""
                     )
+        if "copy_files" in self.inputs:
+            copy_files = self.inputs.copy_files
+            for key, source in copy_files.items():
+                # replace "_dot_" with "." in the key
+                key = key.replace("_dot_", ".")
+                dirpath = pathlib.Path(source.get_remote_path())
+                remote_list.append((source.computer.uuid, str(dirpath), key))
         # create pickle file for the inputs
         input_values = {}
         for key, value in inputs.items():

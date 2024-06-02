@@ -260,6 +260,10 @@ def build_PythonJob_node(func: Callable) -> Node:
     for output in ndata_py["outputs"]:
         if output not in outputs:
             outputs.append(output)
+    # change "copy_files" link_limit to 1e6
+    for input in inputs:
+        if input[1] == "copy_files":
+            input[2].update({"link_limit": 1e6})
     # append the kwargs of the PythonJob node to the function node
     kwargs = ndata["kwargs"]
     kwargs.extend(["computer", "code_label", "code_path", "prepend_text"])
