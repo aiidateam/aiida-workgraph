@@ -1,5 +1,6 @@
 from aiida_workgraph.orm.serializer import serialize_to_aiida_nodes
 from aiida import orm
+from aiida.common.extendeddicts import AttributeDict
 
 
 def prepare_for_workgraph_node(node: dict, kwargs: dict) -> tuple:
@@ -40,7 +41,14 @@ def prepare_for_pythonjob(node: dict, kwargs: dict, var_kwargs: dict) -> dict:
     if node["metadata"]["var_kwargs"] is not None:
         function_kwargs.pop(node["metadata"]["var_kwargs"], None)
         if var_kwargs:
-            function_kwargs.update(var_kwargs.value)
+            # var_kwargs can be AttributeDict if it get data from the previous node output
+            if isinstance(var_kwargs, (dict, AttributeDict)):
+                function_kwargs.update(var_kwargs)
+            # otherwise, it should be a Data node
+            elif isinstance(var_kwargs, orm.Data):
+                function_kwargs.update(var_kwargs.value)
+            else:
+                raise ValueError(f"Invalid var_kwargs type: {type(var_kwargs)}")
     # setup code
     code = kwargs.pop("code", None)
     computer = kwargs.pop("computer", None)

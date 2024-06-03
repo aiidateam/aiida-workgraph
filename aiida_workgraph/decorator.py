@@ -361,21 +361,35 @@ def get_required_imports(func):
 
     type_hints = get_type_hints(func)
     imports = {}
-    for _, type_hint in type_hints.items():
+
+    def add_imports(type_hint):
         if isinstance(
             type_hint, _SpecialForm
         ):  # Handle special forms like Any, Union, Optional
             module_name = "typing"
             type_name = type_hint._name or str(type_hint)
-            if module_name not in imports:
-                imports[module_name] = set()
-            imports[module_name].add(type_name)
+        elif hasattr(
+            type_hint, "__origin__"
+        ):  # This checks for higher-order types like List, Dict
+            module_name = type_hint.__module__
+            type_name = type_hint._name
+            for arg in type_hint.__args__:
+                if arg is type(None):  # noqa: E721
+                    continue
+                add_imports(arg)  # Recursively add imports for each argument
         elif hasattr(type_hint, "__module__"):
             module_name = type_hint.__module__
             type_name = type_hint.__name__
-            if module_name not in imports:
-                imports[module_name] = set()
-            imports[module_name].add(type_name)
+        else:
+            return  # If no module or origin, we can't import it, e.g., for literals
+
+        if module_name not in imports:
+            imports[module_name] = set()
+        imports[module_name].add(type_name)
+
+    for _, type_hint in type_hints.items():
+        add_imports(type_hint)
+
     return imports
 
 
