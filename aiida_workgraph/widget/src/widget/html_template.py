@@ -177,7 +177,7 @@ html_template = """
 
 
             editor.use(area);
-            area.use(connection);
+            // area.use(connection);
             area.use(render);
             area.use(arrange);
             area.use(minimap);
