@@ -48,6 +48,7 @@ class WorkGraphNodeCollection(NodeCollection):
             # make links between the nodes
             node.set(links)
             return node
+        return super().new(identifier, name, uuid, **kwargs)
 
 
 class WorkGraphPropertyCollection(PropertyCollection):
