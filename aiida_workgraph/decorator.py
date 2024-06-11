@@ -277,15 +277,37 @@ def build_PythonJob_node(func: Callable) -> Node:
     return node, ndata
 
 
-def build_ShellJob_node(outputs=None) -> Node:
+def build_ShellJob_node(
+    nodes: dict = None, outputs: list = None, parser_outputs: list = None
+) -> Node:
     """Build PythonJob node from function."""
     from aiida_shell.calculations.shell import ShellJob
+    from aiida_shell.parsers.shell import ShellParser
+    from node_graph.socket import NodeSocket
 
     ndata = {"executor": ShellJob, "node_type": "CALCJOB"}
     _, ndata = build_node_from_AiiDA(ndata)
+    # create input sockets for the nodes, if it is linked other sockets
+    links = {}
+    inputs = []
+    nodes = {} if nodes is None else nodes
+    keys = list(nodes.keys())
+    for key in keys:
+        if isinstance(nodes[key], NodeSocket):
+            inputs.append(["General", f"nodes.{key}"])
+            links[f"nodes.{key}"] = nodes[key]
+            # not it read input from link, so need to remove the key from the nodes
+            nodes.pop(key)
+    for input in inputs:
+        if input not in ndata["inputs"]:
+            ndata["inputs"].append(input)
+            ndata["kwargs"].append(input[1])
     # Extend the outputs
     ndata["outputs"].extend([["General", "stdout"], ["General", "stderr"]])
     outputs = [] if outputs is None else outputs
+    parser_outputs = [] if parser_outputs is None else parser_outputs
+    outputs = [["General", ShellParser.format_link_label(output)] for output in outputs]
+    outputs.extend(parser_outputs)
     # add user defined outputs
     for output in outputs:
         if output not in ndata["outputs"]:
@@ -302,7 +324,7 @@ def build_ShellJob_node(outputs=None) -> Node:
     ndata["node_type"] = "SHELLJOB"
     node = create_node(ndata)
     node.is_aiida_component = True
-    return node, ndata
+    return node, ndata, links
 
 
 def build_node_from_workgraph(wg: any) -> Node:

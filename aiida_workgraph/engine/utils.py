@@ -123,10 +123,16 @@ def prepare_for_shelljob(node: dict, kwargs: dict) -> dict:
     else:
         lang.type_check(command, AbstractCode)
         code = command
+    # update the nodes with links
+    nodes = convert_nodes_single_file_data(kwargs.pop("nodes", {}))
+    # find all keys in kwargs start with "nodes."
+    for key in list(kwargs.keys()):
+        if key.startswith("nodes."):
+            nodes[key[6:]] = kwargs.pop(key)
     metadata.update({"call_link_label": node["name"]})
     inputs = {
         "code": code,
-        "nodes": convert_nodes_single_file_data(kwargs.pop("nodes", {})),
+        "nodes": nodes,
         "filenames": kwargs.pop("filenames", {}),
         "arguments": kwargs.pop("arguments", []),
         "outputs": kwargs.pop("outputs", []),
