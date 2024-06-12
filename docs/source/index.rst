@@ -2,7 +2,7 @@
 AiiDA WorkGraph
 ===========================================
 
-Design flexible node-based workflows using AiiDA.
+Efficiently design and manage flexible, node-based workflows with AiiDA, featuring an interactive GUI, checkpoints, provenance tracking, and remote execution capabilities.
 
 .. raw:: html
 
