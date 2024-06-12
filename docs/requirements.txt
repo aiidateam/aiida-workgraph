@@ -4,3 +4,4 @@ ipython
 aiida-core
 node-graph
 anywidget
+furo

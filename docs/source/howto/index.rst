@@ -9,13 +9,11 @@ This section contains a collection of HowTos for various topics.
    :caption: Contents:
 
    graph_builder
-   if
    parallel
-   for
+   if
    while
+   for
    context
-   aiida_python
-   aiida_shell
    wait
    combine_workgraph
    restart
