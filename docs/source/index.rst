@@ -1,8 +1,8 @@
 
-Welcome to AiiDA WorkGraph's documentation!
+AiiDA WorkGraph
 ===========================================
 
-Provides the third workflow component: ``WorkGraph``, to design flexible node-based workflows using AiiDA.
+Efficiently design and manage flexible, node-based workflows with AiiDA, featuring an interactive GUI, checkpoints, provenance tracking, and remote execution capabilities.
 
 .. raw:: html
 
@@ -10,34 +10,100 @@ Provides the third workflow component: ``WorkGraph``, to design flexible node-ba
         <object type="text/html" data="_static/first_workflow.html" width="100%" height="400px" allowfullscreen="true"></object>
     </div>
 
+Key Features
+------------
 
-In AiiDA, there are two workflow components: `workfunction` and `WorkChain`. Workfunction is easy to implement but it does not support automatic checkpointing, which is important for long-running calculations. Workchain supports automatic checkpointing but it is difficult to implement and also not as flexible as the `workfunction`. AiiDA-WorkGraph provides the third component: `WorkGraph`. It is easy to implement and supports automatic checkpointing. It is also flexible and can be used to design complex workflows. Check this `blog <blog/workgraph_vs_workchain.ipynb>`_ post for more details.
+- **Easy to use**: Create workflows by linking the input and output socket of different tasks.
+- **Flexible**: Extend (modify) the workflow by adding (editing) tasks and links, or combine multiple workflows together.
+- **Interactive GUI**: Visualize and interact with the workflow using the GUI.
+- **Checkpoints**: Save the workflow state, and resume the workflow from the last checkpoint.
+- **Provenance**: Track the provenance of the workflow.
+- **Remote execution**: Execute the task (Python function, Shell command) on a remote machine.
+
+Check this `blog <blog/workgraph_vs_workchain.ipynb>`_ post for the comparison between WorkGraph and AiiDA's WorkChain.
 
 
-Visit the `Workgraph Collections repository <https://github.com/superstar54/workgraph-collections>`_ to see demonstrations of how to utilize AiiDA Workgraph for different computational codes.
+
+Sections
+========
+
+   .. container:: tocdescr
+
+      .. container:: descr
+
+         :doc:`/quick_start`
+            A quick start guide to get you up and running with AiiDA WorkGraph.
+
+      .. container:: descr
+
+         :doc:`/installation`
+            Installation instructions for AiiDA WorkGraph.
+
+      .. container:: descr
+
+         :doc:`/tutorial/index`
+            A step-by-step guide to creating a simple workflow.
+
+      .. container:: descr
+
+         :doc:`/built-in/index`
+            Run a Python function, Shell command on a remote computer
+
+      .. container:: descr
+
+         :doc:`/howto/index`
+            How-to guides for AiiDA WorkGraph.
+
+
+      .. container:: descr
+
+         :doc:`concept/index`
+            Concepts and terminologies used in AiiDA WorkGraph.
+
+      .. container:: descr
+
+         :doc:`development/index`
+            Development guide for AiiDA WorkGraph.
+
+      .. container:: descr
+
+         :doc:`gallery`
+            Gallery of workflows created using AiiDA WorkGraph.
+
+      .. container:: descr
+
+         :doc:`blog/index`
+            Blog posts related to AiiDA WorkGraph.
+
+
+      .. container:: descr
+
+         :doc:`faqs`
+            Frequently asked questions about AiiDA WorkGraph.
 
 
 
 .. toctree::
    :maxdepth: 1
    :caption: Contents:
+   :hidden:
 
    quick_start
    installation
-   zero_to_hero
    tutorial/index
-   howto/index
    built-in/index
-   blog/index
+   howto/index
    concept/index
    development/index
+   gallery
+   blog/index
    faqs
 
 
 
+
 Indices and tables
-==================
+--------------------
 
 * :ref:`genindex`
 * :ref:`modindex`
-* :ref:`search`

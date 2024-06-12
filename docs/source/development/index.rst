@@ -9,3 +9,5 @@ This section contains information for developers.
    :caption: Contents:
 
    data_serialization
+   pythonjob
+   shelljob

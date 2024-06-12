@@ -8,5 +8,5 @@ This section contains a collection of built-in nodes that are used in the AiiDA 
    :maxdepth: 1
    :caption: Contents:
 
-   aiida_python
-   aiida_shell
+   pythonjob
+   shelljob

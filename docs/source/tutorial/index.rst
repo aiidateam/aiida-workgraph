@@ -8,5 +8,6 @@ In this tutorials, you will see severl examples in real applications.
    :maxdepth: 2
    :caption: Contents:
 
+   zero_to_hero
    qe
    eos

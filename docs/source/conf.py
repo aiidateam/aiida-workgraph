@@ -15,6 +15,7 @@ import sys
 import shutil
 from pathlib import Path
 
+
 sys.path.insert(0, os.path.abspath("../.."))
 
 
@@ -24,8 +25,10 @@ project = "AiiDA WorkGraph"
 copyright = "2023, Xing Wang"
 author = "Xing Wang"
 
-# The full version, including alpha/beta/rc tags
-release = "0.0.1"
+# version = ""
+
+# The master toctree document.
+master_doc = "index"
 
 
 # -- General configuration ---------------------------------------------------
@@ -57,12 +60,25 @@ exclude_patterns = []
 # a list of builtin themes.
 #
 # html_theme = 'alabaster'
-html_theme = "sphinx_rtd_theme"
+html_theme = "furo"
 
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
 html_static_path = ["_static"]
+html_css_files = [
+    "css/theme.css",
+]
+
+html_theme_options = {
+    "source_repository": "https://github.com/superstar54/aiida-workgraph/",
+    "source_branch": "main",
+    "source_directory": "docs/source",
+    # "announcement": "<em>Important</em> announcement!",
+}
+
+# pygments_style = "colorful"
+# pygments_dark_style = "monokai"
 
 
 # Function to copy HTML files

@@ -1,0 +1,83 @@
+/*
+ * This stylesheet is applied after the theme's default one,
+ * and thus any overrides or additions can be added here.
+ *
+ * More info:
+ *		https://www.sphinx-doc.org/en/master/extdev/appapi.html#sphinx.application.Sphinx.add_css_file
+ */
+
+
+
+ /* Applied on main index:sections. */
+ /* Start section description. */
+ @media screen and (min-width: 450px){
+	.tocdescr {
+		display: flex; display: -webkit-flex;
+		flex-flow: row wrap; -webkit-flex-flow: row wrap;
+		justify-content: space-between; -webkit-justify-content: space-between;
+		align-items: flex-start; -webkit-align-items: flex-start;
+		align-content: flex-start; -webkit-align-content: flex-start;
+		list-style-type: none;
+		margin-bottom: 10px;
+	}
+	/* Dan Andreasson on Stack Overflow. */
+	.tocdescr:after {
+		content: "";
+		flex: 1 0 33.3%; -webkit-flex: 1 0 33.3%;
+		margin-left: 45px;
+		align-self: stretch; -webkit-align-self: stretch;
+	}
+}
+@media screen and (max-width: 450px) {
+	.tocdescr {
+		display: flex; display: -webkit-flex;
+		flex-flow: column wrap; -webkit-flex-flow: column wrap;
+		justify-content: space-between; -webkit-justify-content: space-between;
+		align-items: flex-start; -webkit-align-items: flex-start;
+		align-content: flex-start; -webkit-align-content: flex-start;
+		list-style-type: none;
+		margin-bottom: 10px;
+	}
+	.tocdescr:after {
+		content: "";
+		flex: none; -webkit-flex: none;
+	}
+}
+.descr {
+	flex: 2 0 33.3%; -webkit-flex: 2 0 33.3%;
+	margin: 10px 15px;
+	border-radius: .3em;
+	user-select: none;
+}
+.descr div.figure,
+.descr figure {
+	margin-bottom: 0px;
+	display: block;
+}
+.descr img {
+	border-top-left-radius: .3em;
+	border-top-right-radius: .3em;
+}
+.descr dl {margin-bottom: 10px}
+.descr dl dt > a {
+	display: block;
+	width: 100%;
+	margin-bottom: 10px;
+}
+.descr dl dt a em, .descr dl dt a span{
+	font-weight: bold;
+	font-style: normal;
+	font-size: 1.3em;
+}
+.descr dl dt{padding: 18px 15px 0px!important}
+.descr dl dd{
+	padding: 0px 15px;
+	font-style: normal;
+	margin: 0px;
+	color: #808080;
+	font-size: 90%;
+}
+.descr {
+	box-shadow: rgba(0,0,0,0.05) 0px 1px 4px 0px,
+					rgba(211,216,223,0.33) 0px 15px 20px -1px;
+}
