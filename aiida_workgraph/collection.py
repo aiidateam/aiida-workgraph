@@ -34,7 +34,7 @@ class WorkGraphNodeCollection(NodeCollection):
                 identifier, _ = build_PythonJob_task(identifier)
             return super().new(identifier, name, uuid, **kwargs)
         if isinstance(identifier, str) and identifier.upper() == "PYTHONJOB":
-            # copy the inputs and outputs from the function node to the PythonJob node
+            # copy the inputs and outputs from the function node to the PythonJob task
             identifier, _ = build_PythonJob_task(kwargs.pop("function"))
             return super().new(identifier, name, uuid, **kwargs)
         if isinstance(identifier, str) and identifier.upper() == "SHELLJOB":

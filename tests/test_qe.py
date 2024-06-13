@@ -172,7 +172,7 @@ def test_pw_relax_workchain(structure_si):
     wg = WorkGraph("test_pw_relax")
     # structure node
     wg.tasks.new("AiiDANode", "si", pk=structure_si.pk)
-    # pw node
+    # pw task
     pw_relax1 = wg.tasks.new(PwRelaxWorkChain, name="pw_relax1")
     pw_relax1.set(
         {
@@ -186,11 +186,11 @@ def test_pw_relax_workchain(structure_si):
             },
         }
     )
-    paras_node = wg.tasks.new(
+    paras_task = wg.tasks.new(
         pw_parameters, "parameters", paras=paras, relax_type="relax"
     )
     wg.links.new(wg.tasks["si"].outputs[0], pw_relax1.inputs["structure"])
-    wg.links.new(paras_node.outputs[0], pw_relax1.inputs["base.pw.parameters"])
+    wg.links.new(paras_task.outputs[0], pw_relax1.inputs["base.pw.parameters"])
     # wg.submit(wait=True, timeout=200)
     wg.run()
     assert wg.state == "FINISHED"

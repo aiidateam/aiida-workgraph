@@ -10,12 +10,12 @@ def test_pw_relax_protocol(structure_si):
     from aiida import orm
 
     # register node
-    pw_relax_node = build_task(
+    pw_relax_task = build_task(
         "aiida_quantumespresso.workflows.pw.relax.PwRelaxWorkChain"
     )
     code = orm.load_code("qe-7.2-pw@localhost")
     wg = WorkGraph("test_pw_relax")
-    pw_relax1 = wg.tasks.new(pw_relax_node, name="pw_relax1")
+    pw_relax1 = wg.tasks.new(pw_relax_task, name="pw_relax1")
     pw_relax1.set_from_protocol(
         code,
         structure_si,
@@ -34,12 +34,12 @@ def test_pw_relax_protocol_pop(structure_si):
     from aiida import orm
 
     # register node
-    pw_relax_node = build_task(
+    pw_relax_task = build_task(
         "aiida_quantumespresso.workflows.pw.relax.PwRelaxWorkChain"
     )
     code = orm.load_code("qe-7.2-pw@localhost")
     wg = WorkGraph("test_pw_relax")
-    pw_relax1 = wg.tasks.new(pw_relax_node, name="pw_relax1")
+    pw_relax1 = wg.tasks.new(pw_relax_task, name="pw_relax1")
     pw_relax1.set_from_protocol(
         code,
         structure_si,
