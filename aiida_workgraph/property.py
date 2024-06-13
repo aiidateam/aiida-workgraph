@@ -17,7 +17,7 @@ class NodeProperty(GraphNodeProperty):
         # to override the default property_pool from node_graph
         from aiida_workgraph.properties import property_pool
 
-        # build the node on the fly if the identifier is a callable
+        # build the task on the fly if the identifier is a callable
         if callable(identifier):
             identifier = build_property_from_AiiDA(identifier)
         return super().new(

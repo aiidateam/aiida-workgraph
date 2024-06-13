@@ -61,7 +61,7 @@ class Task(GraphNode):
         return ndata
 
     def set_from_protocol(self, *args: Any, **kwargs: Any) -> None:
-        """For node support protocol, set the node from protocol data."""
+        """For node support protocol, set the task from protocol data."""
         from aiida_workgraph.utils import get_executor, get_dict_from_builder
 
         executor = get_executor(self.get_executor())[0]
@@ -74,7 +74,7 @@ class Task(GraphNode):
         cls, identifier: Union[str, Callable], name: Optional[str] = None
     ) -> "Node":
         """Create a node from a identifier."""
-        from aiida_workgraph.nodes import node_pool
+        from aiida_workgraph.tasks import node_pool
 
         return super().new(identifier, name=name, node_pool=node_pool)
 
@@ -82,16 +82,16 @@ class Task(GraphNode):
     def from_dict(cls, data: Dict[str, Any], node_pool: Optional[Any] = None) -> "Node":
         """Create a node from a dictionary. This method initializes a Node instance with properties and settings
         defined within the provided data dictionary. If node_pool is not specified, the default node_pool from
-        aiida_workgraph.nodes is used.
+        aiida_workgraph.tasks is used.
 
         Args:
-            data (Dict[str, Any]): A dictionary containing the node's configuration.
+            data (Dict[str, Any]): A dictionary containing the task's configuration.
             node_pool (Optional[Any]): A pool of node configurations, defaults to None
             which will use the global node_pool.
 
         Returns:
             Node: An instance of Node initialized with the provided data."""
-        from aiida_workgraph.nodes import node_pool
+        from aiida_workgraph.tasks import node_pool
 
         node = super().from_dict(data, node_pool=node_pool)
         node.to_context = data.get("to_context", [])
@@ -113,6 +113,6 @@ class Task(GraphNode):
             return self._widget._ipython_display_(*args, **kwargs)
 
     def to_html(self, output: str = None, **kwargs):
-        """Write a standalone html file to visualize the node."""
+        """Write a standalone html file to visualize the task."""
         self._widget.from_node(self)
         return self._widget.to_html(output=output, **kwargs)

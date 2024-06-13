@@ -134,7 +134,7 @@ def generate_node_graph(pk: int) -> Any:
     return graph.graphviz
 
 
-def build_node_link(ntdata: Dict[str, Any]) -> None:
+def build_task_link(ntdata: Dict[str, Any]) -> None:
     """Create links for nodes.
     Create the links for node inputs using:
     1) workgraph links

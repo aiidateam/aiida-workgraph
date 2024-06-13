@@ -14,7 +14,7 @@ def prepare_for_workgraph_node(node: dict, kwargs: dict) -> tuple:
     # update the workgraph data by kwargs
     for node_name, data in kwargs.items():
         # because kwargs is updated using update_nested_dict_with_special_keys
-        # which means the data is grouped by the node name
+        # which means the data is grouped by the task name
         for socket_name, value in data.items():
             wgdata["nodes"][node_name]["properties"][socket_name]["value"] = value
     # merge the properties
@@ -123,7 +123,7 @@ def prepare_for_shelljob(node: dict, kwargs: dict) -> dict:
     else:
         lang.type_check(command, AbstractCode)
         code = command
-    # update the nodes with links
+    # update the tasks with links
     nodes = convert_nodes_single_file_data(kwargs.pop("nodes", {}))
     # find all keys in kwargs start with "nodes."
     for key in list(kwargs.keys()):

@@ -14,7 +14,7 @@ def test_normal_function_run(
     add2 = wg.tasks.new(decorated_add, "add2", x=6)
     wg.links.new(add1.outputs["result"], add2.inputs["y"])
     wg.run()
-    assert wg.nodes["add2"].node.outputs.result == 11
+    assert wg.tasks["add2"].node.outputs.result == 11
 
 
 def test_normal_function_submit(
@@ -26,4 +26,4 @@ def test_normal_function_submit(
     add2 = wg.tasks.new(decorated_add, "add2", x=6)
     wg.links.new(add1.outputs["result"], add2.inputs["y"])
     wg.submit(wait=True)
-    assert wg.nodes["add2"].node.outputs.result == 11
+    assert wg.tasks["add2"].node.outputs.result == 11

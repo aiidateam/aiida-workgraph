@@ -9,7 +9,7 @@ def node_creation_hook(self, node: Any) -> None:
     """
     # send message to the widget
     self.parent._widget.send(
-        {"type": "add_node", "data": {"label": node.name, "inputs": [], "outputs": []}}
+        {"type": "add_task", "data": {"label": node.name, "inputs": [], "outputs": []}}
     )
 
 
@@ -19,7 +19,7 @@ def node_deletion_hook(self, node: Any) -> None:
     Args:
         node (Node): a node to be deleted.
     """
-    # remove all links to the node
+    # remove all links to the task
     link_index = []
     for index, link in enumerate(self.parent.links):
         if link.from_node.name == node.name or link.to_node.name == node.name:

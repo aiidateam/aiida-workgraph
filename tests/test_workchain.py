@@ -10,14 +10,14 @@ def test_workchain(wg_workchain):
     wg.name = "test_workchain"
     wg.submit(wait=True, timeout=100)
     # print("results: ", results[])
-    assert wg.nodes["multiply_add2"].node.outputs.result == 17
+    assert wg.tasks["multiply_add2"].node.outputs.result == 17
 
 
 def test_build_workchain_inputs_outputs():
     """Submit simple calcjob."""
-    from aiida_workgraph import build_node
+    from aiida_workgraph import build_task
 
-    node = build_node(MultiplyAddWorkChain)()
+    node = build_task(MultiplyAddWorkChain)()
     assert len(node.inputs) == 10
     assert len(node.outputs) == 3
 
@@ -47,7 +47,7 @@ def test_build_workchain():
     wg.links.new(code1.outputs[0], multiply_add2.inputs["code"])
     wg.links.new(multiply_add1.outputs[0], multiply_add2.inputs["z"])
     wg.submit(wait=True, timeout=100)
-    assert wg.nodes["multiply_add2"].node.outputs.result == 17
+    assert wg.tasks["multiply_add2"].node.outputs.result == 17
     # reload wg
     wg1 = WorkGraph.load(wg.pk)
     assert wg1.nodes["multiply_add2"].node.outputs.result == 17

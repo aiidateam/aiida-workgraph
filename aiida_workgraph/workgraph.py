@@ -2,7 +2,7 @@ import aiida.orm
 import node_graph
 import aiida
 from aiida.manage import get_manager
-from aiida_workgraph.nodes import node_pool
+from aiida_workgraph.tasks import node_pool
 import time
 from aiida_workgraph.collection import WorkGraphNodeCollection
 from aiida_workgraph.utils.graph import (
@@ -54,6 +54,7 @@ class WorkGraph(node_graph.NodeGraph):
         self.nodes.post_creation_hooks = [node_creation_hook]
         self.links.post_creation_hooks = [link_creation_hook]
         self.links.post_deletion_hooks = [link_deletion_hook]
+        self.tasks = self.nodes
         self._widget = NodeGraphWidget(parent=self)
 
     def run(self, inputs: Optional[Dict[str, Any]] = None) -> Any:
@@ -217,7 +218,7 @@ class WorkGraph(node_graph.NodeGraph):
     def update(self) -> None:
         """
         Update the current state and primary key of the process node as well as the state, node and primary key
-        of the nodes that are outgoing from the process node. This includes updating the state of process nodes
+        of the tasks that are outgoing from the process node. This includes updating the state of process nodes
         linked to the current process, and data nodes linked to the current process.
         """
         # from aiida_workgraph.utils import get_executor
@@ -228,7 +229,7 @@ class WorkGraph(node_graph.NodeGraph):
             node = link.node
             # the link is added in order
             # so the restarted node will be the last one
-            # thus the node is correct
+            # thus the task is correct
             if isinstance(node, aiida.orm.ProcessNode) and getattr(
                 node, "process_state", False
             ):
@@ -270,7 +271,7 @@ class WorkGraph(node_graph.NodeGraph):
                 node.outputs[0].value = getattr(
                     self.process.outputs.new_data, node.name, None
                 )
-            # for normal nodes, we try to read the results from the extras of the node
+            # for normal nodes, we try to read the results from the extras of the task
             # this is disabled for now
             # if node.node_type.upper() == "NORMAL":
             #     results = self.process.base.extras.get(
@@ -361,9 +362,9 @@ class WorkGraph(node_graph.NodeGraph):
 
     def extend(self, wg: "WorkGraph", prefix: str = "") -> None:
         """Append a workgraph to the current workgraph.
-        prefix is used to add a prefix to the node names.
+        prefix is used to add a prefix to the task names.
         """
-        for node in wg.nodes:
+        for node in wg.tasks:
             node.name = prefix + node.name
             node.wait = [prefix + w for w in node.wait] if node.wait else []
             node.parent = self

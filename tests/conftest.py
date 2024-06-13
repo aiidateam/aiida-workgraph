@@ -157,7 +157,7 @@ def decorated_add_multiply_group(decorated_add, decorated_multiply) -> Callable:
         wg = WorkGraph("add_multiply_group")
         add1 = wg.tasks.new(decorated_add, name="add1", x=x, y=y)
         multiply = wg.tasks.new(decorated_multiply, name="multiply1", x=z)
-        # link the output of int node to the input of add node
+        # link the output of int node to the input of add task
         wg.links.new(add1.outputs[0], multiply.inputs["y"])
         return wg
 

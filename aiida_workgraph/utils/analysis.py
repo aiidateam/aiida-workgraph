@@ -56,7 +56,7 @@ class WorkGraphSaver:
         - Check exist in database or not. If not in database, save directly.
         - If in database, analyze the difference, save accordingly.
         """
-        self.build_node_link()
+        self.build_task_link()
         self.build_connectivity()
         if self.exist_in_db() or self.restart_process is not None:
             new_nodes, modified_nodes, update_metadata = self.check_diff(
@@ -66,7 +66,7 @@ class WorkGraphSaver:
             self.reset_nodes(modified_nodes)
         self.insert_workgraph_to_db()
 
-    def build_node_link(self) -> None:
+    def build_task_link(self) -> None:
         """Create links for nodes.
         Create the links for node inputs using:
         1) workgraph links

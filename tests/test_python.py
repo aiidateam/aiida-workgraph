@@ -9,7 +9,7 @@ def test_pythonjob_kwargs():
     """Test function with kwargs."""
     from aiida_workgraph import task, WorkGraph
 
-    # define add node
+    # define add task
     @task()
     def add(x, **kwargs):
         for value in kwargs.values():
@@ -27,7 +27,7 @@ def test_pythonjob_kwargs():
             },
         },
     )
-    assert wg.nodes["add"].outputs["result"].value.value == 6
+    assert wg.tasks["add"].outputs["result"].value.value == 6
 
 
 def test_pythonjob_typing():
@@ -35,12 +35,12 @@ def test_pythonjob_typing():
     from aiida_workgraph import task, WorkGraph
     from numpy import array
 
-    # define add node
+    # define add task
     @task()
     def add(x: array, y: array) -> array:
         return x + y
 
-    # define multiply node
+    # define multiply task
     @task()
     def multiply(x: Any, y: Any) -> Any:
         return x * y
@@ -48,7 +48,7 @@ def test_pythonjob_typing():
     wg = WorkGraph("test_pythonjob")
     wg.tasks.new(add, name="add", run_remotely=True)
     wg.tasks.new(
-        multiply, name="multiply", run_remotely=True, x=wg.nodes["add"].outputs[0]
+        multiply, name="multiply", run_remotely=True, x=wg.tasks["add"].outputs[0]
     )
     #
     metadata = {
@@ -69,7 +69,7 @@ def test_pythonjob_typing():
         },
         # wait=True,
     )
-    assert (wg.nodes["multiply"].outputs["result"].value.value == array([12, 20])).all()
+    assert (wg.tasks["multiply"].outputs["result"].value.value == array([12, 20])).all()
 
 
 def test_pythonjob_outputs():
@@ -90,8 +90,8 @@ def test_pythonjob_outputs():
         computer="localhost",
     )
     wg.submit(wait=True)
-    assert wg.nodes["add"].outputs["sum"].value.value == 3
-    assert wg.nodes["add"].outputs["diff"].value.value == -1
+    assert wg.tasks["add"].outputs["sum"].value.value == 3
+    assert wg.tasks["add"].outputs["diff"].value.value == -1
 
 
 def test_pythonjob_parent_folder():
@@ -101,7 +101,7 @@ def test_pythonjob_parent_folder():
 
     load_profile()
 
-    # define add node
+    # define add task
     @task()
     def add(x, y):
         z = x + y
@@ -109,7 +109,7 @@ def test_pythonjob_parent_folder():
             f.write(str(z))
         return x + y
 
-    # define multiply node
+    # define multiply task
     @task()
     def multiply(x, y):
         with open("parent_folder/result.txt", "r") as f:
@@ -121,7 +121,7 @@ def test_pythonjob_parent_folder():
     wg.tasks.new(
         multiply,
         name="multiply",
-        parent_folder=wg.nodes["add"].outputs["remote_folder"],
+        parent_folder=wg.tasks["add"].outputs["remote_folder"],
         run_remotely=True,
     )
 
@@ -141,7 +141,7 @@ def test_pythonjob_parent_folder():
         },
         wait=True,
     )
-    assert wg.nodes["multiply"].outputs["result"].value.value == 17
+    assert wg.tasks["multiply"].outputs["result"].value.value == 17
 
 
 def test_pythonjob_upload_files():
@@ -160,7 +160,7 @@ def test_pythonjob_upload_files():
     with open("inputs_folder/another_input.txt", "w") as f:
         f.write("3")
 
-    # define add node
+    # define add task
     @task()
     def add():
         with open("input.txt", "r") as f:
@@ -189,14 +189,14 @@ def test_pythonjob_upload_files():
         },
     )
     # wait=True)
-    assert wg.nodes["add"].outputs["result"].value.value == 5
+    assert wg.tasks["add"].outputs["result"].value.value == 5
 
 
 def test_pythonjob_copy_files():
     """Test function with copy files."""
     from aiida_workgraph import WorkGraph, task
 
-    # define add node
+    # define add task
     @task()
     def add(x, y):
         z = x + y
@@ -204,7 +204,7 @@ def test_pythonjob_copy_files():
             f.write(str(z))
         return x + y
 
-    # define multiply node
+    # define multiply task
     @task()
     def multiply(x_folder_name, y_folder_name):
         with open(f"{x_folder_name}/result.txt", "r") as f:
@@ -222,12 +222,12 @@ def test_pythonjob_copy_files():
         run_remotely=True,
     )
     wg.links.new(
-        wg.nodes["add1"].outputs["remote_folder"],
-        wg.nodes["multiply"].inputs["copy_files"],
+        wg.tasks["add1"].outputs["remote_folder"],
+        wg.tasks["multiply"].inputs["copy_files"],
     )
     wg.links.new(
-        wg.nodes["add2"].outputs["remote_folder"],
-        wg.nodes["multiply"].inputs["copy_files"],
+        wg.tasks["add2"].outputs["remote_folder"],
+        wg.tasks["multiply"].inputs["copy_files"],
     )
     # ------------------------- Submit the calculation -------------------
     wg.submit(
@@ -250,4 +250,4 @@ def test_pythonjob_copy_files():
         },
         wait=True,
     )
-    assert wg.nodes["multiply"].outputs["result"].value.value == 25
+    assert wg.tasks["multiply"].outputs["result"].value.value == 25

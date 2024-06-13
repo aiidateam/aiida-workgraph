@@ -46,7 +46,7 @@ def test_decorator_calcfunction(decorated_add: Callable) -> None:
     wg = WorkGraph(name="test_decorator_calcfunction")
     wg.tasks.new(decorated_add, "add1", x=2, y=3)
     wg.submit(wait=True, timeout=100)
-    assert wg.nodes["add1"].outputs["result"].value == 5
+    assert wg.tasks["add1"].outputs["result"].value == 5
 
 
 def test_decorator_workfunction(decorated_add_multiply: Callable) -> None:
@@ -55,7 +55,7 @@ def test_decorator_workfunction(decorated_add_multiply: Callable) -> None:
     wg = WorkGraph(name="test_decorator_workfunction")
     wg.tasks.new(decorated_add_multiply, "add_multiply1", x=2, y=3, z=4)
     wg.submit(wait=True, timeout=100)
-    assert wg.nodes["add_multiply1"].outputs["result"].value == 20
+    assert wg.tasks["add_multiply1"].outputs["result"].value == 20
 
 
 def test_decorator_graph_builder(decorated_add_multiply_group: Callable) -> None:
@@ -69,5 +69,5 @@ def test_decorator_graph_builder(decorated_add_multiply_group: Callable) -> None
     wg.links.new(add1.outputs[0], add_multiply1.inputs["x"])
     wg.links.new(add_multiply1.outputs["result"], sum_diff1.inputs["x"])
     wg.submit(wait=True)
-    assert wg.nodes["add_multiply1"].outputs["result"].value == 32
-    assert wg.nodes["sum_diff1"].outputs["sum"].value == 32
+    assert wg.tasks["add_multiply1"].outputs["result"].value == 32
+    assert wg.tasks["sum_diff1"].outputs["sum"].value == 32

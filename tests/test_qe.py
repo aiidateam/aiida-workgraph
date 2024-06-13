@@ -53,7 +53,7 @@ def test_pw_pseudo(wg_structure_si):
     wg = wg_structure_si
     wg.name = "test_pw_pseudo"
     pw_pseudo1 = wg.tasks.new("AiiDAPWPseudo", "pw_pseudo1")
-    wg.links.new(wg.nodes["structure1"].outputs[0], pw_pseudo1.inputs["structure"])
+    wg.links.new(wg.tasks["structure1"].outputs[0], pw_pseudo1.inputs["structure"])
     wg.submit(wait=True)
     # assert pw_pseudo1.node
 
@@ -105,8 +105,8 @@ def test_pw_dos_projwfc(wg_structure_si):
     projwfc_parameters1 = wg.tasks.new("AiiDADict", "projwfc_parameters1")
     projwfc1.set({"metadata": metadata})
     #
-    wg.links.new(wg.nodes["structure1"].outputs[0], pw_pseudo1.inputs["structure"])
-    wg.links.new(wg.nodes["structure1"].outputs[0], pw_scf1.inputs["structure"])
+    wg.links.new(wg.tasks["structure1"].outputs[0], pw_pseudo1.inputs["structure"])
+    wg.links.new(wg.tasks["structure1"].outputs[0], pw_scf1.inputs["structure"])
     wg.links.new(pw_parameters1.outputs[0], pw_scf1.inputs["parameters"])
     wg.links.new(kpoint1.outputs[0], pw_scf1.inputs["kpoints"])
     wg.links.new(pw_pseudo1.outputs[0], pw_scf1.inputs["pseudos"])
@@ -122,7 +122,7 @@ def test_pw_dos_projwfc(wg_structure_si):
     wg.submit(wait=True, timeout=150)
     assert wg.state == "FINISHED"
     assert np.isclose(
-        wg.nodes["pw_scf1"].node.outputs.output_parameters["energy"], -305.9228430484
+        wg.tasks["pw_scf1"].node.outputs.output_parameters["energy"], -305.9228430484
     )
 
 
@@ -189,12 +189,12 @@ def test_pw_relax_workchain(structure_si):
     paras_node = wg.tasks.new(
         pw_parameters, "parameters", paras=paras, relax_type="relax"
     )
-    wg.links.new(wg.nodes["si"].outputs[0], pw_relax1.inputs["structure"])
+    wg.links.new(wg.tasks["si"].outputs[0], pw_relax1.inputs["structure"])
     wg.links.new(paras_node.outputs[0], pw_relax1.inputs["base.pw.parameters"])
     # wg.submit(wait=True, timeout=200)
     wg.run()
     assert wg.state == "FINISHED"
-    # print(wg.nodes["pw_relax1"].node.outputs.output_parameters["energy"])
+    # print(wg.tasks["pw_relax1"].node.outputs.output_parameters["energy"])
     assert np.isclose(
-        wg.nodes["pw_relax1"].node.outputs.output_parameters["energy"], -292.02237503211
+        wg.tasks["pw_relax1"].node.outputs.output_parameters["energy"], -292.02237503211
     )

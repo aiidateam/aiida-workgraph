@@ -102,12 +102,12 @@ class WorkGraphEngine(Process, metaclass=Protect):
         spec.exit_code(
             302,
             "NODE_FAILED",
-            message="Some of the nodes failed.",
+            message="Some of the tasks failed.",
         )
         spec.exit_code(
             303,
             "NODE_NON_ZERO_EXIT_STATUS",
-            message="Some of the nodes exited with non-zero status.",
+            message="Some of the tasks exited with non-zero status.",
         )
 
     @property
@@ -384,8 +384,8 @@ class WorkGraphEngine(Process, metaclass=Protect):
 
         self._resolve_awaitable(awaitable, value)
 
-        # node finished, update the node state and result
-        # udpate the node state
+        # node finished, update the task state and result
+        # udpate the task state
         self.update_node_state(awaitable.key)
         # try to resume the workgraph, if the workgraph is already resumed
         # by other awaitable, this will not work
@@ -485,7 +485,7 @@ class WorkGraphEngine(Process, metaclass=Protect):
                     )
                     # self.ctx.new_data[name] = outputs
                 elif node["metadata"]["node_type"].upper() == "WORKGRAPH":
-                    # expose the outputs of all the nodes in the workgraph
+                    # expose the outputs of all the tasks in the workgraph
                     node["results"] = {}
                     outgoing = node["process"].base.links.get_outgoing()
                     for link in outgoing.all():
@@ -860,7 +860,7 @@ class WorkGraphEngine(Process, metaclass=Protect):
                     node["results"] = results
                 else:
                     node["results"][node["outputs"][0]["name"]] = results
-                # save the results to the database (as a extra field of the node)
+                # save the results to the database (as a extra field of the task)
                 # this is disabled
                 # self.save_results_to_extras(name)
                 self.ctx.input_nodes[name] = results
@@ -1023,7 +1023,7 @@ class WorkGraphEngine(Process, metaclass=Protect):
         else:
             # check the wait node first
             for node_name in wait_nodes:
-                # in case the node is removed
+                # in case the task is removed
                 if node_name not in self.ctx.nodes:
                     continue
                 if self.ctx.nodes[node_name]["state"] not in [

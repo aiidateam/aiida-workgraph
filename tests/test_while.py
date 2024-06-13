@@ -20,7 +20,7 @@ def test_while(decorated_add, decorated_multiply, decorated_compare):
     wg.links.new(multiply1.outputs["result"], add1.inputs["x"])
     wg.submit(wait=True, timeout=100)
     assert wg.execution_count == 4
-    assert wg.nodes["add1"].outputs["result"].value == 61
+    assert wg.tasks["add1"].outputs["result"].value == 61
 
 
 def test_while_graph_builder(decorated_add, decorated_multiply, decorated_compare):

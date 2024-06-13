@@ -74,11 +74,11 @@ def add(x, y):
 def multiply(x, y):
     return x*y
 
-# Create a workgraph to link the nodes.
+# Create a workgraph to link the tasks.
 wg = WorkGraph("test_add_multiply")
 wg.tasks.new(add, name="add1")
 wg.tasks.new(multiply, name="multiply1")
-wg.links.new(wg.nodes["add1"].outputs["result"], wg.nodes["multiply1"].inputs["x"])
+wg.links.new(wg.tasks["add1"].outputs["result"], wg.tasks["multiply1"].inputs["x"])
 
 ```
 
@@ -90,7 +90,7 @@ from aiida import load_profile
 load_profile()
 
 wg.submit(inputs = {"add1": {"x": 2, "y": 3}, "multiply1": {"y": 4}}, wait=True)
-print("Result of multiply1 is", wg.nodes["multiply1"].outputs[0].value)
+print("Result of multiply1 is", wg.tasks["multiply1"].outputs[0].value)
 ```
 
 Start the web app, open a terminal and run:
