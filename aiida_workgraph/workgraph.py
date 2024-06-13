@@ -326,7 +326,7 @@ class WorkGraph(node_graph.NodeGraph):
         print("WorkGraph: {}, PK: {}, State: {}".format(self.name, self.pk, self.state))
         print("-" * 80)
         # show nodes
-        print("Nodes:")
+        print("Tasks:")
         print(tabulate(table, headers=["Name", "PK", "State"]))
         print("-" * 80)
 
@@ -366,7 +366,7 @@ class WorkGraph(node_graph.NodeGraph):
         """
         for node in wg.tasks:
             node.name = prefix + node.name
-            node.wait = [prefix + w for w in node.wait] if node.wait else []
+            task.wait = [prefix + w for w in task.wait] if task.wait else []
             node.parent = self
             self.nodes.append(node)
         # self.sequence.extend([prefix + node for node in wg.sequence])

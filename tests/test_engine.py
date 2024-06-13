@@ -8,7 +8,7 @@ aiida.load_profile()
 
 def test_run_order(wg_engine: WorkGraph) -> None:
     """Test the order.
-    Nodes should run in parallel and only depend on the input nodes."""
+    Tasks should run in parallel and only depend on the input tasks."""
     wg = wg_engine
     wg.submit(wait=True)
     wg.tasks["add2"].ctime < wg.tasks["add4"].ctime

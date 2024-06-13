@@ -25,7 +25,7 @@ def test_from_dict(wg_calcjob):
 
 
 def test_new_node(wg_calcjob):
-    """Add new node."""
+    """Add new task."""
     wg = wg_calcjob
     n = len(wg.tasks)
     wg.tasks.new(ArithmeticAddCalculation)
@@ -40,7 +40,7 @@ def test_save_load(wg_calcjob):
     assert wg.process.process_state.value.upper() == "CREATED"
     assert wg.process.process_label == "WorkGraph<test_save_load>"
     wg2 = WorkGraph.load(wg.process.pk)
-    assert len(wg.tasks) == len(wg2.nodes)
+    assert len(wg.tasks) == len(wg2.tasks)
 
 
 # skip this test
@@ -70,7 +70,7 @@ def test_reset_message(wg_calcjob):
 def test_restart(wg_calcjob):
     """Restart from a finished workgraph.
     Load the workgraph, modify the task, and restart the workgraph.
-    Only the modified node and its child nodes will be rerun."""
+    Only the modified node and its child tasks will be rerun."""
     wg = wg_calcjob
     wg.name = "test_restart_0"
     wg.submit(wait=True)
@@ -104,7 +104,7 @@ def test_node_from_workgraph(decorated_add_multiply_group):
     add_multiply_wg = decorated_add_multiply_group(x=0, y=4, z=5)
     AddMultiplyNode = build_task(add_multiply_wg)
     assert "add1.x" in AddMultiplyNode().inputs.keys()
-    # add the workgraph as a node
+    # add the workgraph as a task
     add_multiply1 = wg.tasks.new(AddMultiplyNode, "add_multiply1")
     wg.links.new(add1.outputs[0], add_multiply1.inputs["add1.x"])
     wg.links.new(add_multiply1.outputs["multiply1.result"], add2.inputs["x"])

@@ -95,7 +95,7 @@ class Task(GraphNode):
 
         node = super().from_dict(data, node_pool=node_pool)
         node.to_context = data.get("to_context", [])
-        node.wait = data.get("wait", [])
+        task.wait = data.get("wait", [])
         node.process = data.get("process", None)
 
         return node

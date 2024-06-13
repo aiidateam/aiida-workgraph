@@ -126,7 +126,7 @@ def decorated_sqrt() -> Callable:
 def decorated_compare() -> Callable:
     """Generate a decorated node for test."""
 
-    # define compare node
+    # define compare task
     @task()
     def compare(x, y):
         return x < y
@@ -157,7 +157,7 @@ def decorated_add_multiply_group(decorated_add, decorated_multiply) -> Callable:
         wg = WorkGraph("add_multiply_group")
         add1 = wg.tasks.new(decorated_add, name="add1", x=x, y=y)
         multiply = wg.tasks.new(decorated_multiply, name="multiply1", x=z)
-        # link the output of int node to the input of add task
+        # link the output of a task to the input of another task
         wg.links.new(add1.outputs[0], multiply.inputs["y"])
         return wg
 

@@ -538,7 +538,7 @@ class WorkGraphEngine(Process, metaclass=Protect):
     def reset_node(self, name: str) -> None:
         """Reset node."""
         self.ctx.nodes[name]["state"] = "CREATED"
-        # reset its child nodes
+        # reset its child tasks
         names = self.ctx.connectivity["child_node"][name]
         for name in names:
             self.ctx.nodes[name]["state"] = "CREATED"
@@ -996,7 +996,7 @@ class WorkGraphEngine(Process, metaclass=Protect):
     def check_node_state(self, name: str) -> None:
         """Check node states.
 
-        - if all input nodes finished, launch node
+        - if all input tasks finished, launch node
         - if node is a scatter node, check if all scattered nodes finished
         """
         # print(f"    Check node {name} state: ")

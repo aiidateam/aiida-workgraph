@@ -147,7 +147,7 @@ class WorkGraphSaver:
         """Find difference between workgraph and its database.
 
         Returns:
-            new_nodes: new nodes
+            new_nodes: new tasks
             modified_nodes: modified nodes
         """
         from node_graph.analysis import DifferenceAnalysis
