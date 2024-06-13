@@ -21,5 +21,4 @@ This section contains a collection of HowTos for various topics.
    protocol
    queue
    cli
-   web
    transfer_workchain

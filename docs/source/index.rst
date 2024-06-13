@@ -62,6 +62,11 @@ Sections
 
       .. container:: descr
 
+         :doc:`gui/index`
+            Interactive GUI and job menagement of WorkGraph.
+
+      .. container:: descr
+
          :doc:`development/index`
             Development guide for AiiDA WorkGraph.
 
@@ -94,6 +99,7 @@ Sections
    built-in/index
    howto/index
    concept/index
+   gui/index
    development/index
    gallery
    blog/index
