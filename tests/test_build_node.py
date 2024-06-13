@@ -15,7 +15,7 @@ def test_calcjob():
     assert issubclass(ArithmeticAddNode, Node)
     # use the class directly
     wg = WorkGraph()
-    add1 = wg.nodes.new(ArithmeticAddCalculation, name="add1")
+    add1 = wg.tasks.new(ArithmeticAddCalculation, name="add1")
     assert add1.name == "add1"
 
 
@@ -56,7 +56,7 @@ def test_calcfunction():
     assert "sum" in AddNode().outputs.keys()
     # use the class directly
     wg = WorkGraph()
-    add1 = wg.nodes.new(add, name="add1")
+    add1 = wg.tasks.new(add, name="add1")
     assert "result" in add1.outputs.keys()
     assert add1.name == "add1"
 

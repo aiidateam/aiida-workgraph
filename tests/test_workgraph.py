@@ -28,7 +28,7 @@ def test_new_node(wg_calcjob):
     """Add new node."""
     wg = wg_calcjob
     n = len(wg.nodes)
-    wg.nodes.new(ArithmeticAddCalculation)
+    wg.tasks.new(ArithmeticAddCalculation)
     assert len(wg.nodes) == n + 1
 
 
@@ -88,7 +88,7 @@ def test_extend_workgraph(decorated_add_multiply_group):
     from aiida_workgraph import WorkGraph
 
     wg = WorkGraph("test_graph_build")
-    add1 = wg.nodes.new("AiiDAAdd", "add1", x=2, y=3)
+    add1 = wg.tasks.new("AiiDAAdd", "add1", x=2, y=3)
     add_multiply_wg = decorated_add_multiply_group(x=0, y=4, z=5)
     # extend workgraph
     wg.extend(add_multiply_wg, prefix="group_")
@@ -99,13 +99,13 @@ def test_extend_workgraph(decorated_add_multiply_group):
 
 def test_node_from_workgraph(decorated_add_multiply_group):
     wg = WorkGraph("test_node_from_workgraph")
-    add1 = wg.nodes.new("AiiDAAdd", "add1", x=2, y=3)
-    add2 = wg.nodes.new("AiiDAAdd", "add2", y=3)
+    add1 = wg.tasks.new("AiiDAAdd", "add1", x=2, y=3)
+    add2 = wg.tasks.new("AiiDAAdd", "add2", y=3)
     add_multiply_wg = decorated_add_multiply_group(x=0, y=4, z=5)
     AddMultiplyNode = build_node(add_multiply_wg)
     assert "add1.x" in AddMultiplyNode().inputs.keys()
     # add the workgraph as a node
-    add_multiply1 = wg.nodes.new(AddMultiplyNode, "add_multiply1")
+    add_multiply1 = wg.tasks.new(AddMultiplyNode, "add_multiply1")
     wg.links.new(add1.outputs[0], add_multiply1.inputs["add1.x"])
     wg.links.new(add_multiply1.outputs["multiply1.result"], add2.inputs["x"])
     # wg.submit(wait=True)

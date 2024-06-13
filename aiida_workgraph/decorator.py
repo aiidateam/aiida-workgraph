@@ -5,11 +5,10 @@ from aiida import orm
 from aiida.orm.nodes.process.calculation.calcfunction import CalcFunctionNode
 from aiida.orm.nodes.process.workflow.workfunction import WorkFunctionNode
 from aiida.engine.processes.ports import PortNamespace
-from node_graph.decorator import create_node
 import cloudpickle as pickle
-from aiida_workgraph.node import Node
+from aiida_workgraph.task import Task
 
-node_types = {
+task_types = {
     CalcFunctionNode: "CALCFUNCTION",
     WorkFunctionNode: "WORKFUNCTION",
     CalcJob: "CALCJOB",
@@ -22,6 +21,14 @@ aiida_socket_maping = {
     orm.Str: "AiiDAString",
     orm.Bool: "AiiDABool",
 }
+
+
+def create_task(tdata):
+    """Wrap create_node from node_graph to create a Task."""
+    from node_graph.decorator import create_node
+
+    tdata["node_type"] = tdata.pop("task_type")
+    return create_node(tdata)
 
 
 def add_input_recursive(
@@ -41,7 +48,7 @@ def add_input_recursive(
     input_names = [input[1] for input in inputs]
     if isinstance(port, PortNamespace):
         # TODO the default value is {} could cause problem, because the address of the dict is the same,
-        # so if you change the value of one port, the value of all the ports of other nodes will be changed
+        # so if you change the value of one port, the value of all the ports of other tasks will be changed
         # consider to use None as default value
         if port_name not in input_names:
             inputs.append(
@@ -88,7 +95,7 @@ def add_output_recursive(
     output_names = [output[1] for output in outputs]
     if isinstance(port, PortNamespace):
         # TODO the default value is {} could cause problem, because the address of the dict is the same,
-        # so if you change the value of one port, the value of all the ports of other nodes will be changed
+        # so if you change the value of one port, the value of all the ports of other tasks will be changed
         # consider to use None as default value
         if port_name not in output_names:
             outputs.append(["General", port_name])
@@ -100,16 +107,16 @@ def add_output_recursive(
     return outputs
 
 
-def build_node(
+def build_task(
     executor: Union[Callable, str],
     inputs: Optional[List[str]] = None,
     outputs: Optional[List[str]] = None,
-) -> Node:
-    """Build node from executor."""
+) -> Task:
+    """Build task from executor."""
     from aiida_workgraph.workgraph import WorkGraph
 
     if isinstance(executor, WorkGraph):
-        return build_node_from_workgraph(executor)
+        return build_task_from_workgraph(executor)
     elif isinstance(executor, str):
         (
             path,
@@ -117,79 +124,79 @@ def build_node(
         ) = executor.rsplit(".", 1)
         executor, _ = get_executor({"path": path, "name": executor_name})
     if callable(executor):
-        return build_node_from_callable(executor, inputs=inputs, outputs=outputs)
+        return build_task_from_callable(executor, inputs=inputs, outputs=outputs)
 
 
-def build_node_from_callable(
+def build_task_from_callable(
     executor: Callable,
     inputs: Optional[List[str]] = None,
     outputs: Optional[List[str]] = None,
-) -> Node:
-    """Build node from a callable object.
-    First, check if the executor is already a node.
+) -> Task:
+    """Build task from a callable object.
+    First, check if the executor is already a task.
     If not, check if it is a function or a class.
-    If it is a function, build node from function.
+    If it is a function, build task from function.
     If it is a class, it only supports CalcJob and WorkChain.
     """
     import inspect
-    from aiida_workgraph.node import Node
+    from aiida_workgraph.task import Task
 
-    # if it is already a node, return it
+    # if it is already a task, return it
     if (
         hasattr(executor, "node")
         and inspect.isclass(executor.node)
-        and issubclass(executor.node, Node)
+        and issubclass(executor.node, Task)
         or inspect.isclass(executor)
-        and issubclass(executor, Node)
+        and issubclass(executor, Task)
     ):
         return executor
-    ndata = {}
+    tdata = {}
     if inspect.isfunction(executor):
         # calcfunction and workfunction
         if getattr(executor, "node_class", False):
-            ndata["node_type"] = node_types.get(executor.node_class, "NORMAL")
-            ndata["executor"] = executor
-            return build_node_from_AiiDA(ndata, inputs=inputs, outputs=outputs)[0]
+            tdata["task_type"] = task_types.get(executor.node_class, "NORMAL")
+            tdata["executor"] = executor
+            return build_task_from_AiiDA(tdata, inputs=inputs, outputs=outputs)[0]
         else:
-            ndata["node_type"] = "NORMAL"
-            ndata["executor"] = executor
-            return build_node_from_function(executor, inputs=inputs, outputs=outputs)
+            tdata["task_type"] = "NORMAL"
+            tdata["executor"] = executor
+            return build_task_from_function(executor, inputs=inputs, outputs=outputs)
     else:
         if issubclass(executor, CalcJob):
-            ndata["node_type"] = "CALCJOB"
-            ndata["executor"] = executor
-            return build_node_from_AiiDA(ndata, inputs=inputs, outputs=outputs)[0]
+            tdata["task_type"] = "CALCJOB"
+            tdata["executor"] = executor
+            return build_task_from_AiiDA(tdata, inputs=inputs, outputs=outputs)[0]
         elif issubclass(executor, WorkChain):
-            ndata["node_type"] = "WORKCHAIN"
-            ndata["executor"] = executor
-            return build_node_from_AiiDA(ndata, inputs=inputs, outputs=outputs)[0]
+            tdata["task_type"] = "WORKCHAIN"
+            tdata["executor"] = executor
+            return build_task_from_AiiDA(tdata, inputs=inputs, outputs=outputs)[0]
     raise ValueError("The executor is not supported.")
 
 
-def build_node_from_function(
+def build_task_from_function(
     executor: Callable,
     inputs: Optional[List[str]] = None,
     outputs: Optional[List[str]] = None,
-) -> Node:
-    """Build node from function."""
-    return NodeDecoratorCollection.decorator_node(inputs=inputs, outputs=outputs)(
+) -> Task:
+    """Build task from function."""
+    return TaskDecoratorCollection.decorator_task(inputs=inputs, outputs=outputs)(
         executor
     ).node
 
 
-def build_node_from_AiiDA(
-    ndata: Dict[str, Any],
+def build_task_from_AiiDA(
+    tdata: Dict[str, Any],
     inputs: Optional[List[str]] = None,
     outputs: Optional[List[str]] = None,
-) -> Node:
-    """Register a node from a AiiDA component.
+) -> Task:
+    """Register a task from a AiiDA component.
     For example: CalcJob, WorkChain, CalcFunction, WorkFunction."""
-    from aiida_workgraph.node import Node
+    from aiida_workgraph.task import Task
 
     # print(executor)
     inputs = [] if inputs is None else inputs
     outputs = [] if outputs is None else outputs
-    executor = ndata["executor"]
+    executor = tdata["executor"]
     spec = executor.spec()
     args = []
     kwargs = []
@@ -205,46 +212,46 @@ def build_node_from_AiiDA(
                 executor.process_class._var_keyword
                 or executor.process_class._var_positional
             )
-        ndata["var_kwargs"] = name
+        tdata["var_kwargs"] = name
         inputs.append(["General", name, {"property": ["General", {"default": {}}]}])
-    if ndata["node_type"].upper() in ["CALCFUNCTION", "WORKFUNCTION"]:
+    if tdata["task_type"].upper() in ["CALCFUNCTION", "WORKFUNCTION"]:
         outputs = [["General", "result"]] if not outputs else outputs
     # print("kwargs: ", kwargs)
     # add built-in sockets
     outputs.append(["General", "_outputs"])
     outputs.append(["General", "_wait"])
     inputs.append(["General", "_wait", {"link_limit": 1e6}])
-    ndata["node_class"] = Node
-    ndata["args"] = args
-    ndata["kwargs"] = kwargs
-    ndata["inputs"] = inputs
-    ndata["outputs"] = outputs
-    ndata["identifier"] = ndata.pop("identifier", ndata["executor"].__name__)
+    tdata["node_class"] = Task
+    tdata["args"] = args
+    tdata["kwargs"] = kwargs
+    tdata["inputs"] = inputs
+    tdata["outputs"] = outputs
+    tdata["identifier"] = tdata.pop("identifier", tdata["executor"].__name__)
     # TODO In order to reload the WorkGraph from process, "is_pickle" should be True
     # so I pickled the function here, but this is not necessary
     # we need to update the node_graph to support the path and name of the function
     executor = {
         "executor": pickle.dumps(executor),
-        "type": ndata["node_type"],
+        "type": tdata["task_type"],
         "is_pickle": True,
     }
-    ndata["executor"] = executor
-    node = create_node(ndata)
-    node.is_aiida_component = True
-    return node, ndata
+    tdata["executor"] = executor
+    task = create_task(tdata)
+    task.is_aiida_component = True
+    return task, tdata
 
 
-def build_PythonJob_node(func: Callable) -> Node:
-    """Build PythonJob node from function."""
+def build_PythonJob_task(func: Callable) -> Task:
+    """Build PythonJob task from function."""
     from aiida_workgraph.calculations.python import PythonJob
     from copy import deepcopy
 
-    ndata = {"executor": PythonJob, "node_type": "CALCJOB"}
-    _, ndata_py = build_node_from_AiiDA(ndata)
-    ndata = deepcopy(func.ndata)
-    # merge the inputs and outputs from the PythonJob node to the function node
+    tdata = {"executor": PythonJob, "task_type": "CALCJOB"}
+    _, tdata_py = build_task_from_AiiDA(tdata)
+    tdata = deepcopy(func.tdata)
+    # merge the inputs and outputs from the PythonJob task to the function task
     # skip the already existed inputs and outputs
-    inputs = ndata["inputs"]
+    inputs = tdata["inputs"]
     inputs.extend(
         [
             ["String", "computer"],
@@ -253,40 +260,40 @@ def build_PythonJob_node(func: Callable) -> Node:
             ["String", "prepend_text"],
         ]
     )
-    outputs = ndata["outputs"]
-    for input in ndata_py["inputs"]:
+    outputs = tdata["outputs"]
+    for input in tdata_py["inputs"]:
         if input not in inputs:
             inputs.append(input)
-    for output in ndata_py["outputs"]:
+    for output in tdata_py["outputs"]:
         if output not in outputs:
             outputs.append(output)
     # change "copy_files" link_limit to 1e6
     for input in inputs:
         if input[1] == "copy_files":
             input[2].update({"link_limit": 1e6})
-    # append the kwargs of the PythonJob node to the function node
-    kwargs = ndata["kwargs"]
+    # append the kwargs of the PythonJob task to the function task
+    kwargs = tdata["kwargs"]
     kwargs.extend(["computer", "code_label", "code_path", "prepend_text"])
-    kwargs.extend(ndata_py["kwargs"])
-    ndata["inputs"] = inputs
-    ndata["outputs"] = outputs
-    ndata["kwargs"] = kwargs
-    ndata["node_type"] = "PYTHONJOB"
-    node = create_node(ndata)
-    node.is_aiida_component = True
-    return node, ndata
+    kwargs.extend(tdata_py["kwargs"])
+    tdata["inputs"] = inputs
+    tdata["outputs"] = outputs
+    tdata["kwargs"] = kwargs
+    tdata["task_type"] = "PYTHONJOB"
+    task = create_task(tdata)
+    task.is_aiida_component = True
+    return task, tdata
 
 
-def build_ShellJob_node(
+def build_ShellJob_task(
     nodes: dict = None, outputs: list = None, parser_outputs: list = None
-) -> Node:
-    """Build PythonJob node from function."""
+) -> Task:
+    """Build ShellJob task with custom inputs and outputs."""
     from aiida_shell.calculations.shell import ShellJob
     from aiida_shell.parsers.shell import ShellParser
     from node_graph.socket import NodeSocket
 
-    ndata = {"executor": ShellJob, "node_type": "CALCJOB"}
-    _, ndata = build_node_from_AiiDA(ndata)
+    ndata = {"executor": ShellJob, "task_type": "CALCJOB"}
+    _, ndata = build_task_from_AiiDA(ndata)
     # create input sockets for the nodes, if it is linked other sockets
     links = {}
     inputs = []
@@ -321,60 +328,60 @@ def build_ShellJob_node(
         ]
     )
     ndata["kwargs"].extend(["command", "resolve_command"])
-    ndata["node_type"] = "SHELLJOB"
-    node = create_node(ndata)
-    node.is_aiida_component = True
-    return node, ndata, links
+    ndata["task_type"] = "SHELLJOB"
+    task = create_task(ndata)
+    task.is_aiida_component = True
+    return task, ndata, links
 
 
-def build_node_from_workgraph(wg: any) -> Node:
-    """Build node from workgraph."""
-    from aiida_workgraph.node import Node
+def build_task_from_workgraph(wg: any) -> Task:
+    """Build task from workgraph."""
+    from aiida_workgraph.task import Task
 
-    ndata = {"node_type": "workgraph"}
+    tdata = {"task_type": "workgraph"}
     inputs = []
     outputs = []
     group_outputs = []
-    # add all the inputs/outputs from the nodes in the workgraph
-    for node in wg.nodes:
+    # add all the inputs/outputs from the tasks in the workgraph
+    for task in wg.tasks:
         # inputs
-        inputs.append(["General", f"{node.name}"])
-        for socket in node.inputs:
+        inputs.append(["General", f"{task.name}"])
+        for socket in task.inputs:
             if socket.name == "_wait":
                 continue
-            inputs.append(["General", f"{node.name}.{socket.name}"])
+            inputs.append(["General", f"{task.name}.{socket.name}"])
         # outputs
-        outputs.append(["General", f"{node.name}"])
-        for socket in node.outputs:
+        outputs.append(["General", f"{task.name}"])
+        for socket in task.outputs:
             if socket.name in ["_wait", "_outputs"]:
                 continue
-            outputs.append(["General", f"{node.name}.{socket.name}"])
+            outputs.append(["General", f"{task.name}.{socket.name}"])
             group_outputs.append(
-                [f"{node.name}.{socket.name}", f"{node.name}.{socket.name}"]
+                [f"{task.name}.{socket.name}", f"{task.name}.{socket.name}"]
             )
     kwargs = [input[1] for input in inputs]
     # add built-in sockets
     outputs.append(["General", "_outputs"])
     outputs.append(["General", "_wait"])
     inputs.append(["General", "_wait", {"link_limit": 1e6}])
-    ndata["node_class"] = Node
-    ndata["kwargs"] = kwargs
-    ndata["inputs"] = inputs
-    ndata["outputs"] = outputs
-    ndata["identifier"] = wg.name
+    tdata["node_class"] = Task
+    tdata["kwargs"] = kwargs
+    tdata["inputs"] = inputs
+    tdata["outputs"] = outputs
+    tdata["identifier"] = wg.name
     # TODO In order to reload the WorkGraph from process, "is_pickle" should be True
     # so I pickled the function here, but this is not necessary
     # we need to update the node_graph to support the path and name of the function
     executor = {
         "executor": None,
         "wgdata": wg.to_dict(),
-        "type": ndata["node_type"],
+        "type": tdata["task_type"],
         "is_pickle": True,
     }
-    ndata["executor"] = executor
-    node = create_node(ndata)
-    node.group_outputs = group_outputs
-    return node
+    tdata["executor"] = executor
+    task = create_task(tdata)
+    task.group_outputs = group_outputs
+    return task
 
 
 def get_required_imports(func):
@@ -448,95 +455,95 @@ def serialize_function(func: Callable) -> Dict[str, Any]:
     }
 
 
-def generate_ndata(
+def generate_tdata(
     func: Callable,
     identifier: str,
     inputs: List[Tuple[str, str]],
     outputs: List[Tuple[str, str]],
     properties: List[Tuple[str, str]],
     catalog: str,
-    node_type: str,
+    task_type: str,
     additional_data: Optional[Dict[str, Any]] = None,
 ) -> Dict[str, Any]:
-    """Generate node data for creating a node."""
+    """Generate task data for creating a task."""
     from node_graph.decorator import generate_input_sockets
-    from aiida_workgraph.node import Node
+    from aiida_workgraph.task import Task
 
     args, kwargs, var_args, var_kwargs, _inputs = generate_input_sockets(
         func, inputs, properties
     )
-    node_outputs = outputs
+    task_outputs = outputs
     # add built-in sockets
     _inputs.append(["General", "_wait", {"link_limit": 1e6}])
-    node_outputs.append(["General", "_wait"])
-    node_outputs.append(["General", "_outputs"])
-    ndata = {
-        "node_class": Node,
+    task_outputs.append(["General", "_wait"])
+    task_outputs.append(["General", "_outputs"])
+    tdata = {
+        "node_class": Task,
         "identifier": identifier,
         "args": args,
         "kwargs": kwargs,
         "var_args": var_args,
         "var_kwargs": var_kwargs,
-        "node_type": node_type,
+        "task_type": task_type,
         "properties": properties,
         "inputs": _inputs,
-        "outputs": node_outputs,
+        "outputs": task_outputs,
         "executor": serialize_function(func),
         "catalog": catalog,
     }
     if additional_data:
-        ndata.update(additional_data)
-    return ndata
+        tdata.update(additional_data)
+    return tdata
 
 
-class NodeDecoratorCollection:
-    """Collection of node decorators."""
+class TaskDecoratorCollection:
+    """Collection of task decorators."""
 
     # decorator with arguments indentifier, args, kwargs, properties, inputs, outputs, executor
     @staticmethod
-    def decorator_node(
+    def decorator_task(
         identifier: Optional[str] = None,
-        node_type: str = "Normal",
+        task_type: str = "Normal",
         properties: Optional[List[Tuple[str, str]]] = None,
         inputs: Optional[List[Tuple[str, str]]] = None,
         outputs: Optional[List[Tuple[str, str]]] = None,
         catalog: str = "Others",
     ) -> Callable:
-        """Generate a decorator that register a function as a node.
+        """Generate a decorator that register a function as a task.
 
         Attributes:
-            indentifier (str): node identifier
-            catalog (str): node catalog
-            args (list): node args
-            kwargs (dict): node kwargs
-            properties (list): node properties
-            inputs (list): node inputs
-            outputs (list): node outputs
+            indentifier (str): task identifier
+            catalog (str): task catalog
+            args (list): task args
+            kwargs (dict): task kwargs
+            properties (list): task properties
+            inputs (list): task inputs
+            outputs (list): task outputs
         """
 
         def decorator(func):
-            nonlocal identifier, node_type
+            nonlocal identifier, task_type
 
             if identifier is None:
                 identifier = func.__name__
 
-            # Determine node_type based on AiiDA's node classes
-            node_type = node_type
+            # Determine task_type based on AiiDA's node classes
+            task_type = task_type
             if hasattr(func, "node_class"):
-                node_type = node_types.get(func.node_class, node_type)
-            ndata = generate_ndata(
+                task_type = task_types.get(func.node_class, task_type)
+            tdata = generate_tdata(
                 func,
                 identifier,
                 inputs or [],
                 outputs or [["General", "result"]],
                 properties or [],
                 catalog,
-                node_type,
+                task_type,
             )
-            node = create_node(ndata)
+            task = create_task(tdata)
             func.identifier = identifier
-            func.node = node
-            func.ndata = ndata
+            func.node = task
+            func.tdata = tdata
             return func
 
         return decorator
@@ -550,13 +557,13 @@ class NodeDecoratorCollection:
         outputs: Optional[List[Tuple[str, str]]] = None,
         catalog: str = "Others",
     ) -> Callable:
-        """Generate a decorator that register a node group as a node.
+        """Generate a decorator that register a function as a graph_builder task.
         Attributes:
-            indentifier (str): node identifier
-            catalog (str): node catalog
-            properties (list): node properties
-            inputs (list): node inputs
-            outputs (list): node outputs
+            indentifier (str): task identifier
+            catalog (str): task catalog
+            properties (list): task properties
+            inputs (list): task inputs
+            outputs (list): task outputs
         """
 
         outputs = outputs or []
@@ -569,23 +576,23 @@ class NodeDecoratorCollection:
             # use cloudpickle to serialize function
             func.identifier = identifier
 
-            node_outputs = [["General", output[1]] for output in outputs]
-            # print(node_inputs, node_outputs)
+            task_outputs = [["General", output[1]] for output in outputs]
+            # print(task_inputs, task_outputs)
             #
-            node_type = "graph_builder"
-            ndata = generate_ndata(
+            task_type = "graph_builder"
+            tdata = generate_tdata(
                 func,
                 identifier,
                 inputs or [],
-                node_outputs,
+                task_outputs,
                 properties or [],
                 catalog,
-                node_type,
+                task_type,
             )
-            node = create_node(ndata)
-            node.group_inputs = inputs
-            node.group_outputs = outputs
-            func.node = node
+            task = create_task(tdata)
+            task.group_inputs = inputs
+            task.group_outputs = outputs
+            func.node = task
             return func
 
         return decorator
@@ -595,15 +602,15 @@ class NodeDecoratorCollection:
         def decorator(func):
             # First, apply the calcfunction decorator
             func_decorated = calcfunction(func)
-            # Then, apply node decorator
-            node_decorated = build_node_from_callable(
+            # Then, apply task decorator
+            task_decorated = build_task_from_callable(
                 func_decorated,
                 inputs=kwargs.get("inputs", []),
                 outputs=kwargs.get("outputs", []),
             )
             identifier = kwargs.get("identifier", None)
             func_decorated.identifier = identifier if identifier else func.__name__
-            func_decorated.node = node_decorated
+            func_decorated.node = task_decorated
             return func_decorated
 
         return decorator
@@ -613,28 +620,28 @@ class NodeDecoratorCollection:
         def decorator(func):
             # First, apply the workfunction decorator
             func_decorated = workfunction(func)
-            node_decorated = build_node_from_callable(
+            task_decorated = build_task_from_callable(
                 func_decorated,
                 inputs=kwargs.get("inputs", []),
                 outputs=kwargs.get("outputs", []),
             )
             identifier = kwargs.get("identifier", None)
             func_decorated.identifier = identifier if identifier else func.__name__
-            func_decorated.node = node_decorated
+            func_decorated.node = task_decorated
 
             return func_decorated
 
         return decorator
 
-    # Making decorator_node accessible as 'node'
-    node = decorator_node
+    # Making decorator_task accessible as 'task'
+    task = decorator_task
 
     # Making decorator_graph_builder accessible as 'graph_builder'
     graph_builder = decorator_graph_builder
 
     def __call__(self, *args, **kwargs):
-        # This allows using '@node' to directly apply the decorator_node functionality
-        return self.decorator_node(*args, **kwargs)
+        # This allows using '@task' to directly apply the decorator_task functionality
+        return self.decorator_task(*args, **kwargs)
 
 
-node = NodeDecoratorCollection()
+task = TaskDecoratorCollection()

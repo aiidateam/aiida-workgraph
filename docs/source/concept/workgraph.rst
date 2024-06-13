@@ -14,7 +14,7 @@ Create and launch workgraph
 
 .. code-block:: python
 
-    from aiida_workgraph import WorkGraph, node
+    from aiida_workgraph import WorkGraph, task
     wg = WorkGraph(name="my_first_workgraph")
 
 
@@ -23,12 +23,12 @@ Create and use `node`.
 .. code:: python
 
     # define add calcfunction node
-    @node.calcfunction()
+    @task.calcfunction()
     def add(x, y):
        return x + y
 
-    add1 = wg.nodes.new(add, name="add1")
-    add2 = wg.nodes.new(add, name="add2")
+    add1 = wg.tasks.new(add, name="add1")
+    add2 = wg.tasks.new(add, name="add2")
 
 
 - Add link between nodes:

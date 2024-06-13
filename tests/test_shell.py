@@ -9,7 +9,7 @@ aiida.load_profile()
 def test_shell_command():
     """Test the ShellJob with command as a string."""
     wg = WorkGraph(name="test_shell_command")
-    job1 = wg.nodes.new(
+    job1 = wg.tasks.new(
         "ShellJob",
         command="cat",
         resolve_command=True,
@@ -27,7 +27,7 @@ def test_shell_code():
     """Test the ShellJob with code."""
     cat_code = prepare_code("cat")
     wg = WorkGraph(name="test_shell_code")
-    job1 = wg.nodes.new(
+    job1 = wg.tasks.new(
         "ShellJob",
         command=cat_code,
         arguments=["{file_a}", "{file_b}"],
@@ -53,7 +53,7 @@ def test_shell_workflow():
     # Create a workgraph
     wg = WorkGraph(name="shell_add_mutiply_workflow")
     # echo x + y expression
-    job1 = wg.nodes.new(
+    job1 = wg.tasks.new(
         "ShellJob",
         name="job1",
         command="echo",
@@ -64,7 +64,7 @@ def test_shell_workflow():
         },
     )
     # bc command to calculate the expression
-    job2 = wg.nodes.new(
+    job2 = wg.tasks.new(
         "ShellJob",
         name="job2",
         command="bc",
@@ -76,7 +76,7 @@ def test_shell_workflow():
         ],  # add a "result" output socket from the parser
     )
     # echo result + y expression
-    job3 = wg.nodes.new(
+    job3 = wg.tasks.new(
         "ShellJob",
         name="job3",
         command="echo",
@@ -84,7 +84,7 @@ def test_shell_workflow():
         nodes={"result": job2.outputs["result"], "z": Int(4)},
     )
     # bc command to calculate the expression
-    job4 = wg.nodes.new(
+    job4 = wg.tasks.new(
         "ShellJob",
         name="job4",
         command="bc",

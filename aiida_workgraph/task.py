@@ -11,8 +11,8 @@ import aiida
 from typing import Any, Dict, Optional, Union, Callable, List
 
 
-class Node(GraphNode):
-    """Represent a Node in the AiiDA WorkGraph.
+class Task(GraphNode):
+    """Represent a Task in the AiiDA WorkGraph.
 
     The class extends from node_graph.node.Node and add new
     attributes to it.
@@ -31,7 +31,7 @@ class Node(GraphNode):
         **kwargs: Any
     ) -> None:
         """
-        Initialize a Node instance.
+        Initialize a Task instance.
         """
         super().__init__(
             property_collection_class=WorkGraphPropertyCollection,

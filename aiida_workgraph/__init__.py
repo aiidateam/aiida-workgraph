@@ -1,8 +1,8 @@
 from .workgraph import WorkGraph
-from .node import Node
-from .decorator import node, build_node
+from .task import Task
+from .decorator import task, build_task
 
 
 __version__ = "0.2.8"
 
-__all__ = ["WorkGraph", "Node", "node", "build_node"]
+__all__ = ["WorkGraph", "Task", "task", "build_task"]

@@ -29,15 +29,15 @@ def test_build_workchain():
 
     code = load_code("add@localhost")
     wg = WorkGraph(name="test_debug_math")
-    code1 = wg.nodes.new("AiiDACode", "code1", pk=code.pk)
-    multiply_add1 = wg.nodes.new(
+    code1 = wg.tasks.new("AiiDACode", "code1", pk=code.pk)
+    multiply_add1 = wg.tasks.new(
         MultiplyAddWorkChain,
         "multiply_add1",
         x=Int(4).store(),
         y=Int(2).store(),
         z=Int(3).store(),
     )
-    multiply_add2 = wg.nodes.new(
+    multiply_add2 = wg.tasks.new(
         MultiplyAddWorkChain,
         "multiply_add2",
         x=Int(2).store(),

@@ -13,7 +13,7 @@ def test_kpoint():
     from aiida_workgraph import WorkGraph
 
     wg = WorkGraph(name="test_kpoint")
-    kpoint1 = wg.nodes.new("AiiDAKpoint", "kpoint1")
+    kpoint1 = wg.tasks.new("AiiDAKpoint", "kpoint1")
     kpoint1.set({"mesh": [2, 2, 2]})
     wg.submit(wait=True)
     assert kpoint1.outputs[0].value.get_kpoints_mesh() == ([2, 2, 2], [0, 0, 0])
@@ -24,7 +24,7 @@ def test_pw_parameters():
     from aiida_workgraph import WorkGraph
 
     wg = WorkGraph(name="test_pw_parameters")
-    pw_parameters1 = wg.nodes.new("AiiDADict", "pw_parameters1")
+    pw_parameters1 = wg.tasks.new("AiiDADict", "pw_parameters1")
     paras = {
         "CONTROL": {
             "calculation": "scf",
@@ -52,7 +52,7 @@ def test_pw_pseudo(wg_structure_si):
     """Run simple calcfunction."""
     wg = wg_structure_si
     wg.name = "test_pw_pseudo"
-    pw_pseudo1 = wg.nodes.new("AiiDAPWPseudo", "pw_pseudo1")
+    pw_pseudo1 = wg.tasks.new("AiiDAPWPseudo", "pw_pseudo1")
     wg.links.new(wg.nodes["structure1"].outputs[0], pw_pseudo1.inputs["structure"])
     wg.submit(wait=True)
     # assert pw_pseudo1.node
@@ -64,7 +64,7 @@ def test_pw_dos_projwfc(wg_structure_si):
     wg = wg_structure_si
     wg.name = "test_pw_dos_projwfc"
     #
-    pw_scf1 = wg.nodes.new(PwCalculation, "pw_scf1")
+    pw_scf1 = wg.tasks.new(PwCalculation, "pw_scf1")
     metadata = {
         "options": {
             "stash": {},
@@ -73,9 +73,9 @@ def test_pw_dos_projwfc(wg_structure_si):
     }
     pw_scf1.set({"metadata": metadata})
     #
-    pw_code = wg.nodes.new("AiiDACode", "pw_code", label="qe-7.2-pw@localhost")
+    pw_code = wg.tasks.new("AiiDACode", "pw_code", label="qe-7.2-pw@localhost")
     #
-    pw_parameters1 = wg.nodes.new("AiiDADict", "pw_parameters1")
+    pw_parameters1 = wg.tasks.new("AiiDADict", "pw_parameters1")
     paras = {
         "CONTROL": {
             "calculation": "scf",
@@ -87,22 +87,22 @@ def test_pw_dos_projwfc(wg_structure_si):
     }
     pw_parameters1.set({"value": paras})
     #
-    kpoint1 = wg.nodes.new("AiiDAKpoint", "kpoint1")
+    kpoint1 = wg.tasks.new("AiiDAKpoint", "kpoint1")
     kpoint1.set({"mesh": [2, 2, 2]})
     #
-    pw_pseudo1 = wg.nodes.new("AiiDAPWPseudo", "pw_pseudo1")
+    pw_pseudo1 = wg.tasks.new("AiiDAPWPseudo", "pw_pseudo1")
     #
     #
-    dos1 = wg.nodes.new(DosCalculation, "dos1")
-    dos_code = wg.nodes.new("AiiDACode", "dos_code", label="qe-7.2-dos@localhost")
-    dos_parameters1 = wg.nodes.new("AiiDADict", "dos_parameters1")
+    dos1 = wg.tasks.new(DosCalculation, "dos1")
+    dos_code = wg.tasks.new("AiiDACode", "dos_code", label="qe-7.2-dos@localhost")
+    dos_parameters1 = wg.tasks.new("AiiDADict", "dos_parameters1")
     dos1.set({"metadata": metadata})
     #
-    projwfc1 = wg.nodes.new(ProjwfcCalculation, "projwfc1")
-    projwfc_code = wg.nodes.new(
+    projwfc1 = wg.tasks.new(ProjwfcCalculation, "projwfc1")
+    projwfc_code = wg.tasks.new(
         "AiiDACode", "projwfc_code", label="qe-7.2-projwfc@localhost"
     )
-    projwfc_parameters1 = wg.nodes.new("AiiDADict", "projwfc_parameters1")
+    projwfc_parameters1 = wg.tasks.new("AiiDADict", "projwfc_parameters1")
     projwfc1.set({"metadata": metadata})
     #
     wg.links.new(wg.nodes["structure1"].outputs[0], pw_pseudo1.inputs["structure"])
@@ -128,10 +128,10 @@ def test_pw_dos_projwfc(wg_structure_si):
 
 def test_pw_relax_workchain(structure_si):
     """Run simple calcfunction."""
-    from aiida_workgraph import node, WorkGraph
+    from aiida_workgraph import task, WorkGraph
     from aiida.orm import Dict, KpointsData, load_code, load_group
 
-    @node.calcfunction()
+    @task.calcfunction()
     def pw_parameters(paras, relax_type):
         paras1 = paras.clone()
         paras1["CONTROL"]["calculation"] = relax_type
@@ -171,9 +171,9 @@ def test_pw_relax_workchain(structure_si):
 
     wg = WorkGraph("test_pw_relax")
     # structure node
-    wg.nodes.new("AiiDANode", "si", pk=structure_si.pk)
+    wg.tasks.new("AiiDANode", "si", pk=structure_si.pk)
     # pw node
-    pw_relax1 = wg.nodes.new(PwRelaxWorkChain, name="pw_relax1")
+    pw_relax1 = wg.tasks.new(PwRelaxWorkChain, name="pw_relax1")
     pw_relax1.set(
         {
             "base": {
@@ -186,7 +186,7 @@ def test_pw_relax_workchain(structure_si):
             },
         }
     )
-    paras_node = wg.nodes.new(
+    paras_node = wg.tasks.new(
         pw_parameters, "parameters", paras=paras, relax_type="relax"
     )
     wg.links.new(wg.nodes["si"].outputs[0], pw_relax1.inputs["structure"])
