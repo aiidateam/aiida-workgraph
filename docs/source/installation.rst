@@ -40,7 +40,7 @@ To install the package from source, first clone the repository and then install 
     $ npm install
     $ npm run build
     $ # build web frontend
-    $ cd aiida_workgraph/web/frontend/
+    $ cd ../../aiida_workgraph/web/frontend/
     $ npm install
     $ npm run build
 
