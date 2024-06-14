@@ -9,5 +9,4 @@ This section contains information for developers.
    :caption: Contents:
 
    data_serialization
-   PythonTask
-   shelljob
+   python_task

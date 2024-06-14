@@ -340,14 +340,14 @@ class WorkGraph(node_graph.NodeGraph):
 
         os.system("verdi process pause {}".format(self.process.pk))
 
-    def pause_nodes(self, nodes: List[str]) -> None:
+    def pause_tasks(self, tasks: List[str]) -> None:
         """
-        Pause the given nodes
+        Pause the given tasks
         """
 
-    def play_nodes(self, nodes: List[str]) -> None:
+    def play_tasks(self, tasks: List[str]) -> None:
         """
-        Play the given nodes
+        Play the given tasks
         """
 
     def reset(self) -> None:

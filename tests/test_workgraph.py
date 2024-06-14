@@ -20,7 +20,7 @@ def test_from_dict(wg_calcjob):
     wg = wg_calcjob
     ntdata = wg.to_dict()
     wg1 = WorkGraph.from_dict(ntdata)
-    assert len(wg.tasks) == len(wg1.nodes)
+    assert len(wg.tasks) == len(wg1.tasks)
     assert len(wg.links) == len(wg1.links)
 
 
@@ -76,12 +76,12 @@ def test_restart(wg_calcjob):
     wg.submit(wait=True)
     wg1 = WorkGraph.load(wg.process.pk)
     wg1.name = "test_restart_1"
-    wg1.nodes["add2"].set({"y": orm.Int(10).store()})
+    wg1.tasks["add2"].set({"y": orm.Int(10).store()})
     wg1.submit(wait=True, restart=True)
     wg1.update()
-    assert wg1.nodes["add3"].node.outputs.sum == 13
-    assert wg1.nodes["add1"].node.pk == wg.tasks["add1"].pk
-    assert wg1.nodes["add2"].node.pk != wg.tasks["add2"].pk
+    assert wg1.tasks["add3"].node.outputs.sum == 13
+    assert wg1.tasks["add1"].node.pk == wg.tasks["add1"].pk
+    assert wg1.tasks["add2"].node.pk != wg.tasks["add2"].pk
 
 
 def test_extend_workgraph(decorated_add_multiply_group):
@@ -102,10 +102,10 @@ def test_node_from_workgraph(decorated_add_multiply_group):
     add1 = wg.tasks.new("AiiDAAdd", "add1", x=2, y=3)
     add2 = wg.tasks.new("AiiDAAdd", "add2", y=3)
     add_multiply_wg = decorated_add_multiply_group(x=0, y=4, z=5)
-    AddMultiplyNode = build_task(add_multiply_wg)
-    assert "add1.x" in AddMultiplyNode().inputs.keys()
+    AddMultiplyTask = build_task(add_multiply_wg)
+    assert "add1.x" in AddMultiplyTask().inputs.keys()
     # add the workgraph as a task
-    add_multiply1 = wg.tasks.new(AddMultiplyNode, "add_multiply1")
+    add_multiply1 = wg.tasks.new(AddMultiplyTask, "add_multiply1")
     wg.links.new(add1.outputs[0], add_multiply1.inputs["add1.x"])
     wg.links.new(add_multiply1.outputs["multiply1.result"], add2.inputs["x"])
     # wg.submit(wait=True)

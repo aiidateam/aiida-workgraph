@@ -50,4 +50,4 @@ def test_build_workchain():
     assert wg.tasks["multiply_add2"].node.outputs.result == 17
     # reload wg
     wg1 = WorkGraph.load(wg.pk)
-    assert wg1.nodes["multiply_add2"].node.outputs.result == 17
+    assert wg1.tasks["multiply_add2"].node.outputs.result == 17

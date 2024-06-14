@@ -18,7 +18,7 @@ In WorkGraph, all input data are passed into the ``wg`` namespace. The ``wg`` na
 
 There are reasons why we don't serialize all data in the ``wg`` namespace:
 
-- **Flexibility for non-AiiDA components**: WorkGraph supports non-AiiDA components as nodes, meaning any Python function can be used as a task in the graph. These functions do not require AiiDA data as input, allowing for a variety of data types.
+- **Flexibility for non-AiiDA components**: WorkGraph supports non-AiiDA component as task, meaning any Python function can be used as a task in the graph. These functions do not require AiiDA data as input, allowing for a variety of data types.
 
 - **Respecting existing serialization methods**: For AiiDA components (e.g., ``CalcJob``, ``WorkChain``), some input ports may have explicitly defined serialization methods, which must be respected.
 
