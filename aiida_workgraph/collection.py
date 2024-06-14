@@ -18,7 +18,7 @@ class TaskCollection(NodeCollection):
     ) -> Any:
         from aiida_workgraph.decorator import (
             build_task_from_callable,
-            build_PythonJob_task,
+            build_PythonTask_task,
             build_ShellJob_task,
         )
 
@@ -30,11 +30,11 @@ class TaskCollection(NodeCollection):
                     raise ValueError(
                         "GraphBuilder task cannot be run remotely. Please set run_remotely=False."
                     )
-                # this is a PythonJob
-                identifier, _ = build_PythonJob_task(identifier)
+                # this is a PythonTask
+                identifier, _ = build_PythonTask_task(identifier)
             return super().new(identifier, name, uuid, **kwargs)
-        if isinstance(identifier, str) and identifier.upper() == "PYTHONJOB":
-            identifier, _ = build_PythonJob_task(kwargs.pop("function"))
+        if isinstance(identifier, str) and identifier.upper() == "PythonTask":
+            identifier, _ = build_PythonTask_task(kwargs.pop("function"))
             return super().new(identifier, name, uuid, **kwargs)
         if isinstance(identifier, str) and identifier.upper() == "SHELLJOB":
             identifier, _, links = build_ShellJob_task(

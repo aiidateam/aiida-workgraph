@@ -24,13 +24,13 @@ def prepare_for_workgraph_node(node: dict, kwargs: dict) -> tuple:
     return inputs, wgdata
 
 
-def prepare_for_pythonjob(node: dict, kwargs: dict, var_kwargs: dict) -> dict:
-    """Prepare the inputs for PythonJob"""
+def prepare_for_pythontask(node: dict, kwargs: dict, var_kwargs: dict) -> dict:
+    """Prepare the inputs for PythonTask"""
     from aiida_workgraph.utils import get_or_create_code
     import os
 
     print("node  type: Python.")
-    # get the names kwargs for the PythonJob, which are the inputs before _wait
+    # get the names kwargs for the PythonTask, which are the inputs before _wait
     function_kwargs = {}
     for input in node["inputs"]:
         if input["name"] == "_wait":

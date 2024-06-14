@@ -13,7 +13,7 @@ def test_args() -> None:
         print(a, b, c)
 
     #
-    n = test.node()
+    n = test.task()
     assert n.args == ["a"]
     assert n.kwargs == [
         "metadata",

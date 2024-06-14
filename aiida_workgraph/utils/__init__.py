@@ -267,14 +267,14 @@ def get_or_create_code(
         return code
 
 
-def serialize_pythonjob_properties(wgdata):
-    """Serialize the PythonJob properties."""
+def serialize_pythontask_properties(wgdata):
+    """Serialize the PythonTask properties."""
     from aiida_workgraph.orm.serializer import general_serializer
 
     for _, node in wgdata["nodes"].items():
-        if not node["metadata"]["node_type"].upper() == "PYTHONJOB":
+        if not node["metadata"]["node_type"].upper() == "PYTHONTASK":
             continue
-        # get the names kwargs for the PythonJob, which are the inputs before _wait
+        # get the names kwargs for the PythonTask, which are the inputs before _wait
         input_kwargs = []
         for input in node["inputs"]:
             if input["name"] == "_wait":

@@ -143,9 +143,9 @@ def build_task_from_callable(
 
     # if it is already a task, return it
     if (
-        hasattr(executor, "node")
-        and inspect.isclass(executor.node)
-        and issubclass(executor.node, Task)
+        hasattr(executor, "task")
+        and inspect.isclass(executor.task)
+        and issubclass(executor.task, Task)
         or inspect.isclass(executor)
         and issubclass(executor, Task)
     ):
@@ -181,7 +181,7 @@ def build_task_from_function(
     """Build task from function."""
     return TaskDecoratorCollection.decorator_task(inputs=inputs, outputs=outputs)(
         executor
-    ).node
+    ).task
 
 
 def build_task_from_AiiDA(
@@ -241,15 +241,15 @@ def build_task_from_AiiDA(
     return task, tdata
 
 
-def build_PythonJob_task(func: Callable) -> Task:
-    """Build PythonJob task from function."""
-    from aiida_workgraph.calculations.python import PythonJob
+def build_PythonTask_task(func: Callable) -> Task:
+    """Build PythonTask task from function."""
+    from aiida_workgraph.calculations.python import PythonTask
     from copy import deepcopy
 
-    tdata = {"executor": PythonJob, "task_type": "CALCJOB"}
+    tdata = {"executor": PythonTask, "task_type": "CALCJOB"}
     _, tdata_py = build_task_from_AiiDA(tdata)
     tdata = deepcopy(func.tdata)
-    # merge the inputs and outputs from the PythonJob task to the function task
+    # merge the inputs and outputs from the PythonTask task to the function task
     # skip the already existed inputs and outputs
     inputs = tdata["inputs"]
     inputs.extend(
@@ -271,14 +271,14 @@ def build_PythonJob_task(func: Callable) -> Task:
     for input in inputs:
         if input[1] == "copy_files":
             input[2].update({"link_limit": 1e6})
-    # append the kwargs of the PythonJob task to the function task
+    # append the kwargs of the PythonTask task to the function task
     kwargs = tdata["kwargs"]
     kwargs.extend(["computer", "code_label", "code_path", "prepend_text"])
     kwargs.extend(tdata_py["kwargs"])
     tdata["inputs"] = inputs
     tdata["outputs"] = outputs
     tdata["kwargs"] = kwargs
-    tdata["task_type"] = "PYTHONJOB"
+    tdata["task_type"] = "PYTHONTASK"
     task = create_task(tdata)
     task.is_aiida_component = True
     return task, tdata
@@ -542,7 +542,7 @@ class TaskDecoratorCollection:
             )
             task = create_task(tdata)
             func.identifier = identifier
-            func.node = task
+            func.task = func.node = task
             func.tdata = tdata
             return func
 
@@ -592,7 +592,7 @@ class TaskDecoratorCollection:
             task = create_task(tdata)
             task.group_inputs = inputs
             task.group_outputs = outputs
-            func.node = task
+            func.task = func.node = task
             return func
 
         return decorator
@@ -610,7 +610,7 @@ class TaskDecoratorCollection:
             )
             identifier = kwargs.get("identifier", None)
             func_decorated.identifier = identifier if identifier else func.__name__
-            func_decorated.node = task_decorated
+            func_decorated.task = func_decorated.node = task_decorated
             return func_decorated
 
         return decorator
@@ -627,7 +627,7 @@ class TaskDecoratorCollection:
             )
             identifier = kwargs.get("identifier", None)
             func_decorated.identifier = identifier if identifier else func.__name__
-            func_decorated.node = task_decorated
+            func_decorated.task = func_decorated.node = task_decorated
 
             return func_decorated
 

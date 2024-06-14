@@ -22,13 +22,13 @@ def build_socket_from_AiiDA(DataClass: Type[Any]) -> Type[TaskSocket]:
         def __init__(
             self,
             name: str,
-            node: Any = None,
+            parent: Any = None,
             type: str = "INPUT",
             index: int = 0,
             uuid: str = None,
             **kwargs: Any
         ) -> None:
-            super().__init__(name, node, type, index, uuid=uuid)
+            super().__init__(name, parent, type, index, uuid=uuid)
             self.add_property(DataClass, name, **kwargs)
 
         def get_serialize(self) -> dict:

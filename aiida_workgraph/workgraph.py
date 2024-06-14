@@ -66,7 +66,7 @@ class WorkGraph(node_graph.NodeGraph):
         from aiida_workgraph.engine.workgraph import WorkGraphEngine
         from aiida_workgraph.utils import (
             merge_properties,
-            serialize_pythonjob_properties,
+            serialize_pythontask_properties,
         )
 
         # set task inputs
@@ -82,7 +82,7 @@ class WorkGraph(node_graph.NodeGraph):
             return
         wgdata = self.to_dict()
         merge_properties(wgdata)
-        serialize_pythonjob_properties(wgdata)
+        serialize_pythontask_properties(wgdata)
         inputs = {"wg": wgdata}
         # init a process
         runner = get_manager().get_runner()
@@ -145,12 +145,12 @@ class WorkGraph(node_graph.NodeGraph):
         from aiida_workgraph.engine.workgraph import WorkGraphEngine
         from aiida_workgraph.utils import (
             merge_properties,
-            serialize_pythonjob_properties,
+            serialize_pythontask_properties,
         )
 
         wgdata = self.to_dict()
         merge_properties(wgdata)
-        serialize_pythonjob_properties(wgdata)
+        serialize_pythontask_properties(wgdata)
         metadata = metadata or {}
         inputs = {"wg": wgdata, "metadata": metadata}
         if self.process is None:
@@ -159,7 +159,7 @@ class WorkGraph(node_graph.NodeGraph):
             process_inited.runner.persister.save_checkpoint(process_inited)
             self.process = process_inited.node
             self.process_inited = process_inited
-            print(f"WorkGraph node created, PK: {self.process.pk}")
+            print(f"WorkGraph process created, PK: {self.process.pk}")
         self.save_to_base(wgdata)
         self.update()
 
