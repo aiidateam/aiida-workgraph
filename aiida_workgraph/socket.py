@@ -1,21 +1,21 @@
 from typing import Any, Type
-from node_graph.socket import NodeSocket as GraphNodeSocket
-from aiida_workgraph.property import NodeProperty
+from node_graph.socket import NodeSocket
+from aiida_workgraph.property import TaskProperty
 
 
-class NodeSocket(GraphNodeSocket):
-    """Represent a socket of a Node in the AiiDA WorkGraph."""
+class TaskSocket(NodeSocket):
+    """Represent a socket of a Task in the AiiDA WorkGraph."""
 
-    # use NodeProperty from aiida_workgraph.property
+    # use TaskProperty from aiida_workgraph.property
     # to override the default NodeProperty from node_graph
-    node_property = NodeProperty
+    node_property = TaskProperty
 
 
-def build_socket_from_AiiDA(DataClass: Type[Any]) -> Type[GraphNodeSocket]:
+def build_socket_from_AiiDA(DataClass: Type[Any]) -> Type[TaskSocket]:
     """Create a socket class from AiiDA DataClass."""
 
-    class AiiDANodeSocket(NodeSocket):
-        """AiiDA Node Socket."""
+    class AiiDATaskSocket(TaskSocket):
+        """AiiDA Task Socket."""
 
         identifier: str = DataClass.__name__
 
@@ -42,4 +42,4 @@ def build_socket_from_AiiDA(DataClass: Type[Any]) -> Type[GraphNodeSocket]:
             }
             return deserialize
 
-    return AiiDANodeSocket
+    return AiiDATaskSocket

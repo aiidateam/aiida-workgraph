@@ -74,26 +74,26 @@ class Task(GraphNode):
         cls, identifier: Union[str, Callable], name: Optional[str] = None
     ) -> "Task":
         """Create a task from a identifier."""
-        from aiida_workgraph.tasks import node_pool
+        from aiida_workgraph.tasks import task_pool
 
-        return super().new(identifier, name=name, node_pool=node_pool)
+        return super().new(identifier, name=name, node_pool=task_pool)
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any], node_pool: Optional[Any] = None) -> "Task":
+    def from_dict(cls, data: Dict[str, Any], task_pool: Optional[Any] = None) -> "Task":
         """Create a task from a dictionary. This method initializes a Node instance with properties and settings
-        defined within the provided data dictionary. If node_pool is not specified, the default node_pool from
+        defined within the provided data dictionary. If task_pool is not specified, the default task_pool from
         aiida_workgraph.tasks is used.
 
         Args:
             data (Dict[str, Any]): A dictionary containing the task's configuration.
-            node_pool (Optional[Any]): A pool of node configurations, defaults to None
-            which will use the global node_pool.
+            task_pool (Optional[Any]): A pool of node configurations, defaults to None
+            which will use the global task_pool.
 
         Returns:
             Node: An instance of Node initialized with the provided data."""
-        from aiida_workgraph.tasks import node_pool
+        from aiida_workgraph.tasks import task_pool
 
-        task = super().from_dict(data, node_pool=node_pool)
+        task = super().from_dict(data, node_pool=task_pool)
         task.to_context = data.get("to_context", [])
         task.wait = data.get("wait", [])
         task.process = data.get("process", None)

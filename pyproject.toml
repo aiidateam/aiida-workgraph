@@ -90,8 +90,8 @@ workgraph = "aiida_workgraph.cli.cmd_workgraph:workgraph"
 [project.entry-points."aiida.node"]
 "process.workflow.workgraph" = "aiida_workgraph.orm.workgraph:WorkgraphNode"
 
-[project.entry-points."aiida_workgraph.node"]
-"aiida" = "aiida_workgraph.tasks:node_list"
+[project.entry-points."aiida_workgraph.task"]
+"aiida" = "aiida_workgraph.tasks:task_list"
 
 [project.entry-points."aiida_workgraph.property"]
 "aiida" = "aiida_workgraph.properties.built_in:property_list"

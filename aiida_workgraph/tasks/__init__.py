@@ -19,7 +19,7 @@ from .qe import (
     AiiDAStructure,
 )
 
-node_list = [
+task_list = [
     AiiDAGather,
     AiiDAToCtx,
     AiiDAFromCtx,
@@ -40,5 +40,5 @@ node_list = [
 ]
 
 
-# should after node_list, otherwise circular import
-node_pool = get_entries(entry_point_name="aiida_workgraph.node")
+# should after task_list, otherwise circular import
+task_pool = get_entries(entry_point_name="aiida_workgraph.task")

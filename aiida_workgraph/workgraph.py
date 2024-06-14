@@ -2,9 +2,9 @@ import aiida.orm
 import node_graph
 import aiida
 from aiida.manage import get_manager
-from aiida_workgraph.tasks import node_pool
+from aiida_workgraph.tasks import task_pool
 import time
-from aiida_workgraph.collection import WorkGraphNodeCollection
+from aiida_workgraph.collection import TaskCollection
 from aiida_workgraph.utils.graph import (
     task_deletion_hook,
     task_creation_hook,
@@ -16,7 +16,7 @@ from typing import Any, Dict, List, Optional
 
 
 class WorkGraph(node_graph.NodeGraph):
-    """Build a node-based workflow AiiDA's workgraph.
+    """Build flexible workflows with AiiDA.
 
     The class extends from NodeGraph and provides methods to run,
     submit tasks, wait for tasks to finish, and update the process status.
@@ -29,7 +29,7 @@ class WorkGraph(node_graph.NodeGraph):
         pk (int): The primary key of the process node.
     """
 
-    node_pool = node_pool
+    node_pool = task_pool
 
     def __init__(self, name: str = "WorkGraph", **kwargs) -> None:
         """
@@ -49,10 +49,11 @@ class WorkGraph(node_graph.NodeGraph):
         self.max_number_jobs = 1000000
         self.execution_count = 0
         self.max_iteration = 1000000
-        self.nodes = WorkGraphNodeCollection(self, pool=self.node_pool)
-        self.nodes.post_deletion_hooks = [task_deletion_hook]
-        self.nodes.post_creation_hooks = [task_creation_hook]
-        self.tasks = self.nodes
+        self.tasks = TaskCollection(self, pool=self.node_pool)
+        self.tasks.post_deletion_hooks = [task_deletion_hook]
+        self.tasks.post_creation_hooks = [task_creation_hook]
+        # add alias `nodes` for node_graph
+        self.nodes = self.tasks
         self.links.post_creation_hooks = [link_creation_hook]
         self.links.post_deletion_hooks = [link_deletion_hook]
         self._widget = NodeGraphWidget(parent=self)
@@ -68,7 +69,7 @@ class WorkGraph(node_graph.NodeGraph):
             serialize_pythonjob_properties,
         )
 
-        # set node inputs
+        # set task inputs
         if inputs is not None:
             for name, input in inputs.items():
                 if name not in self.tasks.keys():
@@ -105,10 +106,10 @@ class WorkGraph(node_graph.NodeGraph):
         Args:
             wait (bool): Wait for the process to finish.
             timeout (int): The maximum time in seconds to wait for the process to finish. Defaults to 60.
-            restart (bool): Restart the process, and reset the modified nodes, then only re-run the modified nodes.
+            restart (bool): Restart the process, and reset the modified tasks, then only re-run the modified tasks.
             new (bool): Submit a new process.
         """
-        # set node inputs
+        # set task inputs
         if inputs is not None:
             for name, input in inputs.items():
                 if name not in self.tasks.keys():
@@ -121,7 +122,7 @@ class WorkGraph(node_graph.NodeGraph):
             self.reset()
         # Create a restart submission
         # save the current process node as restart_process
-        # so that the WorkGraphSaver can compare the difference, and reset the modified nodes
+        # so that the WorkGraphSaver can compare the difference, and reset the modified tasks
         if restart:
             self.restart_process = self.process
             self.process = None
@@ -164,7 +165,7 @@ class WorkGraph(node_graph.NodeGraph):
 
     def save_to_base(self, wgdata: Dict[str, Any]) -> None:
         """Save new wgdata to base.extras.
-        It will first check the difference, and reset nodes if needed.
+        It will first check the difference, and reset tasks if needed.
         """
         from aiida_workgraph.utils.analysis import WorkGraphSaver
 

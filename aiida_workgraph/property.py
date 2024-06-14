@@ -1,9 +1,9 @@
 from typing import Any, Type, Union, Dict, Optional, Callable
-from node_graph.property import NodeProperty as GraphNodeProperty
+from node_graph.property import NodeProperty
 
 
-class NodeProperty(GraphNodeProperty):
-    """Represent a property of a Node in the AiiDA WorkGraph."""
+class TaskProperty(NodeProperty):
+    """Represent a property of a Task in the AiiDA WorkGraph."""
 
     @classmethod
     def new(
@@ -11,7 +11,7 @@ class NodeProperty(GraphNodeProperty):
         identifier: Union[Callable, str],
         name: Optional[str] = None,
         data: Dict[str, Any] = {},
-    ) -> "NodeProperty":
+    ) -> "TaskProperty":
         """Create a property from a identifier."""
         # use property_pool from aiida_workgraph.properties
         # to override the default property_pool from node_graph
@@ -25,10 +25,10 @@ class NodeProperty(GraphNodeProperty):
         )
 
 
-def build_property_from_AiiDA(DataClass: Type[Any]) -> Type[GraphNodeProperty]:
+def build_property_from_AiiDA(DataClass: Type[Any]) -> Type[TaskProperty]:
     """Create a property class from AiiDA DataClass."""
 
-    class AiiDANodeProperty(NodeProperty):
+    class AiiDATaskProperty(TaskProperty):
         identifier: str = DataClass.__name__
 
         def set_value(self, value: Any) -> None:
@@ -57,4 +57,4 @@ def build_property_from_AiiDA(DataClass: Type[Any]) -> Type[GraphNodeProperty]:
             }
             return deserialize
 
-    return AiiDANodeProperty
+    return AiiDATaskProperty

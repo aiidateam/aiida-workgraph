@@ -7,13 +7,13 @@ from node_graph.collection import (
 from typing import Any, Callable, Optional, Union
 
 
-class WorkGraphNodeCollection(NodeCollection):
+class TaskCollection(NodeCollection):
     def new(
         self,
         identifier: Union[Callable, str],
         name: Optional[str] = None,
         uuid: Optional[str] = None,
-        on_remote: Optional[bool] = False,
+        run_remotely: Optional[bool] = False,
         **kwargs: Any
     ) -> Any:
         from aiida_workgraph.decorator import (
@@ -25,29 +25,27 @@ class WorkGraphNodeCollection(NodeCollection):
         # build the task on the fly if the identifier is a callable
         if callable(identifier):
             identifier = build_task_from_callable(identifier)
-            if kwargs.pop("run_remotely", False):
+            if run_remotely:
                 if identifier.node.node_type.upper() == "GRAPH_BUILDER":
                     raise ValueError(
-                        "GraphBuilder nodes cannot be run remotely. Please set run_remotely=False."
+                        "GraphBuilder task cannot be run remotely. Please set run_remotely=False."
                     )
                 # this is a PythonJob
                 identifier, _ = build_PythonJob_task(identifier)
             return super().new(identifier, name, uuid, **kwargs)
         if isinstance(identifier, str) and identifier.upper() == "PYTHONJOB":
-            # copy the inputs and outputs from the function node to the PythonJob task
             identifier, _ = build_PythonJob_task(kwargs.pop("function"))
             return super().new(identifier, name, uuid, **kwargs)
         if isinstance(identifier, str) and identifier.upper() == "SHELLJOB":
-            # copy the inputs and outputs from the function node to the SHELLJob node
             identifier, _, links = build_ShellJob_task(
                 nodes=kwargs.get("nodes", {}),
                 outputs=kwargs.get("outputs", None),
                 parser_outputs=kwargs.pop("parser_outputs", None),
             )
-            node = super().new(identifier, name, uuid, **kwargs)
+            task = super().new(identifier, name, uuid, **kwargs)
             # make links between the tasks
-            node.set(links)
-            return node
+            task.set(links)
+            return task
         return super().new(identifier, name, uuid, **kwargs)
 
 
