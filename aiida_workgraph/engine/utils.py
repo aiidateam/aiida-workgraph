@@ -106,13 +106,13 @@ def prepare_for_pythontask(node: dict, kwargs: dict, var_kwargs: dict) -> dict:
     return inputs
 
 
-def prepare_for_shelljob(node: dict, kwargs: dict) -> dict:
-    """Prepare the inputs for ShellJob"""
+def prepare_for_shelltask(node: dict, kwargs: dict) -> dict:
+    """Prepare the inputs for ShellTask"""
     from aiida_shell.launch import prepare_code, convert_nodes_single_file_data
     from aiida.common import lang
     from aiida.orm import AbstractCode
 
-    print("node  type: ShellJob.")
+    print("node  type: ShellTask.")
     command = kwargs.pop("command", None)
     resolve_command = kwargs.pop("resolve_command", False)
     metadata = kwargs.pop("metadata", {})

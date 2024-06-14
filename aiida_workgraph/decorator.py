@@ -241,7 +241,7 @@ def build_task_from_AiiDA(
     return task, tdata
 
 
-def build_PythonTask_task(func: Callable) -> Task:
+def build_python_task(func: Callable) -> Task:
     """Build PythonTask task from function."""
     from aiida_workgraph.calculations.python import PythonTask
     from copy import deepcopy
@@ -284,15 +284,15 @@ def build_PythonTask_task(func: Callable) -> Task:
     return task, tdata
 
 
-def build_ShellJob_task(
+def build_shell_task(
     nodes: dict = None, outputs: list = None, parser_outputs: list = None
 ) -> Task:
-    """Build ShellJob task with custom inputs and outputs."""
+    """Build ShellTask with custom inputs and outputs."""
     from aiida_shell.calculations.shell import ShellJob
     from aiida_shell.parsers.shell import ShellParser
     from node_graph.socket import NodeSocket
 
-    ndata = {"executor": ShellJob, "task_type": "CALCJOB"}
+    ndata = {"executor": ShellJob, "task_type": "SHELLTASK"}
     _, ndata = build_task_from_AiiDA(ndata)
     # create input sockets for the nodes, if it is linked other sockets
     links = {}
@@ -320,7 +320,7 @@ def build_ShellJob_task(
         if output not in ndata["outputs"]:
             ndata["outputs"].append(output)
     #
-    ndata["identifier"] = "ShellJob"
+    ndata["identifier"] = "ShellTask"
     ndata["inputs"].extend(
         [
             ["General", "command"],
@@ -328,7 +328,7 @@ def build_ShellJob_task(
         ]
     )
     ndata["kwargs"].extend(["command", "resolve_command"])
-    ndata["task_type"] = "SHELLJOB"
+    ndata["task_type"] = "SHELLTASK"
     task = create_task(ndata)
     task.is_aiida_component = True
     return task, ndata, links
