@@ -503,8 +503,10 @@ class WorkGraphEngine(Process, metaclass=Protect):
                 task["results"] = task["process"].outputs
                 # self.ctx.new_data[name] = task["results"]
                 self.ctx.tasks[name]["state"] = "FAILED"
-                # set child state to FAILED
-                self.set_task_state(self.ctx.connectivity["child_node"][name], "FAILED")
+                # set child tasks state to SKIPPED
+                self.set_task_state(
+                    self.ctx.connectivity["child_node"][name], "SKIPPED"
+                )
                 self.report(f"Task: {name} failed.")
         else:
             task["results"] = None
@@ -602,7 +604,7 @@ class WorkGraphEngine(Process, metaclass=Protect):
                 is_finished = not should_run
         print("is workgraph finished: ", is_finished)
         if is_finished and len(failed_tasks) > 0:
-            message = f"WorkGraph finished, but tasks: {failed_tasks} failed."
+            message = f"WorkGraph finished, but tasks: {failed_tasks} failed. Thus all their child tasks are skipped."
             self.report(message)
             result = ExitCode(302, message)
         else:
@@ -765,7 +767,7 @@ class WorkGraphEngine(Process, metaclass=Protect):
                     self.ctx.tasks[name]["state"] = "FAILED"
                     # set child state to FAILED
                     self.set_task_state(
-                        self.ctx.connectivity["child_node"][name], "FAILED"
+                        self.ctx.connectivity["child_node"][name], "SKIPPED"
                     )
                     print(f"Task: {name} failed.")
                     self.report(f"Task: {name} failed.")
