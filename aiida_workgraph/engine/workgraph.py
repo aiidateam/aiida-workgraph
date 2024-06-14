@@ -503,8 +503,10 @@ class WorkGraphEngine(Process, metaclass=Protect):
                 task["results"] = task["process"].outputs
                 # self.ctx.new_data[name] = task["results"]
                 self.ctx.tasks[name]["state"] = "FAILED"
-                # set child state to FAILED
-                self.set_task_state(self.ctx.connectivity["child_node"][name], "FAILED")
+                # set child state to SKIPPED
+                self.set_task_state(
+                    self.ctx.connectivity["child_node"][name], "SKIPPED"
+                )
                 self.report(f"Task: {name} failed.")
         else:
             task["results"] = None
