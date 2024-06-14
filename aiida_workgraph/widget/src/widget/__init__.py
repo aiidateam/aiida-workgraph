@@ -38,13 +38,13 @@ class NodeGraphWidget(anywidget.AnyWidget):
         self.value = wgdata
 
     def from_node(self, node: Any) -> None:
-        ndata = node.to_dict()
-        ndata.pop("properties", None)
-        ndata.pop("executor", None)
-        ndata.pop("node_class", None)
-        ndata.pop("process", None)
-        ndata["label"] = ndata["metadata"]["identifier"]
-        wgdata = {"name": node.name, "nodes": {node.name: ndata}, "links": []}
+        tdata = node.to_dict()
+        tdata.pop("properties", None)
+        tdata.pop("executor", None)
+        tdata.pop("node_class", None)
+        tdata.pop("process", None)
+        tdata["label"] = tdata["metadata"]["identifier"]
+        wgdata = {"name": node.name, "nodes": {node.name: tdata}, "links": []}
         self.value = wgdata
 
     def to_html(self, output: str = None, width: str = "100%", height: str = "600px"):

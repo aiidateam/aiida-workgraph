@@ -73,7 +73,7 @@ class WorkGraph(node_graph.NodeGraph):
         if inputs is not None:
             for name, input in inputs.items():
                 if name not in self.tasks.keys():
-                    raise KeyError(f"Node {name} not found in WorkGraph.")
+                    raise KeyError(f"Task {name} not found in WorkGraph.")
                 self.tasks[name].set(input)
         # One can not run again if the process is alreay created. otherwise, a new process node will
         # be created again.
@@ -113,7 +113,7 @@ class WorkGraph(node_graph.NodeGraph):
         if inputs is not None:
             for name, input in inputs.items():
                 if name not in self.tasks.keys():
-                    raise KeyError(f"Node {name} not found in WorkGraph.")
+                    raise KeyError(f"Task {name} not found in WorkGraph.")
                 self.tasks[name].set(input)
 
         process_controller = get_manager().get_process_controller()
@@ -272,9 +272,9 @@ class WorkGraph(node_graph.NodeGraph):
                 task.outputs[0].value = getattr(
                     self.process.outputs.new_data, task.name, None
                 )
-            # for normal nodes, we try to read the results from the extras of the task
+            # for normal tasks, we try to read the results from the extras of the task
             # this is disabled for now
-            # if node.node_type.upper() == "NORMAL":
+            # if task.node_type.upper() == "NORMAL":
             #     results = self.process.base.extras.get(
             #         f"nodes__results__{task.name}", {}
             #     )
@@ -296,7 +296,7 @@ class WorkGraph(node_graph.NodeGraph):
     @classmethod
     def load(cls, pk: int) -> Optional["WorkGraph"]:
         """
-        Load the process node with the given primary key.
+        Load WorkGraph from the process node with the given primary key.
 
         Args:
             pk (int): The primary key of the process node.
@@ -321,12 +321,11 @@ class WorkGraph(node_graph.NodeGraph):
 
         table = []
         self.update()
-        for node in self.tasks:
-            table.append([task.name, node.pk, node.state])
+        for task in self.tasks:
+            table.append([task.name, task.pk, task.state])
         print("-" * 80)
         print("WorkGraph: {}, PK: {}, State: {}".format(self.name, self.pk, self.state))
         print("-" * 80)
-        # show nodes
         print("Tasks:")
         print(tabulate(table, headers=["Name", "PK", "State"]))
         print("-" * 80)
@@ -354,8 +353,8 @@ class WorkGraph(node_graph.NodeGraph):
         """Reset the workgraph."""
 
         self.process = None
-        for node in self.tasks:
-            node.reset()
+        for task in self.tasks:
+            task.reset()
         self.sequence = []
         self.conditions = []
         self.context = {}
@@ -370,7 +369,7 @@ class WorkGraph(node_graph.NodeGraph):
             task.wait = [prefix + w for w in task.wait] if task.wait else []
             task.parent = self
             self.tasks.append(task)
-        # self.sequence.extend([prefix + node for node in wg.sequence])
+        # self.sequence.extend([prefix + task for task in wg.sequence])
         # self.conditions.extend(wg.conditions)
         self.context.update(wg.context)
         # links

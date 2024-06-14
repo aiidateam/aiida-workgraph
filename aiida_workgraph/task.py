@@ -49,16 +49,16 @@ class Task(GraphNode):
         )
 
     def to_dict(self) -> Dict[str, Any]:
-        ndata = super().to_dict()
-        ndata["to_context"] = [] if self.to_context is None else self.to_context
-        ndata["wait"] = [
+        tdata = super().to_dict()
+        tdata["to_context"] = [] if self.to_context is None else self.to_context
+        tdata["wait"] = [
             task if isinstance(task, str) else task.name for task in self.wait
         ]
-        ndata["process"] = self.process.uuid if self.process else None
-        ndata["metadata"]["pk"] = self.process.pk if self.process else None
-        ndata["metadata"]["is_aiida_component"] = self.is_aiida_component
+        tdata["process"] = self.process.uuid if self.process else None
+        tdata["metadata"]["pk"] = self.process.pk if self.process else None
+        tdata["metadata"]["is_aiida_component"] = self.is_aiida_component
 
-        return ndata
+        return tdata
 
     def set_from_protocol(self, *args: Any, **kwargs: Any) -> None:
         """Set the task inputs from protocol data."""

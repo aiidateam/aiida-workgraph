@@ -106,39 +106,39 @@ def get_node_outputs(pk: Optional[int]) -> Union[str, Dict[str, Union[List[int],
     return result
 
 
-def node_to_short_json(workgraph_pk: int, ndata: Dict[str, Any]) -> Dict[str, Any]:
+def node_to_short_json(workgraph_pk: int, tdata: Dict[str, Any]) -> Dict[str, Any]:
     """Export a node to a rete js node."""
     from aiida_workgraph.utils import get_executor, get_processes_latest
 
-    executor, _ = get_executor(ndata["executor"])
+    executor, _ = get_executor(tdata["executor"])
     is_function, source_code = is_function_and_get_source(executor)
     if is_function:
         executor = source_code
     else:
         executor = str(executor)
-    ndata_short = {
-        "node_type": ndata["metadata"]["node_type"],
+    tdata_short = {
+        "node_type": tdata["metadata"]["node_type"],
         "metadata": [
-            ["name", ndata["name"]],
-            ["node_type", ndata["metadata"]["node_type"]],
-            ["identifier", ndata["metadata"]["identifier"]],
+            ["name", tdata["name"]],
+            ["node_type", tdata["metadata"]["node_type"]],
+            ["identifier", tdata["metadata"]["identifier"]],
         ],
         "executor": executor,
     }
-    process_info = get_processes_latest(workgraph_pk).get(ndata["name"], {})
-    ndata_short["process"] = process_info
+    process_info = get_processes_latest(workgraph_pk).get(tdata["name"], {})
+    tdata_short["process"] = process_info
     if process_info is not None:
-        ndata_short["metadata"].append(["pk", process_info.get("pk")])
-        ndata_short["metadata"].append(["state", process_info.get("state")])
-        ndata_short["metadata"].append(["ctime", process_info.get("ctime")])
-        ndata_short["metadata"].append(["mtime", process_info.get("mtime")])
-        ndata_short["inputs"] = get_node_inputs(process_info.get("pk"))
-        ndata_short["outputs"] = get_node_outputs(process_info.get("pk"))
+        tdata_short["metadata"].append(["pk", process_info.get("pk")])
+        tdata_short["metadata"].append(["state", process_info.get("state")])
+        tdata_short["metadata"].append(["ctime", process_info.get("ctime")])
+        tdata_short["metadata"].append(["mtime", process_info.get("mtime")])
+        tdata_short["inputs"] = get_node_inputs(process_info.get("pk"))
+        tdata_short["outputs"] = get_node_outputs(process_info.get("pk"))
     else:
-        ndata_short["inputs"] = ""
-        ndata_short["outputs"] = ""
+        tdata_short["inputs"] = ""
+        tdata_short["outputs"] = ""
 
-    return ndata_short
+    return tdata_short
 
 
 def get_node_summary(node: Node) -> List[List[str]]:

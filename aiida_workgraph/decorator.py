@@ -292,8 +292,8 @@ def build_shell_task(
     from aiida_shell.parsers.shell import ShellParser
     from node_graph.socket import NodeSocket
 
-    ndata = {"executor": ShellJob, "task_type": "SHELLTASK"}
-    _, ndata = build_task_from_AiiDA(ndata)
+    tdata = {"executor": ShellJob, "task_type": "SHELLTASK"}
+    _, tdata = build_task_from_AiiDA(tdata)
     # create input sockets for the nodes, if it is linked other sockets
     links = {}
     inputs = []
@@ -306,32 +306,32 @@ def build_shell_task(
             # not it read input from link, so need to remove the key from the nodes
             nodes.pop(key)
     for input in inputs:
-        if input not in ndata["inputs"]:
-            ndata["inputs"].append(input)
-            ndata["kwargs"].append(input[1])
+        if input not in tdata["inputs"]:
+            tdata["inputs"].append(input)
+            tdata["kwargs"].append(input[1])
     # Extend the outputs
-    ndata["outputs"].extend([["General", "stdout"], ["General", "stderr"]])
+    tdata["outputs"].extend([["General", "stdout"], ["General", "stderr"]])
     outputs = [] if outputs is None else outputs
     parser_outputs = [] if parser_outputs is None else parser_outputs
     outputs = [["General", ShellParser.format_link_label(output)] for output in outputs]
     outputs.extend(parser_outputs)
     # add user defined outputs
     for output in outputs:
-        if output not in ndata["outputs"]:
-            ndata["outputs"].append(output)
+        if output not in tdata["outputs"]:
+            tdata["outputs"].append(output)
     #
-    ndata["identifier"] = "ShellTask"
-    ndata["inputs"].extend(
+    tdata["identifier"] = "ShellTask"
+    tdata["inputs"].extend(
         [
             ["General", "command"],
             ["General", "resolve_command"],
         ]
     )
-    ndata["kwargs"].extend(["command", "resolve_command"])
-    ndata["task_type"] = "SHELLTASK"
-    task = create_task(ndata)
+    tdata["kwargs"].extend(["command", "resolve_command"])
+    tdata["task_type"] = "SHELLTASK"
+    task = create_task(tdata)
     task.is_aiida_component = True
-    return task, ndata, links
+    return task, tdata, links
 
 
 def build_task_from_workgraph(wg: any) -> Task:
