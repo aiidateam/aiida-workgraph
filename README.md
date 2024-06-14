@@ -39,12 +39,13 @@ To install the latest version from source, first clone the repository and then i
 
 ```console
 git clone https://github.com/superstar54/aiida-workgraph
-cd aiida-workgraph
-pip install -e .
-```
-In order to use the widget, you also need to run:
-```console
+pip install -e aiida-workgraph
+# build widget
 cd aiida_workgraph/widget/
+npm install
+npm run build
+# build web frontend
+cd ../../aiida_workgraph/web/frontend/
 npm install
 npm run build
 ```
@@ -118,20 +119,12 @@ pip install -e .[tests, pre-commit]
 pre-commit install
 ```
 
+### Widget
+See the [README.md](https://github.com/superstar54/aiida-workgraph/blob/main/aiida_workgraph/widget/README.md)
+
 ### Web app
 See the [README.md](https://github.com/superstar54/aiida-workgraph/blob/main/aiida_workgraph/web/README.md)
 
-### Build and publish
-Build package:
-```console
-pip install build
-python -m build
-```
-Upload to PyPI:
-```console
-pip install twine
-twine upload dist/*
-```
 
 ## License
 [MIT](http://opensource.org/licenses/MIT)

@@ -3,8 +3,11 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "widget"
-version = "0.0.0"
+name = "node-graph-widget"
+version = "0.0.1"
+description = "Widget for node-graph"
+authors = [{name = "Xing Wang", email = "xingwang1991@gmail.com"}]
+readme = "README.md"
 dependencies = ["anywidget"]
 readme = "README.md"
 
