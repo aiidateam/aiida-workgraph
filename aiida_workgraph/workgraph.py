@@ -6,8 +6,8 @@ from aiida_workgraph.tasks import node_pool
 import time
 from aiida_workgraph.collection import WorkGraphNodeCollection
 from aiida_workgraph.utils.graph import (
-    node_deletion_hook,
-    node_creation_hook,
+    task_deletion_hook,
+    task_creation_hook,
     link_creation_hook,
     link_deletion_hook,
 )
@@ -50,11 +50,11 @@ class WorkGraph(node_graph.NodeGraph):
         self.execution_count = 0
         self.max_iteration = 1000000
         self.nodes = WorkGraphNodeCollection(self, pool=self.node_pool)
-        self.nodes.post_deletion_hooks = [node_deletion_hook]
-        self.nodes.post_creation_hooks = [node_creation_hook]
+        self.nodes.post_deletion_hooks = [task_deletion_hook]
+        self.nodes.post_creation_hooks = [task_creation_hook]
+        self.tasks = self.nodes
         self.links.post_creation_hooks = [link_creation_hook]
         self.links.post_deletion_hooks = [link_deletion_hook]
-        self.tasks = self.nodes
         self._widget = NodeGraphWidget(parent=self)
 
     def run(self, inputs: Optional[Dict[str, Any]] = None) -> Any:
@@ -71,9 +71,9 @@ class WorkGraph(node_graph.NodeGraph):
         # set node inputs
         if inputs is not None:
             for name, input in inputs.items():
-                if name not in self.nodes.keys():
+                if name not in self.tasks.keys():
                     raise KeyError(f"Node {name} not found in WorkGraph.")
-                self.nodes[name].set(input)
+                self.tasks[name].set(input)
         # One can not run again if the process is alreay created. otherwise, a new process node will
         # be created again.
         if self.process is not None:
@@ -111,9 +111,9 @@ class WorkGraph(node_graph.NodeGraph):
         # set node inputs
         if inputs is not None:
             for name, input in inputs.items():
-                if name not in self.nodes.keys():
+                if name not in self.tasks.keys():
                     raise KeyError(f"Node {name} not found in WorkGraph.")
-                self.nodes[name].set(input)
+                self.tasks[name].set(input)
 
         process_controller = get_manager().get_process_controller()
         # Create a new submission
@@ -233,17 +233,17 @@ class WorkGraph(node_graph.NodeGraph):
             if isinstance(node, aiida.orm.ProcessNode) and getattr(
                 node, "process_state", False
             ):
-                self.nodes[link.link_label].process = node
-                self.nodes[link.link_label].state = node.process_state.value.upper()
-                self.nodes[link.link_label].node = node
-                self.nodes[link.link_label].pk = node.pk
-                self.nodes[link.link_label].ctime = node.ctime
-                self.nodes[link.link_label].mtime = node.mtime
-                if self.nodes[link.link_label].state == "FINISHED":
+                self.tasks[link.link_label].process = node
+                self.tasks[link.link_label].state = node.process_state.value.upper()
+                self.tasks[link.link_label].node = node
+                self.tasks[link.link_label].pk = node.pk
+                self.tasks[link.link_label].ctime = node.ctime
+                self.tasks[link.link_label].mtime = node.mtime
+                if self.tasks[link.link_label].state == "FINISHED":
                     # update the output sockets
                     i = 0
-                    for socket in self.nodes[link.link_label].outputs:
-                        if self.nodes[link.link_label].node_type == "graph_builder":
+                    for socket in self.tasks[link.link_label].outputs:
+                        if self.tasks[link.link_label].node_type == "graph_builder":
                             if not getattr(node.outputs, "group_outputs", False):
                                 continue
                             socket.value = getattr(
@@ -257,25 +257,25 @@ class WorkGraph(node_graph.NodeGraph):
                     "group_outputs__"
                 ) or link.link_label.startswith("new_data__"):
                     label = link.link_label.split("__", 1)[1]
-                    if label in self.nodes.keys():
-                        self.nodes[label].state = "FINISHED"
-                        self.nodes[label].node = node
-                        self.nodes[label].pk = node.pk
+                    if label in self.tasks.keys():
+                        self.tasks[label].state = "FINISHED"
+                        self.tasks[label].node = node
+                        self.tasks[label].pk = node.pk
                 elif link.link_label == "execution_count":
                     self.execution_count = node.value
         # read results from the process outputs
-        for node in self.nodes:
-            if node.node_type.upper() == "DATA":
+        for task in self.tasks:
+            if task.node_type.upper() == "DATA":
                 if not getattr(self.process.outputs, "new_data", False):
                     continue
-                node.outputs[0].value = getattr(
-                    self.process.outputs.new_data, node.name, None
+                task.outputs[0].value = getattr(
+                    self.process.outputs.new_data, task.name, None
                 )
             # for normal nodes, we try to read the results from the extras of the task
             # this is disabled for now
             # if node.node_type.upper() == "NORMAL":
             #     results = self.process.base.extras.get(
-            #         f"nodes__results__{node.name}", {}
+            #         f"nodes__results__{task.name}", {}
             #     )
             #     for key, value in results.items():
             #         # if value is an AiiDA data node, we don't need to deserialize it
@@ -286,7 +286,7 @@ class WorkGraph(node_graph.NodeGraph):
             #         except Exception:
             #             pass
             #         node.outputs[key].value = value
-        self._widget.states = {node.name: node.state for node in self.nodes}
+        self._widget.states = {task.name: node.state for node in self.tasks}
 
     @property
     def pk(self) -> Optional[int]:
@@ -320,8 +320,8 @@ class WorkGraph(node_graph.NodeGraph):
 
         table = []
         self.update()
-        for node in self.nodes:
-            table.append([node.name, node.pk, node.state])
+        for node in self.tasks:
+            table.append([task.name, node.pk, node.state])
         print("-" * 80)
         print("WorkGraph: {}, PK: {}, State: {}".format(self.name, self.pk, self.state))
         print("-" * 80)
@@ -353,7 +353,7 @@ class WorkGraph(node_graph.NodeGraph):
         """Reset the workgraph."""
 
         self.process = None
-        for node in self.nodes:
+        for node in self.tasks:
             node.reset()
         self.sequence = []
         self.conditions = []
@@ -364,11 +364,11 @@ class WorkGraph(node_graph.NodeGraph):
         """Append a workgraph to the current workgraph.
         prefix is used to add a prefix to the task names.
         """
-        for node in wg.tasks:
-            node.name = prefix + node.name
+        for task in wg.tasks:
+            task.name = prefix + task.name
             task.wait = [prefix + w for w in task.wait] if task.wait else []
-            node.parent = self
-            self.nodes.append(node)
+            task.parent = self
+            self.tasks.append(task)
         # self.sequence.extend([prefix + node for node in wg.sequence])
         # self.conditions.extend(wg.conditions)
         self.context.update(wg.context)

@@ -52,7 +52,7 @@ class Task(GraphNode):
         ndata = super().to_dict()
         ndata["to_context"] = [] if self.to_context is None else self.to_context
         ndata["wait"] = [
-            node if isinstance(node, str) else node.name for node in self.wait
+            task if isinstance(task, str) else task.name for task in self.wait
         ]
         ndata["process"] = self.process.uuid if self.process else None
         ndata["metadata"]["pk"] = self.process.pk if self.process else None
@@ -61,7 +61,7 @@ class Task(GraphNode):
         return ndata
 
     def set_from_protocol(self, *args: Any, **kwargs: Any) -> None:
-        """For node support protocol, set the task from protocol data."""
+        """Set the task inputs from protocol data."""
         from aiida_workgraph.utils import get_executor, get_dict_from_builder
 
         executor = get_executor(self.get_executor())[0]
@@ -72,15 +72,15 @@ class Task(GraphNode):
     @classmethod
     def new(
         cls, identifier: Union[str, Callable], name: Optional[str] = None
-    ) -> "Node":
-        """Create a node from a identifier."""
+    ) -> "Task":
+        """Create a task from a identifier."""
         from aiida_workgraph.tasks import node_pool
 
         return super().new(identifier, name=name, node_pool=node_pool)
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any], node_pool: Optional[Any] = None) -> "Node":
-        """Create a node from a dictionary. This method initializes a Node instance with properties and settings
+    def from_dict(cls, data: Dict[str, Any], node_pool: Optional[Any] = None) -> "Task":
+        """Create a task from a dictionary. This method initializes a Node instance with properties and settings
         defined within the provided data dictionary. If node_pool is not specified, the default node_pool from
         aiida_workgraph.tasks is used.
 
@@ -93,12 +93,12 @@ class Task(GraphNode):
             Node: An instance of Node initialized with the provided data."""
         from aiida_workgraph.tasks import node_pool
 
-        node = super().from_dict(data, node_pool=node_pool)
-        node.to_context = data.get("to_context", [])
+        task = super().from_dict(data, node_pool=node_pool)
+        task.to_context = data.get("to_context", [])
         task.wait = data.get("wait", [])
-        node.process = data.get("process", None)
+        task.process = data.get("process", None)
 
-        return node
+        return task
 
     def reset(self) -> None:
         self.process = None
