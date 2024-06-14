@@ -1,5 +1,5 @@
 from typing import Optional, Any
-from aiida_workgraph.socket import NodeSocket
+from aiida_workgraph.socket import TaskSocket
 from node_graph.serializer import SerializeJson, SerializePickle
 from node_graph.sockets.builtin import (
     SocketInt,
@@ -11,7 +11,7 @@ from node_graph.sockets.builtin import (
 )
 
 
-class SocketGeneral(NodeSocket, SerializePickle):
+class SocketGeneral(TaskSocket, SerializePickle):
     """General socket."""
 
     identifier: str = "General"
@@ -29,7 +29,7 @@ class SocketGeneral(NodeSocket, SerializePickle):
         self.add_property("General", name, **kwargs)
 
 
-class SocketAiiDAFloat(NodeSocket, SerializeJson):
+class SocketAiiDAFloat(TaskSocket, SerializeJson):
     """AiiDAFloat socket."""
 
     identifier: str = "AiiDAFloat"
@@ -47,7 +47,7 @@ class SocketAiiDAFloat(NodeSocket, SerializeJson):
         self.add_property("AiiDAFloat", name, **kwargs)
 
 
-class SocketAiiDAInt(NodeSocket, SerializeJson):
+class SocketAiiDAInt(TaskSocket, SerializeJson):
     """AiiDAInt socket."""
 
     identifier: str = "AiiDAInt"
@@ -65,7 +65,7 @@ class SocketAiiDAInt(NodeSocket, SerializeJson):
         self.add_property("AiiDAInt", name, **kwargs)
 
 
-class SocketAiiDAString(NodeSocket, SerializeJson):
+class SocketAiiDAString(TaskSocket, SerializeJson):
     """AiiDAString socket."""
 
     identifier: str = "AiiDAString"
@@ -83,7 +83,7 @@ class SocketAiiDAString(NodeSocket, SerializeJson):
         self.add_property("AiiDAString", name, **kwargs)
 
 
-class SocketAiiDABool(NodeSocket, SerializeJson):
+class SocketAiiDABool(TaskSocket, SerializeJson):
     """AiiDABool socket."""
 
     identifier: str = "AiiDABool"
@@ -101,7 +101,7 @@ class SocketAiiDABool(NodeSocket, SerializeJson):
         self.add_property("AiiDABool", name, **kwargs)
 
 
-class SocketAiiDAIntVector(NodeSocket, SerializeJson):
+class SocketAiiDAIntVector(TaskSocket, SerializeJson):
     """Socket with a AiiDAIntVector property."""
 
     identifier: str = "AiiDAIntVector"
@@ -119,7 +119,7 @@ class SocketAiiDAIntVector(NodeSocket, SerializeJson):
         self.add_property("AiiDAIntVector", name, **kwargs)
 
 
-class SocketAiiDAFloatVector(NodeSocket, SerializeJson):
+class SocketAiiDAFloatVector(TaskSocket, SerializeJson):
     """Socket with a FloatVector property."""
 
     identifier: str = "FloatVector"

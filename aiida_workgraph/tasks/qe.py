@@ -1,8 +1,8 @@
 from typing import Dict
-from aiida_workgraph.node import Node
+from aiida_workgraph.task import Task
 
 
-class AiiDAKpoint(Node):
+class AiiDAKpoint(Task):
     identifier = "AiiDAKpoint"
     name = "AiiDAKpoint"
     node_type = "data"
@@ -24,7 +24,7 @@ class AiiDAKpoint(Node):
         }
 
 
-class AiiDAStructure(Node):
+class AiiDAStructure(Task):
     identifier = "AiiDAStructure"
     name = "AiiDAStructure"
     node_type = "data"
@@ -50,7 +50,7 @@ class AiiDAStructure(Node):
         }
 
 
-class AiiDAPWPseudo(Node):
+class AiiDAPWPseudo(Task):
     identifier = "AiiDAPWPseudo"
     name = "AiiDAPWPseudo"
     node_type = "Normal"

@@ -4,7 +4,7 @@ metadata:
   version: scinode@0.1.0
   platform: scinode
   worker_name: localhost
-nodes:
+tasks:
   - identifier: AiiDAFloat
     name: float1
     properties:

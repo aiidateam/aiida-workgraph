@@ -18,13 +18,13 @@ In WorkGraph, all input data are passed into the ``wg`` namespace. The ``wg`` na
 
 There are reasons why we don't serialize all data in the ``wg`` namespace:
 
-- **Flexibility for non-AiiDA components**: WorkGraph supports non-AiiDA components as nodes, meaning any Python function can be used as a node in the graph. These functions do not require AiiDA data as input, allowing for a variety of data types.
+- **Flexibility for non-AiiDA components**: WorkGraph supports non-AiiDA component as task, meaning any Python function can be used as a task in the graph. These functions do not require AiiDA data as input, allowing for a variety of data types.
 
 - **Respecting existing serialization methods**: For AiiDA components (e.g., ``CalcJob``, ``WorkChain``), some input ports may have explicitly defined serialization methods, which must be respected.
 
 However, ensuring that all data within the ``wg`` namespace are JSON-serializable is beneficial to guarantee that checkpoints can be saved and loaded correctly.
 
-PythonJob
+PythonTask
 ---------
 
-``PythonJob`` is a special case of ``CalcJob`` that runs a Python function on a remote computer. The input data for the function does not need to be of AiiDA data type, and users are not required to provide AiiDA data types as input. When WorkGraph launches the ``PythonJob``, it serializes all input data for the function. However, if users provide non-JSON-serializable data as input, the checkpoint will fail. Thus, it is necessary to serialize all input data of the function when initializing the WorkGraph process.
+``PythonTask`` is a special case of ``CalcJob`` that runs a Python function on a remote computer. The input data for the function does not need to be of AiiDA data type, and users are not required to provide AiiDA data types as input. When WorkGraph launches the ``PythonTask``, it serializes all input data for the function. However, if users provide non-JSON-serializable data as input, the checkpoint will fail. Thus, it is necessary to serialize all input data of the function when initializing the WorkGraph process.

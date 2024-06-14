@@ -3,45 +3,45 @@ from aiida import orm
 from aiida.common.extendeddicts import AttributeDict
 
 
-def prepare_for_workgraph_node(node: dict, kwargs: dict) -> tuple:
-    """Prepare the inputs for WorkGraph node"""
+def prepare_for_workgraph_task(task: dict, kwargs: dict) -> tuple:
+    """Prepare the inputs for WorkGraph task"""
     from aiida_workgraph.utils import merge_properties
 
-    print("node  type: workgraph.")
-    wgdata = node["executor"]["wgdata"]
-    wgdata["name"] = node["name"]
-    wgdata["metadata"]["group_outputs"] = node["metadata"]["group_outputs"]
+    print("Task type: workgraph.")
+    wgdata = task["executor"]["wgdata"]
+    wgdata["name"] = task["name"]
+    wgdata["metadata"]["group_outputs"] = task["metadata"]["group_outputs"]
     # update the workgraph data by kwargs
-    for node_name, data in kwargs.items():
+    for task_name, data in kwargs.items():
         # because kwargs is updated using update_nested_dict_with_special_keys
-        # which means the data is grouped by the node name
+        # which means the data is grouped by the task name
         for socket_name, value in data.items():
-            wgdata["nodes"][node_name]["properties"][socket_name]["value"] = value
+            wgdata["tasks"][task_name]["properties"][socket_name]["value"] = value
     # merge the properties
     merge_properties(wgdata)
-    metadata = {"call_link_label": node["name"]}
+    metadata = {"call_link_label": task["name"]}
     inputs = {"wg": wgdata, "metadata": metadata}
     return inputs, wgdata
 
 
-def prepare_for_pythonjob(node: dict, kwargs: dict, var_kwargs: dict) -> dict:
-    """Prepare the inputs for PythonJob"""
+def prepare_for_python_task(task: dict, kwargs: dict, var_kwargs: dict) -> dict:
+    """Prepare the inputs for PythonTask"""
     from aiida_workgraph.utils import get_or_create_code
     import os
 
-    print("node  type: Python.")
-    # get the names kwargs for the PythonJob, which are the inputs before _wait
+    print("Task  type: Python.")
+    # get the names kwargs for the PythonTask, which are the inputs before _wait
     function_kwargs = {}
-    for input in node["inputs"]:
+    for input in task["inputs"]:
         if input["name"] == "_wait":
             break
         function_kwargs[input["name"]] = kwargs.pop(input["name"], None)
     # if the var_kwargs is not None, we need to pop the var_kwargs from the kwargs
     # then update the function_kwargs if var_kwargs is not None
-    if node["metadata"]["var_kwargs"] is not None:
-        function_kwargs.pop(node["metadata"]["var_kwargs"], None)
+    if task["metadata"]["var_kwargs"] is not None:
+        function_kwargs.pop(task["metadata"]["var_kwargs"], None)
         if var_kwargs:
-            # var_kwargs can be AttributeDict if it get data from the previous node output
+            # var_kwargs can be AttributeDict if it get data from the previous task output
             if isinstance(var_kwargs, (dict, AttributeDict)):
                 function_kwargs.update(var_kwargs)
             # otherwise, it should be a Data node
@@ -80,16 +80,16 @@ def prepare_for_pythonjob(node: dict, kwargs: dict, var_kwargs: dict) -> dict:
             prepend_text=prepend_text if prepend_text else None,
         )
     metadata = kwargs.pop("metadata", {})
-    metadata.update({"call_link_label": node["name"]})
+    metadata.update({"call_link_label": task["name"]})
     # get the source code of the function
-    function_name = node["executor"]["function_name"]
+    function_name = task["executor"]["function_name"]
     function_source_code = (
-        node["executor"]["import_statements"]
+        task["executor"]["import_statements"]
         + "\n"
-        + node["executor"]["function_source_code"]
+        + task["executor"]["function_source_code"]
     )
     # outputs
-    output_name_list = [output["name"] for output in node["outputs"]]
+    output_name_list = [output["name"] for output in task["outputs"]]
     # serialize the kwargs into AiiDA Data
     function_kwargs = serialize_to_aiida_nodes(function_kwargs)
     # transfer the args to kwargs
@@ -106,13 +106,13 @@ def prepare_for_pythonjob(node: dict, kwargs: dict, var_kwargs: dict) -> dict:
     return inputs
 
 
-def prepare_for_shelljob(node: dict, kwargs: dict) -> dict:
-    """Prepare the inputs for ShellJob"""
+def prepare_for_shell_task(task: dict, kwargs: dict) -> dict:
+    """Prepare the inputs for ShellTask"""
     from aiida_shell.launch import prepare_code, convert_nodes_single_file_data
     from aiida.common import lang
     from aiida.orm import AbstractCode
 
-    print("node  type: ShellJob.")
+    print("Task  type: ShellTask.")
     command = kwargs.pop("command", None)
     resolve_command = kwargs.pop("resolve_command", False)
     metadata = kwargs.pop("metadata", {})
@@ -123,13 +123,13 @@ def prepare_for_shelljob(node: dict, kwargs: dict) -> dict:
     else:
         lang.type_check(command, AbstractCode)
         code = command
-    # update the nodes with links
+    # update the tasks with links
     nodes = convert_nodes_single_file_data(kwargs.pop("nodes", {}))
     # find all keys in kwargs start with "nodes."
     for key in list(kwargs.keys()):
         if key.startswith("nodes."):
             nodes[key[6:]] = kwargs.pop(key)
-    metadata.update({"call_link_label": node["name"]})
+    metadata.update({"call_link_label": task["name"]})
     inputs = {
         "code": code,
         "nodes": nodes,

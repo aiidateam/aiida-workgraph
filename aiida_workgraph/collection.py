@@ -7,47 +7,45 @@ from node_graph.collection import (
 from typing import Any, Callable, Optional, Union
 
 
-class WorkGraphNodeCollection(NodeCollection):
+class TaskCollection(NodeCollection):
     def new(
         self,
         identifier: Union[Callable, str],
         name: Optional[str] = None,
         uuid: Optional[str] = None,
-        on_remote: Optional[bool] = False,
+        run_remotely: Optional[bool] = False,
         **kwargs: Any
     ) -> Any:
         from aiida_workgraph.decorator import (
-            build_node_from_callable,
-            build_PythonJob_node,
-            build_ShellJob_node,
+            build_task_from_callable,
+            build_python_task,
+            build_shell_task,
         )
 
-        # build the node on the fly if the identifier is a callable
+        # build the task on the fly if the identifier is a callable
         if callable(identifier):
-            identifier = build_node_from_callable(identifier)
-            if kwargs.pop("run_remotely", False):
+            identifier = build_task_from_callable(identifier)
+            if run_remotely:
                 if identifier.node.node_type.upper() == "GRAPH_BUILDER":
                     raise ValueError(
-                        "GraphBuilder nodes cannot be run remotely. Please set run_remotely=False."
+                        "GraphBuilder task cannot be run remotely. Please set run_remotely=False."
                     )
-                # this is a PythonJob
-                identifier, _ = build_PythonJob_node(identifier)
+                # this is a PythonTask
+                identifier, _ = build_python_task(identifier)
             return super().new(identifier, name, uuid, **kwargs)
-        if isinstance(identifier, str) and identifier.upper() == "PYTHONJOB":
-            # copy the inputs and outputs from the function node to the PythonJob node
-            identifier, _ = build_PythonJob_node(kwargs.pop("function"))
+        if isinstance(identifier, str) and identifier.upper() == "PythonTask":
+            identifier, _ = build_python_task(kwargs.pop("function"))
             return super().new(identifier, name, uuid, **kwargs)
-        if isinstance(identifier, str) and identifier.upper() == "SHELLJOB":
-            # copy the inputs and outputs from the function node to the SHELLJob node
-            identifier, _, links = build_ShellJob_node(
+        if isinstance(identifier, str) and identifier.upper() == "SHELLTASK":
+            identifier, _, links = build_shell_task(
                 nodes=kwargs.get("nodes", {}),
                 outputs=kwargs.get("outputs", None),
                 parser_outputs=kwargs.pop("parser_outputs", None),
             )
-            node = super().new(identifier, name, uuid, **kwargs)
-            # make links between the nodes
-            node.set(links)
-            return node
+            task = super().new(identifier, name, uuid, **kwargs)
+            # make links between the tasks
+            task.set(links)
+            return task
         return super().new(identifier, name, uuid, **kwargs)
 
 

@@ -10,4 +10,4 @@ def test_submit(wg_calcjob: WorkGraph) -> None:
     wg = wg_calcjob
     wg.name = "test_submit_calcjob"
     wg.submit(wait=True)
-    assert wg.nodes["add2"].outputs["sum"].value == 9
+    assert wg.tasks["add2"].outputs["sum"].value == 9

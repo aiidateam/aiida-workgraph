@@ -1,8 +1,8 @@
 from typing import Dict
-from aiida_workgraph.node import Node
+from aiida_workgraph.task import Task
 
 
-class AiiDAGather(Node):
+class AiiDAGather(Task):
     """AiiDAGather"""
 
     identifier = "AiiDAGather"
@@ -25,7 +25,7 @@ class AiiDAGather(Node):
         }
 
 
-class AiiDAToCtx(Node):
+class AiiDAToCtx(Task):
     """AiiDAToCtx"""
 
     identifier = "ToCtx"
@@ -48,7 +48,7 @@ class AiiDAToCtx(Node):
         }
 
 
-class AiiDAFromCtx(Node):
+class AiiDAFromCtx(Task):
     """AiiDAFromCtx"""
 
     identifier = "FromCtx"

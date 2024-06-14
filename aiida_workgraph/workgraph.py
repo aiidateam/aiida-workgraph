@@ -2,12 +2,12 @@ import aiida.orm
 import node_graph
 import aiida
 from aiida.manage import get_manager
-from aiida_workgraph.nodes import node_pool
+from aiida_workgraph.tasks import task_pool
 import time
-from aiida_workgraph.collection import WorkGraphNodeCollection
+from aiida_workgraph.collection import TaskCollection
 from aiida_workgraph.utils.graph import (
-    node_deletion_hook,
-    node_creation_hook,
+    task_deletion_hook,
+    task_creation_hook,
     link_creation_hook,
     link_deletion_hook,
 )
@@ -16,7 +16,7 @@ from typing import Any, Dict, List, Optional
 
 
 class WorkGraph(node_graph.NodeGraph):
-    """Build a node-based workflow AiiDA's workgraph.
+    """Build flexible workflows with AiiDA.
 
     The class extends from NodeGraph and provides methods to run,
     submit tasks, wait for tasks to finish, and update the process status.
@@ -29,7 +29,7 @@ class WorkGraph(node_graph.NodeGraph):
         pk (int): The primary key of the process node.
     """
 
-    node_pool = node_pool
+    node_pool = task_pool
 
     def __init__(self, name: str = "WorkGraph", **kwargs) -> None:
         """
@@ -49,30 +49,35 @@ class WorkGraph(node_graph.NodeGraph):
         self.max_number_jobs = 1000000
         self.execution_count = 0
         self.max_iteration = 1000000
-        self.nodes = WorkGraphNodeCollection(self, pool=self.node_pool)
-        self.nodes.post_deletion_hooks = [node_deletion_hook]
-        self.nodes.post_creation_hooks = [node_creation_hook]
+        self.nodes = TaskCollection(self, pool=self.node_pool)
+        self.nodes.post_deletion_hooks = [task_deletion_hook]
+        self.nodes.post_creation_hooks = [task_creation_hook]
         self.links.post_creation_hooks = [link_creation_hook]
         self.links.post_deletion_hooks = [link_deletion_hook]
         self._widget = NodeGraphWidget(parent=self)
 
+    @property
+    def tasks(self) -> TaskCollection:
+        """Add alias to `nodes` for WorkGraph"""
+        return self.nodes
+
     def run(self, inputs: Optional[Dict[str, Any]] = None) -> Any:
         """
         Run the AiiDA workgraph process and update the process status. The method uses AiiDA's engine to run
-        the process and then calls the update method to update the state of the process.
+        the process, when the process is finished, update the status of the tasks
         """
         from aiida_workgraph.engine.workgraph import WorkGraphEngine
         from aiida_workgraph.utils import (
             merge_properties,
-            serialize_pythonjob_properties,
+            serialize_pythontask_properties,
         )
 
-        # set node inputs
+        # set task inputs
         if inputs is not None:
             for name, input in inputs.items():
-                if name not in self.nodes.keys():
-                    raise KeyError(f"Node {name} not found in WorkGraph.")
-                self.nodes[name].set(input)
+                if name not in self.tasks.keys():
+                    raise KeyError(f"Task {name} not found in WorkGraph.")
+                self.tasks[name].set(input)
         # One can not run again if the process is alreay created. otherwise, a new process node will
         # be created again.
         if self.process is not None:
@@ -80,7 +85,7 @@ class WorkGraph(node_graph.NodeGraph):
             return
         wgdata = self.to_dict()
         merge_properties(wgdata)
-        serialize_pythonjob_properties(wgdata)
+        serialize_pythontask_properties(wgdata)
         inputs = {"wg": wgdata}
         # init a process
         runner = get_manager().get_runner()
@@ -104,15 +109,15 @@ class WorkGraph(node_graph.NodeGraph):
         Args:
             wait (bool): Wait for the process to finish.
             timeout (int): The maximum time in seconds to wait for the process to finish. Defaults to 60.
-            restart (bool): Restart the process, and reset the modified nodes, then only re-run the modified nodes.
+            restart (bool): Restart the process, and reset the modified tasks, then only re-run the modified tasks.
             new (bool): Submit a new process.
         """
-        # set node inputs
+        # set task inputs
         if inputs is not None:
             for name, input in inputs.items():
-                if name not in self.nodes.keys():
-                    raise KeyError(f"Node {name} not found in WorkGraph.")
-                self.nodes[name].set(input)
+                if name not in self.tasks.keys():
+                    raise KeyError(f"Task {name} not found in WorkGraph.")
+                self.tasks[name].set(input)
 
         process_controller = get_manager().get_process_controller()
         # Create a new submission
@@ -120,7 +125,7 @@ class WorkGraph(node_graph.NodeGraph):
             self.reset()
         # Create a restart submission
         # save the current process node as restart_process
-        # so that the WorkGraphSaver can compare the difference, and reset the modified nodes
+        # so that the WorkGraphSaver can compare the difference, and reset the modified tasks
         if restart:
             self.restart_process = self.process
             self.process = None
@@ -143,12 +148,12 @@ class WorkGraph(node_graph.NodeGraph):
         from aiida_workgraph.engine.workgraph import WorkGraphEngine
         from aiida_workgraph.utils import (
             merge_properties,
-            serialize_pythonjob_properties,
+            serialize_pythontask_properties,
         )
 
         wgdata = self.to_dict()
         merge_properties(wgdata)
-        serialize_pythonjob_properties(wgdata)
+        serialize_pythontask_properties(wgdata)
         metadata = metadata or {}
         inputs = {"wg": wgdata, "metadata": metadata}
         if self.process is None:
@@ -157,13 +162,13 @@ class WorkGraph(node_graph.NodeGraph):
             process_inited.runner.persister.save_checkpoint(process_inited)
             self.process = process_inited.node
             self.process_inited = process_inited
-            print(f"WorkGraph node created, PK: {self.process.pk}")
+            print(f"WorkGraph process created, PK: {self.process.pk}")
         self.save_to_base(wgdata)
         self.update()
 
     def save_to_base(self, wgdata: Dict[str, Any]) -> None:
         """Save new wgdata to base.extras.
-        It will first check the difference, and reset nodes if needed.
+        It will first check the difference, and reset tasks if needed.
         """
         from aiida_workgraph.utils.analysis import WorkGraphSaver
 
@@ -188,6 +193,7 @@ class WorkGraph(node_graph.NodeGraph):
                 "max_number_jobs": self.max_number_jobs,
             }
         )
+        wgdata["tasks"] = wgdata.pop("nodes")
 
         return wgdata
 
@@ -217,7 +223,7 @@ class WorkGraph(node_graph.NodeGraph):
     def update(self) -> None:
         """
         Update the current state and primary key of the process node as well as the state, node and primary key
-        of the nodes that are outgoing from the process node. This includes updating the state of process nodes
+        of the tasks that are outgoing from the process node. This includes updating the state of process nodes
         linked to the current process, and data nodes linked to the current process.
         """
         # from aiida_workgraph.utils import get_executor
@@ -228,21 +234,21 @@ class WorkGraph(node_graph.NodeGraph):
             node = link.node
             # the link is added in order
             # so the restarted node will be the last one
-            # thus the node is correct
+            # thus the task is correct
             if isinstance(node, aiida.orm.ProcessNode) and getattr(
                 node, "process_state", False
             ):
-                self.nodes[link.link_label].process = node
-                self.nodes[link.link_label].state = node.process_state.value.upper()
-                self.nodes[link.link_label].node = node
-                self.nodes[link.link_label].pk = node.pk
-                self.nodes[link.link_label].ctime = node.ctime
-                self.nodes[link.link_label].mtime = node.mtime
-                if self.nodes[link.link_label].state == "FINISHED":
+                self.tasks[link.link_label].process = node
+                self.tasks[link.link_label].state = node.process_state.value.upper()
+                self.tasks[link.link_label].node = node
+                self.tasks[link.link_label].pk = node.pk
+                self.tasks[link.link_label].ctime = node.ctime
+                self.tasks[link.link_label].mtime = node.mtime
+                if self.tasks[link.link_label].state == "FINISHED":
                     # update the output sockets
                     i = 0
-                    for socket in self.nodes[link.link_label].outputs:
-                        if self.nodes[link.link_label].node_type == "graph_builder":
+                    for socket in self.tasks[link.link_label].outputs:
+                        if self.tasks[link.link_label].node_type == "graph_builder":
                             if not getattr(node.outputs, "group_outputs", False):
                                 continue
                             socket.value = getattr(
@@ -256,25 +262,25 @@ class WorkGraph(node_graph.NodeGraph):
                     "group_outputs__"
                 ) or link.link_label.startswith("new_data__"):
                     label = link.link_label.split("__", 1)[1]
-                    if label in self.nodes.keys():
-                        self.nodes[label].state = "FINISHED"
-                        self.nodes[label].node = node
-                        self.nodes[label].pk = node.pk
+                    if label in self.tasks.keys():
+                        self.tasks[label].state = "FINISHED"
+                        self.tasks[label].node = node
+                        self.tasks[label].pk = node.pk
                 elif link.link_label == "execution_count":
                     self.execution_count = node.value
         # read results from the process outputs
-        for node in self.nodes:
-            if node.node_type.upper() == "DATA":
+        for task in self.tasks:
+            if task.node_type.upper() == "DATA":
                 if not getattr(self.process.outputs, "new_data", False):
                     continue
-                node.outputs[0].value = getattr(
-                    self.process.outputs.new_data, node.name, None
+                task.outputs[0].value = getattr(
+                    self.process.outputs.new_data, task.name, None
                 )
-            # for normal nodes, we try to read the results from the extras of the node
+            # for normal tasks, we try to read the results from the extras of the task
             # this is disabled for now
-            # if node.node_type.upper() == "NORMAL":
+            # if task.node_type.upper() == "NORMAL":
             #     results = self.process.base.extras.get(
-            #         f"nodes__results__{node.name}", {}
+            #         f"nodes__results__{task.name}", {}
             #     )
             #     for key, value in results.items():
             #         # if value is an AiiDA data node, we don't need to deserialize it
@@ -285,16 +291,41 @@ class WorkGraph(node_graph.NodeGraph):
             #         except Exception:
             #             pass
             #         node.outputs[key].value = value
-        self._widget.states = {node.name: node.state for node in self.nodes}
+        self._widget.states = {task.name: node.state for node in self.tasks}
 
     @property
     def pk(self) -> Optional[int]:
         return self.process.pk if self.process else None
 
     @classmethod
+    def from_dict(cls, wgdata: Dict[str, Any]) -> "WorkGraph":
+        if "tasks" in wgdata:
+            wgdata["nodes"] = wgdata.pop("tasks")
+        return super().from_dict(wgdata)
+
+    @classmethod
+    def from_yaml(cls, filename: str = None, string: str = None) -> "WorkGraph":
+        """Build WrokGraph from yaml file."""
+        import yaml
+        from node_graph.utils import yaml_to_dict
+
+        # load data
+        if filename:
+            with open(filename, "r") as f:
+                wgdata = yaml.safe_load(f)
+        elif string:
+            wgdata = yaml.safe_load(string)
+        else:
+            raise Exception("Please specific a filename or yaml string.")
+        wgdata["nodes"] = wgdata.pop("tasks")
+        wgdata = yaml_to_dict(wgdata)
+        nt = cls.from_dict(wgdata)
+        return nt
+
+    @classmethod
     def load(cls, pk: int) -> Optional["WorkGraph"]:
         """
-        Load the process node with the given primary key.
+        Load WorkGraph from the process node with the given primary key.
 
         Args:
             pk (int): The primary key of the process node.
@@ -319,13 +350,12 @@ class WorkGraph(node_graph.NodeGraph):
 
         table = []
         self.update()
-        for node in self.nodes:
-            table.append([node.name, node.pk, node.state])
+        for task in self.tasks:
+            table.append([task.name, task.pk, task.state])
         print("-" * 80)
         print("WorkGraph: {}, PK: {}, State: {}".format(self.name, self.pk, self.state))
         print("-" * 80)
-        # show nodes
-        print("Nodes:")
+        print("Tasks:")
         print(tabulate(table, headers=["Name", "PK", "State"]))
         print("-" * 80)
 
@@ -338,22 +368,22 @@ class WorkGraph(node_graph.NodeGraph):
 
         os.system("verdi process pause {}".format(self.process.pk))
 
-    def pause_nodes(self, nodes: List[str]) -> None:
+    def pause_tasks(self, tasks: List[str]) -> None:
         """
-        Pause the given nodes
+        Pause the given tasks
         """
 
-    def play_nodes(self, nodes: List[str]) -> None:
+    def play_tasks(self, tasks: List[str]) -> None:
         """
-        Play the given nodes
+        Play the given tasks
         """
 
     def reset(self) -> None:
         """Reset the workgraph."""
 
         self.process = None
-        for node in self.nodes:
-            node.reset()
+        for task in self.tasks:
+            task.reset()
         self.sequence = []
         self.conditions = []
         self.context = {}
@@ -361,14 +391,14 @@ class WorkGraph(node_graph.NodeGraph):
 
     def extend(self, wg: "WorkGraph", prefix: str = "") -> None:
         """Append a workgraph to the current workgraph.
-        prefix is used to add a prefix to the node names.
+        prefix is used to add a prefix to the task names.
         """
-        for node in wg.nodes:
-            node.name = prefix + node.name
-            node.wait = [prefix + w for w in node.wait] if node.wait else []
-            node.parent = self
-            self.nodes.append(node)
-        # self.sequence.extend([prefix + node for node in wg.sequence])
+        for task in wg.tasks:
+            task.name = prefix + task.name
+            task.wait = [prefix + w for w in task.wait] if task.wait else []
+            task.parent = self
+            self.tasks.append(task)
+        # self.sequence.extend([prefix + task for task in wg.sequence])
         # self.conditions.extend(wg.conditions)
         self.context.update(wg.context)
         # links

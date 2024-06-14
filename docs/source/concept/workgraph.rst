@@ -6,7 +6,7 @@
 ===========================================
 WorkGraph
 ===========================================
-The :class:`~aiida_workgraph.workgraph.WorkGraph` object is a collection of nodes and links.
+The :class:`~aiida_workgraph.workgraph.WorkGraph` object is a collection of tasks and links.
 
 Create and launch workgraph
 ============================
@@ -14,24 +14,24 @@ Create and launch workgraph
 
 .. code-block:: python
 
-    from aiida_workgraph import WorkGraph, node
+    from aiida_workgraph import WorkGraph, task
     wg = WorkGraph(name="my_first_workgraph")
 
 
-Create and use `node`.
+Create and use `task`.
 
 .. code:: python
 
-    # define add calcfunction node
-    @node.calcfunction()
+    # define add calcfunction task
+    @task.calcfunction()
     def add(x, y):
        return x + y
 
-    add1 = wg.nodes.new(add, name="add1")
-    add2 = wg.nodes.new(add, name="add2")
+    add1 = wg.tasks.new(add, name="add1")
+    add2 = wg.tasks.new(add, name="add2")
 
 
-- Add link between nodes:
+- Add link between tasks:
 
 .. code-block:: python
 
@@ -56,10 +56,10 @@ WorkGraph save its data as a extra attribute into its process, so that one can r
 
 Execute order
 ===============
-The nodes will be executed when:
+The tasks will be executed when:
 
-- No input node
-- All input nodes finish.
+- No input task
+- All input tasks finish.
 
 
 

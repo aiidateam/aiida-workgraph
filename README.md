@@ -4,10 +4,8 @@
 [![codecov](https://codecov.io/gh/superstar54/aiida-workgraph/branch/main/graph/badge.svg)](https://codecov.io/gh/superstar54/aiida-workgraph)
 [![Docs status](https://readthedocs.org/projects/aiida-workgraph/badge)](http://aiida-workgraph.readthedocs.io/)
 
-Design flexible node-based workflows using AiiDA.
+Efficiently design and manage flexible workflows with AiiDA, featuring an interactive GUI, checkpoints, provenance tracking, and remote execution capabilities.
 
-
-In AiiDA, there are two workflow components: `workfunction` and `WorkChain`. Workfunction is easy to implement but it does not support automatic checkpointing, which is important for long-running calculations. Workchain supports automatic checkpointing but it is difficult to implement and also not as flexible as the `workfunction`. AiiDA-WorkGraph provides the third component: `WorkGraph`. It is easy to implement and supports automatic checkpointing. It is also flexible and can be used to design complex workflows.
 
 
 Here is a detailed comparison between the ``WorkGraph`` with two AiiDA built-in workflow components.
@@ -74,11 +72,11 @@ def add(x, y):
 def multiply(x, y):
     return x*y
 
-# Create a workgraph to link the nodes.
+# Create a workgraph to link the tasks.
 wg = WorkGraph("test_add_multiply")
-wg.nodes.new(add, name="add1")
-wg.nodes.new(multiply, name="multiply1")
-wg.links.new(wg.nodes["add1"].outputs["result"], wg.nodes["multiply1"].inputs["x"])
+wg.tasks.new(add, name="add1")
+wg.tasks.new(multiply, name="multiply1")
+wg.links.new(wg.tasks["add1"].outputs["result"], wg.tasks["multiply1"].inputs["x"])
 
 ```
 
@@ -90,7 +88,7 @@ from aiida import load_profile
 load_profile()
 
 wg.submit(inputs = {"add1": {"x": 2, "y": 3}, "multiply1": {"y": 4}}, wait=True)
-print("Result of multiply1 is", wg.nodes["multiply1"].outputs[0].value)
+print("Result of multiply1 is", wg.tasks["multiply1"].outputs[0].value)
 ```
 
 Start the web app, open a terminal and run:
