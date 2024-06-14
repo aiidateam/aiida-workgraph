@@ -64,7 +64,7 @@ class WorkGraph(node_graph.NodeGraph):
     def run(self, inputs: Optional[Dict[str, Any]] = None) -> Any:
         """
         Run the AiiDA workgraph process and update the process status. The method uses AiiDA's engine to run
-        the process and then calls the update method to update the state of the process.
+        the process, when the process is finished, update the status of the tasks
         """
         from aiida_workgraph.engine.workgraph import WorkGraphEngine
         from aiida_workgraph.utils import (
@@ -299,8 +299,28 @@ class WorkGraph(node_graph.NodeGraph):
 
     @classmethod
     def from_dict(cls, wgdata: Dict[str, Any]) -> "WorkGraph":
+        if "tasks" in wgdata:
+            wgdata["nodes"] = wgdata.pop("tasks")
+        return super().from_dict(wgdata)
+
+    @classmethod
+    def from_yaml(cls, filename: str = None, string: str = None) -> "WorkGraph":
+        """Build WrokGraph from yaml file."""
+        import yaml
+        from node_graph.utils import yaml_to_dict
+
+        # load data
+        if filename:
+            with open(filename, "r") as f:
+                wgdata = yaml.safe_load(f)
+        elif string:
+            wgdata = yaml.safe_load(string)
+        else:
+            raise Exception("Please specific a filename or yaml string.")
         wgdata["nodes"] = wgdata.pop("tasks")
-        super().from_dict(wgdata)
+        wgdata = yaml_to_dict(wgdata)
+        nt = cls.from_dict(wgdata)
+        return nt
 
     @classmethod
     def load(cls, pk: int) -> Optional["WorkGraph"]:
