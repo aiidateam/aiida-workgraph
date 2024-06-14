@@ -423,7 +423,7 @@ class WorkGraphEngine(Process, metaclass=Protect):
 
     def setup_ctx_workgraph(self, wgdata: t.Dict[str, t.Any]) -> None:
         """setup the workgraph in the context."""
-        self.ctx.tasks = wgdata["nodes"]
+        self.ctx.tasks = wgdata["tasks"]
         self.ctx.links = wgdata["links"]
         self.ctx.connectivity = wgdata["connectivity"]
         self.ctx.ctrl_links = wgdata["ctrl_links"]
@@ -439,7 +439,7 @@ class WorkGraphEngine(Process, metaclass=Protect):
     def update_workgraph_from_base(self) -> None:
         """Update the ctx from base.extras."""
         wgdata = self.read_wgdata_from_base()
-        for name, task in wgdata["nodes"].items():
+        for name, task in wgdata["tasks"].items():
             task["state"] = self.ctx.tasks[name]["state"]
             task["results"] = self.ctx.tasks[name].get("results")
             task["process"] = self.ctx.tasks[name].get("process")

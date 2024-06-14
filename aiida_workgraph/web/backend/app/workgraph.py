@@ -45,7 +45,7 @@ async def read_workgraph_node(id: int, node_name: str):
             return
 
         wgdata = deserialize_unsafe(wgdata)
-        content = node_to_short_json(id, wgdata["nodes"][node_name])
+        content = node_to_short_json(id, wgdata["tasks"][node_name])
         return content
     except KeyError:
         raise HTTPException(

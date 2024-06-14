@@ -102,7 +102,7 @@ def update_nested_dict_with_special_keys(d: Dict[str, Any]) -> Dict[str, Any]:
     return d
 
 
-def merge_properties(ntdata: Dict[str, Any]) -> None:
+def merge_properties(wgdata: Dict[str, Any]) -> None:
     """Merge sub properties to the root properties.
     {
         "base.pw.parameters": 2,
@@ -113,12 +113,12 @@ def merge_properties(ntdata: Dict[str, Any]) -> None:
                     "code": 1}}
     So that no "." in the key name.
     """
-    for name, node in ntdata["nodes"].items():
-        for key, prop in node["properties"].items():
+    for name, task in wgdata["tasks"].items():
+        for key, prop in task["properties"].items():
             if "." in key and prop["value"] not in [None, {}]:
                 root, key = key.split(".", 1)
                 update_nested_dict(
-                    node["properties"][root]["value"], key, prop["value"]
+                    task["properties"][root]["value"], key, prop["value"]
                 )
                 prop["value"] = None
 
@@ -134,28 +134,28 @@ def generate_node_graph(pk: int) -> Any:
     return graph.graphviz
 
 
-def build_task_link(ntdata: Dict[str, Any]) -> None:
-    """Create links for nodes.
-    Create the links for node inputs using:
+def build_task_link(wgdata: Dict[str, Any]) -> None:
+    """Create links for tasks.
+    Create the links for task inputs using:
     1) workgraph links
     2) if it is a graph builder graph, expose the group inputs and outputs
     sockets.
     """
-    # reset node input links
-    for name, node in ntdata["nodes"].items():
-        for input in node["inputs"]:
+    # reset task input links
+    for name, task in wgdata["tasks"].items():
+        for input in task["inputs"]:
             input["links"] = []
-        for output in node["outputs"]:
+        for output in task["outputs"]:
             output["links"] = []
-    for link in ntdata["links"]:
+    for link in wgdata["links"]:
         to_socket = [
             socket
-            for socket in ntdata["nodes"][link["to_node"]]["inputs"]
+            for socket in wgdata["tasks"][link["to_node"]]["inputs"]
             if socket["name"] == link["to_socket"]
         ][0]
         from_socket = [
             socket
-            for socket in ntdata["nodes"][link["from_node"]]["outputs"]
+            for socket in wgdata["tasks"][link["from_node"]]["outputs"]
             if socket["name"] == link["from_socket"]
         ][0]
         to_socket["links"].append(link)
@@ -271,17 +271,17 @@ def serialize_pythontask_properties(wgdata):
     """Serialize the PythonTask properties."""
     from aiida_workgraph.orm.serializer import general_serializer
 
-    for _, node in wgdata["nodes"].items():
-        if not node["metadata"]["node_type"].upper() == "PYTHONTASK":
+    for _, task in wgdata["tasks"].items():
+        if not task["metadata"]["node_type"].upper() == "PYTHONTASK":
             continue
         # get the names kwargs for the PythonTask, which are the inputs before _wait
         input_kwargs = []
-        for input in node["inputs"]:
+        for input in task["inputs"]:
             if input["name"] == "_wait":
                 break
             input_kwargs.append(input["name"])
         for name in input_kwargs:
-            prop = node["properties"][name]
+            prop = task["properties"][name]
             # if value is not None, not {}
             if not (
                 prop["value"] is None

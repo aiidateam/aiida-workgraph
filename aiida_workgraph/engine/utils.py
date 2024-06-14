@@ -16,7 +16,7 @@ def prepare_for_workgraph_task(task: dict, kwargs: dict) -> tuple:
         # because kwargs is updated using update_nested_dict_with_special_keys
         # which means the data is grouped by the task name
         for socket_name, value in data.items():
-            wgdata["nodes"][task_name]["properties"][socket_name]["value"] = value
+            wgdata["tasks"][task_name]["properties"][socket_name]["value"] = value
     # merge the properties
     merge_properties(wgdata)
     metadata = {"call_link_label": task["name"]}

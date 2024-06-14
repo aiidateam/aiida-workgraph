@@ -49,14 +49,17 @@ class WorkGraph(node_graph.NodeGraph):
         self.max_number_jobs = 1000000
         self.execution_count = 0
         self.max_iteration = 1000000
-        self.tasks = TaskCollection(self, pool=self.node_pool)
-        self.tasks.post_deletion_hooks = [task_deletion_hook]
-        self.tasks.post_creation_hooks = [task_creation_hook]
-        # add alias `nodes` for node_graph
-        self.nodes = self.tasks
+        self.nodes = TaskCollection(self, pool=self.node_pool)
+        self.nodes.post_deletion_hooks = [task_deletion_hook]
+        self.nodes.post_creation_hooks = [task_creation_hook]
         self.links.post_creation_hooks = [link_creation_hook]
         self.links.post_deletion_hooks = [link_deletion_hook]
         self._widget = NodeGraphWidget(parent=self)
+
+    @property
+    def tasks(self) -> TaskCollection:
+        """Add alias to `nodes` for WorkGraph"""
+        return self.nodes
 
     def run(self, inputs: Optional[Dict[str, Any]] = None) -> Any:
         """
@@ -190,6 +193,7 @@ class WorkGraph(node_graph.NodeGraph):
                 "max_number_jobs": self.max_number_jobs,
             }
         )
+        wgdata["tasks"] = wgdata.pop("nodes")
 
         return wgdata
 
@@ -292,6 +296,11 @@ class WorkGraph(node_graph.NodeGraph):
     @property
     def pk(self) -> Optional[int]:
         return self.process.pk if self.process else None
+
+    @classmethod
+    def from_dict(cls, wgdata: Dict[str, Any]) -> "WorkGraph":
+        wgdata["nodes"] = wgdata.pop("tasks")
+        super().from_dict(wgdata)
 
     @classmethod
     def load(cls, pk: int) -> Optional["WorkGraph"]:

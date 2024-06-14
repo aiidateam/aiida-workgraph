@@ -17,18 +17,18 @@ def workgraph_to_short_json(
         "links": wgdata["links"],
     }
     #
-    for name, node in wgdata["nodes"].items():
+    for name, task in wgdata["tasks"].items():
         # Add required inputs to nodes
         inputs = [
             input
-            for input in node["inputs"]
-            if input["name"] in node["metadata"]["args"]
+            for input in task["inputs"]
+            if input["name"] in task["metadata"]["args"]
         ]
         wgdata_short["nodes"][name] = {
-            "label": node["name"],
+            "label": task["name"],
             "inputs": inputs,
             "outputs": [],
-            "position": node["position"],
+            "position": task["position"],
         }
     # Add links to nodes
     for link in wgdata["links"]:

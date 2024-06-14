@@ -10,16 +10,16 @@ load_profile()
 def test_to_dict(wg_calcjob):
     """Export NodeGraph to dict."""
     wg = wg_calcjob
-    ntdata = wg.to_dict()
-    assert len(ntdata["nodes"]) == len(wg.tasks)
-    assert len(ntdata["links"]) == len(wg.links)
+    wgdata = wg.to_dict()
+    assert len(wgdata["tasks"]) == len(wg.tasks)
+    assert len(wgdata["links"]) == len(wg.links)
 
 
 def test_from_dict(wg_calcjob):
     """Export NodeGraph to dict."""
     wg = wg_calcjob
-    ntdata = wg.to_dict()
-    wg1 = WorkGraph.from_dict(ntdata)
+    wgdata = wg.to_dict()
+    wg1 = WorkGraph.from_dict(wgdata)
     assert len(wg.tasks) == len(wg1.tasks)
     assert len(wg.links) == len(wg1.links)
 

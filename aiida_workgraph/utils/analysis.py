@@ -27,9 +27,9 @@ class WorkGraphSaver:
 
     def wait_to_link(self) -> None:
         """Convert wait attribute to link."""
-        for name, task in self.wgdata["nodes"].items():
+        for name, task in self.wgdata["tasks"].items():
             for wait_task in task["wait"]:
-                if wait_task in self.wgdata["nodes"]:
+                if wait_task in self.wgdata["tasks"]:
                     self.wgdata["links"].append(
                         {
                             "from_node": wait_task,
@@ -43,8 +43,8 @@ class WorkGraphSaver:
         """Clean hanging links in the workgraph."""
         for link in self.wgdata["links"][:]:  # Iterate over a shallow copy of the list
             if (
-                link["from_node"] not in self.wgdata["nodes"]
-                or link["to_node"] not in self.wgdata["nodes"]
+                link["from_node"] not in self.wgdata["tasks"]
+                or link["to_node"] not in self.wgdata["tasks"]
             ):
                 self.wgdata["links"].remove(link)
 
@@ -73,7 +73,7 @@ class WorkGraphSaver:
 
         """
         # reset task input links
-        for name, task in self.wgdata["nodes"].items():
+        for name, task in self.wgdata["tasks"].items():
             for input in task["inputs"]:
                 input["links"] = []
             for output in task["outputs"]:
@@ -81,12 +81,12 @@ class WorkGraphSaver:
         for link in self.wgdata["links"]:
             to_socket = [
                 socket
-                for socket in self.wgdata["nodes"][link["to_node"]]["inputs"]
+                for socket in self.wgdata["tasks"][link["to_node"]]["inputs"]
                 if socket["name"] == link["to_socket"]
             ][0]
             from_socket = [
                 socket
-                for socket in self.wgdata["nodes"][link["from_node"]]["outputs"]
+                for socket in self.wgdata["tasks"][link["from_node"]]["outputs"]
                 if socket["name"] == link["from_socket"]
             ][0]
             to_socket["links"].append(link)
@@ -124,7 +124,7 @@ class WorkGraphSaver:
 
     def set_tasks_action(self, action: str) -> None:
         """Set task action."""
-        for name, task in self.wgdata["nodes"].items():
+        for name, task in self.wgdata["tasks"].items():
             # print("Reset task: {}".format(task))
             task["action"] = action
 
@@ -175,5 +175,6 @@ class WorkGraphSaver:
         """Analyze the connectivity of workgraph and save it into dict."""
         from node_graph.analysis import ConnectivityAnalysis
 
+        self.wgdata["nodes"] = self.wgdata["tasks"]
         nc = ConnectivityAnalysis(self.wgdata)
         self.wgdata["connectivity"] = nc.build_connectivity()
