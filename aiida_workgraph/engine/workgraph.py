@@ -409,6 +409,8 @@ class WorkGraphEngine(Process, metaclass=Protect):
         self.ctx._execution_count = 0
         # init task results
         self.set_task_results()
+        # init task actions
+        self.ctx.task_actions = {}
         # while workgraph
         if self.ctx.workgraph["workgraph_type"].upper() == "WHILE":
             self.ctx._max_iteration = self.ctx.workgraph.get("max_iteration", 1000)
@@ -525,15 +527,16 @@ class WorkGraphEngine(Process, metaclass=Protect):
             else:
                 self.report(f"Unknow message type {msg}")
             index += 1
-            self.report("Apply actions: {}".format(msg))
             msgs = self.node.base.extras.set("workgraph_queue_index", index)
 
     def apply_task_actions(self, msg: str) -> None:
         """Apply task actions to the workgraph."""
         name, action = msg.split(":")
-        print("apply task actions: ", name, action)
-        if action == "RESET":
+        self.report(f"Apply task actions: {name}, {action}")
+        if action.upper() == "RESET":
             self.reset_task(name)
+        if action.upper() == "PAUSE":
+            self.pause_task(name)
 
     def reset_task(self, name: str) -> None:
         """Reset task."""
@@ -544,6 +547,21 @@ class WorkGraphEngine(Process, metaclass=Protect):
             self.ctx.tasks[name]["state"] = "CREATED"
             self.ctx.tasks[name]["result"] = None
             self.ctx.tasks[name]["process"] = None
+
+    def pause_task(self, name: str) -> None:
+        """Pause task."""
+
+        # if it is running, we need to setn the pause signal to rabbitmq
+        # if self.ctx.tasks[name]["state"] == "RUNNING":
+        # message = 'Paused through the WorkGraph.'
+        # control.pause_processes([self.ctx.tasks[name]['process']], message=message)
+        # in this case, we just instanciate the task process, but do not run it
+        if self.ctx.tasks[name]["state"] == "CREATED":
+            # set the task to be paused
+            self.report(f"Task {name} is paused.")
+            self.ctx.task_actions[name] = "PAUSE"
+        else:
+            self.report(f"Task {name} is not created, thus cannot be paused.")
 
     def continue_workgraph(self, exclude: t.Optional[t.List[str]] = None) -> None:
         print("Continue workgraph.")
@@ -776,14 +794,29 @@ class WorkGraphEngine(Process, metaclass=Protect):
                     self.continue_workgraph(names)
             elif task["metadata"]["node_type"].upper() in ["CALCJOB", "WORKCHAIN"]:
                 # process = run_get_node(executor, *args, **kwargs)
+                from aiida.engine.utils import instantiate_process
+
                 print("task type: calcjob/workchain.")
                 kwargs.setdefault("metadata", {})
                 kwargs["metadata"].update({"call_link_label": name})
                 # transfer the args to kwargs
-                process = self.submit(executor, **kwargs)
+                self.report(f"Node action: {name}, {task['action']}")
+                if self.ctx.task_actions.get(name, "").upper() == "PAUSE":
+                    self.ctx.task_actions[name] = ""
+                    self.report(f"Task {name} is created and paused.")
+                    process_inited = instantiate_process(
+                        self.runner, executor, **kwargs
+                    )
+                    process_inited.runner.persister.save_checkpoint(process_inited)
+                    process_inited.close()
+                    process = process_inited.node
+                    self.ctx.tasks[name]["state"] = "PAUSED"
+                    process.base.attributes.set("process_status", "PAUSED")
+                else:
+                    process = self.submit(executor, **kwargs)
+                    self.ctx.tasks[name]["state"] = "RUNNING"
                 process.label = name
                 task["process"] = process
-                self.ctx.tasks[name]["state"] = "RUNNING"
                 self.to_context(**{name: process})
             elif task["metadata"]["node_type"].upper() in ["GRAPH_BUILDER"]:
                 print("task type: graph_builder.")

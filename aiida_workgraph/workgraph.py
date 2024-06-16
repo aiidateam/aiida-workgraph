@@ -145,6 +145,8 @@ class WorkGraph(node_graph.NodeGraph):
         This is only used for a running workgraph.
         Save the AiiDA workgraph process and update the process status.
         """
+        from aiida.manage import manager
+        from aiida.engine.utils import instantiate_process
         from aiida_workgraph.engine.workgraph import WorkGraphEngine
         from aiida_workgraph.utils import (
             merge_properties,
@@ -157,11 +159,13 @@ class WorkGraph(node_graph.NodeGraph):
         metadata = metadata or {}
         inputs = {"wg": wgdata, "metadata": metadata}
         if self.process is None:
+            runner = manager.get_manager().get_runner()
             # init a process node
-            process_inited = WorkGraphEngine(inputs=inputs)
+            process_inited = instantiate_process(runner, WorkGraphEngine, **inputs)
             process_inited.runner.persister.save_checkpoint(process_inited)
             self.process = process_inited.node
             self.process_inited = process_inited
+            process_inited.close()
             print(f"WorkGraph process created, PK: {self.process.pk}")
         self.save_to_base(wgdata)
         self.update()
@@ -372,11 +376,35 @@ class WorkGraph(node_graph.NodeGraph):
         """
         Pause the given tasks
         """
+        workgraph_queue = self.process.base.extras.get("workgraph_queue", [])
+        for task in tasks:
+            msg = f"task,{task}:pause"
+            workgraph_queue.append(msg)
+        print("Tasks are paused.")
+        print(workgraph_queue)
+        self.process.base.extras.set("workgraph_queue", workgraph_queue)
 
     def play_tasks(self, tasks: List[str]) -> None:
         """
         Play the given tasks
         """
+        # from aiida.manage import manager
+        from aiida.manage import get_manager
+
+        manager = get_manager()
+        process_controller = manager.get_process_controller()
+
+        for task in tasks:
+            pk = self.tasks[task].pk
+            print(f"Play task {task}, PK: {pk}")
+            process_controller.continue_process(pk)
+
+    def play(self):
+        from aiida.manage import get_manager
+
+        manager = get_manager()
+        process_controller = manager.get_process_controller()
+        process_controller.continue_process(self.pk)
 
     def reset(self) -> None:
         """Reset the workgraph."""
