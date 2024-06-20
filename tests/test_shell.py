@@ -40,6 +40,30 @@ def test_shell_code():
     assert job1.node.outputs.stdout.get_content() == "string astring b"
 
 
+def test_shell_set():
+    """Set the nodes during/after the creation of the task."""
+    wg = WorkGraph(name="test_shell_set")
+    echo_task = wg.tasks.new(
+        "ShellTask",
+        name="echo",
+        command="cp",
+        arguments=["{file}", "copied_file"],
+        nodes={"file": SinglefileData.from_string("1 5 1")},
+        outputs=["copied_file"],
+    )
+
+    cat_task = wg.tasks.new(
+        "ShellTask",
+        name="cat",
+        command="cat",
+        arguments=["{input}"],
+        nodes={"input": None},
+    )
+    wg.links.new(echo_task.outputs["copied_file"], cat_task.inputs["nodes.input"])
+    wg.submit(wait=True)
+    assert cat_task.outputs["stdout"].value.get_content() == "1 5 1"
+
+
 def test_shell_workflow():
     from aiida_workgraph import WorkGraph
     from aiida.orm import Int
