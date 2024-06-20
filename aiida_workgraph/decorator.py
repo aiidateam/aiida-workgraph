@@ -300,10 +300,11 @@ def build_shell_task(
     nodes = {} if nodes is None else nodes
     keys = list(nodes.keys())
     for key in keys:
+        inputs.append(["General", f"nodes.{key}"])
+        # input is a output of another task, we make a link
         if isinstance(nodes[key], NodeSocket):
-            inputs.append(["General", f"nodes.{key}"])
             links[f"nodes.{key}"] = nodes[key]
-            # not it read input from link, so need to remove the key from the nodes
+            # Output socket itself is not a value, so we remove the key from the nodes
             nodes.pop(key)
     for input in inputs:
         if input not in tdata["inputs"]:
