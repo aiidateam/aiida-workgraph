@@ -389,15 +389,13 @@ class WorkGraph(node_graph.NodeGraph):
         Play the given tasks
         """
         # from aiida.manage import manager
-        from aiida.manage import get_manager
+        from aiida.engine.processes import control
 
-        manager = get_manager()
-        process_controller = manager.get_process_controller()
-
+        processes = []
         for task in tasks:
-            pk = self.tasks[task].pk
-            print(f"Play task {task}, PK: {pk}")
-            process_controller.continue_process(pk)
+            processes.append(aiida.orm.load_node(self.tasks[task].pk))
+
+        control.play_processes(processes, all_entries=None, timeout=5, wait=False)
 
     def play(self):
         from aiida.manage import get_manager

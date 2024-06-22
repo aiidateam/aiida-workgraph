@@ -122,7 +122,7 @@ def test_pause_task(wg_calcjob):
     time.sleep(20)
     wg.update()
     assert wg.tasks["add2"].node.process_state.value.upper() == "CREATED"
-    assert wg.tasks["add2"].node.process_status.upper() == "PAUSED"
+    assert wg.tasks["add2"].node.process_status == "Paused through WorkGraph"
     wg.play_tasks(["add2"])
     wg.wait()
     assert wg.tasks["add2"].outputs["sum"].value == 9

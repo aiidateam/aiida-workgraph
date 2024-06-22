@@ -27,6 +27,7 @@ from aiida.engine.processes.workchains.awaitable import (
 )
 from aiida.engine.processes.workchains.workchain import Protect, WorkChainSpec
 from aiida.engine import run_get_node
+from aiida_workgraph.engine.utils import create_and_pause_process
 
 
 if t.TYPE_CHECKING:
@@ -794,8 +795,6 @@ class WorkGraphEngine(Process, metaclass=Protect):
                     self.continue_workgraph(names)
             elif task["metadata"]["node_type"].upper() in ["CALCJOB", "WORKCHAIN"]:
                 # process = run_get_node(executor, *args, **kwargs)
-                from aiida.engine.utils import instantiate_process
-
                 print("task type: calcjob/workchain.")
                 kwargs.setdefault("metadata", {})
                 kwargs["metadata"].update({"call_link_label": name})
@@ -804,14 +803,13 @@ class WorkGraphEngine(Process, metaclass=Protect):
                 if self.ctx.task_actions.get(name, "").upper() == "PAUSE":
                     self.ctx.task_actions[name] = ""
                     self.report(f"Task {name} is created and paused.")
-                    process_inited = instantiate_process(
-                        self.runner, executor, **kwargs
+                    process = create_and_pause_process(
+                        self.runner,
+                        executor,
+                        kwargs,
+                        state_msg="Paused through WorkGraph",
                     )
-                    process_inited.runner.persister.save_checkpoint(process_inited)
-                    process_inited.close()
-                    process = process_inited.node
                     self.ctx.tasks[name]["state"] = "PAUSED"
-                    process.base.attributes.set("process_status", "PAUSED")
                 else:
                     process = self.submit(executor, **kwargs)
                     self.ctx.tasks[name]["state"] = "RUNNING"
@@ -850,27 +848,42 @@ class WorkGraphEngine(Process, metaclass=Protect):
 
                 inputs = prepare_for_python_task(task, kwargs, var_kwargs)
                 # since aiida 2.5.0, we can pass inputs directly to the submit, no need to use **inputs
-                process = self.submit(
-                    PythonTask,
-                    **inputs,
-                )
+                if self.ctx.task_actions.get(name, "").upper() == "PAUSE":
+                    self.ctx.task_actions[name] = ""
+                    self.report(f"Task {name} is created and paused.")
+                    process = create_and_pause_process(
+                        self.runner,
+                        PythonTask,
+                        inputs,
+                        state_msg="Paused through WorkGraph",
+                    )
+                    self.ctx.tasks[name]["state"] = "PAUSED"
+                else:
+                    process = self.submit(executor, **kwargs)
+                    self.ctx.tasks[name]["state"] = "RUNNING"
                 process.label = name
                 task["process"] = process
-                self.ctx.tasks[name]["state"] = "RUNNING"
                 self.to_context(**{name: process})
             elif task["metadata"]["node_type"].upper() in ["SHELLTASK"]:
                 from aiida_shell.calculations.shell import ShellJob
                 from .utils import prepare_for_shell_task
 
                 inputs = prepare_for_shell_task(task, kwargs)
-                # since aiida 2.5.0, we can pass inputs directly to the submit, no need to use **inputs
-                process = self.submit(
-                    ShellJob,
-                    **inputs,
-                )
+                if self.ctx.task_actions.get(name, "").upper() == "PAUSE":
+                    self.ctx.task_actions[name] = ""
+                    self.report(f"Task {name} is created and paused.")
+                    process = create_and_pause_process(
+                        self.runner,
+                        ShellJob,
+                        inputs,
+                        state_msg="Paused through WorkGraph",
+                    )
+                    self.ctx.tasks[name]["state"] = "PAUSED"
+                else:
+                    process = self.submit(executor, **kwargs)
+                    self.ctx.tasks[name]["state"] = "RUNNING"
                 process.label = name
                 task["process"] = process
-                self.ctx.tasks[name]["state"] = "RUNNING"
                 self.to_context(**{name: process})
             elif task["metadata"]["node_type"].upper() in ["NORMAL"]:
                 print("Task  type: Normal.")
