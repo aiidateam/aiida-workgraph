@@ -859,7 +859,7 @@ class WorkGraphEngine(Process, metaclass=Protect):
                     )
                     self.ctx.tasks[name]["state"] = "PAUSED"
                 else:
-                    process = self.submit(executor, **kwargs)
+                    process = self.submit(PythonTask, **inputs)
                     self.ctx.tasks[name]["state"] = "RUNNING"
                 process.label = name
                 task["process"] = process
@@ -880,7 +880,7 @@ class WorkGraphEngine(Process, metaclass=Protect):
                     )
                     self.ctx.tasks[name]["state"] = "PAUSED"
                 else:
-                    process = self.submit(executor, **kwargs)
+                    process = self.submit(ShellJob, **inputs)
                     self.ctx.tasks[name]["state"] = "RUNNING"
                 process.label = name
                 task["process"] = process
