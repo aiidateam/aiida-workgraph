@@ -112,8 +112,6 @@ class WorkGraph(node_graph.NodeGraph):
         inputs: Optional[Dict[str, Any]] = None,
         wait: bool = False,
         timeout: int = 60,
-        restart: bool = False,
-        new: bool = False,
         metadata: Optional[Dict[str, Any]] = None,
     ) -> aiida.orm.ProcessNode:
         """Submit the AiiDA workgraph process and optionally wait for it to finish.
@@ -130,21 +128,13 @@ class WorkGraph(node_graph.NodeGraph):
                     raise KeyError(f"Task {name} not found in WorkGraph.")
                 self.tasks[name].set(input)
 
-        # Create a new submission
-        if self.process is not None and new:
-            self.reset()
-        # Create a restart submission
-        # save the current process node as restart_process
-        # so that the WorkGraphSaver can compare the difference, and reset the modified tasks
-        if self.process is not None:
-            self.restart_process = self.process
-            self.process = None
         # save the workgraph to the process node
         self.save(metadata=metadata)
         if self.process.process_state.value.upper() not in ["CREATED"]:
             raise ValueError(f"Process {self.process.pk} has already been submitted.")
-
         self.continue_process()
+        # as long as we submit the process, it is a new submission, we should set restart_process to None
+        self.restart_process = None
         if wait:
             self.wait(timeout=timeout)
         return self.process
@@ -409,8 +399,19 @@ class WorkGraph(node_graph.NodeGraph):
 
         os.system("verdi process play {}".format(self.process.pk))
 
+    def restart(self):
+        """Create a restart submission."""
+        if self.process is None:
+            raise ValueError(
+                "No process found. One can not restart from a non-existing process."
+            )
+        # save the current process node as restart_process
+        # so that the WorkGraphSaver can compare the difference, and reset the modified tasks
+        self.restart_process = self.process
+        self.process = None
+
     def reset(self) -> None:
-        """Reset the workgraph."""
+        """Reset the workgraph to create a new submission."""
 
         self.process = None
         for task in self.tasks:

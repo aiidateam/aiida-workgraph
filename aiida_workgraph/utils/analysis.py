@@ -113,9 +113,21 @@ class WorkGraphSaver:
         """
         from aiida_workgraph.utils.control import reset_task
 
-        for name in tasks:
-            print("Reset process {}, task: {}".format(self.process, name))
-            reset_task(self.process, name)
+        # print("process state: ", self.process.process_state.value.upper())
+        if self.process.process_state.value.upper() == "CREATED":
+            for name in tasks:
+                self.wgdata["tasks"][name]["state"] = "PLANNED"
+                self.wgdata["tasks"][name]["process"] = None
+                self.wgdata["tasks"][name]["result"] = None
+                names = self.wgdata["connectivity"]["child_node"][name]
+                for name in names:
+                    self.wgdata["tasks"][name]["state"] = "PLANNED"
+                    self.wgdata["tasks"][name]["result"] = None
+                    self.wgdata["tasks"][name]["process"] = None
+        else:
+            for name in tasks:
+                print(f"Send message to reset task: {name}")
+                reset_task(self.process, name)
 
     def set_tasks_action(self, action: str) -> None:
         """Set task action."""
