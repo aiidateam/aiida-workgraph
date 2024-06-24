@@ -47,6 +47,7 @@ class Task(GraphNode):
             settings={"minmap": False},
             style={"width": "80%", "height": "600px"},
         )
+        self.state = "PLANNED"
 
     def to_dict(self) -> Dict[str, Any]:
         tdata = super().to_dict()
@@ -102,7 +103,7 @@ class Task(GraphNode):
 
     def reset(self) -> None:
         self.process = None
-        self.state = "CREATED"
+        self.state = "PLANNED"
 
     def _repr_mimebundle_(self, *args: Any, **kwargs: Any) -> any:
         # if ipywdigets > 8.0.0, use _repr_mimebundle_ instead of _ipython_display_

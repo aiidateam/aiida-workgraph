@@ -58,13 +58,16 @@ def test_pause(wg_engine):
 def test_reset_message(wg_calcjob):
     """Modify a node and save the workgraph.
     This will add a message to the workgraph_queue extra field."""
+    from aiida.cmdline.utils.common import get_workchain_report
+
     wg = wg_calcjob
     wg.submit()
     wg = WorkGraph.load(wg.process.pk)
     wg.tasks["add2"].set({"y": orm.Int(10).store()})
     wg.save()
-    msgs = wg.process.base.extras.get("workgraph_queue", [])
-    assert len(msgs) == 1
+    wg.wait()
+    report = get_workchain_report(wg.process, "REPORT")
+    assert "Task add2 action: RESET." in report
 
 
 def test_restart(wg_calcjob):
@@ -77,7 +80,7 @@ def test_restart(wg_calcjob):
     wg1 = WorkGraph.load(wg.process.pk)
     wg1.name = "test_restart_1"
     wg1.tasks["add2"].set({"y": orm.Int(10).store()})
-    wg1.submit(wait=True, restart=True)
+    wg1.submit(wait=True)
     wg1.update()
     assert wg1.tasks["add3"].node.outputs.sum == 13
     assert wg1.tasks["add1"].node.pk == wg.tasks["add1"].pk

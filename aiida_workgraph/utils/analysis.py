@@ -111,16 +111,11 @@ class WorkGraphSaver:
         Args:
             tasks (list): a list of task names.
         """
+        from aiida_workgraph.utils.control import reset_task
 
         for name in tasks:
-            self.append_message_to_queue(
-                f"task,{name}:RESET",
-            )
-
-    def append_message_to_queue(self, message: str) -> None:
-        queue = self.process.base.extras.get("workgraph_queue", [])
-        queue.append(message)
-        self.process.base.extras.set("workgraph_queue", queue)
+            print("Reset process {}, task: {}".format(self.process, name))
+            reset_task(self.process, name)
 
     def set_tasks_action(self, action: str) -> None:
         """Set task action."""

@@ -1,8 +1,6 @@
 from aiida_workgraph.orm.serializer import serialize_to_aiida_nodes
 from aiida import orm
 from aiida.common.extendeddicts import AttributeDict
-from typing import Callable
-from aiida.engine.runners import Runner
 
 
 def prepare_for_workgraph_task(task: dict, kwargs: dict) -> tuple:
@@ -142,19 +140,3 @@ def prepare_for_shell_task(task: dict, kwargs: dict) -> dict:
         "metadata": metadata or {},
     }
     return inputs
-
-
-def create_and_pause_process(
-    runner: Runner = None,
-    process_class: Callable = None,
-    inputs: dict = None,
-    state_msg: str = "",
-) -> orm.ProcessNode:
-    from aiida.engine.utils import instantiate_process
-
-    process_inited = instantiate_process(runner, process_class, **inputs)
-    process_inited._do_pause(state_msg=state_msg)
-    process_inited.runner.persister.save_checkpoint(process_inited)
-    process_inited.close()
-    runner.controller.continue_process(process_inited.pid, nowait=True, no_reply=True)
-    return process_inited.node
