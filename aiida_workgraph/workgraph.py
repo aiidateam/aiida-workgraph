@@ -364,27 +364,34 @@ class WorkGraph(node_graph.NodeGraph):
         os.system("verdi process pause {}".format(self.process.pk))
 
     def pause_tasks(self, tasks: List[str]) -> None:
-        """
-        Pause the given tasks
-        """
-        from aiida_workgraph.utils.control import pause_task
+        """Pause the given tasks."""
+        from aiida_workgraph.utils.control import create_task_action
 
-        for task in tasks:
-            pause_task(self.process, task, timeout=5, wait=False)
-        print("Tasks are paused.")
+        if self.process.process_state.value.upper() not in ["RUNNING", "WAITING"]:
+            message = "Process is not running. Cannot pause tasks."
+            print(message)
+            return message
+        try:
+            create_task_action(
+                self.process, tasks, action="pause", timeout=5, wait=False
+            )
+        except Exception as e:
+            print(f"Pause task {tasks} failed: {e}")
+        return "Send message to pause tasks."
 
     def play_tasks(self, tasks: List[str]) -> None:
-        """
-        Play the given tasks
-        """
+        """Play the given tasks"""
         # from aiida.manage import manager
         from aiida.engine.processes import control
 
         processes = []
         for task in tasks:
             processes.append(aiida.orm.load_node(self.tasks[task].pk))
-
-        control.play_processes(processes, all_entries=None, timeout=5, wait=False)
+        try:
+            control.play_processes(processes, all_entries=None, timeout=5, wait=False)
+        except Exception as e:
+            print(f"Play task {task} failed: {e}")
+        return "Send message to play tasks."
 
     def continue_process(self):
         """Continue a saved process by sending the task to RabbitMA.

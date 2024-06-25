@@ -521,21 +521,24 @@ class WorkGraphEngine(Process, metaclass=Protect):
         else:
             task["results"] = None
 
-    def apply_action(self, msg: str) -> None:
-        header, msg = msg.split(",")
-        if header == "task":
+    def apply_action(self, msg: dict) -> None:
+
+        if msg["catalog"] == "task":
             self.apply_task_actions(msg)
         else:
             self.report(f"Unknow message type {msg}")
 
-    def apply_task_actions(self, msg: str) -> None:
+    def apply_task_actions(self, msg: dict) -> None:
         """Apply task actions to the workgraph."""
-        name, action = msg.split(":")
+        action = msg["action"]
+        tasks = msg["tasks"]
+        self.report(f"Action: {action}. {tasks}")
         if action.upper() == "RESET":
-            self.report(f"Task {name} action: RESET.")
-            self.ctx.task_actions[name] = "RESET"
+            for name in tasks:
+                self.ctx.task_actions[name] = "RESET"
         if action.upper() == "PAUSE":
-            self.pause_task(name)
+            for name in tasks:
+                self.pause_task(name)
         if action.upper() == "SKIP":
             pass
 
@@ -1187,9 +1190,7 @@ class WorkGraphEngine(Process, metaclass=Protect):
             self.get_status_info(status_info)
             return status_info
         if intent == "custom":
-            return self._schedule_rpc(
-                self.apply_action, msg=msg.get(process_comms.MESSAGE_KEY, None)
-            )
+            return self._schedule_rpc(self.apply_action, msg=msg)
 
         # Didn't match any known intents
         raise RuntimeError("Unknown intent")
