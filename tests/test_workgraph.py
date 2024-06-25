@@ -121,6 +121,8 @@ def test_pause_task(wg_calcjob):
     wg = wg_calcjob
     wg.name = "test_pause_task"
     wg.submit()
+    # wait for the daemon to start the workgraph
+    time.sleep(3)
     # wg.run()
     wg.pause_tasks(["add2"])
     time.sleep(20)
