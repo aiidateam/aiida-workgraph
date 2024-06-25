@@ -164,14 +164,14 @@ async def manage_node_action(action: str, id: int, node_names: List[str]):
         wg = WorkGraph.load(id)
 
         if action == "pause":
-            print(f"Pausing tasks {node_names}")
+            (f"Pausing tasks {node_names}")
             msg = wg.pause_tasks(node_names)
         elif action == "play":
-            print(f"Playing tasks {node_names}")
-            wg.play_tasks(node_names)
+            (f"Playing tasks {node_names}")
+            msg = wg.play_tasks(node_names)
         elif action == "kill":
-            print(f"Killing tasks {node_names}")
-            wg.kill_tasks(node_names)
+            (f"Killing tasks {node_names}")
+            msg = wg.kill_tasks(node_names)
         else:
             raise HTTPException(status_code=400, detail="Unsupported action")
 
