@@ -83,6 +83,7 @@ def test_restart(wg_calcjob):
     wg1.restart()
     wg1.name = "test_restart_1"
     wg1.tasks["add2"].set({"x": orm.Int(10).store()})
+    # wg1.save()
     wg1.submit(wait=True)
     assert wg1.tasks["add1"].node.pk == wg.tasks["add1"].pk
     assert wg1.tasks["add2"].node.pk != wg.tasks["add2"].pk

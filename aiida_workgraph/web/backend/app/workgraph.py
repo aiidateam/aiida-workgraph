@@ -40,7 +40,7 @@ async def read_workgraph_task(id: int, node_name: str):
 
     try:
         node = orm.load_node(id)
-        wgdata = node.base.extras.get("workgraph", None)
+        wgdata = node.base.extras.get("_workgraph", None)
         if wgdata is None:
             print("No workgraph data found in the node.")
             return
@@ -69,7 +69,7 @@ async def read_workgraph(id: int):
     try:
         node = orm.load_node(id)
 
-        wgdata = node.base.extras.get("workgraph", None)
+        wgdata = node.base.extras.get("_workgraph", None)
         if wgdata is None:
             print("No workgraph data found in the node.")
             return

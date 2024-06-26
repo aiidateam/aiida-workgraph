@@ -88,7 +88,7 @@ workgraph = "aiida_workgraph.cli.cmd_workgraph:workgraph"
 
 
 [project.entry-points."aiida.node"]
-"process.workflow.workgraph" = "aiida_workgraph.orm.workgraph:WorkgraphNode"
+"process.workflow.workgraph" = "aiida_workgraph.orm.workgraph:WorkGraphNode"
 
 [project.entry-points."aiida_workgraph.task"]
 "aiida" = "aiida_workgraph.tasks:task_list"

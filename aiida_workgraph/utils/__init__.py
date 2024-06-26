@@ -180,7 +180,7 @@ def get_workgraph_data(process: Union[int, orm.Node]) -> Optional[Dict[str, Any]
 
     if isinstance(process, int):
         process = load_node(process)
-    wgdata = process.base.extras.get("workgraph", None)
+    wgdata = process.base.extras.get("_workgraph", None)
     if wgdata is None:
         return
     wgdata = deserialize_unsafe(wgdata)

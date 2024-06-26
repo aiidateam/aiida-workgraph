@@ -103,7 +103,25 @@ class WorkGraphSaver:
         # pprint(self.wgdata)
         self.wgdata["created"] = datetime.datetime.utcnow()
         self.wgdata["lastUpdate"] = datetime.datetime.utcnow()
-        self.process.base.extras.set("workgraph", serialize(self.wgdata))
+        self.process.base.extras.set("_workgraph", serialize(self.wgdata))
+        self.save_task_states()
+
+    def save_task_states(self) -> Dict:
+        """Get task states."""
+        from aiida.orm.utils.serialize import serialize
+
+        task_states = {}
+        task_processes = {}
+        task_actions = {}
+        for name, task in self.wgdata["tasks"].items():
+            task_states[f"_task_state_{name}"] = serialize(task["state"])
+            task_processes[f"_task_process_{name}"] = serialize(task["process"])
+            task_actions[f"_task_action_{name}"] = serialize(task["action"])
+        self.process.base.extras.set_many(task_states)
+        self.process.base.extras.set_many(task_processes)
+        self.process.base.extras.set_many(task_actions)
+
+        return task_states
 
     def reset_tasks(self, tasks: List[str]) -> None:
         """Reset tasks
@@ -139,7 +157,7 @@ class WorkGraphSaver:
         from aiida.orm.utils.serialize import deserialize_unsafe
 
         process = self.process if process is None else process
-        wgdata = process.base.extras.get("workgraph", None)
+        wgdata = process.base.extras.get("_workgraph", None)
         if wgdata is None:
             print("No workgraph data found in the process node.")
             return
@@ -172,7 +190,7 @@ class WorkGraphSaver:
         Returns:
             bool: _description_
         """
-        if self.process.base.extras.get("workgraph", None) is not None:
+        if self.process.base.extras.get("_workgraph", None) is not None:
             return True
         return False
 

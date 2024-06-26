@@ -26,8 +26,8 @@ def test_reset_node(wg_engine: WorkGraph) -> None:
     wg.wait()
     wg.update()
     assert wg.tasks["add5"].node.outputs.sum == 21
-    assert wg.process.base.extras.get("workgraph_queue_index") == 1
-    assert len(wg.process.base.extras.get("workgraph_queue")) == 1
+    assert wg.process.base.extras.get("_workgraph_queue_index") == 1
+    assert len(wg.process.base.extras.get("_workgraph_queue")) == 1
 
 
 def test_max_number_jobs() -> None:
