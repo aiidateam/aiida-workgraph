@@ -62,7 +62,6 @@ async def read_workgraph(id: int):
         get_node_inputs,
         get_node_outputs,
     )
-    from aiida.cmdline.utils.common import get_workchain_report
     from aiida.orm.utils.serialize import deserialize_unsafe
     from aiida_workgraph.utils import get_parent_workgraphs, get_processes_latest
 
@@ -80,12 +79,11 @@ async def read_workgraph(id: int):
             "inputs": get_node_inputs(id),
             "outputs": get_node_outputs(id),
         }
-        report = get_workchain_report(node, "REPORT")
+
         parent_workgraphs = get_parent_workgraphs(id)
         parent_workgraphs.reverse()
         processes_info = get_processes_latest(id)
         content["summary"] = summary
-        content["logs"] = report.splitlines()
         content["parent_workgraphs"] = parent_workgraphs
         content["processes_info"] = processes_info
         return content
@@ -100,6 +98,19 @@ async def read_workgraph_tasks_state(id: int):
     try:
         processes_info = get_processes_latest(id)
         return processes_info
+    except KeyError:
+        raise HTTPException(status_code=404, detail=f"Workgraph {id} not found")
+
+
+@router.get("/api/workgraph-logs/{id}")
+async def read_workgraph_logs(id: int):
+    from aiida.cmdline.utils.common import get_workchain_report
+
+    try:
+        node = orm.load_node(id)
+        report = get_workchain_report(node, "REPORT")
+        logs = report.splitlines()
+        return logs
     except KeyError:
         raise HTTPException(status_code=404, detail=f"Workgraph {id} not found")
 

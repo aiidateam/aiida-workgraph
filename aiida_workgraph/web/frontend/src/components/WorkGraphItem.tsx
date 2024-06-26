@@ -74,7 +74,7 @@ export function useRete<T extends { destroy(): void }>(
 
 function WorkGraphGraph() {
   const { pk } = useParams();
-  const [workgraphData, setWorktreeData] = useState({ summary: {}, nodes: {}, links: [], logs: [], pk: [] });
+  const [workgraphData, setWorktreeData] = useState({ summary: {}, nodes: {}, links: [], pk: [] });
   const [ref, editor] = useRete(createEditor, workgraphData);
   const [selectedNode, setSelectedNode] = useState({ metadata: [], executor: '' });
   const [showNodeDetails, setShowNodeDetails] = useState(false);
@@ -111,20 +111,24 @@ function WorkGraphGraph() {
         if (nodeName && nodeName in stateData) {
           const nodeState = stateData[nodeName].state;
             if (nodeState === 'FINISHED') {
-            titleElement.style.background = 'green';
+              titleElement.style.background = 'green';
             } else if (nodeState === 'RUNNING') {
-            titleElement.style.background = 'orange';
+              titleElement.style.background = 'orange';
             } else if (nodeState === 'CREATED') {
-            titleElement.style.background = 'blue';
+              titleElement.style.background = 'blue';
+            } else if (nodeState === 'PLANNED') {
+              titleElement.style.background = 'gray';
             } else if (nodeState === 'WAITING') {
-            titleElement.style.background = 'purple'; // Change to the desired color for "waiting"
+              titleElement.style.background = 'purple'; // Change to the desired color for "waiting"
             } else if (nodeState === 'KILLED') {
-            titleElement.style.background = 'red'; // Change to the desired color for "killed"
-            // } else if (nodeState === 'PAUSED') {
-            // titleElement.style.background = 'purple'; // Change to the desired color for "paused"
+              titleElement.style.background = 'pink'; // Change to the desired color for "killed"
+            } else if (nodeState === 'PAUSED') {
+              titleElement.style.background = 'yellow'; // Change to the desired color for "paused"
+            } else if (nodeState === 'FAILED') {
+              titleElement.style.background = 'red'; // Change to the desired color for "failed"
             } else {
-            // Handle any other states or provide a default color
-            titleElement.style.background = 'gray'; // Change to the desired default color
+              // Handle any other states or provide a default color
+              titleElement.style.background = 'lightblue'; // Change to the desired default color
             }
         }
       }
@@ -253,7 +257,7 @@ function WorkGraphGraph() {
           <Button onClick={() => setSelectedView('Time')}>Time</Button>
         </TopMenu>
           {selectedView === 'Summary' && <WorktreeSummary summary={workgraphData.summary} />}
-          {selectedView === 'Log' && <WorkGraphLog logs={workgraphData.logs} />}
+          {selectedView === 'Log' && <WorkGraphLog id={pk} />}
           {selectedView === 'Time' && <NodeDurationGraph id={pk}/>}
           <EditorWrapper visible={selectedView === 'Editor'}>
           <WorkGraphIndicator parentWorktrees={workgraphHierarchy} />
