@@ -91,5 +91,36 @@ def play_tasks(pk: int, tasks: list, timeout: int = 5, wait: bool = False):
     return True, ""
 
 
-def kill_tasks():
-    pass
+def kill_tasks(pk: int, tasks: list, timeout: int = 5, wait: bool = False):
+    node = orm.load_node(pk)
+    if node.is_finished:
+        message = "Process is finished. Cannot pause tasks."
+        print(message)
+        return False, message
+    elif node.process_state.value.upper() in [
+        "CREATED",
+        "RUNNING",
+        "WAITING",
+        "PAUSED",
+    ]:
+        for name in tasks:
+            if get_task_state_info(node, name, "state") == "PLANNED":
+                set_task_state_info(node, name, "action", "skip")
+            elif get_task_state_info(node, name, "state") in [
+                "CREATED",
+                "RUNNING",
+                "WAITING",
+                "PAUSED",
+            ]:
+                try:
+                    control.kill_processes(
+                        [get_task_state_info(node, name, "process")],
+                        all_entries=None,
+                        timeout=5,
+                        wait=False,
+                    )
+                except Exception as e:
+                    print(f"Kill task {name} failed: {e}")
+            elif get_task_state_info(node, name, "process").is_finished:
+                raise ValueError(f"Task {name} is already finished.")
+    return True, ""
