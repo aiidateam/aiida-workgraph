@@ -125,7 +125,7 @@ class WorkGraphSaver:
                     self.wgdata["tasks"][name]["result"] = None
                     self.wgdata["tasks"][name]["process"] = None
         else:
-            create_task_action(self.process, tasks=tasks, action="reset")
+            create_task_action(self.process.pk, tasks=tasks, action="reset")
 
     def set_tasks_action(self, action: str) -> None:
         """Set task action."""

@@ -373,7 +373,7 @@ class WorkGraph(node_graph.NodeGraph):
             return message
         try:
             create_task_action(
-                self.process, tasks, action="pause", timeout=5, wait=False
+                self.process.pk, tasks, action="pause", timeout=5, wait=False
             )
         except Exception as e:
             print(f"Pause task {tasks} failed: {e}")
@@ -381,16 +381,19 @@ class WorkGraph(node_graph.NodeGraph):
 
     def play_tasks(self, tasks: List[str]) -> None:
         """Play the given tasks"""
-        # from aiida.manage import manager
-        from aiida.engine.processes import control
 
-        processes = []
-        for task in tasks:
-            processes.append(aiida.orm.load_node(self.tasks[task].pk))
+        from aiida_workgraph.utils.control import create_task_action
+
+        if self.process.process_state.value.upper() not in ["RUNNING", "WAITING"]:
+            message = "Process is not running. Cannot play tasks."
+            print(message)
+            return message
         try:
-            control.play_processes(processes, all_entries=None, timeout=5, wait=False)
+            create_task_action(
+                self.process.pk, tasks, action="play", timeout=5, wait=False
+            )
         except Exception as e:
-            print(f"Play task {task} failed: {e}")
+            print(f"Play task {tasks} failed: {e}")
         return "Send message to play tasks."
 
     def continue_process(self):

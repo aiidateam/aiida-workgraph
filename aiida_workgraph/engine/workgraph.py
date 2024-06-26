@@ -30,6 +30,7 @@ from aiida.engine.processes.workchains.awaitable import (
 from aiida.engine.processes.workchains.workchain import Protect, WorkChainSpec
 from aiida.engine import run_get_node
 from aiida_workgraph.utils import create_and_pause_process
+import subprocess
 
 
 if t.TYPE_CHECKING:
@@ -539,6 +540,9 @@ class WorkGraphEngine(Process, metaclass=Protect):
         if action.upper() == "PAUSE":
             for name in tasks:
                 self.pause_task(name)
+        if action.upper() == "PLAY":
+            for name in tasks:
+                self.play_task(name)
         if action.upper() == "SKIP":
             pass
 
@@ -557,13 +561,62 @@ class WorkGraphEngine(Process, metaclass=Protect):
 
     def pause_task(self, name: str) -> None:
         """Pause task."""
+        from aiida.engine.processes import control
 
+        self.report(f"Task {name} action: PAUSE.")
         if self.ctx.tasks[name]["state"] == "PLANNED":
-            # set the task to be paused
-            self.report(f"Task {name} action: PAUSE.")
+            # set the task to be paused, so that it will be paused when it is created
             self.ctx.task_actions[name] = "PAUSE"
+        elif self.ctx.tasks[name]["process"].process_state.value.upper() in [
+            "RUNNING",
+            "WAITING",
+        ]:
+            # if the task is running, pause it, so that it will be paused when it is finished
+            try:
+                control.pause_processes(
+                    [self.ctx.tasks[name]["process"]],
+                    all_entries=None,
+                    timeout=5,
+                    wait=False,
+                )
+            except Exception as e:
+                self.report(f"Play task {name} failed: {e}")
         else:
             self.report(f"Task {name} is not created, thus cannot be paused.")
+
+    def play_task(self, name: str) -> None:
+        """Play task."""
+        self.report(f"Task {name} action: PLAY.")
+
+        if self.ctx.tasks[name]["state"] == "PLANNED":
+            self.report(
+                f"Task {name} is at planned state, so we reset the task action."
+            )
+            self.ctx.task_actions[name] = None
+        elif self.ctx.tasks[name]["process"].process_state.value.upper() in [
+            "PAUSED",
+            "CREATED",
+        ]:
+            state = self.ctx.tasks[name]["process"].process_state.value.upper()
+            self.report(f"Task {name} is at {state} state, so we play the task.")
+            try:
+                # use subprocess to play the task, so that it not block the current process
+                subprocess.Popen(
+                    [
+                        "verdi",
+                        "process",
+                        "play",
+                        str(self.ctx.tasks[name]["process"].pk),
+                    ],
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                )
+            except Exception as e:
+                self.report(f"Play task {name} failed: {e}")
+        else:
+            self.report(f"Task {name} cannot be played.")
+
+        return "Send message to play tasks."
 
     def continue_workgraph(self, exclude: t.Optional[t.List[str]] = None) -> None:
         print("Continue workgraph.")

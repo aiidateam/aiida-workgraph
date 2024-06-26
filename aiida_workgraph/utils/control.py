@@ -1,9 +1,8 @@
 from aiida.manage import get_manager
-from aiida.orm import ProcessNode
 
 
 def create_task_action(
-    process: ProcessNode,
+    pk: int,
     tasks: list,
     action: str = "pause",
     timeout: int = 5,
@@ -13,4 +12,4 @@ def create_task_action(
 
     controller = get_manager().get_process_controller()
     message = {"intent": "custom", "catalog": "task", "action": action, "tasks": tasks}
-    controller._communicator.rpc_send(process.pk, message)
+    controller._communicator.rpc_send(pk, message)

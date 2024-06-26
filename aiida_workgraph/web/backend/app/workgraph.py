@@ -155,23 +155,22 @@ async def delete_workgraph(
         raise HTTPException(status_code=500, detail=str(e))
 
 
-# General function to manage node actions
-async def manage_node_action(action: str, id: int, node_names: List[str]):
-    from aiida_workgraph import WorkGraph
+# General function to manage task actions
+async def manage_task_action(action: str, id: int, tasks: List[str]):
+    from aiida_workgraph.utils.control import create_task_action
 
-    print(f"Performing {action} action on nodes {node_names} in workgraph {id}")
+    print(f"Performing {action} action on tasks {tasks} in workgraph {id}")
     try:
-        wg = WorkGraph.load(id)
 
         if action == "pause":
-            (f"Pausing tasks {node_names}")
-            msg = wg.pause_tasks(node_names)
+            (f"Pausing tasks {tasks}")
+            msg = create_task_action(id, tasks=tasks)
         elif action == "play":
-            (f"Playing tasks {node_names}")
-            msg = wg.play_tasks(node_names)
+            (f"Playing tasks {tasks}")
+            msg = wg.play_tasks(tasks)
         elif action == "kill":
-            (f"Killing tasks {node_names}")
-            msg = wg.kill_tasks(node_names)
+            (f"Killing tasks {tasks}")
+            msg = wg.kill_tasks(tasks)
         else:
             raise HTTPException(status_code=400, detail="Unsupported action")
 
@@ -181,19 +180,19 @@ async def manage_node_action(action: str, id: int, node_names: List[str]):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-# Endpoint for pausing nodes in a workgraph
+# Endpoint for pausing tasks in a workgraph
 @router.post("/api/workgraph/tasks/pause/{id}")
-async def pause_workgraph_nodes(id: int, node_names: List[str] = None):
-    return await manage_node_action("pause", id, node_names)
+async def pause_workgraph_tasks(id: int, tasks: List[str] = None):
+    return await manage_task_action("pause", id, tasks)
 
 
-# Endpoint for playing nodes in a workgraph
+# Endpoint for playing tasks in a workgraph
 @router.post("/api/workgraph/tasks/play/{id}")
-async def play_workgraph_nodes(id: int, node_names: List[str] = None):
-    return await manage_node_action("play", id, node_names)
+async def play_workgraph_tasks(id: int, tasks: List[str] = None):
+    return await manage_task_action("play", id, tasks)
 
 
-# Endpoint for killing nodes in a workgraph
+# Endpoint for killing tasks in a workgraph
 @router.post("/api/workgraph/tasks/kill/{id}")
-async def kill_workgraph_nodes(id: int, node_names: List[str] = None):
-    return await manage_node_action("kill", id, node_names)
+async def kill_workgraph_tasks(id: int, tasks: List[str] = None):
+    return await manage_task_action("kill", id, tasks)
