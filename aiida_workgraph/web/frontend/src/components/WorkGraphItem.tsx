@@ -74,7 +74,7 @@ export function useRete<T extends { destroy(): void }>(
 
 function WorkGraphGraph() {
   const { pk } = useParams();
-  const [workgraphData, setWorktreeData] = useState({ summary: {}, nodes: {}, links: [], logs: [], pk: [] });
+  const [workgraphData, setWorktreeData] = useState({ summary: {}, nodes: {}, links: [], pk: [] });
   const [ref, editor] = useRete(createEditor, workgraphData);
   const [selectedNode, setSelectedNode] = useState({ metadata: [], executor: '' });
   const [showNodeDetails, setShowNodeDetails] = useState(false);
@@ -257,7 +257,7 @@ function WorkGraphGraph() {
           <Button onClick={() => setSelectedView('Time')}>Time</Button>
         </TopMenu>
           {selectedView === 'Summary' && <WorktreeSummary summary={workgraphData.summary} />}
-          {selectedView === 'Log' && <WorkGraphLog logs={workgraphData.logs} />}
+          {selectedView === 'Log' && <WorkGraphLog id={pk} />}
           {selectedView === 'Time' && <NodeDurationGraph id={pk}/>}
           <EditorWrapper visible={selectedView === 'Editor'}>
           <WorkGraphIndicator parentWorktrees={workgraphHierarchy} />
