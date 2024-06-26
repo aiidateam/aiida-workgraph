@@ -108,7 +108,7 @@ function WorkGraphGraph() {
       nodeElements.forEach((nodeElement) => {
         const titleElement = nodeElement.querySelector('[data-testid="title"]')  as HTMLElement;
         const nodeName = titleElement.textContent;
-        if (nodeName) {
+        if (nodeName && nodeName in stateData) {
           const nodeState = stateData[nodeName].state;
           if (nodeState === 'finished') {
             titleElement.style.background = 'green';

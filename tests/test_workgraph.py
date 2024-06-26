@@ -120,7 +120,21 @@ def test_node_from_workgraph(decorated_add_multiply_group):
     assert wg.tasks["add2"].node.outputs.sum == 48
 
 
-def test_pause_task(wg_calcjob):
+def test_pause_task_before_submit(wg_calcjob):
+    wg = wg_calcjob
+    wg.name = "test_pause_task"
+    wg.pause_tasks(["add2"])
+    wg.submit()
+    time.sleep(20)
+    wg.update()
+    assert wg.tasks["add2"].node.process_state.value.upper() == "CREATED"
+    assert wg.tasks["add2"].node.process_status == "Paused through WorkGraph"
+    wg.play_tasks(["add2"])
+    wg.wait()
+    assert wg.tasks["add2"].outputs["sum"].value == 9
+
+
+def test_pause_task_after_submit(wg_calcjob):
     wg = wg_calcjob
     wg.name = "test_pause_task"
     wg.submit()

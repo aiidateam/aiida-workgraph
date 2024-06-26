@@ -157,20 +157,20 @@ async def delete_workgraph(
 
 # General function to manage task actions
 async def manage_task_action(action: str, id: int, tasks: List[str]):
-    from aiida_workgraph.utils.control import create_task_action
+    from aiida_workgraph.utils.control import pause_tasks, play_tasks, kill_tasks
 
     print(f"Performing {action} action on tasks {tasks} in workgraph {id}")
     try:
 
         if action == "pause":
-            (f"Pausing tasks {tasks}")
-            msg = create_task_action(id, tasks=tasks)
+            print(f"Pausing tasks {tasks}")
+            _, msg = pause_tasks(id, tasks=tasks)
         elif action == "play":
-            (f"Playing tasks {tasks}")
-            msg = wg.play_tasks(tasks)
+            print(f"Playing tasks {tasks}")
+            _, msg = play_tasks(id, tasks)
         elif action == "kill":
-            (f"Killing tasks {tasks}")
-            msg = wg.kill_tasks(tasks)
+            print(f"Killing tasks {tasks}")
+            _, msg = kill_tasks(id, tasks)
         else:
             raise HTTPException(status_code=400, detail="Unsupported action")
 

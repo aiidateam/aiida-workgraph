@@ -30,7 +30,6 @@ from aiida.engine.processes.workchains.awaitable import (
 from aiida.engine.processes.workchains.workchain import Protect, WorkChainSpec
 from aiida.engine import run_get_node
 from aiida_workgraph.utils import create_and_pause_process
-import subprocess
 
 
 if t.TYPE_CHECKING:
@@ -411,10 +410,6 @@ class WorkGraphEngine(Process, metaclass=Protect):
         #
         self.ctx.msgs = []
         self.ctx._execution_count = 0
-        # init task actions
-        if not getattr(self.ctx, "task_actions", None):
-            self.report("init task actions")
-            self.ctx.task_actions = {}
         # init task results
         self.set_task_results()
         # while workgraph
@@ -480,9 +475,8 @@ class WorkGraphEngine(Process, metaclass=Protect):
         self.setup_ctx_workgraph(wgdata)
 
     def set_task_results(self) -> None:
-        self.report("task actions: {}".format(self.ctx.task_actions))
         for name, task in self.ctx.tasks.items():
-            if self.ctx.task_actions.get(name, "").upper() == "RESET":
+            if self.get_task_state_info(name, "action").upper() == "RESET":
                 self.reset_task(task["name"])
             if self.get_task_state_info(name, "process"):
                 if isinstance(self.get_task_state_info(task["name"], "process"), str):
@@ -587,64 +581,11 @@ class WorkGraphEngine(Process, metaclass=Protect):
 
     def pause_task(self, name: str) -> None:
         """Pause task."""
-        from aiida.engine.processes import control
-
         self.report(f"Task {name} action: PAUSE.")
-        if self.get_task_state_info(name, "state") == "PLANNED":
-            # set the task to be paused, so that it will be paused when it is created
-            self.ctx.task_actions[name] = "PAUSE"
-        elif self.get_task_state_info(name, "process").process_state.value.upper() in [
-            "RUNNING",
-            "WAITING",
-        ]:
-            # if the task is running, pause it, so that it will be paused when it is finished
-            try:
-                control.pause_processes(
-                    [self.get_task_state_info(name, "process")],
-                    all_entries=None,
-                    timeout=5,
-                    wait=False,
-                )
-            except Exception as e:
-                self.report(f"Play task {name} failed: {e}")
-        else:
-            self.report(f"Task {name} is not created, thus cannot be paused.")
 
     def play_task(self, name: str) -> None:
         """Play task."""
         self.report(f"Task {name} action: PLAY.")
-
-        if self.get_task_state_info(name, "state") == "PLANNED":
-            self.report(
-                f"Task {name} is at planned state, so we reset the task action."
-            )
-            self.ctx.task_actions[name] = None
-        elif self.get_task_state_info(name, "process").process_state.value.upper() in [
-            "PAUSED",
-            "CREATED",
-        ]:
-            state = self.get_task_state_info(
-                name, "process"
-            ).process_state.value.upper()
-            self.report(f"Task {name} is at {state} state, so we play the task.")
-            try:
-                # use subprocess to play the task, so that it not block the current process
-                subprocess.Popen(
-                    [
-                        "verdi",
-                        "process",
-                        "play",
-                        str(self.get_task_state_info(name, "process").pk),
-                    ],
-                    stdout=subprocess.PIPE,
-                    stderr=subprocess.PIPE,
-                )
-            except Exception as e:
-                self.report(f"Play task {name} failed: {e}")
-        else:
-            self.report(f"Task {name} cannot be played.")
-
-        return "Send message to play tasks."
 
     def continue_workgraph(self, exclude: t.Optional[t.List[str]] = None) -> None:
         print("Continue workgraph.")
@@ -887,11 +828,8 @@ class WorkGraphEngine(Process, metaclass=Protect):
                 kwargs.setdefault("metadata", {})
                 kwargs["metadata"].update({"call_link_label": name})
                 # transfer the args to kwargs
-                self.report(
-                    f"Node action: {name}, {self.ctx.task_actions.get(name, None)}"
-                )
-                if self.ctx.task_actions.get(name, "").upper() == "PAUSE":
-                    self.ctx.task_actions[name] = ""
+                if self.get_task_state_info(name, "action").upper() == "PAUSE":
+                    self.set_task_state_info(name, "action", "")
                     self.report(f"Task {name} is created and paused.")
                     process = create_and_pause_process(
                         self.runner,
@@ -939,8 +877,8 @@ class WorkGraphEngine(Process, metaclass=Protect):
 
                 inputs = prepare_for_python_task(task, kwargs, var_kwargs)
                 # since aiida 2.5.0, we can pass inputs directly to the submit, no need to use **inputs
-                if self.ctx.task_actions.get(name, "").upper() == "PAUSE":
-                    self.ctx.task_actions[name] = ""
+                if self.get_task_state_info(name, "action").upper() == "PAUSE":
+                    self.set_task_state_info(name, "action", "")
                     self.report(f"Task {name} is created and paused.")
                     process = create_and_pause_process(
                         self.runner,
@@ -961,8 +899,8 @@ class WorkGraphEngine(Process, metaclass=Protect):
                 from .utils import prepare_for_shell_task
 
                 inputs = prepare_for_shell_task(task, kwargs)
-                if self.ctx.task_actions.get(name, "").upper() == "PAUSE":
-                    self.ctx.task_actions[name] = ""
+                if self.get_task_state_info(name, "action").upper() == "PAUSE":
+                    self.set_task_state_info(name, "action", "")
                     self.report(f"Task {name} is created and paused.")
                     process = create_and_pause_process(
                         self.runner,
