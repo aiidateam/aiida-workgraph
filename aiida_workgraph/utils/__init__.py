@@ -180,7 +180,7 @@ def get_workgraph_data(process: Union[int, orm.Node]) -> Optional[Dict[str, Any]
 
     if isinstance(process, int):
         process = load_node(process)
-    wgdata = process.base.extras.get("workgraph", None)
+    wgdata = process.base.extras.get("_workgraph", None)
     if wgdata is None:
         return
     wgdata = deserialize_unsafe(wgdata)
@@ -206,38 +206,34 @@ def get_parent_workgraphs(pk: int) -> list:
 
 
 def get_processes_latest(pk: int) -> Dict[str, Dict[str, Union[int, str]]]:
-    """Get the latest info of all nodes from the process."""
+    """Get the latest info of all tasks from the process."""
     import aiida
+    from aiida.orm.utils.serialize import deserialize_unsafe
 
     process = aiida.orm.load_node(pk)
-    outgoing = process.base.links.get_outgoing()
-    nodes = {}
-    for link in outgoing.all():
-        node = link.node
-        # the link is added in order
-        # so the restarted node will be the last one
-        # thus the node is correct
-        if isinstance(node, aiida.orm.ProcessNode) and getattr(
-            node, "process_state", False
-        ):
-            nodes[link.link_label] = {
-                "pk": node.pk,
-                "state": node.process_state.value,
-                "ctime": node.ctime,
-                "mtime": node.mtime,
-            }
-
-        elif isinstance(node, aiida.orm.Data):
-            if (link.link_label).startswith("group_outputs__"):
-                label = link.link_label.split("__", 1)[1]
-                if label in nodes.keys():
-                    nodes[label] = {
-                        "pk": node.pk,
-                        "state": "Stored" if node.is_stored else "Unstored",
-                        "ctime": nodes.ctime,
-                        "mtime": nodes.mtime,
-                    }
-    return nodes
+    tasks = {}
+    for key in process.base.extras.keys():
+        if key.startswith("_task_state"):
+            name = key[12:]
+            state = deserialize_unsafe(process.base.extras.get(key))
+            task_process = deserialize_unsafe(
+                process.base.extras.get(f"_task_process_{name}")
+            )
+            if task_process:
+                tasks[name] = {
+                    "pk": task_process.pk,
+                    "state": state,
+                    "ctime": task_process.ctime,
+                    "mtime": task_process.mtime,
+                }
+            else:
+                tasks[name] = {
+                    "pk": None,
+                    "state": state,
+                    "ctime": None,
+                    "mtime": None,
+                }
+    return tasks
 
 
 def get_or_create_code(

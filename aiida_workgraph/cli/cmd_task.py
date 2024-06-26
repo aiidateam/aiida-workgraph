@@ -37,14 +37,12 @@ def workgraph_task():
 def task_pause(process, tasks, timeout, wait):
     """Pause task."""
     from aiida.engine.processes import control
-    from aiida_workgraph.utils.control import pause_task
+    from aiida_workgraph.utils.control import pause_tasks
 
-    for task in tasks:
-        try:
-            pause_task(process, task, timeout, wait)
-
-        except control.ProcessTimeoutException as exception:
-            echo.echo_critical(f"{exception}\n{REPAIR_INSTRUCTIONS}")
+    try:
+        _, msg = pause_tasks(process.pk, tasks, timeout, wait)
+    except control.ProcessTimeoutException as exception:
+        echo.echo_critical(f"{exception}\n{REPAIR_INSTRUCTIONS}")
 
 
 @workgraph_task.command("play")
@@ -56,14 +54,12 @@ def task_pause(process, tasks, timeout, wait):
 def task_play(process, tasks, timeout, wait):
     """Play task."""
     from aiida.engine.processes import control
-    from aiida_workgraph.utils.control import play_task
+    from aiida_workgraph.utils.control import play_tasks
 
-    for task in tasks:
-        try:
-            play_task(process, task, timeout, wait)
-
-        except control.ProcessTimeoutException as exception:
-            echo.echo_critical(f"{exception}\n{REPAIR_INSTRUCTIONS}")
+    try:
+        _, msg = play_tasks(process.pk, tasks, timeout, wait)
+    except control.ProcessTimeoutException as exception:
+        echo.echo_critical(f"{exception}\n{REPAIR_INSTRUCTIONS}")
 
 
 @workgraph_task.command("skip")

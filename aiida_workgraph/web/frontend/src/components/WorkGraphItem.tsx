@@ -108,24 +108,24 @@ function WorkGraphGraph() {
       nodeElements.forEach((nodeElement) => {
         const titleElement = nodeElement.querySelector('[data-testid="title"]')  as HTMLElement;
         const nodeName = titleElement.textContent;
-        if (nodeName) {
+        if (nodeName && nodeName in stateData) {
           const nodeState = stateData[nodeName].state;
-          if (nodeState === 'finished') {
+            if (nodeState === 'FINISHED') {
             titleElement.style.background = 'green';
-          } else if (nodeState === 'running') {
+            } else if (nodeState === 'RUNNING') {
             titleElement.style.background = 'orange';
-          } else if (nodeState === 'created') {
+            } else if (nodeState === 'CREATED') {
             titleElement.style.background = 'blue';
-          } else if (nodeState === 'waiting') {
+            } else if (nodeState === 'WAITING') {
             titleElement.style.background = 'purple'; // Change to the desired color for "waiting"
-          } else if (nodeState === 'killed') {
+            } else if (nodeState === 'KILLED') {
             titleElement.style.background = 'red'; // Change to the desired color for "killed"
-          // } else if (nodeState === 'paused') {
+            // } else if (nodeState === 'PAUSED') {
             // titleElement.style.background = 'purple'; // Change to the desired color for "paused"
-          } else {
+            } else {
             // Handle any other states or provide a default color
             titleElement.style.background = 'gray'; // Change to the desired default color
-          }
+            }
         }
       }
       )};

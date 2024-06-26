@@ -3,12 +3,12 @@ from typing import Optional, Tuple
 
 from aiida.common.lang import classproperty
 
-from aiida.orm.nodes.process.workflow.workflow import WorkflowNode
+from aiida.orm.nodes.process.workflow.workchain import WorkChainNode
 
 __all__ = ("WorkGraphNode",)
 
 
-class WorkGraphNode(WorkflowNode):
+class WorkGraphNode(WorkChainNode):
     """ORM class for all nodes representing the execution of a WorkGraph."""
 
     WORKTREE_STATE_INFO_KEY = "workgraph_state_info"

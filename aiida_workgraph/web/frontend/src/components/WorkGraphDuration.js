@@ -10,14 +10,12 @@ const NodeDurationGraph = ({ id }) => {
 
     // Function to fetch data from the backend
     const fetchData = async () => {
-        console.log('fetchData', id);
         try {
             const response = await fetch(`http://localhost:8000/api/workgraph-state/${id}`);
             if (!response.ok) {
                 throw new Error('Network response was not ok');
             }
             const data = await response.json();
-            console.log(data);
             setProcessesInfo(data);
         } catch (error) {
             console.error('Error fetching data:', error);

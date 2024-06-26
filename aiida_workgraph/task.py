@@ -48,6 +48,7 @@ class Task(GraphNode):
             style={"width": "80%", "height": "600px"},
         )
         self.state = "PLANNED"
+        self.action = ""
 
     def to_dict(self) -> Dict[str, Any]:
         tdata = super().to_dict()

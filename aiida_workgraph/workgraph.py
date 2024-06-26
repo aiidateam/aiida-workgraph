@@ -365,35 +365,26 @@ class WorkGraph(node_graph.NodeGraph):
 
     def pause_tasks(self, tasks: List[str]) -> None:
         """Pause the given tasks."""
-        from aiida_workgraph.utils.control import create_task_action
+        from aiida_workgraph.utils.control import pause_tasks
 
-        if self.process.process_state.value.upper() not in ["RUNNING", "WAITING"]:
-            message = "Process is not running. Cannot pause tasks."
-            print(message)
-            return message
-        try:
-            create_task_action(
-                self.process.pk, tasks, action="pause", timeout=5, wait=False
-            )
-        except Exception as e:
-            print(f"Pause task {tasks} failed: {e}")
+        if self.process is None:
+            for name in tasks:
+                self.tasks[name].action = "PAUSE"
+        else:
+            _, msg = pause_tasks(self.process.pk, tasks)
+
         return "Send message to pause tasks."
 
     def play_tasks(self, tasks: List[str]) -> None:
         """Play the given tasks"""
 
-        from aiida_workgraph.utils.control import create_task_action
+        from aiida_workgraph.utils.control import play_tasks
 
-        if self.process.process_state.value.upper() not in ["RUNNING", "WAITING"]:
-            message = "Process is not running. Cannot play tasks."
-            print(message)
-            return message
-        try:
-            create_task_action(
-                self.process.pk, tasks, action="play", timeout=5, wait=False
-            )
-        except Exception as e:
-            print(f"Play task {tasks} failed: {e}")
+        if self.process is None:
+            for name in tasks:
+                self.tasks[name].action = ""
+        else:
+            _, msg = play_tasks(self.process.pk, tasks)
         return "Send message to play tasks."
 
     def continue_process(self):
