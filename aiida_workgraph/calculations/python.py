@@ -19,10 +19,10 @@ from aiida.orm import (
 )
 
 
-__all__ = ("PythonTask",)
+__all__ = ("PythonJob",)
 
 
-class PythonTask(CalcJob):
+class PythonJob(CalcJob):
     """Calcjob to run a Python function on a remote computer."""
 
     _internal_retrieve_list = []
@@ -131,7 +131,7 @@ class PythonTask(CalcJob):
 
         :returns: The process label to use for ``ProcessNode`` instances.
         """
-        return f"PythonTask<{self.inputs.function_name.value}>"
+        return f"PythonJob<{self.inputs.function_name.value}>"
 
     def prepare_for_submission(self, folder: Folder) -> CalcInfo:
         """Prepare the calculation for submission.

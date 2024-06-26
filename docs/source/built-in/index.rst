@@ -8,5 +8,5 @@ This section contains a collection of built-in tasks that are used in the AiiDA 
    :maxdepth: 1
    :caption: Contents:
 
-   pythontask
-   shelltask
+   pythonjob
+   shelljob

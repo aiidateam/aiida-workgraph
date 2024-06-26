@@ -1,10 +1,10 @@
-"""Parser for an `PythonTask` job."""
+"""Parser for an `PythonJob` job."""
 from aiida.parsers.parser import Parser
 from aiida_workgraph.orm import serialize_to_aiida_nodes
 
 
 class PythonParser(Parser):
-    """Parser for an `PythonTask` job."""
+    """Parser for an `PythonJob` job."""
 
     def parse(self, **kwargs):
         """Parse the contents of the output files stored in the `retrieved` output node."""
