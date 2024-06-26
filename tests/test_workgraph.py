@@ -62,6 +62,8 @@ def test_reset_message(wg_calcjob):
 
     wg = wg_calcjob
     wg.submit()
+    # wait for the daemon to start the workgraph
+    time.sleep(3)
     wg = WorkGraph.load(wg.process.pk)
     wg.tasks["add2"].set({"y": orm.Int(10).store()})
     wg.save()

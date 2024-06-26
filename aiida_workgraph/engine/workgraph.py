@@ -535,7 +535,7 @@ class WorkGraphEngine(Process, metaclass=Protect):
         self.report(f"Action: {action}. {tasks}")
         if action.upper() == "RESET":
             for name in tasks:
-                self.ctx.task_actions[name] = "RESET"
+                self.reset_task(name)
         if action.upper() == "PAUSE":
             for name in tasks:
                 self.pause_task(name)

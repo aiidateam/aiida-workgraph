@@ -111,7 +111,7 @@ class WorkGraphSaver:
         Args:
             tasks (list): a list of task names.
         """
-        from aiida_workgraph.utils.control import reset_task
+        from aiida_workgraph.utils.control import create_task_action
 
         # print("process state: ", self.process.process_state.value.upper())
         if self.process.process_state.value.upper() == "CREATED":
@@ -125,9 +125,7 @@ class WorkGraphSaver:
                     self.wgdata["tasks"][name]["result"] = None
                     self.wgdata["tasks"][name]["process"] = None
         else:
-            for name in tasks:
-                print(f"Send message to reset task: {name}")
-                reset_task(self.process, name)
+            create_task_action(self.process, tasks=tasks, action="reset")
 
     def set_tasks_action(self, action: str) -> None:
         """Set task action."""
