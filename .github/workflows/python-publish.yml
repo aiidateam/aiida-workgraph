@@ -37,7 +37,7 @@ jobs:
         npm run build
     - name: Build web frontend package
       working-directory: aiida_workgraph/web/frontend/
-      run:
+      run: |
         npm install
         npm run build
     - name: Build package
