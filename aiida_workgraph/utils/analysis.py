@@ -111,16 +111,21 @@ class WorkGraphSaver:
         Args:
             tasks (list): a list of task names.
         """
+        from aiida_workgraph.utils.control import create_task_action
 
-        for name in tasks:
-            self.append_message_to_queue(
-                f"task,{name}:RESET",
-            )
-
-    def append_message_to_queue(self, message: str) -> None:
-        queue = self.process.base.extras.get("workgraph_queue", [])
-        queue.append(message)
-        self.process.base.extras.set("workgraph_queue", queue)
+        # print("process state: ", self.process.process_state.value.upper())
+        if self.process.process_state.value.upper() == "CREATED":
+            for name in tasks:
+                self.wgdata["tasks"][name]["state"] = "PLANNED"
+                self.wgdata["tasks"][name]["process"] = None
+                self.wgdata["tasks"][name]["result"] = None
+                names = self.wgdata["connectivity"]["child_node"][name]
+                for name in names:
+                    self.wgdata["tasks"][name]["state"] = "PLANNED"
+                    self.wgdata["tasks"][name]["result"] = None
+                    self.wgdata["tasks"][name]["process"] = None
+        else:
+            create_task_action(self.process.pk, tasks=tasks, action="reset")
 
     def set_tasks_action(self, action: str) -> None:
         """Set task action."""

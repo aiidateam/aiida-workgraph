@@ -1,7 +1,8 @@
-from typing import Any, Dict, Optional, Union
+from typing import Any, Dict, Optional, Union, Callable
 from aiida.engine.processes import Process
 from aiida import orm
 from aiida.common.exceptions import NotExistent
+from aiida.engine.runners import Runner
 
 
 def get_executor(data: Dict[str, Any]) -> Union[Process, Any]:
@@ -428,3 +429,32 @@ Please check!
                 return True, "Environment setup is complete."
 
     return True, None
+
+
+def create_and_pause_process(
+    runner: Runner = None,
+    process_class: Callable = None,
+    inputs: dict = None,
+    state_msg: str = "",
+) -> Process:
+    from aiida.engine.utils import instantiate_process
+
+    process_inited = instantiate_process(runner, process_class, **inputs)
+    process_inited.pause(msg=state_msg)
+    process_inited.runner.persister.save_checkpoint(process_inited)
+    process_inited.close()
+    runner.controller.continue_process(process_inited.pid, nowait=True, no_reply=True)
+    return process_inited
+
+
+def recursive_to_dict(attr_dict):
+    """
+    Recursively convert an AttributeDict to a standard dictionary.
+    """
+    from aiida.common import AttributeDict
+    from plumpy.utils import AttributesFrozendict
+
+    if isinstance(attr_dict, (AttributesFrozendict, AttributeDict)):
+        return {k: recursive_to_dict(v) for k, v in attr_dict.items()}
+    else:
+        return attr_dict

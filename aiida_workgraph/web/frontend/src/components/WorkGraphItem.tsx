@@ -16,7 +16,16 @@ import {
   TopMenu,
   EditorWrapper,
 } from './WorkGraphItemStyles'; // Import your styles
+import { ToastContainer, toast } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 
+
+// Extend the Window interface
+declare global {
+  interface Window {
+    editor?: any; // You can replace `any` with a more specific type if available
+  }
+}
 
 
 
@@ -39,6 +48,7 @@ export function useRete<T extends { destroy(): void }>(
       create(container, workgraphData).then((value) => {
         editorRef.current = value;
         setEditor(value);
+        window.editor = value;
       });
     }
   }, [container, create, workgraphData]); // Add workgraphData as a dependency
@@ -59,6 +69,7 @@ export function useRete<T extends { destroy(): void }>(
 
   return [ref, editor] as const;
 }
+
 
 
 function WorkGraphGraph() {
@@ -200,6 +211,38 @@ function WorkGraphGraph() {
   ), [workgraphHierarchy, editor, showNodeDetails, selectedNode]); // Specify dependencies
 
 
+  const handleTaskAction = async (action: string) => {
+    if (editor && editor.editor) {
+        const selectedNodes = editor.editor.getNodes().filter((node: any) => node.selected);
+        const nodeNames = selectedNodes.map((node: any) => node.label);
+        console.log(nodeNames); // Good for debugging
+
+        try {
+            const response = await fetch(`http://localhost:8000/api/workgraph/tasks/${action}/${pk}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(nodeNames), // Correct the body to match expected structure
+            });
+
+            if (!response.ok) throw new Error(`Failed to perform ${action}: ${response.statusText}`);
+
+            const data = await response.json();
+            console.log(data.message); // Display backend response message
+            toast.success(`${action} action performed successfully on nodes.`);
+        } catch (error: any) {
+            console.error('Error performing node action:', error);
+            toast.error(`Error performing ${action}: ${error.message}`);
+        }
+    } else {
+        toast.error("No nodes selected or editor is not available");
+    }
+};
+
+  const handlePause = () => handleTaskAction('pause');
+  const handlePlay = () => handleTaskAction('play');
+  const handleKill = () => handleTaskAction('kill');
 
   return (
       <PageContainer>
@@ -225,7 +268,11 @@ function WorkGraphGraph() {
                 <label>Real-time state</label>
               </div>
               <div>
+                <ToastContainer />
                 <Button onClick={() => editor?.layout(true)}>Arrange</Button>
+                <Button onClick={handlePause}>Pause</Button>
+                <Button onClick={handlePlay}>Play</Button>
+                <Button onClick={handleKill}>Kill</Button>
               </div>
               </LayoutAction>
               {showNodeDetails && (

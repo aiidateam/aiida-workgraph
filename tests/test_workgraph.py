@@ -58,13 +58,18 @@ def test_pause(wg_engine):
 def test_reset_message(wg_calcjob):
     """Modify a node and save the workgraph.
     This will add a message to the workgraph_queue extra field."""
+    from aiida.cmdline.utils.common import get_workchain_report
+
     wg = wg_calcjob
     wg.submit()
+    # wait for the daemon to start the workgraph
+    time.sleep(3)
     wg = WorkGraph.load(wg.process.pk)
     wg.tasks["add2"].set({"y": orm.Int(10).store()})
     wg.save()
-    msgs = wg.process.base.extras.get("workgraph_queue", [])
-    assert len(msgs) == 1
+    wg.wait()
+    report = get_workchain_report(wg.process, "REPORT")
+    assert "Task add2 action: RESET." in report
 
 
 def test_restart(wg_calcjob):
@@ -75,13 +80,14 @@ def test_restart(wg_calcjob):
     wg.name = "test_restart_0"
     wg.submit(wait=True)
     wg1 = WorkGraph.load(wg.process.pk)
+    wg1.restart()
     wg1.name = "test_restart_1"
-    wg1.tasks["add2"].set({"y": orm.Int(10).store()})
-    wg1.submit(wait=True, restart=True)
-    wg1.update()
-    assert wg1.tasks["add3"].node.outputs.sum == 13
+    wg1.tasks["add2"].set({"x": orm.Int(10).store()})
+    wg1.submit(wait=True)
     assert wg1.tasks["add1"].node.pk == wg.tasks["add1"].pk
     assert wg1.tasks["add2"].node.pk != wg.tasks["add2"].pk
+    assert wg1.tasks["add3"].node.pk != wg.tasks["add3"].pk
+    assert wg1.tasks["add3"].node.outputs.sum == 19
 
 
 def test_extend_workgraph(decorated_add_multiply_group):
@@ -111,3 +117,20 @@ def test_node_from_workgraph(decorated_add_multiply_group):
     # wg.submit(wait=True)
     wg.run()
     assert wg.tasks["add2"].node.outputs.sum == 48
+
+
+def test_pause_task(wg_calcjob):
+    wg = wg_calcjob
+    wg.name = "test_pause_task"
+    wg.submit()
+    # wait for the daemon to start the workgraph
+    time.sleep(3)
+    # wg.run()
+    wg.pause_tasks(["add2"])
+    time.sleep(20)
+    wg.update()
+    assert wg.tasks["add2"].node.process_state.value.upper() == "CREATED"
+    assert wg.tasks["add2"].node.process_status == "Paused through WorkGraph"
+    wg.play_tasks(["add2"])
+    wg.wait()
+    assert wg.tasks["add2"].outputs["sum"].value == 9

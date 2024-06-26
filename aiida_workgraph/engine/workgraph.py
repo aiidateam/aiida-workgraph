@@ -6,9 +6,11 @@ import functools
 import logging
 import typing as t
 
+from plumpy import process_comms
 from plumpy.persistence import auto_persist
 from plumpy.process_states import Continue, Wait
 from plumpy.workchains import _PropagateReturn
+import kiwipy
 
 from aiida.common import exceptions
 from aiida.common.extendeddicts import AttributeDict
@@ -27,6 +29,8 @@ from aiida.engine.processes.workchains.awaitable import (
 )
 from aiida.engine.processes.workchains.workchain import Protect, WorkChainSpec
 from aiida.engine import run_get_node
+from aiida_workgraph.utils import create_and_pause_process
+import subprocess
 
 
 if t.TYPE_CHECKING:
@@ -407,6 +411,10 @@ class WorkGraphEngine(Process, metaclass=Protect):
         #
         self.ctx.msgs = []
         self.ctx._execution_count = 0
+        # init task actions
+        if not getattr(self.ctx, "task_actions", None):
+            self.report("init task actions")
+            self.ctx.task_actions = {}
         # init task results
         self.set_task_results()
         # while workgraph
@@ -461,7 +469,10 @@ class WorkGraphEngine(Process, metaclass=Protect):
         self.setup_ctx_workgraph(wgdata)
 
     def set_task_results(self) -> None:
-        for _, task in self.ctx.tasks.items():
+        self.report("task actions: {}".format(self.ctx.task_actions))
+        for name, task in self.ctx.tasks.items():
+            if self.ctx.task_actions.get(name, "").upper() == "RESET":
+                self.reset_task(task["name"])
             if task.get("process"):
                 if isinstance(task["process"], str):
                     task["process"] = orm.load_node(task["process"])
@@ -511,50 +522,111 @@ class WorkGraphEngine(Process, metaclass=Protect):
         else:
             task["results"] = None
 
-    def apply_actions(self) -> None:
-        """Apply actions to the workgraph.
-        The actions are stored in the base.extras["workgraph_queue"].
-        The index of the last applied action is stored in the base.extras["workgraph_queue_index"].
-        """
-        msgs = self.node.base.extras.get("workgraph_queue", [])
-        index = self.node.base.extras.get("workgraph_queue_index", 0)
-        for msg in msgs[index:]:
-            header, msg = msg.split(",")
-            if header == "task":
-                self.apply_task_actions(msg)
-            else:
-                self.report(f"Unknow message type {msg}")
-            index += 1
-            self.report("Apply actions: {}".format(msg))
-            msgs = self.node.base.extras.set("workgraph_queue_index", index)
+    def apply_action(self, msg: dict) -> None:
 
-    def apply_task_actions(self, msg: str) -> None:
+        if msg["catalog"] == "task":
+            self.apply_task_actions(msg)
+        else:
+            self.report(f"Unknow message type {msg}")
+
+    def apply_task_actions(self, msg: dict) -> None:
         """Apply task actions to the workgraph."""
-        name, action = msg.split(":")
-        print("apply task actions: ", name, action)
-        if action == "RESET":
-            self.reset_task(name)
+        action = msg["action"]
+        tasks = msg["tasks"]
+        self.report(f"Action: {action}. {tasks}")
+        if action.upper() == "RESET":
+            for name in tasks:
+                self.reset_task(name)
+        if action.upper() == "PAUSE":
+            for name in tasks:
+                self.pause_task(name)
+        if action.upper() == "PLAY":
+            for name in tasks:
+                self.play_task(name)
+        if action.upper() == "SKIP":
+            pass
 
     def reset_task(self, name: str) -> None:
         """Reset task."""
-        self.ctx.tasks[name]["state"] = "CREATED"
+
+        self.report(f"Task {name} action: RESET.")
+        self.ctx.tasks[name]["state"] = "PLANNED"
+        self.ctx.tasks[name]["process"] = None
         # reset its child tasks
         names = self.ctx.connectivity["child_node"][name]
         for name in names:
-            self.ctx.tasks[name]["state"] = "CREATED"
+            self.ctx.tasks[name]["state"] = "PLANNED"
             self.ctx.tasks[name]["result"] = None
             self.ctx.tasks[name]["process"] = None
+
+    def pause_task(self, name: str) -> None:
+        """Pause task."""
+        from aiida.engine.processes import control
+
+        self.report(f"Task {name} action: PAUSE.")
+        if self.ctx.tasks[name]["state"] == "PLANNED":
+            # set the task to be paused, so that it will be paused when it is created
+            self.ctx.task_actions[name] = "PAUSE"
+        elif self.ctx.tasks[name]["process"].process_state.value.upper() in [
+            "RUNNING",
+            "WAITING",
+        ]:
+            # if the task is running, pause it, so that it will be paused when it is finished
+            try:
+                control.pause_processes(
+                    [self.ctx.tasks[name]["process"]],
+                    all_entries=None,
+                    timeout=5,
+                    wait=False,
+                )
+            except Exception as e:
+                self.report(f"Play task {name} failed: {e}")
+        else:
+            self.report(f"Task {name} is not created, thus cannot be paused.")
+
+    def play_task(self, name: str) -> None:
+        """Play task."""
+        self.report(f"Task {name} action: PLAY.")
+
+        if self.ctx.tasks[name]["state"] == "PLANNED":
+            self.report(
+                f"Task {name} is at planned state, so we reset the task action."
+            )
+            self.ctx.task_actions[name] = None
+        elif self.ctx.tasks[name]["process"].process_state.value.upper() in [
+            "PAUSED",
+            "CREATED",
+        ]:
+            state = self.ctx.tasks[name]["process"].process_state.value.upper()
+            self.report(f"Task {name} is at {state} state, so we play the task.")
+            try:
+                # use subprocess to play the task, so that it not block the current process
+                subprocess.Popen(
+                    [
+                        "verdi",
+                        "process",
+                        "play",
+                        str(self.ctx.tasks[name]["process"].pk),
+                    ],
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                )
+            except Exception as e:
+                self.report(f"Play task {name} failed: {e}")
+        else:
+            self.report(f"Task {name} cannot be played.")
+
+        return "Send message to play tasks."
 
     def continue_workgraph(self, exclude: t.Optional[t.List[str]] = None) -> None:
         print("Continue workgraph.")
         exclude = exclude or []
         self.report("Continue workgraph.")
         self.update_workgraph_from_base()
-        self.apply_actions()
         task_to_run = []
         for name, task in self.ctx.tasks.items():
             # update task state
-            if task["state"] in ["RUNNING", "FINISHED", "FAILED", "SKIPPED"]:
+            if task["state"] in ["CREATED", "RUNNING", "FINISHED", "FAILED", "SKIPPED"]:
                 continue
             ready, output = self.check_parent_state(name)
             if ready and name not in exclude:
@@ -567,20 +639,16 @@ class WorkGraphEngine(Process, metaclass=Protect):
         """Update task state if task is a Awaitable."""
         print("update task state: ", name)
         task = self.ctx.tasks[name]
-        if (
-            task["metadata"]["node_type"].upper()
-            in [
-                "CALCFUNCTION",
-                "WORKFUNCTION",
-                "CALCJOB",
-                "WORKCHAIN",
-                "GRAPH_BUILDER",
-                "WORKGRAPH",
-                "PYTHONTASK",
-                "SHELLTASK",
-            ]
-            and task["state"] == "RUNNING"
-        ):
+        if task["metadata"]["node_type"].upper() in [
+            "CALCFUNCTION",
+            "WORKFUNCTION",
+            "CALCJOB",
+            "WORKCHAIN",
+            "GRAPH_BUILDER",
+            "WORKGRAPH",
+            "PYTHONTASK",
+            "SHELLTASK",
+        ] and task["state"] in ["CREATED", "RUNNING"]:
             self.set_task_result(task)
 
     def is_workgraph_finished(self) -> bool:
@@ -591,7 +659,7 @@ class WorkGraphEngine(Process, metaclass=Protect):
         for name, task in self.ctx.tasks.items():
             # self.update_task_state(name)
             print("task: ", name, task["state"])
-            if task["state"] in ["RUNNING", "CREATED", "READY"]:
+            if task["state"] in ["RUNNING", "CREATED", "PLANNED", "READY"]:
                 is_finished = False
             elif task["state"] == "FAILED":
                 failed_tasks.append(name)
@@ -780,10 +848,25 @@ class WorkGraphEngine(Process, metaclass=Protect):
                 kwargs.setdefault("metadata", {})
                 kwargs["metadata"].update({"call_link_label": name})
                 # transfer the args to kwargs
-                process = self.submit(executor, **kwargs)
+                self.report(
+                    f"Node action: {name}, {self.ctx.task_actions.get(name, None)}"
+                )
+                if self.ctx.task_actions.get(name, "").upper() == "PAUSE":
+                    self.ctx.task_actions[name] = ""
+                    self.report(f"Task {name} is created and paused.")
+                    process = create_and_pause_process(
+                        self.runner,
+                        executor,
+                        kwargs,
+                        state_msg="Paused through WorkGraph",
+                    )
+                    self.ctx.tasks[name]["state"] = "CREATED"
+                    process = process.node
+                else:
+                    process = self.submit(executor, **kwargs)
+                    self.ctx.tasks[name]["state"] = "RUNNING"
                 process.label = name
                 task["process"] = process
-                self.ctx.tasks[name]["state"] = "RUNNING"
                 self.to_context(**{name: process})
             elif task["metadata"]["node_type"].upper() in ["GRAPH_BUILDER"]:
                 print("task type: graph_builder.")
@@ -817,27 +900,44 @@ class WorkGraphEngine(Process, metaclass=Protect):
 
                 inputs = prepare_for_python_task(task, kwargs, var_kwargs)
                 # since aiida 2.5.0, we can pass inputs directly to the submit, no need to use **inputs
-                process = self.submit(
-                    PythonTask,
-                    **inputs,
-                )
+                if self.ctx.task_actions.get(name, "").upper() == "PAUSE":
+                    self.ctx.task_actions[name] = ""
+                    self.report(f"Task {name} is created and paused.")
+                    process = create_and_pause_process(
+                        self.runner,
+                        PythonTask,
+                        inputs,
+                        state_msg="Paused through WorkGraph",
+                    )
+                    self.ctx.tasks[name]["state"] = "CREATED"
+                    process = process.node
+                else:
+                    process = self.submit(PythonTask, **inputs)
+                    self.ctx.tasks[name]["state"] = "RUNNING"
                 process.label = name
                 task["process"] = process
-                self.ctx.tasks[name]["state"] = "RUNNING"
                 self.to_context(**{name: process})
             elif task["metadata"]["node_type"].upper() in ["SHELLTASK"]:
                 from aiida_shell.calculations.shell import ShellJob
                 from .utils import prepare_for_shell_task
 
                 inputs = prepare_for_shell_task(task, kwargs)
-                # since aiida 2.5.0, we can pass inputs directly to the submit, no need to use **inputs
-                process = self.submit(
-                    ShellJob,
-                    **inputs,
-                )
+                if self.ctx.task_actions.get(name, "").upper() == "PAUSE":
+                    self.ctx.task_actions[name] = ""
+                    self.report(f"Task {name} is created and paused.")
+                    process = create_and_pause_process(
+                        self.runner,
+                        ShellJob,
+                        inputs,
+                        state_msg="Paused through WorkGraph",
+                    )
+                    self.ctx.tasks[name]["state"] = "CREATED"
+                    process = process.node
+                else:
+                    process = self.submit(ShellJob, **inputs)
+                    self.ctx.tasks[name]["state"] = "RUNNING"
                 process.label = name
                 task["process"] = process
-                self.ctx.tasks[name]["state"] = "RUNNING"
                 self.to_context(**{name: process})
             elif task["metadata"]["node_type"].upper() in ["NORMAL"]:
                 print("Task  type: Normal.")
@@ -1000,7 +1100,7 @@ class WorkGraphEngine(Process, metaclass=Protect):
         - if task is a scatter task, check if all scattered tasks finished
         """
         # print(f"    Check task {name} state: ")
-        if self.ctx.tasks[name]["state"] in ["CREATED", "WAITING"]:
+        if self.ctx.tasks[name]["state"] in ["PLANNED", "WAITING"]:
             ready, output = self.check_parent_state(name)
             if ready:
                 # print(f"    Task {name} is ready to launch.")
@@ -1060,7 +1160,7 @@ class WorkGraphEngine(Process, metaclass=Protect):
     def reset(self) -> None:
         print("Reset")
         self.ctx._execution_count += 1
-        self.set_task_state(self.ctx.tasks.keys(), "CREATED")
+        self.set_task_state(self.ctx.tasks.keys(), "PLANNED")
 
     def set_task_state(
         self, names: t.Union[t.List[str], t.Sequence[str]], value: str
@@ -1108,6 +1208,45 @@ class WorkGraphEngine(Process, metaclass=Protect):
             Executor, _ = get_executor(output["serialize"])
             datas[key] = Executor(value)
         self.node.set_extra(f"nodes__results__{name}", datas)
+
+    def message_receive(
+        self, _comm: kiwipy.Communicator, msg: t.Dict[str, t.Any]
+    ) -> t.Any:
+        """
+        Coroutine called when the process receives a message from the communicator
+
+        :param _comm: the communicator that sent the message
+        :param msg: the message
+        :return: the outcome of processing the message, the return value will be sent back as a response to the sender
+        """
+        self.logger.debug(
+            "Process<%s>: received RPC message with communicator '%s': %r",
+            self.pid,
+            _comm,
+            msg,
+        )
+
+        intent = msg[process_comms.INTENT_KEY]
+
+        if intent == process_comms.Intent.PLAY:
+            return self._schedule_rpc(self.play)
+        if intent == process_comms.Intent.PAUSE:
+            return self._schedule_rpc(
+                self.pause, msg=msg.get(process_comms.MESSAGE_KEY, None)
+            )
+        if intent == process_comms.Intent.KILL:
+            return self._schedule_rpc(
+                self.kill, msg=msg.get(process_comms.MESSAGE_KEY, None)
+            )
+        if intent == process_comms.Intent.STATUS:
+            status_info: t.Dict[str, t.Any] = {}
+            self.get_status_info(status_info)
+            return status_info
+        if intent == "custom":
+            return self._schedule_rpc(self.apply_action, msg=msg)
+
+        # Didn't match any known intents
+        raise RuntimeError("Unknown intent")
 
     def finalize(self) -> t.Optional[ExitCode]:
         """"""

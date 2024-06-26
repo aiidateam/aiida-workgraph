@@ -61,16 +61,29 @@ class WorkGraph(node_graph.NodeGraph):
         """Add alias to `nodes` for WorkGraph"""
         return self.nodes
 
-    def run(self, inputs: Optional[Dict[str, Any]] = None) -> Any:
+    def prepare_inputs(self, metadata: Optional[Dict[str, Any]]) -> Dict[str, Any]:
+        from aiida_workgraph.utils import (
+            merge_properties,
+            serialize_pythontask_properties,
+        )
+
+        wgdata = self.to_dict()
+        merge_properties(wgdata)
+        serialize_pythontask_properties(wgdata)
+        metadata = metadata or {}
+        inputs = {"wg": wgdata, "metadata": metadata}
+        return inputs
+
+    def run(
+        self,
+        inputs: Optional[Dict[str, Any]] = None,
+        metadata: Optional[Dict[str, Any]] = None,
+    ) -> Any:
         """
         Run the AiiDA workgraph process and update the process status. The method uses AiiDA's engine to run
         the process, when the process is finished, update the status of the tasks
         """
         from aiida_workgraph.engine.workgraph import WorkGraphEngine
-        from aiida_workgraph.utils import (
-            merge_properties,
-            serialize_pythontask_properties,
-        )
 
         # set task inputs
         if inputs is not None:
@@ -83,16 +96,13 @@ class WorkGraph(node_graph.NodeGraph):
         if self.process is not None:
             print("Your workgraph is already created. Please use the submit() method.")
             return
-        wgdata = self.to_dict()
-        merge_properties(wgdata)
-        serialize_pythontask_properties(wgdata)
-        inputs = {"wg": wgdata}
+        inputs = self.prepare_inputs(metadata=metadata)
         # init a process
         runner = get_manager().get_runner()
         process_inited = WorkGraphEngine(runner=runner, inputs=inputs)
         self.process = process_inited.node
         # save workgraph data into process node
-        self.save_to_base(wgdata)
+        self.save_to_base(inputs["wg"])
         result = aiida.engine.run(process_inited)
         self.update()
         return result
@@ -102,8 +112,7 @@ class WorkGraph(node_graph.NodeGraph):
         inputs: Optional[Dict[str, Any]] = None,
         wait: bool = False,
         timeout: int = 60,
-        restart: bool = False,
-        new: bool = False,
+        metadata: Optional[Dict[str, Any]] = None,
     ) -> aiida.orm.ProcessNode:
         """Submit the AiiDA workgraph process and optionally wait for it to finish.
         Args:
@@ -119,23 +128,13 @@ class WorkGraph(node_graph.NodeGraph):
                     raise KeyError(f"Task {name} not found in WorkGraph.")
                 self.tasks[name].set(input)
 
-        process_controller = get_manager().get_process_controller()
-        # Create a new submission
-        if self.process is not None and new:
-            self.reset()
-        # Create a restart submission
-        # save the current process node as restart_process
-        # so that the WorkGraphSaver can compare the difference, and reset the modified tasks
-        if restart:
-            self.restart_process = self.process
-            self.process = None
         # save the workgraph to the process node
-        self.save()
+        self.save(metadata=metadata)
         if self.process.process_state.value.upper() not in ["CREATED"]:
             raise ValueError(f"Process {self.process.pk} has already been submitted.")
-        # launch the process, send the task to RabbitMA
-        # TODO in case of "[ERROR] Process<3705> is unreachable."
-        process_controller.continue_process(self.process.pk)
+        self.continue_process()
+        # as long as we submit the process, it is a new submission, we should set restart_process to None
+        self.restart_process = None
         if wait:
             self.wait(timeout=timeout)
         return self.process
@@ -145,25 +144,21 @@ class WorkGraph(node_graph.NodeGraph):
         This is only used for a running workgraph.
         Save the AiiDA workgraph process and update the process status.
         """
+        from aiida.manage import manager
+        from aiida.engine.utils import instantiate_process
         from aiida_workgraph.engine.workgraph import WorkGraphEngine
-        from aiida_workgraph.utils import (
-            merge_properties,
-            serialize_pythontask_properties,
-        )
 
-        wgdata = self.to_dict()
-        merge_properties(wgdata)
-        serialize_pythontask_properties(wgdata)
-        metadata = metadata or {}
-        inputs = {"wg": wgdata, "metadata": metadata}
+        inputs = self.prepare_inputs(metadata)
         if self.process is None:
+            runner = manager.get_manager().get_runner()
             # init a process node
-            process_inited = WorkGraphEngine(inputs=inputs)
+            process_inited = instantiate_process(runner, WorkGraphEngine, **inputs)
             process_inited.runner.persister.save_checkpoint(process_inited)
             self.process = process_inited.node
             self.process_inited = process_inited
+            process_inited.close()
             print(f"WorkGraph process created, PK: {self.process.pk}")
-        self.save_to_base(wgdata)
+        self.save_to_base(inputs["wg"])
         self.update()
 
     def save_to_base(self, wgdata: Dict[str, Any]) -> None:
@@ -369,17 +364,64 @@ class WorkGraph(node_graph.NodeGraph):
         os.system("verdi process pause {}".format(self.process.pk))
 
     def pause_tasks(self, tasks: List[str]) -> None:
-        """
-        Pause the given tasks
-        """
+        """Pause the given tasks."""
+        from aiida_workgraph.utils.control import create_task_action
+
+        if self.process.process_state.value.upper() not in ["RUNNING", "WAITING"]:
+            message = "Process is not running. Cannot pause tasks."
+            print(message)
+            return message
+        try:
+            create_task_action(
+                self.process.pk, tasks, action="pause", timeout=5, wait=False
+            )
+        except Exception as e:
+            print(f"Pause task {tasks} failed: {e}")
+        return "Send message to pause tasks."
 
     def play_tasks(self, tasks: List[str]) -> None:
-        """
-        Play the given tasks
-        """
+        """Play the given tasks"""
+
+        from aiida_workgraph.utils.control import create_task_action
+
+        if self.process.process_state.value.upper() not in ["RUNNING", "WAITING"]:
+            message = "Process is not running. Cannot play tasks."
+            print(message)
+            return message
+        try:
+            create_task_action(
+                self.process.pk, tasks, action="play", timeout=5, wait=False
+            )
+        except Exception as e:
+            print(f"Play task {tasks} failed: {e}")
+        return "Send message to play tasks."
+
+    def continue_process(self):
+        """Continue a saved process by sending the task to RabbitMA.
+        Use with caution, this may launch duplicate processes."""
+        from aiida.manage import get_manager
+
+        process_controller = get_manager().get_process_controller()
+        process_controller.continue_process(self.pk)
+
+    def play(self):
+        import os
+
+        os.system("verdi process play {}".format(self.process.pk))
+
+    def restart(self):
+        """Create a restart submission."""
+        if self.process is None:
+            raise ValueError(
+                "No process found. One can not restart from a non-existing process."
+            )
+        # save the current process node as restart_process
+        # so that the WorkGraphSaver can compare the difference, and reset the modified tasks
+        self.restart_process = self.process
+        self.process = None
 
     def reset(self) -> None:
-        """Reset the workgraph."""
+        """Reset the workgraph to create a new submission."""
 
         self.process = None
         for task in self.tasks:
@@ -387,7 +429,7 @@ class WorkGraph(node_graph.NodeGraph):
         self.sequence = []
         self.conditions = []
         self.context = {}
-        self.state = "CREATED"
+        self.state = "PLANNED"
 
     def extend(self, wg: "WorkGraph", prefix: str = "") -> None:
         """Append a workgraph to the current workgraph.

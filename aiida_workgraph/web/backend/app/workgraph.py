@@ -1,5 +1,6 @@
 from fastapi import APIRouter, HTTPException, Query
 from aiida import orm
+from typing import List
 
 router = APIRouter()
 
@@ -33,7 +34,7 @@ async def read_workgraph_data(search: str = Query(None)):
 
 
 @router.get("/api/workgraph/{id}/{node_name}")
-async def read_workgraph_node(id: int, node_name: str):
+async def read_workgraph_task(id: int, node_name: str):
     from .utils import node_to_short_json
     from aiida.orm.utils.serialize import deserialize_unsafe
 
@@ -54,7 +55,7 @@ async def read_workgraph_node(id: int, node_name: str):
 
 
 @router.get("/api/workgraph/{id}")
-async def read_workgraph_item(id: int):
+async def read_workgraph(id: int):
     from .utils import (
         workgraph_to_short_json,
         get_node_summary,
@@ -93,7 +94,7 @@ async def read_workgraph_item(id: int):
 
 
 @router.get("/api/workgraph-state/{id}")
-async def read_workgraph_item_state(id: int):
+async def read_workgraph_tasks_state(id: int):
     from aiida_workgraph.utils import get_processes_latest
 
     try:
@@ -105,7 +106,7 @@ async def read_workgraph_item_state(id: int):
 
 # Route for pausing a workgraph item
 @router.post("/api/workgraph/pause/{id}")
-async def pause_workgraph_node(
+async def pause_workgraph(
     id: int,
 ):
     from aiida.engine.processes.control import pause_processes
@@ -121,7 +122,7 @@ async def pause_workgraph_node(
 
 # Route for playing a workgraph item
 @router.post("/api/workgraph/play/{id}")
-async def play_workgraph_node(
+async def play_workgraph(
     id: int,
 ):
     from aiida.engine.processes.control import play_processes
@@ -137,7 +138,7 @@ async def play_workgraph_node(
 
 # Route for deleting a workgraph item
 @router.delete("/api/workgraph/delete/{id}")
-async def delete_workgraph_node(
+async def delete_workgraph(
     id: int,
 ):
     from aiida.tools import delete_nodes
@@ -152,3 +153,46 @@ async def delete_workgraph_node(
             return {"message": f"Failed to delete workgraph {id}"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+# General function to manage task actions
+async def manage_task_action(action: str, id: int, tasks: List[str]):
+    from aiida_workgraph.utils.control import create_task_action
+
+    print(f"Performing {action} action on tasks {tasks} in workgraph {id}")
+    try:
+
+        if action == "pause":
+            (f"Pausing tasks {tasks}")
+            msg = create_task_action(id, tasks=tasks)
+        elif action == "play":
+            (f"Playing tasks {tasks}")
+            msg = wg.play_tasks(tasks)
+        elif action == "kill":
+            (f"Killing tasks {tasks}")
+            msg = wg.kill_tasks(tasks)
+        else:
+            raise HTTPException(status_code=400, detail="Unsupported action")
+
+        return {"message": msg}
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# Endpoint for pausing tasks in a workgraph
+@router.post("/api/workgraph/tasks/pause/{id}")
+async def pause_workgraph_tasks(id: int, tasks: List[str] = None):
+    return await manage_task_action("pause", id, tasks)
+
+
+# Endpoint for playing tasks in a workgraph
+@router.post("/api/workgraph/tasks/play/{id}")
+async def play_workgraph_tasks(id: int, tasks: List[str] = None):
+    return await manage_task_action("play", id, tasks)
+
+
+# Endpoint for killing tasks in a workgraph
+@router.post("/api/workgraph/tasks/kill/{id}")
+async def kill_workgraph_tasks(id: int, tasks: List[str] = None):
+    return await manage_task_action("kill", id, tasks)
