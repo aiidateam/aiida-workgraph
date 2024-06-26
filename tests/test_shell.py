@@ -7,10 +7,10 @@ aiida.load_profile()
 
 
 def test_shell_command():
-    """Test the ShellTask with command as a string."""
+    """Test the ShellJob with command as a string."""
     wg = WorkGraph(name="test_shell_command")
     job1 = wg.tasks.new(
-        "ShellTask",
+        "ShellJob",
         command="cat",
         resolve_command=True,
         arguments=["{file_a}", "{file_b}"],
@@ -24,11 +24,11 @@ def test_shell_command():
 
 
 def test_shell_code():
-    """Test the ShellTask with code."""
+    """Test the ShellJob with code."""
     cat_code = prepare_code("cat")
     wg = WorkGraph(name="test_shell_code")
     job1 = wg.tasks.new(
-        "ShellTask",
+        "ShellJob",
         command=cat_code,
         arguments=["{file_a}", "{file_b}"],
         nodes={
@@ -44,7 +44,7 @@ def test_shell_set():
     """Set the nodes during/after the creation of the task."""
     wg = WorkGraph(name="test_shell_set")
     echo_task = wg.tasks.new(
-        "ShellTask",
+        "ShellJob",
         name="echo",
         command="cp",
         arguments=["{file}", "copied_file"],
@@ -53,7 +53,7 @@ def test_shell_set():
     )
 
     cat_task = wg.tasks.new(
-        "ShellTask",
+        "ShellJob",
         name="cat",
         command="cat",
         arguments=["{input}"],
@@ -78,7 +78,7 @@ def test_shell_workflow():
     wg = WorkGraph(name="shell_add_mutiply_workflow")
     # echo x + y expression
     job1 = wg.tasks.new(
-        "ShellTask",
+        "ShellJob",
         name="job1",
         command="echo",
         arguments=["{x}", "+", "{y}"],
@@ -89,7 +89,7 @@ def test_shell_workflow():
     )
     # bc command to calculate the expression
     job2 = wg.tasks.new(
-        "ShellTask",
+        "ShellJob",
         name="job2",
         command="bc",
         arguments=["{expression}"],
@@ -101,7 +101,7 @@ def test_shell_workflow():
     )
     # echo result + y expression
     job3 = wg.tasks.new(
-        "ShellTask",
+        "ShellJob",
         name="job3",
         command="echo",
         arguments=["{result}", "*", "{z}"],
@@ -109,7 +109,7 @@ def test_shell_workflow():
     )
     # bc command to calculate the expression
     job4 = wg.tasks.new(
-        "ShellTask",
+        "ShellJob",
         name="job4",
         command="bc",
         arguments=["{expression}"],

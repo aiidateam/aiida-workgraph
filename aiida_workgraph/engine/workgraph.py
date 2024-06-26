@@ -647,7 +647,7 @@ class WorkGraphEngine(Process, metaclass=Protect):
             "GRAPH_BUILDER",
             "WORKGRAPH",
             "PYTHONTASK",
-            "SHELLTASK",
+            "SHELLJOB",
         ] and task["state"] in ["CREATED", "RUNNING"]:
             self.set_task_result(task)
 
@@ -753,7 +753,7 @@ class WorkGraphEngine(Process, metaclass=Protect):
                 "GRAPH_BUILDER",
                 "WORKGRAPH",
                 "PYTHONTASK",
-                "SHELLTASK",
+                "SHELLJOB",
             ]:
                 if len(self._awaitables) > self.ctx.max_number_awaitables:
                     print(
@@ -917,7 +917,7 @@ class WorkGraphEngine(Process, metaclass=Protect):
                 process.label = name
                 task["process"] = process
                 self.to_context(**{name: process})
-            elif task["metadata"]["node_type"].upper() in ["SHELLTASK"]:
+            elif task["metadata"]["node_type"].upper() in ["SHELLJOB"]:
                 from aiida_shell.calculations.shell import ShellJob
                 from .utils import prepare_for_shell_task
 

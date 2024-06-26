@@ -9,4 +9,4 @@ This section contains a collection of built-in tasks that are used in the AiiDA 
    :caption: Contents:
 
    pythontask
-   shelltask
+   shelljob

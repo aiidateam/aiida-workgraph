@@ -36,7 +36,7 @@ class TaskCollection(NodeCollection):
         if isinstance(identifier, str) and identifier.upper() == "PythonTask":
             identifier, _ = build_python_task(kwargs.pop("function"))
             return super().new(identifier, name, uuid, **kwargs)
-        if isinstance(identifier, str) and identifier.upper() == "SHELLTASK":
+        if isinstance(identifier, str) and identifier.upper() == "SHELLJOB":
             identifier, _, links = build_shell_task(
                 nodes=kwargs.get("nodes", {}),
                 outputs=kwargs.get("outputs", None),
