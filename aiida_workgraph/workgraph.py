@@ -64,12 +64,12 @@ class WorkGraph(node_graph.NodeGraph):
     def prepare_inputs(self, metadata: Optional[Dict[str, Any]]) -> Dict[str, Any]:
         from aiida_workgraph.utils import (
             merge_properties,
-            serialize_pythontask_properties,
+            serialize_pythonjob_properties,
         )
 
         wgdata = self.to_dict()
         merge_properties(wgdata)
-        serialize_pythontask_properties(wgdata)
+        serialize_pythonjob_properties(wgdata)
         metadata = metadata or {}
         inputs = {"wg": wgdata, "metadata": metadata}
         return inputs

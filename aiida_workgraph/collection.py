@@ -30,13 +30,13 @@ class TaskCollection(NodeCollection):
                     raise ValueError(
                         "GraphBuilder task cannot be run remotely. Please set run_remotely=False."
                     )
-                # this is a PythonTask
+                # this is a PythonJob
                 identifier, _ = build_python_task(identifier)
             return super().new(identifier, name, uuid, **kwargs)
-        if isinstance(identifier, str) and identifier.upper() == "PythonTask":
+        if isinstance(identifier, str) and identifier.upper() == "PythonJob":
             identifier, _ = build_python_task(kwargs.pop("function"))
             return super().new(identifier, name, uuid, **kwargs)
-        if isinstance(identifier, str) and identifier.upper() == "SHELLTASK":
+        if isinstance(identifier, str) and identifier.upper() == "SHELLJOB":
             identifier, _, links = build_shell_task(
                 nodes=kwargs.get("nodes", {}),
                 outputs=kwargs.get("outputs", None),

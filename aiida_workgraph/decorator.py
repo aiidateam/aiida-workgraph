@@ -242,14 +242,14 @@ def build_task_from_AiiDA(
 
 
 def build_python_task(func: Callable) -> Task:
-    """Build PythonTask task from function."""
-    from aiida_workgraph.calculations.python import PythonTask
+    """Build PythonJob task from function."""
+    from aiida_workgraph.calculations.python import PythonJob
     from copy import deepcopy
 
-    tdata = {"executor": PythonTask, "task_type": "CALCJOB"}
+    tdata = {"executor": PythonJob, "task_type": "CALCJOB"}
     _, tdata_py = build_task_from_AiiDA(tdata)
     tdata = deepcopy(func.tdata)
-    # merge the inputs and outputs from the PythonTask task to the function task
+    # merge the inputs and outputs from the PythonJob task to the function task
     # skip the already existed inputs and outputs
     inputs = tdata["inputs"]
     inputs.extend(
@@ -271,14 +271,14 @@ def build_python_task(func: Callable) -> Task:
     for input in inputs:
         if input[1] == "copy_files":
             input[2].update({"link_limit": 1e6})
-    # append the kwargs of the PythonTask task to the function task
+    # append the kwargs of the PythonJob task to the function task
     kwargs = tdata["kwargs"]
     kwargs.extend(["computer", "code_label", "code_path", "prepend_text"])
     kwargs.extend(tdata_py["kwargs"])
     tdata["inputs"] = inputs
     tdata["outputs"] = outputs
     tdata["kwargs"] = kwargs
-    tdata["task_type"] = "PYTHONTASK"
+    tdata["task_type"] = "PYTHONJOB"
     task = create_task(tdata)
     task.is_aiida_component = True
     return task, tdata
@@ -287,12 +287,12 @@ def build_python_task(func: Callable) -> Task:
 def build_shell_task(
     nodes: dict = None, outputs: list = None, parser_outputs: list = None
 ) -> Task:
-    """Build ShellTask with custom inputs and outputs."""
+    """Build ShellJob with custom inputs and outputs."""
     from aiida_shell.calculations.shell import ShellJob
     from aiida_shell.parsers.shell import ShellParser
     from node_graph.socket import NodeSocket
 
-    tdata = {"executor": ShellJob, "task_type": "SHELLTASK"}
+    tdata = {"executor": ShellJob, "task_type": "SHELLJOB"}
     _, tdata = build_task_from_AiiDA(tdata)
     # create input sockets for the nodes, if it is linked other sockets
     links = {}
@@ -321,7 +321,7 @@ def build_shell_task(
         if output not in tdata["outputs"]:
             tdata["outputs"].append(output)
     #
-    tdata["identifier"] = "ShellTask"
+    tdata["identifier"] = "ShellJob"
     tdata["inputs"].extend(
         [
             ["General", "command"],
@@ -329,7 +329,7 @@ def build_shell_task(
         ]
     )
     tdata["kwargs"].extend(["command", "resolve_command"])
-    tdata["task_type"] = "SHELLTASK"
+    tdata["task_type"] = "SHELLJOB"
     task = create_task(tdata)
     task.is_aiida_component = True
     return task, tdata, links

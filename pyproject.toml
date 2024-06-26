@@ -71,7 +71,7 @@ workgraph = "aiida_workgraph.cli.cmd_workgraph:workgraph"
 "workgraph" = "aiida_workgraph.cli.cmd_workgraph:workgraph"
 
 [project.entry-points."aiida.calculations"]
-"workgraph.python" = "aiida_workgraph.calculations.python:PythonTask"
+"workgraph.python" = "aiida_workgraph.calculations.python:PythonJob"
 
 [project.entry-points."aiida.parsers"]
 "workgraph.python" = "aiida_workgraph.calculations.python_parser:PythonParser"

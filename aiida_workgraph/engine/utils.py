@@ -25,12 +25,12 @@ def prepare_for_workgraph_task(task: dict, kwargs: dict) -> tuple:
 
 
 def prepare_for_python_task(task: dict, kwargs: dict, var_kwargs: dict) -> dict:
-    """Prepare the inputs for PythonTask"""
+    """Prepare the inputs for PythonJob"""
     from aiida_workgraph.utils import get_or_create_code
     import os
 
     print("Task  type: Python.")
-    # get the names kwargs for the PythonTask, which are the inputs before _wait
+    # get the names kwargs for the PythonJob, which are the inputs before _wait
     function_kwargs = {}
     for input in task["inputs"]:
         if input["name"] == "_wait":
@@ -107,12 +107,12 @@ def prepare_for_python_task(task: dict, kwargs: dict, var_kwargs: dict) -> dict:
 
 
 def prepare_for_shell_task(task: dict, kwargs: dict) -> dict:
-    """Prepare the inputs for ShellTask"""
+    """Prepare the inputs for ShellJob"""
     from aiida_shell.launch import prepare_code, convert_nodes_single_file_data
     from aiida.common import lang
     from aiida.orm import AbstractCode
 
-    print("Task  type: ShellTask.")
+    print("Task  type: ShellJob.")
     command = kwargs.pop("command", None)
     resolve_command = kwargs.pop("resolve_command", False)
     metadata = kwargs.pop("metadata", {})

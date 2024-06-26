@@ -621,8 +621,8 @@ class WorkGraphEngine(Process, metaclass=Protect):
             "WORKCHAIN",
             "GRAPH_BUILDER",
             "WORKGRAPH",
-            "PYTHONTASK",
-            "SHELLTASK",
+            "PYTHONJOB",
+            "SHELLJOB",
         ] and self.get_task_state_info(task["name"], "state") in ["CREATED", "RUNNING"]:
             self.set_task_result(task)
 
@@ -732,8 +732,8 @@ class WorkGraphEngine(Process, metaclass=Protect):
                 "WORKCHAIN",
                 "GRAPH_BUILDER",
                 "WORKGRAPH",
-                "PYTHONTASK",
-                "SHELLTASK",
+                "PYTHONJOB",
+                "SHELLJOB",
             ]:
                 if len(self._awaitables) > self.ctx.max_number_awaitables:
                     print(
@@ -871,8 +871,8 @@ class WorkGraphEngine(Process, metaclass=Protect):
                 self.set_task_state_info(task["name"], "process", process)
                 self.set_task_state_info(name, "state", "RUNNING")
                 self.to_context(**{name: process})
-            elif task["metadata"]["node_type"].upper() in ["PYTHONTASK"]:
-                from aiida_workgraph.calculations.python import PythonTask
+            elif task["metadata"]["node_type"].upper() in ["PYTHONJOB"]:
+                from aiida_workgraph.calculations.python import PythonJob
                 from .utils import prepare_for_python_task
 
                 inputs = prepare_for_python_task(task, kwargs, var_kwargs)
@@ -882,19 +882,19 @@ class WorkGraphEngine(Process, metaclass=Protect):
                     self.report(f"Task {name} is created and paused.")
                     process = create_and_pause_process(
                         self.runner,
-                        PythonTask,
+                        PythonJob,
                         inputs,
                         state_msg="Paused through WorkGraph",
                     )
                     self.set_task_state_info(name, "state", "CREATED")
                     process = process.node
                 else:
-                    process = self.submit(PythonTask, **inputs)
+                    process = self.submit(PythonJob, **inputs)
                     self.set_task_state_info(name, "state", "RUNNING")
                 process.label = name
                 self.set_task_state_info(task["name"], "process", process)
                 self.to_context(**{name: process})
-            elif task["metadata"]["node_type"].upper() in ["SHELLTASK"]:
+            elif task["metadata"]["node_type"].upper() in ["SHELLJOB"]:
                 from aiida_shell.calculations.shell import ShellJob
                 from .utils import prepare_for_shell_task
 
