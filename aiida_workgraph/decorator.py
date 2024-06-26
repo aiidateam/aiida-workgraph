@@ -242,14 +242,14 @@ def build_task_from_AiiDA(
 
 
 def build_python_task(func: Callable) -> Task:
-    """Build PythonTask task from function."""
-    from aiida_workgraph.calculations.python import PythonTask
+    """Build PythonJob task from function."""
+    from aiida_workgraph.calculations.python import PythonJob
     from copy import deepcopy
 
-    tdata = {"executor": PythonTask, "task_type": "CALCJOB"}
+    tdata = {"executor": PythonJob, "task_type": "CALCJOB"}
     _, tdata_py = build_task_from_AiiDA(tdata)
     tdata = deepcopy(func.tdata)
-    # merge the inputs and outputs from the PythonTask task to the function task
+    # merge the inputs and outputs from the PythonJob task to the function task
     # skip the already existed inputs and outputs
     inputs = tdata["inputs"]
     inputs.extend(
@@ -271,14 +271,14 @@ def build_python_task(func: Callable) -> Task:
     for input in inputs:
         if input[1] == "copy_files":
             input[2].update({"link_limit": 1e6})
-    # append the kwargs of the PythonTask task to the function task
+    # append the kwargs of the PythonJob task to the function task
     kwargs = tdata["kwargs"]
     kwargs.extend(["computer", "code_label", "code_path", "prepend_text"])
     kwargs.extend(tdata_py["kwargs"])
     tdata["inputs"] = inputs
     tdata["outputs"] = outputs
     tdata["kwargs"] = kwargs
-    tdata["task_type"] = "PYTHONTASK"
+    tdata["task_type"] = "PYTHONJOB"
     task = create_task(tdata)
     task.is_aiida_component = True
     return task, tdata

@@ -25,12 +25,12 @@ def prepare_for_workgraph_task(task: dict, kwargs: dict) -> tuple:
 
 
 def prepare_for_python_task(task: dict, kwargs: dict, var_kwargs: dict) -> dict:
-    """Prepare the inputs for PythonTask"""
+    """Prepare the inputs for PythonJob"""
     from aiida_workgraph.utils import get_or_create_code
     import os
 
     print("Task  type: Python.")
-    # get the names kwargs for the PythonTask, which are the inputs before _wait
+    # get the names kwargs for the PythonJob, which are the inputs before _wait
     function_kwargs = {}
     for input in task["inputs"]:
         if input["name"] == "_wait":

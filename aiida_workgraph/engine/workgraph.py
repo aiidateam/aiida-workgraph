@@ -646,7 +646,7 @@ class WorkGraphEngine(Process, metaclass=Protect):
             "WORKCHAIN",
             "GRAPH_BUILDER",
             "WORKGRAPH",
-            "PYTHONTASK",
+            "PYTHONJOB",
             "SHELLJOB",
         ] and task["state"] in ["CREATED", "RUNNING"]:
             self.set_task_result(task)
@@ -752,7 +752,7 @@ class WorkGraphEngine(Process, metaclass=Protect):
                 "WORKCHAIN",
                 "GRAPH_BUILDER",
                 "WORKGRAPH",
-                "PYTHONTASK",
+                "PYTHONJOB",
                 "SHELLJOB",
             ]:
                 if len(self._awaitables) > self.ctx.max_number_awaitables:
@@ -894,8 +894,8 @@ class WorkGraphEngine(Process, metaclass=Protect):
                 task["process"] = process
                 self.ctx.tasks[name]["state"] = "RUNNING"
                 self.to_context(**{name: process})
-            elif task["metadata"]["node_type"].upper() in ["PYTHONTASK"]:
-                from aiida_workgraph.calculations.python import PythonTask
+            elif task["metadata"]["node_type"].upper() in ["PYTHONJOB"]:
+                from aiida_workgraph.calculations.python import PythonJob
                 from .utils import prepare_for_python_task
 
                 inputs = prepare_for_python_task(task, kwargs, var_kwargs)
@@ -905,14 +905,14 @@ class WorkGraphEngine(Process, metaclass=Protect):
                     self.report(f"Task {name} is created and paused.")
                     process = create_and_pause_process(
                         self.runner,
-                        PythonTask,
+                        PythonJob,
                         inputs,
                         state_msg="Paused through WorkGraph",
                     )
                     self.ctx.tasks[name]["state"] = "CREATED"
                     process = process.node
                 else:
-                    process = self.submit(PythonTask, **inputs)
+                    process = self.submit(PythonJob, **inputs)
                     self.ctx.tasks[name]["state"] = "RUNNING"
                 process.label = name
                 task["process"] = process

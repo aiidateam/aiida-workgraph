@@ -24,7 +24,7 @@ There are reasons why we don't serialize all data in the ``wg`` namespace:
 
 However, ensuring that all data within the ``wg`` namespace are JSON-serializable is beneficial to guarantee that checkpoints can be saved and loaded correctly.
 
-PythonTask
+PythonJob
 ---------
 
-``PythonTask`` is a special case of ``CalcJob`` that runs a Python function on a remote computer. The input data for the function does not need to be of AiiDA data type, and users are not required to provide AiiDA data types as input. When WorkGraph launches the ``PythonTask``, it serializes all input data for the function. However, if users provide non-JSON-serializable data as input, the checkpoint will fail. Thus, it is necessary to serialize all input data of the function when initializing the WorkGraph process.
+``PythonJob`` is a special case of ``CalcJob`` that runs a Python function on a remote computer. The input data for the function does not need to be of AiiDA data type, and users are not required to provide AiiDA data types as input. When WorkGraph launches the ``PythonJob``, it serializes all input data for the function. However, if users provide non-JSON-serializable data as input, the checkpoint will fail. Thus, it is necessary to serialize all input data of the function when initializing the WorkGraph process.

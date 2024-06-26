@@ -5,7 +5,7 @@ from typing import Any
 aiida.load_profile()
 
 
-def test_PythonTask_kwargs():
+def test_PythonJob_kwargs():
     """Test function with kwargs."""
     from aiida_workgraph import task, WorkGraph
 
@@ -16,7 +16,7 @@ def test_PythonTask_kwargs():
             x += value
         return x
 
-    wg = WorkGraph("test_PythonTask")
+    wg = WorkGraph("test_PythonJob")
     wg.tasks.new(add, name="add", run_remotely=True)
     wg.run(
         inputs={
@@ -30,7 +30,7 @@ def test_PythonTask_kwargs():
     assert wg.tasks["add"].outputs["result"].value.value == 6
 
 
-def test_PythonTask_typing():
+def test_PythonJob_typing():
     """Test function with typing."""
     from aiida_workgraph import task, WorkGraph
     from numpy import array
@@ -45,7 +45,7 @@ def test_PythonTask_typing():
     def multiply(x: Any, y: Any) -> Any:
         return x * y
 
-    wg = WorkGraph("test_PythonTask")
+    wg = WorkGraph("test_PythonJob")
     wg.tasks.new(add, name="add", run_remotely=True)
     wg.tasks.new(
         multiply, name="multiply", run_remotely=True, x=wg.tasks["add"].outputs[0]
@@ -72,14 +72,14 @@ def test_PythonTask_typing():
     assert (wg.tasks["multiply"].outputs["result"].value.value == array([12, 20])).all()
 
 
-def test_PythonTask_outputs():
+def test_PythonJob_outputs():
     """Test function with multiple outputs."""
 
     @task(outputs=[["General", "sum"], ["General", "diff"]])
     def add(x, y):
         return {"sum": x + y, "diff": x - y}
 
-    wg = WorkGraph("test_PythonTask_outputs")
+    wg = WorkGraph("test_PythonJob_outputs")
     wg.tasks.new(
         add,
         name="add",
@@ -94,7 +94,7 @@ def test_PythonTask_outputs():
     assert wg.tasks["add"].outputs["diff"].value.value == -1
 
 
-def test_PythonTask_parent_folder():
+def test_PythonJob_parent_folder():
     """Test function with parent folder."""
     from aiida_workgraph import WorkGraph, task
     from aiida import load_profile
@@ -116,7 +116,7 @@ def test_PythonTask_parent_folder():
             z = int(f.read())
         return x * y + z
 
-    wg = WorkGraph("test_PythonTask_parent_folder")
+    wg = WorkGraph("test_PythonJob_parent_folder")
     wg.tasks.new(add, name="add", run_remotely=True)
     wg.tasks.new(
         multiply,
@@ -144,7 +144,7 @@ def test_PythonTask_parent_folder():
     assert wg.tasks["multiply"].outputs["result"].value.value == 17
 
 
-def test_PythonTask_upload_files():
+def test_PythonJob_upload_files():
     """Test function with upload files."""
     from aiida_workgraph import WorkGraph, task
 
@@ -169,7 +169,7 @@ def test_PythonTask_upload_files():
             b = int(f.read())
         return a + b
 
-    wg = WorkGraph("test_PythonTask_upload_files")
+    wg = WorkGraph("test_PythonJob_upload_files")
     wg.tasks.new(add, name="add", run_remotely=True)
 
     # ------------------------- Submit the calculation -------------------
@@ -192,7 +192,7 @@ def test_PythonTask_upload_files():
     assert wg.tasks["add"].outputs["result"].value.value == 5
 
 
-def test_PythonTask_copy_files():
+def test_PythonJob_copy_files():
     """Test function with copy files."""
     from aiida_workgraph import WorkGraph, task
 
@@ -213,7 +213,7 @@ def test_PythonTask_copy_files():
             y = int(f.read())
         return x * y
 
-    wg = WorkGraph("test_PythonTask_parent_folder")
+    wg = WorkGraph("test_PythonJob_parent_folder")
     wg.tasks.new(add, name="add1", run_remotely=True)
     wg.tasks.new(add, name="add2", run_remotely=True)
     wg.tasks.new(
