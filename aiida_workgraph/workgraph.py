@@ -54,6 +54,7 @@ class WorkGraph(node_graph.NodeGraph):
         self.nodes.post_creation_hooks = [task_creation_hook]
         self.links.post_creation_hooks = [link_creation_hook]
         self.links.post_deletion_hooks = [link_deletion_hook]
+        self.error_handlers = []
         self._widget = NodeGraphWidget(parent=self)
 
     @property
@@ -173,6 +174,8 @@ class WorkGraph(node_graph.NodeGraph):
         saver.save()
 
     def to_dict(self) -> Dict[str, Any]:
+        import cloudpickle as pickle
+
         wgdata = super().to_dict()
         self.context["sequence"] = self.sequence
         # only alphanumeric and underscores are allowed
@@ -188,6 +191,7 @@ class WorkGraph(node_graph.NodeGraph):
                 "max_number_jobs": self.max_number_jobs,
             }
         )
+        wgdata["error_handlers"] = pickle.dumps(self.error_handlers)
         wgdata["tasks"] = wgdata.pop("nodes")
 
         return wgdata
