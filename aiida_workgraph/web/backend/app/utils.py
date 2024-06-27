@@ -45,15 +45,22 @@ def workgraph_to_short_json(
     return wgdata_short
 
 
-def is_function_and_get_source(obj: Any) -> Tuple[bool, Optional[str]]:
+def get_executor_source(tdata: Any) -> Tuple[bool, Optional[str]]:
+    """Get the source code of the executor."""
     import inspect
+    from aiida_workgraph.utils import get_executor
 
-    if callable(obj):
-        source_lines, _ = inspect.getsourcelines(obj)
-        source_code = "".join(source_lines)
-        return True, source_code
+    executor, _ = get_executor(tdata["executor"])
+    if callable(executor):
+        try:
+            source_lines, _ = inspect.getsourcelines(executor)
+            source_code = "".join(source_lines)
+            return source_code
+        except (TypeError, OSError):
+            source_code = tdata["executor"].get("function_source_code", "")
+            return source_code
     else:
-        return False, None
+        return str(executor)
 
 
 def get_node_recursive(links: Dict) -> Dict[str, Union[List[int], str]]:
@@ -108,14 +115,9 @@ def get_node_outputs(pk: Optional[int]) -> Union[str, Dict[str, Union[List[int],
 
 def node_to_short_json(workgraph_pk: int, tdata: Dict[str, Any]) -> Dict[str, Any]:
     """Export a node to a rete js node."""
-    from aiida_workgraph.utils import get_executor, get_processes_latest
+    from aiida_workgraph.utils import get_processes_latest
 
-    executor, _ = get_executor(tdata["executor"])
-    is_function, source_code = is_function_and_get_source(executor)
-    if is_function:
-        executor = source_code
-    else:
-        executor = str(executor)
+    executor = get_executor_source(tdata)
     tdata_short = {
         "node_type": tdata["metadata"]["node_type"],
         "metadata": [

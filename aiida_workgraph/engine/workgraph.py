@@ -608,7 +608,7 @@ class WorkGraphEngine(Process, metaclass=Protect):
                 task_to_run.append(name)
         #
         self.report("tasks ready to run: {}".format(",".join(task_to_run)))
-        self.run_taskss(task_to_run)
+        self.run_tasks(task_to_run)
 
     def update_task_state(self, name: str) -> None:
         """Update task state if task is a Awaitable."""
@@ -680,7 +680,7 @@ class WorkGraphEngine(Process, metaclass=Protect):
             task_name, socket_name = c.split(".")
             if "task_name" != "context":
                 condition_tasks.append(task_name)
-        self.run_taskss(condition_tasks, continue_workgraph=False)
+        self.run_tasks(condition_tasks, continue_workgraph=False)
         conditions = []
         for c in self.ctx.workgraph["conditions"]:
             task_name, socket_name = c.split(".")
@@ -698,7 +698,7 @@ class WorkGraphEngine(Process, metaclass=Protect):
     def check_for_conditions(self) -> bool:
         print("Is a for workgraph")
         condition_tasks = [c[0] for c in self.ctx.workgraph["conditions"]]
-        self.run_taskss(condition_tasks)
+        self.run_tasks(condition_tasks)
         conditions = [self.ctx._count < len(self.ctx.sequence)] + [
             self.ctx.tasks[c[0]]["results"][c[1]]
             for c in self.ctx.workgraph["conditions"]
@@ -712,7 +712,7 @@ class WorkGraphEngine(Process, metaclass=Protect):
         self.ctx._count += 1
         return should_run
 
-    def run_taskss(self, names: t.List[str], continue_workgraph: bool = True) -> None:
+    def run_tasks(self, names: t.List[str], continue_workgraph: bool = True) -> None:
         """Run task
         Here we use ToContext to pass the results of the run to the next step.
         This will force the engine to wait for all the submitted processes to
@@ -889,7 +889,9 @@ class WorkGraphEngine(Process, metaclass=Protect):
                     self.set_task_state_info(name, "state", "CREATED")
                     process = process.node
                 else:
+                    print("inputs: ", inputs)
                     process = self.submit(PythonJob, **inputs)
+                    print("process: ", process)
                     self.set_task_state_info(name, "state", "RUNNING")
                 process.label = name
                 self.set_task_state_info(task["name"], "process", process)

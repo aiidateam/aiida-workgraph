@@ -75,7 +75,12 @@ def test_PythonJob_typing():
 def test_PythonJob_outputs():
     """Test function with multiple outputs."""
 
-    @task(outputs=[["General", "sum"], ["General", "diff"]])
+    @task(
+        outputs=[
+            {"identifier": "General", "name": "sum"},
+            {"identifier": "General", "name": "diff"},
+        ]
+    )
     def add(x, y):
         return {"sum": x + y, "diff": x - y}
 
@@ -89,7 +94,8 @@ def test_PythonJob_outputs():
         #  code=code,
         computer="localhost",
     )
-    wg.submit(wait=True)
+    # wg.submit(wait=True)
+    wg.run()
     assert wg.tasks["add"].outputs["sum"].value.value == 3
     assert wg.tasks["add"].outputs["diff"].value.value == -1
 

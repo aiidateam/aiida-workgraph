@@ -86,7 +86,7 @@ def prepare_for_python_task(task: dict, kwargs: dict, var_kwargs: dict) -> dict:
     function_source_code = (
         task["executor"]["import_statements"]
         + "\n"
-        + task["executor"]["function_source_code"]
+        + task["executor"]["function_source_code_without_decorator"]
     )
     # outputs
     output_name_list = [output["name"] for output in task["outputs"]]
