@@ -17,6 +17,7 @@ This section contains a collection of HowTos for various topics.
    wait
    combine_workgraph
    restart
+   error_resistant
    continue_finished_workgraph
    protocol
    queue

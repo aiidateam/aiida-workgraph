@@ -431,6 +431,7 @@ class WorkGraphEngine(Process, metaclass=Protect):
         self.ctx.connectivity = wgdata["connectivity"]
         self.ctx.ctrl_links = wgdata["ctrl_links"]
         self.ctx.workgraph = wgdata
+        self.ctx.error_handlers = wgdata["error_handlers"]
 
     def read_wgdata_from_base(self) -> t.Dict[str, t.Any]:
         """Read workgraph data from base.extras."""
@@ -539,6 +540,7 @@ class WorkGraphEngine(Process, metaclass=Protect):
                     self.ctx.connectivity["child_node"][name], "SKIPPED"
                 )
                 self.report(f"Task: {name} failed.")
+                self.run_error_handlers()
         else:
             task["results"] = None
 
@@ -591,7 +593,7 @@ class WorkGraphEngine(Process, metaclass=Protect):
         print("Continue workgraph.")
         exclude = exclude or []
         self.report("Continue workgraph.")
-        self.update_workgraph_from_base()
+        # self.update_workgraph_from_base()
         task_to_run = []
         for name, task in self.ctx.tasks.items():
             # update task state
@@ -625,6 +627,14 @@ class WorkGraphEngine(Process, metaclass=Protect):
             "SHELLJOB",
         ] and self.get_task_state_info(task["name"], "state") in ["CREATED", "RUNNING"]:
             self.set_task_result(task)
+
+    def run_error_handlers(self) -> None:
+        """Run error handler."""
+        import cloudpickle as pickle
+
+        error_handlers = pickle.loads(self.ctx.error_handlers)
+        for handler in error_handlers:
+            handler(self)
 
     def is_workgraph_finished(self) -> bool:
         """Check if the workgraph is finished.
