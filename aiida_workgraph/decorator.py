@@ -1,5 +1,5 @@
 from typing import Any, Callable, Dict, List, Optional, Union, Tuple
-from aiida_workgraph.utils import get_executor
+from aiida_workgraph.utils import get_executor, serialize_function
 from aiida.engine import calcfunction, workfunction, CalcJob, WorkChain
 from aiida import orm
 from aiida.orm.nodes.process.calculation.calcfunction import CalcFunctionNode
@@ -224,10 +224,22 @@ def build_task_from_AiiDA(
                 "property": {"identifier": "General", "default": {}},
             }
         )
+    # TODO In order to reload the WorkGraph from process, "is_pickle" should be True
+    # so I pickled the function here, but this is not necessary
+    # we need to update the node_graph to support the path and name of the function
+    tdata["identifier"] = tdata.pop("identifier", tdata["executor"].__name__)
+    tdata["executor"] = {
+        "executor": pickle.dumps(executor),
+        "type": tdata["task_type"],
+        "is_pickle": True,
+    }
     if tdata["task_type"].upper() in ["CALCFUNCTION", "WORKFUNCTION"]:
         outputs = (
             [{"identifier": "General", "name": "result"}] if not outputs else outputs
         )
+        # get the source code of the function
+        tdata["executor"] = serialize_function(executor)
+        # tdata["executor"]["type"] = tdata["task_type"]
     # print("kwargs: ", kwargs)
     # add built-in sockets
     outputs.append({"identifier": "General", "name": "_outputs"})
@@ -238,13 +250,6 @@ def build_task_from_AiiDA(
     tdata["kwargs"] = kwargs
     tdata["inputs"] = inputs
     tdata["outputs"] = outputs
-    tdata["identifier"] = tdata.pop("identifier", tdata["executor"].__name__)
-    # TODO In order to reload the WorkGraph from process, "is_pickle" should be True
-    # so I pickled the function here, but this is not necessary
-    # we need to update the node_graph to support the path and name of the function
-    executor = serialize_function(executor)
-    executor["type"] = tdata["task_type"]
-    tdata["executor"] = executor
     task = create_task(tdata)
     task.is_aiida_component = True
     return task, tdata
@@ -404,85 +409,6 @@ def build_task_from_workgraph(wg: any) -> Task:
     task = create_task(tdata)
     task.group_outputs = group_outputs
     return task
-
-
-def get_required_imports(func):
-    """Retrieve type hints and the corresponding module"""
-    from typing import get_type_hints, _SpecialForm
-
-    type_hints = get_type_hints(func)
-    imports = {}
-
-    def add_imports(type_hint):
-        if isinstance(
-            type_hint, _SpecialForm
-        ):  # Handle special forms like Any, Union, Optional
-            module_name = "typing"
-            type_name = type_hint._name or str(type_hint)
-        elif hasattr(
-            type_hint, "__origin__"
-        ):  # This checks for higher-order types like List, Dict
-            module_name = type_hint.__module__
-            type_name = type_hint._name
-            for arg in type_hint.__args__:
-                if arg is type(None):  # noqa: E721
-                    continue
-                add_imports(arg)  # Recursively add imports for each argument
-        elif hasattr(type_hint, "__module__"):
-            module_name = type_hint.__module__
-            type_name = type_hint.__name__
-        else:
-            return  # If no module or origin, we can't import it, e.g., for literals
-
-        if module_name not in imports:
-            imports[module_name] = set()
-        imports[module_name].add(type_name)
-
-    for _, type_hint in type_hints.items():
-        add_imports(type_hint)
-
-    return imports
-
-
-def serialize_function(func: Callable) -> Dict[str, Any]:
-    """Serialize a function for storage or transmission."""
-    import inspect
-    import textwrap
-
-    # we need save the source code explicitly, because in the case of jupyter notebook,
-    # the source code is not saved in the pickle file
-    source_code = inspect.getsource(func)
-    # Split the source into lines for processing
-    source_code_lines = source_code.split("\n")
-    function_source_code = "\n".join(source_code_lines)
-    # Find the first line of the actual function definition
-    for i, line in enumerate(source_code_lines):
-        if line.strip().startswith("def "):
-            break
-    function_source_code_without_decorator = "\n".join(source_code_lines[i:])
-    function_source_code_without_decorator = textwrap.dedent(
-        function_source_code_without_decorator
-    )
-    # we also need to include the necessary imports for the types used in the type hints.
-    try:
-        required_imports = get_required_imports(func)
-    except Exception as e:
-        required_imports = {}
-        print(f"Failed to get required imports for function {func.__name__}: {e}")
-    # Generate import statements
-    import_statements = "\n".join(
-        f"from {module} import {', '.join(types)}"
-        for module, types in required_imports.items()
-    )
-    return {
-        "executor": pickle.dumps(func),
-        "type": "function",
-        "is_pickle": True,
-        "function_name": func.__name__,
-        "function_source_code": function_source_code,
-        "function_source_code_without_decorator": function_source_code_without_decorator,
-        "import_statements": import_statements,
-    }
 
 
 def generate_tdata(
