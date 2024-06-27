@@ -96,7 +96,7 @@ def test_shell_workflow():
         nodes={"expression": job1.outputs["stdout"]},
         parser=PickledData(parser),
         parser_outputs=[
-            ["General", "result"]
+            {"identifier": "General", "name": "result"}
         ],  # add a "result" output socket from the parser
     )
     # echo result + y expression
@@ -116,7 +116,7 @@ def test_shell_workflow():
         nodes={"expression": job3.outputs["stdout"]},
         parser=PickledData(parser),
         parser_outputs=[
-            ["General", "result"]
+            {"identifier": "General", "name": "result"}
         ],  # add a "result" output socket from the parser
     )
     # there is a bug in aiida-shell, the following line will raise an error

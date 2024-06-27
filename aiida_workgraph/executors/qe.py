@@ -4,8 +4,11 @@ from aiida.orm import StructureData, UpfData
 
 
 @task(
-    inputs=[["String", "pseudo_family"], [StructureData, "structure"]],
-    outputs=[[UpfData, "Pseudo"]],
+    inputs=[
+        {"identifier": "String", "name": "pseudo_family"},
+        {"identifier": StructureData, "name": "structure"},
+    ],
+    outputs=[{"identifier": UpfData, "name": "Pseudo"}],
 )
 def get_pseudo_from_structure(
     pseudo_family: str, structure: StructureData

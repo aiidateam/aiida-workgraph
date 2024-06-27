@@ -242,18 +242,15 @@ def build_task_from_AiiDA(
     # TODO In order to reload the WorkGraph from process, "is_pickle" should be True
     # so I pickled the function here, but this is not necessary
     # we need to update the node_graph to support the path and name of the function
-    executor = {
-        "executor": pickle.dumps(executor),
-        "type": tdata["task_type"],
-        "is_pickle": True,
-    }
+    executor = serialize_function(executor)
+    executor["type"] = tdata["task_type"]
     tdata["executor"] = executor
     task = create_task(tdata)
     task.is_aiida_component = True
     return task, tdata
 
 
-def build_python_task(func: Callable) -> Task:
+def build_pythonjob_task(func: Callable) -> Task:
     """Build PythonJob task from function."""
     from aiida_workgraph.calculations.python import PythonJob
     from copy import deepcopy
@@ -266,10 +263,10 @@ def build_python_task(func: Callable) -> Task:
     inputs = tdata["inputs"]
     inputs.extend(
         [
-            ["String", "computer"],
-            ["String", "code_label"],
-            ["String", "code_path"],
-            ["String", "prepend_text"],
+            {"identifier": "String", "name": "computer"},
+            {"identifier": "String", "name": "code_label"},
+            {"identifier": "String", "name": "code_path"},
+            {"identifier": "String", "name": "prepend_text"},
         ]
     )
     outputs = tdata["outputs"]
@@ -281,8 +278,8 @@ def build_python_task(func: Callable) -> Task:
             outputs.append(output)
     # change "copy_files" link_limit to 1e6
     for input in inputs:
-        if input[1] == "copy_files":
-            input[2].update({"link_limit": 1e6})
+        if input["name"] == "copy_files":
+            input["link_limit"] = 1e6
     # append the kwargs of the PythonJob task to the function task
     kwargs = tdata["kwargs"]
     kwargs.extend(["computer", "code_label", "code_path", "prepend_text"])
@@ -296,7 +293,7 @@ def build_python_task(func: Callable) -> Task:
     return task, tdata
 
 
-def build_shell_task(
+def build_shelljob_task(
     nodes: dict = None, outputs: list = None, parser_outputs: list = None
 ) -> Task:
     """Build ShellJob with custom inputs and outputs."""
@@ -321,7 +318,7 @@ def build_shell_task(
     for input in inputs:
         if input not in tdata["inputs"]:
             tdata["inputs"].append(input)
-            tdata["kwargs"].append(input[1])
+            tdata["kwargs"].append(input["name"])
     # Extend the outputs
     tdata["outputs"].extend(
         [
@@ -449,16 +446,23 @@ def get_required_imports(func):
 
 def serialize_function(func: Callable) -> Dict[str, Any]:
     """Serialize a function for storage or transmission."""
-    import cloudpickle as pickle
     import inspect
     import textwrap
 
-    source_code = inspect.getsource(func)
-    source_code_lines = source_code.split("\n")
     # we need save the source code explicitly, because in the case of jupyter notebook,
     # the source code is not saved in the pickle file
-    function_source_code = "\n".join(source_code_lines[1:])
-    function_source_code = textwrap.dedent(function_source_code)
+    source_code = inspect.getsource(func)
+    # Split the source into lines for processing
+    source_code_lines = source_code.split("\n")
+    function_source_code = "\n".join(source_code_lines)
+    # Find the first line of the actual function definition
+    for i, line in enumerate(source_code_lines):
+        if line.strip().startswith("def "):
+            break
+    function_source_code_without_decorator = "\n".join(source_code_lines[i:])
+    function_source_code_without_decorator = textwrap.dedent(
+        function_source_code_without_decorator
+    )
     # we also need to include the necessary imports for the types used in the type hints.
     try:
         required_imports = get_required_imports(func)
@@ -476,6 +480,7 @@ def serialize_function(func: Callable) -> Dict[str, Any]:
         "is_pickle": True,
         "function_name": func.__name__,
         "function_source_code": function_source_code,
+        "function_source_code_without_decorator": function_source_code_without_decorator,
         "import_statements": import_statements,
     }
 
