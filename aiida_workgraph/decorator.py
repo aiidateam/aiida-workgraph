@@ -45,14 +45,18 @@ def add_input_recursive(
     else:
         port_name = f"{prefix}.{port.name}"
     required = port.required and required
-    input_names = [input[1] for input in inputs]
+    input_names = [input["name"] for input in inputs]
     if isinstance(port, PortNamespace):
         # TODO the default value is {} could cause problem, because the address of the dict is the same,
         # so if you change the value of one port, the value of all the ports of other tasks will be changed
         # consider to use None as default value
         if port_name not in input_names:
             inputs.append(
-                ["General", port_name, {"property": ["General", {"default": {}}]}]
+                {
+                    "identifier": "General",
+                    "name": port_name,
+                    "property": {"identifier": "General", "default": {}},
+                }
             )
         if required:
             args.append(port_name)
@@ -72,7 +76,7 @@ def add_input_recursive(
                 socket_type = aiida_socket_maping.get(port.valid_type[0], "General")
             else:
                 socket_type = aiida_socket_maping.get(port.valid_type, "General")
-            inputs.append([socket_type, port_name])
+            inputs.append({"identifier": socket_type, "name": port_name})
         if required:
             args.append(port_name)
         else:
@@ -92,18 +96,18 @@ def add_output_recursive(
     else:
         port_name = f"{prefix}.{port.name}"
     required = port.required and required
-    output_names = [output[1] for output in outputs]
+    output_names = [output["name"] for output in outputs]
     if isinstance(port, PortNamespace):
         # TODO the default value is {} could cause problem, because the address of the dict is the same,
         # so if you change the value of one port, the value of all the ports of other tasks will be changed
         # consider to use None as default value
         if port_name not in output_names:
-            outputs.append(["General", port_name])
+            outputs.append({"identifier": "General", "name": port_name})
         for value in port.values():
             add_output_recursive(outputs, value, prefix=port_name, required=required)
     else:
         if port_name not in output_names:
-            outputs.append(["General", port_name])
+            outputs.append({"identifier": "General", "name": port_name})
     return outputs
 
 
@@ -213,14 +217,22 @@ def build_task_from_AiiDA(
                 or executor.process_class._var_positional
             )
         tdata["var_kwargs"] = name
-        inputs.append(["General", name, {"property": ["General", {"default": {}}]}])
+        inputs.append(
+            {
+                "identifier": "General",
+                "name": name,
+                "property": {"identifier": "General", "default": {}},
+            }
+        )
     if tdata["task_type"].upper() in ["CALCFUNCTION", "WORKFUNCTION"]:
-        outputs = [["General", "result"]] if not outputs else outputs
+        outputs = (
+            [{"identifier": "General", "name": "result"}] if not outputs else outputs
+        )
     # print("kwargs: ", kwargs)
     # add built-in sockets
-    outputs.append(["General", "_outputs"])
-    outputs.append(["General", "_wait"])
-    inputs.append(["General", "_wait", {"link_limit": 1e6}])
+    outputs.append({"identifier": "General", "name": "_outputs"})
+    outputs.append({"identifier": "General", "name": "_wait"})
+    inputs.append({"identifier": "General", "name": "_wait", "link_limit": 1e6})
     tdata["node_class"] = Task
     tdata["args"] = args
     tdata["kwargs"] = kwargs
@@ -300,7 +312,7 @@ def build_shell_task(
     nodes = {} if nodes is None else nodes
     keys = list(nodes.keys())
     for key in keys:
-        inputs.append(["General", f"nodes.{key}"])
+        inputs.append({"identifier": "General", "name": f"nodes.{key}"})
         # input is a output of another task, we make a link
         if isinstance(nodes[key], NodeSocket):
             links[f"nodes.{key}"] = nodes[key]
@@ -311,10 +323,18 @@ def build_shell_task(
             tdata["inputs"].append(input)
             tdata["kwargs"].append(input[1])
     # Extend the outputs
-    tdata["outputs"].extend([["General", "stdout"], ["General", "stderr"]])
+    tdata["outputs"].extend(
+        [
+            {"identifier": "General", "name": "stdout"},
+            {"identifier": "General", "name": "stderr"},
+        ]
+    )
     outputs = [] if outputs is None else outputs
     parser_outputs = [] if parser_outputs is None else parser_outputs
-    outputs = [["General", ShellParser.format_link_label(output)] for output in outputs]
+    outputs = [
+        {"identifier": "General", "name": ShellParser.format_link_label(output)}
+        for output in outputs
+    ]
     outputs.extend(parser_outputs)
     # add user defined outputs
     for output in outputs:
@@ -324,8 +344,8 @@ def build_shell_task(
     tdata["identifier"] = "ShellJob"
     tdata["inputs"].extend(
         [
-            ["General", "command"],
-            ["General", "resolve_command"],
+            {"identifier": "General", "name": "command"},
+            {"identifier": "General", "name": "resolve_command"},
         ]
     )
     tdata["kwargs"].extend(["command", "resolve_command"])
@@ -346,25 +366,29 @@ def build_task_from_workgraph(wg: any) -> Task:
     # add all the inputs/outputs from the tasks in the workgraph
     for task in wg.tasks:
         # inputs
-        inputs.append(["General", f"{task.name}"])
+        inputs.append({"identifier": "General", "name": f"{task.name}"})
         for socket in task.inputs:
             if socket.name == "_wait":
                 continue
-            inputs.append(["General", f"{task.name}.{socket.name}"])
+            inputs.append(
+                {"identifier": "General", "name": f"{task.name}.{socket.name}"}
+            )
         # outputs
-        outputs.append(["General", f"{task.name}"])
+        outputs.append({"identifier": "General", "name": f"{task.name}"})
         for socket in task.outputs:
             if socket.name in ["_wait", "_outputs"]:
                 continue
-            outputs.append(["General", f"{task.name}.{socket.name}"])
+            outputs.append(
+                {"identifier": "General", "name": f"{task.name}.{socket.name}"}
+            )
             group_outputs.append(
                 [f"{task.name}.{socket.name}", f"{task.name}.{socket.name}"]
             )
     kwargs = [input[1] for input in inputs]
     # add built-in sockets
-    outputs.append(["General", "_outputs"])
-    outputs.append(["General", "_wait"])
-    inputs.append(["General", "_wait", {"link_limit": 1e6}])
+    outputs.append({"identifier": "General", "name": "_outputs"})
+    outputs.append({"identifier": "General", "name": "_wait"})
+    inputs.append({"identifier": "General", "name": "_wait", "link_limit": 1e6})
     tdata["node_class"] = Task
     tdata["kwargs"] = kwargs
     tdata["inputs"] = inputs
@@ -475,9 +499,9 @@ def generate_tdata(
     )
     task_outputs = outputs
     # add built-in sockets
-    _inputs.append(["General", "_wait", {"link_limit": 1e6}])
-    task_outputs.append(["General", "_wait"])
-    task_outputs.append(["General", "_outputs"])
+    _inputs.append({"identifier": "General", "name": "_wait", "link_limit": 1e6})
+    task_outputs.append({"identifier": "General", "name": "_wait"})
+    task_outputs.append({"identifier": "General", "name": "_outputs"})
     tdata = {
         "node_class": Task,
         "identifier": identifier,
@@ -536,7 +560,7 @@ class TaskDecoratorCollection:
                 func,
                 identifier,
                 inputs or [],
-                outputs or [["General", "result"]],
+                outputs or [{"identifier": "General", "name": "result"}],
                 properties or [],
                 catalog,
                 task_type,
@@ -577,7 +601,9 @@ class TaskDecoratorCollection:
             # use cloudpickle to serialize function
             func.identifier = identifier
 
-            task_outputs = [["General", output[1]] for output in outputs]
+            task_outputs = [
+                {"identifier": "General", "name": output[1]} for output in outputs
+            ]
             # print(task_inputs, task_outputs)
             #
             task_type = "graph_builder"
