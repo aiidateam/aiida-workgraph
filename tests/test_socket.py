@@ -9,7 +9,7 @@ def test_socket(decorated_multiply) -> None:
     from aiida_workgraph import task
 
     @task(
-        outputs=[[float, "result"]],
+        outputs=[{"identifier": float, "name": "result"}],
     )
     def add(x: int, y: float):
         result = x + y
@@ -38,7 +38,7 @@ def test_AiiDA_socket():
     from aiida import orm
 
     @task.calcfunction(
-        outputs=[[orm.Float, "result"]],
+        outputs=[{"identifier": orm.Float, "name": "result"}],
     )
     def add(x: int, y: float):
         result = x + y

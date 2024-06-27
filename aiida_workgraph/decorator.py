@@ -386,7 +386,7 @@ def build_task_from_workgraph(wg: any) -> Task:
             group_outputs.append(
                 [f"{task.name}.{socket.name}", f"{task.name}.{socket.name}"]
             )
-    kwargs = [input[1] for input in inputs]
+    kwargs = [input["name"] for input in inputs]
     # add built-in sockets
     outputs.append({"identifier": "General", "name": "_outputs"})
     outputs.append({"identifier": "General", "name": "_wait"})
