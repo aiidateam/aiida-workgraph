@@ -55,6 +55,7 @@ class WorkGraph(node_graph.NodeGraph):
         self.links.post_creation_hooks = [link_creation_hook]
         self.links.post_deletion_hooks = [link_deletion_hook]
         self.error_handlers = {}
+        self.while_zones = {}
         self._widget = NodeGraphWidget(parent=self)
 
     @property
@@ -192,6 +193,9 @@ class WorkGraph(node_graph.NodeGraph):
             }
         )
         wgdata["error_handlers"] = pickle.dumps(self.error_handlers)
+        wgdata["while_zones"] = {
+            key: value.to_dict() for key, value in self.while_zones.items()
+        }
         wgdata["tasks"] = wgdata.pop("nodes")
 
         return wgdata
@@ -472,3 +476,24 @@ class WorkGraph(node_graph.NodeGraph):
         """Write a standalone html file to visualize the workgraph."""
         self._widget.from_workgraph(self)
         return self._widget.to_html(output=output, **kwargs)
+
+
+class WhileZone:
+    def __init__(
+        self,
+        workgraph: WorkGraph = None,
+        tasks: List[str] = None,
+        conditions: List[str] = None,
+        update_inputs: Dict[str, Any] = None,
+    ):
+        self.workgraph = workgraph
+        self.tasks = tasks
+        self.conditions = conditions
+        self.update_inputs = update_inputs
+
+    def to_dict(self):
+        return {
+            "tasks": self.tasks,
+            "conditions": self.conditions,
+            "update_inputs": self.update_inputs,
+        }

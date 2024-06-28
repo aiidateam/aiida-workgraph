@@ -15,6 +15,7 @@ def workgraph_to_short_json(
         "state": wgdata["state"],
         "nodes": {},
         "links": wgdata["links"],
+        "while_zones": wgdata["while_zones"],
     }
     #
     for name, task in wgdata["tasks"].items():

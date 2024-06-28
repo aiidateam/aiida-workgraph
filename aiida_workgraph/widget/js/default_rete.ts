@@ -5,6 +5,7 @@ import {
   Presets as ConnectionPresets
 } from "rete-connection-plugin";
 import { ReactPlugin, Presets, ReactArea2D } from "rete-react-plugin";
+import { CommentPlugin, CommentExtensions } from "rete-comment-plugin";
 import { MinimapExtra, MinimapPlugin } from "rete-minimap-plugin";
 import {
   ContextMenuPlugin,
@@ -90,6 +91,21 @@ export async function loadJSON(editor, area, layout, workgraphData) {
   workgraphData.links.forEach(async (link: LinkData) => { // Specify the type of link here
     await addLink(editor, area, layout, link);
   });
+
+  // Add comment to highlight the While Zone
+  console.log("Adding comments: ", workgraphData.while_zones)
+  for (const while_zone_name in workgraphData.while_zones) {
+    console.log("Adding comment for while zone: ", while_zone_name)
+    const while_zone = workgraphData.while_zones[while_zone_name];
+    const comment = editor.comment
+    console.log("comment: ", comment)
+    // find the id of all nodes in the editor that has a label in while_zone.tasks
+    const nodes = editor.getNodes().filter(node => while_zone.tasks.includes(node.label))
+    const nodeIds = nodes.map(node => node.id);
+    console.log("Node ids in while zone: ", nodeIds)
+    comment.addFrame(while_zone_name, nodeIds);
+
+  }
 }
 
 export async function addNode(editor, area, nodeData) {
@@ -161,6 +177,7 @@ export async function createEditor(container: HTMLElement, settings: any) {
   const area = new AreaPlugin<Schemes, AreaExtra>(container);
   const connection = new ConnectionPlugin<Schemes, AreaExtra>();
   const render = new ReactPlugin<Schemes, AreaExtra>();
+  const comment = new CommentPlugin<Schemes, AreaExtra>();
   const arrange = new AutoArrangePlugin<Schemes>();
   const contextMenu = new ContextMenuPlugin<Schemes>({
     items: ContextMenuPresets.classic.setup([
@@ -170,9 +187,10 @@ export async function createEditor(container: HTMLElement, settings: any) {
     boundViewport: true
   });
 
-  AreaExtensions.selectableNodes(area, AreaExtensions.selector(), {
-    accumulating: AreaExtensions.accumulateOnCtrl()
-  });
+  const selector = AreaExtensions.selector();
+  const accumulating = AreaExtensions.accumulateOnCtrl();
+
+  AreaExtensions.selectableNodes(area, selector, { accumulating });
 
   render.addPreset(Presets.classic.setup());
   render.addPreset(Presets.contextMenu.setup());
@@ -193,6 +211,7 @@ export async function createEditor(container: HTMLElement, settings: any) {
   editor.use(area);
   // area.use(connection);
   area.use(render);
+  area.use(comment);
   area.use(arrange);
   area.use(contextMenu);
   if (settings.minimap) {
@@ -200,6 +219,7 @@ export async function createEditor(container: HTMLElement, settings: any) {
   }
 
   AreaExtensions.simpleNodesOrder(area);
+  CommentExtensions.selectable(comment, selector, accumulating);
 
 
   async function layout(animate: boolean) {
@@ -210,6 +230,7 @@ export async function createEditor(container: HTMLElement, settings: any) {
   // Adding nodes based on workgraphData
   const nodeMap: NodeMap = {}; // To keep track of created nodes for linking
   editor.nodeMap = nodeMap;
+  editor.comment = comment;
 
   // aplly layout twice to ensure all nodes are arranged
   // await layout(true);
