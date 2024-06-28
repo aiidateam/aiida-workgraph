@@ -30,7 +30,7 @@ from aiida.engine.processes.workchains.awaitable import (
 from aiida.engine.processes.workchains.workchain import Protect, WorkChainSpec
 from aiida.engine import run_get_node
 from aiida_workgraph.utils import create_and_pause_process
-
+from aiida_workgraph.task import Task
 
 if t.TYPE_CHECKING:
     from aiida.engine.runners import Runner  # pylint: disable=unused-import
@@ -426,12 +426,14 @@ class WorkGraphEngine(Process, metaclass=Protect):
 
     def setup_ctx_workgraph(self, wgdata: t.Dict[str, t.Any]) -> None:
         """setup the workgraph in the context."""
+        import cloudpickle as pickle
+
         self.ctx.tasks = wgdata["tasks"]
         self.ctx.links = wgdata["links"]
         self.ctx.connectivity = wgdata["connectivity"]
         self.ctx.ctrl_links = wgdata["ctrl_links"]
         self.ctx.workgraph = wgdata
-        self.ctx.error_handlers = wgdata["error_handlers"]
+        self.ctx.error_handlers = pickle.loads(wgdata["error_handlers"])
 
     def read_wgdata_from_base(self) -> t.Dict[str, t.Any]:
         """Read workgraph data from base.extras."""
@@ -446,6 +448,16 @@ class WorkGraphEngine(Process, metaclass=Protect):
         for name, task in wgdata["tasks"].items():
             task["results"] = self.ctx.tasks[name].get("results")
         self.setup_ctx_workgraph(wgdata)
+
+    def get_task(self, name: str):
+        """Get task from the context."""
+        task = Task.from_dict(self.ctx.tasks[name])
+        return task
+
+    def update_task(self, task: Task):
+        """Update task in the context."""
+        self.ctx.tasks[task.name]["properties"] = task.properties_to_dict()
+        self.reset_task(task.name)
 
     def get_task_state_info(self, name: str, key: str) -> str:
         """Get task state info from base.extras."""
@@ -540,7 +552,7 @@ class WorkGraphEngine(Process, metaclass=Protect):
                     self.ctx.connectivity["child_node"][name], "SKIPPED"
                 )
                 self.report(f"Task: {name} failed.")
-                self.run_error_handlers()
+                self.run_error_handlers(name)
         else:
             task["results"] = None
 
@@ -628,13 +640,21 @@ class WorkGraphEngine(Process, metaclass=Protect):
         ] and self.get_task_state_info(task["name"], "state") in ["CREATED", "RUNNING"]:
             self.set_task_result(task)
 
-    def run_error_handlers(self) -> None:
+    def run_error_handlers(self, task_name: str) -> None:
         """Run error handler."""
-        import cloudpickle as pickle
-
-        error_handlers = pickle.loads(self.ctx.error_handlers)
-        for handler in error_handlers:
-            handler(self)
+        node = self.get_task_state_info(task_name, "process")
+        if not node or not node.exit_status:
+            return
+        for _, data in self.ctx.error_handlers.items():
+            if task_name in data["tasks"]:
+                handler = data["handler"]
+                metadata = data["tasks"][task_name]
+                if node.exit_code.status in metadata.get("exit_codes", []):
+                    self.report(f"Run error handler: {metadata}")
+                    metadata.setdefault("retry", 0)
+                    if metadata["retry"] < metadata["max_retries"]:
+                        handler(self, task_name, **metadata.get("kwargs", {}))
+                        metadata["retry"] += 1
 
     def is_workgraph_finished(self) -> bool:
         """Check if the workgraph is finished.

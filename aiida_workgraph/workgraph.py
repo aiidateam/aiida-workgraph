@@ -54,7 +54,7 @@ class WorkGraph(node_graph.NodeGraph):
         self.nodes.post_creation_hooks = [task_creation_hook]
         self.links.post_creation_hooks = [link_creation_hook]
         self.links.post_deletion_hooks = [link_deletion_hook]
-        self.error_handlers = []
+        self.error_handlers = {}
         self._widget = NodeGraphWidget(parent=self)
 
     @property
@@ -298,9 +298,18 @@ class WorkGraph(node_graph.NodeGraph):
 
     @classmethod
     def from_dict(cls, wgdata: Dict[str, Any]) -> "WorkGraph":
+        import cloudpickle as pickle
+
         if "tasks" in wgdata:
             wgdata["nodes"] = wgdata.pop("tasks")
-        return super().from_dict(wgdata)
+        wg = super().from_dict(wgdata)
+        wg.max_iteration = wgdata["max_iteration"]
+        wg.execution_count = wgdata["execution_count"]
+        wg.workgraph_type = wgdata["workgraph_type"]
+        wg.conditions = wgdata["conditions"]
+        wg.max_number_jobs = wgdata["max_number_jobs"]
+        wg.error_handlers = pickle.loads(wgdata["error_handlers"])
+        return wg
 
     @classmethod
     def from_yaml(cls, filename: str = None, string: str = None) -> "WorkGraph":
@@ -441,6 +450,10 @@ class WorkGraph(node_graph.NodeGraph):
         # links
         for link in wg.links:
             self.links.append(link)
+
+    def attach_error_handler(self, handler, name, tasks: dict = None) -> None:
+        """Attach an error handler to the workgraph."""
+        self.error_handlers[name] = {"handler": handler, "tasks": tasks}
 
     def _repr_mimebundle_(self, *args, **kwargs):
         # if ipywdigets > 8.0.0, use _repr_mimebundle_ instead of _ipython_display_
