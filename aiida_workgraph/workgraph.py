@@ -303,12 +303,17 @@ class WorkGraph(node_graph.NodeGraph):
         if "tasks" in wgdata:
             wgdata["nodes"] = wgdata.pop("tasks")
         wg = super().from_dict(wgdata)
-        wg.max_iteration = wgdata["max_iteration"]
-        wg.execution_count = wgdata["execution_count"]
-        wg.workgraph_type = wgdata["workgraph_type"]
-        wg.conditions = wgdata["conditions"]
-        wg.max_number_jobs = wgdata["max_number_jobs"]
-        wg.error_handlers = pickle.loads(wgdata["error_handlers"])
+        for key in [
+            "max_iteration",
+            "execution_count",
+            "workgraph_type",
+            "conditions",
+            "max_number_jobs",
+        ]:
+            if key in wgdata:
+                setattr(wg, key, wgdata[key])
+        if "error_handlers" in wgdata:
+            wg.error_handlers = pickle.loads(wgdata["error_handlers"])
         return wg
 
     @classmethod
