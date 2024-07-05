@@ -1,6 +1,6 @@
 """Parser for an `PythonJob` job."""
 from aiida.parsers.parser import Parser
-from aiida_workgraph.orm import serialize_to_aiida_nodes
+from aiida_workgraph.orm import general_serializer
 
 
 class PythonParser(Parser):
@@ -13,12 +13,12 @@ class PythonParser(Parser):
         try:
             with self.retrieved.base.repository.open("results.pickle", "rb") as handle:
                 results = pickle.load(handle)
-                output_name_list = self.node.inputs.output_name_list.get_list()
-                # output_name_list exclude ['_wait', '_outputs', 'remote_folder', 'remote_stash', 'retrieved']
-                output_name_list = [
-                    name
-                    for name in output_name_list
-                    if name
+                output_info = self.node.inputs.output_info.get_list()
+                # output_info exclude ['_wait', '_outputs', 'remote_folder', 'remote_stash', 'retrieved']
+                outputs = [
+                    data
+                    for data in output_info
+                    if data["name"]
                     not in [
                         "_wait",
                         "_outputs",
@@ -27,24 +27,44 @@ class PythonParser(Parser):
                         "retrieved",
                     ]
                 ]
-                outputs = {}
+                if len(outputs) == 0:
+                    outputs = [
+                        {"name": "result", "value": None, "identifier": "General"}
+                    ]
                 if isinstance(results, tuple):
-                    if len(output_name_list) != len(results):
+                    if len(outputs) != len(results):
                         raise ValueError(
-                            "The number of results does not match the number of output_name_list."
+                            "The number of results does not match the number of outputs."
                         )
-                    for i in range(len(output_name_list)):
-                        outputs[output_name_list[i].name] = results[i]
-                        outputs = serialize_to_aiida_nodes(outputs)
-                elif isinstance(results, dict) and len(results) == len(
-                    output_name_list
-                ):
-                    outputs = serialize_to_aiida_nodes(results)
+                    for i in range(len(outputs)):
+                        outputs[i]["value"] = self.serialize_output(
+                            results[i], outputs[i]["identifier"]
+                        )
+                elif isinstance(results, dict) and len(results) == len(outputs):
+                    for output in outputs:
+                        output["value"] = self.serialize_output(
+                            results[output["name"]], output["identifier"]
+                        )
                 else:
-                    outputs = serialize_to_aiida_nodes({"result": results})
-                for key, value in outputs.items():
-                    self.out(key, value)
+                    outputs[0]["value"] = self.serialize_output(
+                        results, outputs[0]["identifier"]
+                    )
+                for output in outputs:
+                    self.out(output["name"], output["value"])
         except OSError:
             return self.exit_codes.ERROR_READING_OUTPUT_FILE
         except ValueError:
             return self.exit_codes.ERROR_INVALID_OUTPUT
+
+    def serialize_output(self, result, identifier):
+        """Serialize dynamic outputs."""
+        if identifier.upper() == "DYNAMIC":
+            if isinstance(result, dict):
+                output = {}
+                for key, value in result.items():
+                    output[key] = general_serializer(value)
+                return output
+            else:
+                self.exit_codes.ERROR_INVALID_OUTPUT
+        else:
+            return general_serializer(result)

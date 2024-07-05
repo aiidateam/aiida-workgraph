@@ -100,6 +100,36 @@ def test_PythonJob_outputs():
     assert wg.tasks["add"].outputs["diff"].value.value == -1
 
 
+def test_PythonJob_dynamic_outputs():
+    """Test function with dynamic outputs."""
+
+    @task(
+        outputs=[
+            {"identifier": "Dynamic", "name": "add_multiply"},
+            {"name": "minus"},
+        ]
+    )
+    def myfunc(x, y):
+        return {
+            "add_multiply": {"add": x + y, "multiply": x * y},
+            "minus": x - y,
+        }
+
+    wg = WorkGraph("test_dynamic_outputs")
+    wg.tasks.new(myfunc, name="add", run_remotely=True)
+
+    inputs = {
+        "add": {
+            "x": 1.0,
+            "y": 2.0,
+            "computer": "localhost",
+        }
+    }
+    wg.run(inputs=inputs)
+    assert wg.tasks["add"].outputs["add_multiply"].value.add.value == 3
+    assert wg.tasks["add"].outputs["add_multiply"].value.multiply.value == 2
+
+
 def test_PythonJob_parent_folder():
     """Test function with parent folder."""
     from aiida_workgraph import WorkGraph, task

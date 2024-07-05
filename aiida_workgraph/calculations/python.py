@@ -54,11 +54,11 @@ class PythonJob(CalcJob):
             "function_kwargs", valid_type=Data, required=False
         )  # , serializer=serialize_to_aiida_nodes)
         spec.input(
-            "output_name_list",
+            "output_info",
             valid_type=List,
             required=False,
             serializer=to_aiida_type,
-            help="The names of the output ports",
+            help="The information of the output ports",
         )
         spec.input(
             "parent_folder",
