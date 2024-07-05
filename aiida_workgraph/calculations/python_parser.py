@@ -57,8 +57,8 @@ class PythonParser(Parser):
             return self.exit_codes.ERROR_INVALID_OUTPUT
 
     def serialize_output(self, result, identifier):
-        """Serialize dynamic outputs."""
-        if identifier.upper() == "DYNAMIC":
+        """Serialize outputs."""
+        if identifier.upper() == "NAMESPACE":
             if isinstance(result, dict):
                 output = {}
                 for key, value in result.items():

@@ -100,12 +100,12 @@ def test_PythonJob_outputs():
     assert wg.tasks["add"].outputs["diff"].value.value == -1
 
 
-def test_PythonJob_dynamic_outputs():
-    """Test function with dynamic outputs."""
+def test_PythonJob_namespace_outputs():
+    """Test function with namespace outputs."""
 
     @task(
         outputs=[
-            {"identifier": "Dynamic", "name": "add_multiply"},
+            {"identifier": "Namespace", "name": "add_multiply"},
             {"name": "minus"},
         ]
     )
@@ -115,7 +115,7 @@ def test_PythonJob_dynamic_outputs():
             "minus": x - y,
         }
 
-    wg = WorkGraph("test_dynamic_outputs")
+    wg = WorkGraph("test_namespace_outputs")
     wg.tasks.new(myfunc, name="add", run_remotely=True)
 
     inputs = {

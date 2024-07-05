@@ -29,10 +29,10 @@ class SocketGeneral(TaskSocket, SerializePickle):
         self.add_property("General", name, **kwargs)
 
 
-class SocketDynamic(TaskSocket, SerializePickle):
-    """Dynamic socket."""
+class SocketNamespace(TaskSocket, SerializePickle):
+    """Namespace socket."""
 
-    identifier: str = "Dynamic"
+    identifier: str = "Namespace"
 
     def __init__(
         self,
@@ -157,7 +157,7 @@ class SocketAiiDAFloatVector(TaskSocket, SerializeJson):
 
 socket_list = [
     SocketGeneral,
-    SocketDynamic,
+    SocketNamespace,
     SocketInt,
     SocketFloat,
     SocketString,
