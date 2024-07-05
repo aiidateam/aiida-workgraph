@@ -18,7 +18,10 @@ def test_build_workchain_inputs_outputs():
     from aiida_workgraph import build_task
 
     node = build_task(MultiplyAddWorkChain)()
-    assert len(node.inputs) == 10
+    inputs = MultiplyAddWorkChain.spec().inputs
+    # inputs + metadata + _wait
+    ninput = len(inputs.ports) + len(inputs.ports["metadata"].ports) + 1
+    assert len(node.inputs) == ninput
     assert len(node.outputs) == 3
 
 
