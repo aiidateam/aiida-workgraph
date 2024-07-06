@@ -27,10 +27,6 @@ class PythonParser(Parser):
                         "retrieved",
                     ]
                 ]
-                if len(outputs) == 0:
-                    outputs = [
-                        {"name": "result", "value": None, "identifier": "General"}
-                    ]
                 if isinstance(results, tuple):
                     if len(outputs) != len(results):
                         raise ValueError(
@@ -40,10 +36,18 @@ class PythonParser(Parser):
                         outputs[i]["value"] = self.serialize_output(
                             results[i], outputs[i]["identifier"]
                         )
-                elif isinstance(results, dict) and len(results) == len(outputs):
+                elif isinstance(results, dict) and len(outputs) > 1:
                     for output in outputs:
+                        if output.get("required", False):
+                            if output["name"] not in results:
+                                self.exit_codes.ERROR_MISSING_OUTPUT
                         output["value"] = self.serialize_output(
-                            results[output["name"]], output["identifier"]
+                            results.pop(output["name"]), output["identifier"]
+                        )
+                    # if there are any remaining results, raise an warning
+                    if results:
+                        self.logger.warning(
+                            f"Found extra results that are not included in the output: {results.keys()}"
                         )
                 else:
                     outputs[0]["value"] = self.serialize_output(
