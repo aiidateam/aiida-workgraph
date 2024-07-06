@@ -100,9 +100,10 @@ def test_PythonJob_outputs():
     assert wg.tasks["add"].outputs["diff"].value.value == -1
 
 
-def test_PythonJob_namespace_outputs():
-    """Test function with namespace outputs."""
+def test_PythonJob_namespace_output_input():
+    """Test function with namespace output and input."""
 
+    # output namespace
     @task(
         outputs=[
             {"identifier": "Namespace", "name": "add_multiply"},
@@ -115,19 +116,37 @@ def test_PythonJob_namespace_outputs():
             "minus": x - y,
         }
 
+    # input namespace
+    @task()
+    def myfunc2(x, y):
+        add = x["add"]
+        multiply = x["multiply"]
+        return y + add + multiply
+
     wg = WorkGraph("test_namespace_outputs")
-    wg.tasks.new(myfunc, name="add", run_remotely=True)
+    wg.tasks.new(myfunc, name="myfunc", run_remotely=True)
+    wg.tasks.new(
+        myfunc2,
+        name="myfunc2",
+        x=wg.tasks["myfunc"].outputs["add_multiply"],
+        run_remotely=True,
+    )
 
     inputs = {
-        "add": {
+        "myfunc": {
             "x": 1.0,
             "y": 2.0,
             "computer": "localhost",
-        }
+        },
+        "myfunc2": {
+            "y": 3.0,
+            "computer": "localhost",
+        },
     }
     wg.run(inputs=inputs)
-    assert wg.tasks["add"].outputs["add_multiply"].value.add.value == 3
-    assert wg.tasks["add"].outputs["add_multiply"].value.multiply.value == 2
+    assert wg.tasks["myfunc"].outputs["add_multiply"].value.add.value == 3
+    assert wg.tasks["myfunc"].outputs["add_multiply"].value.multiply.value == 2
+    assert wg.tasks["myfunc2"].outputs["result"].value.value == 8
 
 
 def test_PythonJob_parent_folder():
