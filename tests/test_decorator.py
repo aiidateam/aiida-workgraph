@@ -12,17 +12,18 @@ def test_args() -> None:
     def test(a, b=1, **c):
         print(a, b, c)
 
+    metadata_kwargs = set(
+        [
+            f"metadata.{key}"
+            for key in test.process_class.spec().inputs.ports["metadata"].ports.keys()
+        ]
+    )
+    kwargs = set(test.process_class.spec().inputs.ports.keys()).union(metadata_kwargs)
+    kwargs.remove("a")
     #
     n = test.task()
     assert n.args == ["a"]
-    assert n.kwargs == [
-        "metadata",
-        "metadata.store_provenance",
-        "metadata.description",
-        "metadata.label",
-        "metadata.call_link_label",
-        "b",
-    ]
+    assert set(n.kwargs) == set(kwargs)
     assert n.var_args is None
     assert n.var_kwargs == "c"
     assert n.outputs.keys() == ["result", "_outputs", "_wait"]

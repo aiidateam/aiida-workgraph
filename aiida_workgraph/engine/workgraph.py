@@ -919,9 +919,7 @@ class WorkGraphEngine(Process, metaclass=Protect):
                     self.set_task_state_info(name, "state", "CREATED")
                     process = process.node
                 else:
-                    print("inputs: ", inputs)
                     process = self.submit(PythonJob, **inputs)
-                    print("process: ", process)
                     self.set_task_state_info(name, "state", "RUNNING")
                 process.label = name
                 self.set_task_state_info(task["name"], "process", process)
