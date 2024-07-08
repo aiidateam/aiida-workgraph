@@ -143,9 +143,6 @@ def test_PythonJob_namespace_output_input():
 
 def test_PythonJob_parent_folder():
     """Test function with parent folder."""
-    from aiida import load_profile
-
-    load_profile()
 
     def add(x, y):
         z = x + y
@@ -289,3 +286,35 @@ def test_PythonJob_copy_files():
         wait=True,
     )
     assert wg.tasks["multiply"].outputs["result"].value.value == 25
+
+
+def test_PythonJob_retrieve_files():
+    """Test retrieve files."""
+
+    def add(x, y):
+        z = x + y
+        with open("result.txt", "w") as f:
+            f.write(str(z))
+        return x + y
+
+    wg = WorkGraph("test_PythonJob_retrieve_files")
+    wg.tasks.new("PythonJob", function=add, name="add")
+    # ------------------------- Submit the calculation -------------------
+    wg.submit(
+        inputs={
+            "add": {
+                "x": 2,
+                "y": 3,
+                "computer": "localhost",
+                "metadata": {
+                    "options": {
+                        "additional_retrieve_list": ["result.txt"],
+                    }
+                },
+            },
+        },
+        wait=True,
+    )
+    assert (
+        "result.txt" in wg.tasks["add"].outputs["retrieved"].value.list_object_names()
+    )
