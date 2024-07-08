@@ -49,9 +49,25 @@ class PythonParser(Parser):
                         self.logger.warning(
                             f"Found extra results that are not included in the output: {results.keys()}"
                         )
-                else:
+                elif isinstance(results, dict) and len(outputs) == 1:
+                    # if output name in results, use it
+                    if outputs[0]["name"] in results:
+                        outputs[0]["value"] = self.serialize_output(
+                            results[outputs[0]["name"]], outputs[0]["identifier"]
+                        )
+                    # otherwise, we assume the results is the output
+                    else:
+                        outputs[0]["value"] = self.serialize_output(
+                            results, outputs[0]["identifier"]
+                        )
+                elif len(outputs) == 1:
+                    # otherwise, we assume the results is the output
                     outputs[0]["value"] = self.serialize_output(
                         results, outputs[0]["identifier"]
+                    )
+                else:
+                    raise ValueError(
+                        "The number of results does not match the number of outputs."
                     )
                 for output in outputs:
                     self.out(output["name"], output["value"])
