@@ -122,7 +122,7 @@ function NodeDetails({ selectedNode, onClose, setShowNodeDetails }) {
   };
 
   const handleWorktreeClick = () => {
-    if (selectedNode.node_type === 'workgraph' && selectedNode.process.pk) {
+    if (selectedNode.node_type === 'graph_builder' && selectedNode.process.pk) {
       navigate(`/workgraph/${selectedNode.process.pk}`);
     }
   };
@@ -163,7 +163,7 @@ function NodeDetails({ selectedNode, onClose, setShowNodeDetails }) {
     <NodeDetailsPanel>
       <CloseButton onClick={handleClose}>Close</CloseButton>
       <NodeDetailsTitle>Node Details</NodeDetailsTitle>
-      {selectedNode.node_type === 'workgraph' && (
+      {selectedNode.node_type === 'graph_builder' && (
       <WorktreeButton onClick={handleWorktreeClick} disabled={isButtonDisabled}>
         Go to Worktree
       </WorktreeButton>
