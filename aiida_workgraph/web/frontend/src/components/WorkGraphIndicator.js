@@ -1,9 +1,9 @@
 import React from 'react';
 import styled from 'styled-components';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faAngleRight } from '@fortawesome/free-solid-svg-icons';
+import { faChevronRight, faCircle } from '@fortawesome/free-solid-svg-icons';
 
-const IndicatorContainer = styled.div`
+const BreadcrumbContainer = styled.nav`
   background-color: #f7f7f7;
   padding: 10px;
   font-size: 0.9em;
@@ -13,24 +13,39 @@ const IndicatorContainer = styled.div`
   justify-content: flex-start;
 `;
 
-const IndicatorLink = styled.a`
+const BreadcrumbLink = styled.a`
   color: #007bff;
   text-decoration: none;
   cursor: pointer;
-  margin-left: 5px;
+  margin: 0 5px;
+  &:hover {
+    text-decoration: underline;
+  }
 `;
 
-function WorkGraphIndicator({ parentWorktrees }) {
-  const hierarchy = parentWorktrees.map(([workgraphName, workgraphId], index) => (
-    <span key={workgraphId}>
-      {index === 0 && <FontAwesomeIcon size="lg" icon={faAngleRight} />}
-      <IndicatorLink href={`/workgraph/${workgraphId}`}>{workgraphName}</IndicatorLink>
-      {` (${workgraphId})`}
-      {index < parentWorktrees.length - 1 && <FontAwesomeIcon size="lg" style={{ marginLeft: '5px' }} icon={faAngleRight} />}
-    </span>
-  ));
+const Separator = styled.span`
+  margin: 0 5px;
+  color: #ccc;
+`;
 
-  return <IndicatorContainer>{hierarchy}</IndicatorContainer>;
+function Breadcrumbs({ parentWorktrees }) {
+  // const separatorIcon = <FontAwesomeIcon icon={faChevronRight} />; // Change this icon as needed
+  // const separatorIcon = <FontAwesomeIcon icon={faCircle} />; // Alternative smaller icon
+  // const separatorIcon = '>'; // Text-based alternative
+  const separatorIcon = '🍞'; // Emoji-based alternative
+
+  return (
+    <BreadcrumbContainer aria-label="breadcrumb">
+      {parentWorktrees.map(([workgraphName, workgraphId], index) => (
+        <React.Fragment key={workgraphId}>
+          <BreadcrumbLink href={`/workgraph/${workgraphId}`}>
+            {workgraphName}
+          </BreadcrumbLink>
+          {index < parentWorktrees.length - 1 && <Separator>{separatorIcon}</Separator>}
+        </React.Fragment>
+      ))}
+    </BreadcrumbContainer>
+  );
 }
 
-export default WorkGraphIndicator;
+export default Breadcrumbs;
