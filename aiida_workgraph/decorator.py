@@ -260,6 +260,13 @@ def build_pythonjob_task(func: Callable) -> Task:
     from aiida_workgraph.calculations.python import PythonJob
     from copy import deepcopy
 
+    # if the function is not a task, build a task from the function
+    if not hasattr(func, "node"):
+        TaskDecoratorCollection.decorator_task()(func)
+    if func.node.node_type.upper() == "GRAPH_BUILDER":
+        raise ValueError(
+            "GraphBuilder task cannot be run remotely. Please remove 'PythonJob'."
+        )
     tdata = {"executor": PythonJob, "task_type": "CALCJOB"}
     _, tdata_py = build_task_from_AiiDA(tdata)
     tdata = deepcopy(func.tdata)

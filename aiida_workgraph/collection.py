@@ -33,7 +33,7 @@ class TaskCollection(NodeCollection):
                 # this is a PythonJob
                 identifier, _ = build_pythonjob_task(identifier)
             return super().new(identifier, name, uuid, **kwargs)
-        if isinstance(identifier, str) and identifier.upper() == "PythonJob":
+        if isinstance(identifier, str) and identifier.upper() == "PYTHONJOB":
             identifier, _ = build_pythonjob_task(kwargs.pop("function"))
             return super().new(identifier, name, uuid, **kwargs)
         if isinstance(identifier, str) and identifier.upper() == "SHELLJOB":
