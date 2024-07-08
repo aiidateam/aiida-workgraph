@@ -7,17 +7,14 @@ aiida.load_profile()
 
 def test_PythonJob_kwargs():
     """Test function with kwargs."""
-    from aiida_workgraph import task, WorkGraph
 
-    # define add task
-    @task()
     def add(x, **kwargs):
         for value in kwargs.values():
             x += value
         return x
 
     wg = WorkGraph("test_PythonJob")
-    wg.tasks.new(add, name="add", run_remotely=True)
+    wg.tasks.new("PythonJob", function=add, name="add")
     wg.run(
         inputs={
             "add": {
@@ -32,23 +29,18 @@ def test_PythonJob_kwargs():
 
 def test_PythonJob_typing():
     """Test function with typing."""
-    from aiida_workgraph import task, WorkGraph
     from numpy import array
 
-    # define add task
-    @task()
     def add(x: array, y: array) -> array:
         return x + y
 
-    # define multiply task
-    @task()
     def multiply(x: Any, y: Any) -> Any:
         return x * y
 
     wg = WorkGraph("test_PythonJob")
-    wg.tasks.new(add, name="add", run_remotely=True)
+    wg.tasks.new("PythonJob", function=add, name="add")
     wg.tasks.new(
-        multiply, name="multiply", run_remotely=True, x=wg.tasks["add"].outputs[0]
+        "PythonJob", function=multiply, name="multiply", x=wg.tasks["add"].outputs[0]
     )
     #
     metadata = {
@@ -86,11 +78,11 @@ def test_PythonJob_outputs():
 
     wg = WorkGraph("test_PythonJob_outputs")
     wg.tasks.new(
-        add,
+        "PythonJob",
+        function=add,
         name="add",
         x=1,
         y=2,
-        run_remotely=True,
         #  code=code,
         computer="localhost",
     )
@@ -124,12 +116,12 @@ def test_PythonJob_namespace_output_input():
         return y + add + multiply
 
     wg = WorkGraph("test_namespace_outputs")
-    wg.tasks.new(myfunc, name="myfunc", run_remotely=True)
+    wg.tasks.new("PythonJob", function=myfunc, name="myfunc")
     wg.tasks.new(
-        myfunc2,
+        "PythonJob",
+        function=myfunc2,
         name="myfunc2",
         x=wg.tasks["myfunc"].outputs["add_multiply"],
-        run_remotely=True,
     )
 
     inputs = {
@@ -151,33 +143,28 @@ def test_PythonJob_namespace_output_input():
 
 def test_PythonJob_parent_folder():
     """Test function with parent folder."""
-    from aiida_workgraph import WorkGraph, task
     from aiida import load_profile
 
     load_profile()
 
-    # define add task
-    @task()
     def add(x, y):
         z = x + y
         with open("result.txt", "w") as f:
             f.write(str(z))
         return x + y
 
-    # define multiply task
-    @task()
     def multiply(x, y):
         with open("parent_folder/result.txt", "r") as f:
             z = int(f.read())
         return x * y + z
 
     wg = WorkGraph("test_PythonJob_parent_folder")
-    wg.tasks.new(add, name="add", run_remotely=True)
+    wg.tasks.new("PythonJob", function=add, name="add")
     wg.tasks.new(
-        multiply,
+        "PythonJob",
+        function=multiply,
         name="multiply",
         parent_folder=wg.tasks["add"].outputs["remote_folder"],
-        run_remotely=True,
     )
 
     # ------------------------- Submit the calculation -------------------
@@ -201,7 +188,6 @@ def test_PythonJob_parent_folder():
 
 def test_PythonJob_upload_files():
     """Test function with upload files."""
-    from aiida_workgraph import WorkGraph, task
 
     # create a temporary file "input.txt" in the current directory
     with open("input.txt", "w") as f:
@@ -215,8 +201,6 @@ def test_PythonJob_upload_files():
     with open("inputs_folder/another_input.txt", "w") as f:
         f.write("3")
 
-    # define add task
-    @task()
     def add():
         with open("input.txt", "r") as f:
             a = int(f.read())
@@ -225,7 +209,7 @@ def test_PythonJob_upload_files():
         return a + b
 
     wg = WorkGraph("test_PythonJob_upload_files")
-    wg.tasks.new(add, name="add", run_remotely=True)
+    wg.tasks.new("PythonJob", function=add, name="add")
 
     # ------------------------- Submit the calculation -------------------
     # we need use full path to the file
@@ -249,7 +233,6 @@ def test_PythonJob_upload_files():
 
 def test_PythonJob_copy_files():
     """Test function with copy files."""
-    from aiida_workgraph import WorkGraph, task
 
     # define add task
     @task()
@@ -269,12 +252,12 @@ def test_PythonJob_copy_files():
         return x * y
 
     wg = WorkGraph("test_PythonJob_parent_folder")
-    wg.tasks.new(add, name="add1", run_remotely=True)
-    wg.tasks.new(add, name="add2", run_remotely=True)
+    wg.tasks.new("PythonJob", function=add, name="add1")
+    wg.tasks.new("PythonJob", function=add, name="add2")
     wg.tasks.new(
-        multiply,
+        "PythonJob",
+        function=multiply,
         name="multiply",
-        run_remotely=True,
     )
     wg.links.new(
         wg.tasks["add1"].outputs["remote_folder"],
