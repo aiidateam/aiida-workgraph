@@ -376,3 +376,26 @@ def test_PythonJob_retrieve_files():
     assert (
         "result.txt" in wg.tasks["add"].outputs["retrieved"].value.list_object_names()
     )
+
+
+def test_data_serializer():
+    from ase import Atoms
+    from ase.build import bulk
+
+    @task()
+    def make_supercell(atoms: Atoms, dim: int) -> Atoms:
+        """Scale the structure by the given scales."""
+        return atoms * (dim, dim, dim)
+
+    atoms = bulk("Si")
+
+    wg = WorkGraph("test_PythonJob_retrieve_files")
+    wg.tasks.new(
+        "PythonJob", function=make_supercell, atoms=atoms, dim=2, name="make_supercell"
+    )
+    # ------------------------- Submit the calculation -------------------
+    wg.submit(wait=True)
+    assert (
+        wg.tasks["make_supercell"].outputs["result"].value.value.get_chemical_formula()
+        == "Si16"
+    )
