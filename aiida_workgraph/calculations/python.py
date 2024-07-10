@@ -125,6 +125,12 @@ class PythonJob(CalcJob):
             invalidates_cache=True,
             message="The output file contains invalid output.",
         )
+        spec.exit_code(
+            321,
+            "ERROR_RESULT_OUTPUT_MISMATCH",
+            invalidates_cache=True,
+            message="The number of results does not match the number of outputs.",
+        )
 
     def _build_process_label(self) -> str:
         """Use the function name as the process label.

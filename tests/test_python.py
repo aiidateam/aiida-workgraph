@@ -92,6 +92,47 @@ def test_PythonJob_outputs():
     assert wg.tasks["add"].outputs["diff"].value.value == -1
 
 
+def test_PythonJob_namespace_output():
+    """Test function with namespace output and input."""
+
+    # output namespace
+    @task(
+        outputs=[
+            {
+                "name": "add_multiply",
+                "identifier": "Namespace",
+            },
+            {
+                "name": "add_multiply.add",
+                "identifier": "Namespace",
+            },
+            {"name": "minus"},
+        ]
+    )
+    def myfunc(x, y):
+        add = {"order1": x + y, "order2": x * x + y * y}
+        return {
+            "add_multiply": {"add": add, "multiply": x * y},
+            "minus": x - y,
+        }
+
+    wg = WorkGraph("test_namespace_outputs")
+    wg.tasks.new("PythonJob", function=myfunc, name="myfunc")
+    wg.submit(
+        wait=True,
+        inputs={
+            "myfunc": {
+                "x": 1.0,
+                "y": 2.0,
+                "computer": "localhost",
+            }
+        },
+    )
+    assert wg.tasks["myfunc"].outputs["add_multiply"].value.add.order1.value == 3
+    assert wg.tasks["myfunc"].outputs["add_multiply"].value.add.order2.value == 5
+    assert wg.tasks["myfunc"].outputs["add_multiply"].value.multiply.value == 2
+
+
 def test_PythonJob_namespace_output_input():
     """Test function with namespace output and input."""
 
@@ -99,6 +140,8 @@ def test_PythonJob_namespace_output_input():
     @task(
         outputs=[
             {"identifier": "Namespace", "name": "add_multiply"},
+            {"name": "add_multiply.add"},
+            {"name": "add_multiply.multiply"},
             {"name": "minus"},
         ]
     )
@@ -115,6 +158,10 @@ def test_PythonJob_namespace_output_input():
         multiply = x["multiply"]
         return y + add + multiply
 
+    @task()
+    def myfunc3(x, y):
+        return x + y
+
     wg = WorkGraph("test_namespace_outputs")
     wg.tasks.new("PythonJob", function=myfunc, name="myfunc")
     wg.tasks.new(
@@ -122,6 +169,12 @@ def test_PythonJob_namespace_output_input():
         function=myfunc2,
         name="myfunc2",
         x=wg.tasks["myfunc"].outputs["add_multiply"],
+    )
+    wg.tasks.new(
+        "PythonJob",
+        function=myfunc3,
+        name="myfunc3",
+        x=wg.tasks["myfunc"].outputs["add_multiply.add"],
     )
 
     inputs = {
@@ -134,11 +187,16 @@ def test_PythonJob_namespace_output_input():
             "y": 3.0,
             "computer": "localhost",
         },
+        "myfunc3": {
+            "y": 4.0,
+            "computer": "localhost",
+        },
     }
     wg.run(inputs=inputs)
     assert wg.tasks["myfunc"].outputs["add_multiply"].value.add.value == 3
     assert wg.tasks["myfunc"].outputs["add_multiply"].value.multiply.value == 2
     assert wg.tasks["myfunc2"].outputs["result"].value.value == 8
+    assert wg.tasks["myfunc3"].outputs["result"].value.value == 7
 
 
 def test_PythonJob_parent_folder():

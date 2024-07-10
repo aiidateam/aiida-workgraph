@@ -53,7 +53,7 @@ def add_input_recursive(
         if port_name not in input_names:
             inputs.append(
                 {
-                    "identifier": "General",
+                    "identifier": "Namespace",
                     "name": port_name,
                     "property": {"identifier": "General", "default": {}},
                 }
@@ -102,7 +102,7 @@ def add_output_recursive(
         # so if you change the value of one port, the value of all the ports of other tasks will be changed
         # consider to use None as default value
         if port_name not in output_names:
-            outputs.append({"identifier": "General", "name": port_name})
+            outputs.append({"identifier": "Namespace", "name": port_name})
         for value in port.values():
             add_output_recursive(outputs, value, prefix=port_name, required=required)
     else:
