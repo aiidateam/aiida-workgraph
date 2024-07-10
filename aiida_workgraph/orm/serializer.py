@@ -2,19 +2,7 @@ from .general_data import GeneralData
 from aiida import orm, common
 from importlib.metadata import entry_points
 from typing import Any
-import json
-from pathlib import Path
-
-
-def load_config() -> dict:
-    """Load the configuration from the config file."""
-    config_file_path = Path.home() / ".config" / "workgraph.json"
-    try:
-        with config_file_path.open("r") as f:
-            config = json.load(f)
-    except FileNotFoundError:
-        config = {}
-    return config
+from aiida_workgraph.config import load_config
 
 
 def get_serializer_from_entry_points() -> dict:
