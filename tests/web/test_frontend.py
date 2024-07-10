@@ -56,3 +56,7 @@ def test_workgraph_item(page, wg_calcfunction, assert_snapshot):
 
     # compare the screenshot
     assert_snapshot(page.screenshot())
+
+    # page.get_by_text("sumdiff2").click()
+    # page.wait_for_timeout(3000)
+    # assert_snapshot(page.screenshot(), name='test_workgraph_item_sumdiff2.png')

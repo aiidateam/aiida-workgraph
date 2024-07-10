@@ -142,4 +142,4 @@ jobs:
             if: ${{ !cancelled() }}
             with:
                 name: playwright-traces
-                path: test-results/
+                path: tests/web/snapshots/
