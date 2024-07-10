@@ -46,14 +46,13 @@ def test_workgraph_item(page, wg_calcfunction, assert_snapshot):
 
     wg = wg_calcfunction
     wg.submit(wait=True)
-    page.goto("http://localhost:8000/workgraph/{}".format(wg.pk))
-    page.wait_for_timeout(8000)
-
-    page.get_by_text("sumdiff3").is_visible()
-
-    # Simulate user interaction (e.g., clicking a button)
+    page.goto(
+        "http://localhost:8000/workgraph/{}".format(wg.pk),
+        wait_until="domcontentloaded",
+    )
+    page.wait_for_timeout(3000)
     page.get_by_role("button", name="Arrange").click()
-    page.wait_for_timeout(8000)
+    page.wait_for_timeout(5000)
 
     # compare the screenshot
-    assert_snapshot(page.screenshot(), "screenshot.png")
+    assert_snapshot(page.screenshot())
