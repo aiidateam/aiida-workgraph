@@ -110,6 +110,8 @@ class WorkGraphSaver:
         self.save_task_states()
         for name, task in self.wgdata["tasks"].items():
             self.wgdata["tasks"][name] = serialize(task)
+        # nodes is a copy of tasks, so we need to pop it out
+        self.wgdata.pop("nodes")
         self.wgdata["error_handlers"] = serialize(self.wgdata["error_handlers"])
         self.process.base.extras.set("_workgraph", self.wgdata)
 
@@ -168,7 +170,11 @@ class WorkGraphSaver:
         if wgdata is None:
             print("No workgraph data found in the process node.")
             return
-        wgdata = deserialize_unsafe(wgdata)
+        for name, task in wgdata["tasks"].items():
+            wgdata["tasks"][name] = deserialize_unsafe(task)
+        # also make a alias for nodes
+        wgdata["nodes"] = wgdata["tasks"]
+        wgdata["error_handlers"] = deserialize_unsafe(wgdata["error_handlers"])
         return wgdata
 
     def check_diff(
