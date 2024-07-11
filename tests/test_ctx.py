@@ -22,7 +22,11 @@ def test_node_to_ctx(decorated_add: Callable) -> None:
 
     wg = WorkGraph(name="test_node_to_ctx")
     add1 = wg.tasks.new(decorated_add, "add1", x=Float(2).store(), y=Float(3).store())
-    add1.to_context = [["result", "sum"]]
+    try:
+        add1.set_context({"resul": "sum"})
+    except ValueError as e:
+        assert str(e) == "Keys {'resul'} are not in the outputs of this task."
+    add1.set_context({"result": "sum"})
     add2 = wg.tasks.new(decorated_add, "add2", y="{{ sum }}")
     wg.links.new(add1.outputs[0], add2.inputs["x"])
     wg.submit(wait=True)

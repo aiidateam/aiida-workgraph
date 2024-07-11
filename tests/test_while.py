@@ -16,7 +16,7 @@ def test_while(decorated_add, decorated_multiply, decorated_compare):
         decorated_multiply, name="multiply1", x="{{ n }}", y=orm.Int(2)
     )
     add1 = wg.tasks.new(decorated_add, name="add1", y=3)
-    add1.to_context = [["result", "n"]]
+    add1.set_context({"result": "n"})
     wg.links.new(multiply1.outputs["result"], add1.inputs["x"])
     wg.submit(wait=True, timeout=100)
     assert wg.execution_count == 4
@@ -37,7 +37,7 @@ def test_while_graph_builder(decorated_add, decorated_multiply, decorated_compar
             decorated_multiply, name="multiply1", x="{{ n }}", y=orm.Int(2)
         )
         add1 = wg.tasks.new(decorated_add, name="add1", y=3)
-        add1.to_context = [["result", "n"]]
+        add1.set_context({"result": "n"})
         wg.links.new(multiply1.outputs["result"], add1.inputs["x"])
         return wg
 
@@ -68,7 +68,7 @@ def test_while_max_iteration(decorated_add, decorated_multiply, decorated_compar
             decorated_multiply, name="multiply1", x="{{ n }}", y=orm.Int(2)
         )
         add1 = wg.tasks.new(decorated_add, name="add1", y=3)
-        add1.to_context = [["result", "n"]]
+        add1.set_context({"result": "n"})
         wg.links.new(multiply1.outputs["result"], add1.inputs["x"])
         return wg
 

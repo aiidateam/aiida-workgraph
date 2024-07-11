@@ -21,7 +21,7 @@ def test_for(decorated_add: Callable, decorated_multiply: Callable) -> None:
         )
         add1 = wg.tasks.new(decorated_add, name="add1", x="{{ total }}")
         # update the context variable
-        add1.to_context = [["result", "total"]]
+        add1.set_context({"result": "total"})
         wg.links.new(multiply1.outputs["result"], add1.inputs["y"])
         # don't forget to return the workgraph
         return wg
