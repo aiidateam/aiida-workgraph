@@ -227,6 +227,9 @@ class WorkGraph(node_graph.NodeGraph):
         """
         # from aiida_workgraph.utils import get_executor
 
+        if self.process is None:
+            return
+
         self.state = self.process.process_state.value.upper()
         outgoing = self.process.base.links.get_outgoing()
         for link in outgoing.all():
@@ -384,6 +387,8 @@ class WorkGraph(node_graph.NodeGraph):
     def pause_tasks(self, tasks: List[str]) -> None:
         """Pause the given tasks."""
         from aiida_workgraph.utils.control import pause_tasks
+
+        self.update()
 
         if self.process is None:
             for name in tasks:

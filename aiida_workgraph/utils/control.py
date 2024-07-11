@@ -21,7 +21,10 @@ def get_task_state_info(node, name: str, key: str) -> str:
     """Get task state info from base.extras."""
     from aiida.orm.utils.serialize import deserialize_unsafe
 
-    value = deserialize_unsafe(node.base.extras.get(f"_task_{key}_{name}", ""))
+    if key == "process":
+        value = deserialize_unsafe(node.base.extras.get(f"_task_{key}_{name}", ""))
+    else:
+        value = node.base.extras.get(f"_task_{key}_{name}", "")
     return value
 
 
@@ -29,7 +32,10 @@ def set_task_state_info(node, name: str, key: str, value: any) -> None:
     """Set task state info to base.extras."""
     from aiida.orm.utils.serialize import serialize
 
-    node.base.extras.set(f"_task_{key}_{name}", serialize(value))
+    if key == "process":
+        node.base.extras.set(f"_task_{key}_{name}", serialize(value))
+    else:
+        node.base.extras.set(f"_task_{key}_{name}", value)
 
 
 def pause_tasks(pk: int, tasks: list, timeout: int = 5, wait: bool = False):

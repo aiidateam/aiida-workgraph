@@ -439,7 +439,10 @@ class WorkGraphEngine(Process, metaclass=Protect):
         """Read workgraph data from base.extras."""
         from aiida.orm.utils.serialize import deserialize_unsafe
 
-        wgdata = deserialize_unsafe(self.node.base.extras.get("_workgraph"))
+        wgdata = self.node.base.extras.get("_workgraph")
+        for name, task in wgdata["tasks"].items():
+            wgdata["tasks"][name] = deserialize_unsafe(task)
+        wgdata["error_handlers"] = deserialize_unsafe(wgdata["error_handlers"])
         return wgdata
 
     def update_workgraph_from_base(self) -> None:
@@ -463,14 +466,22 @@ class WorkGraphEngine(Process, metaclass=Protect):
         """Get task state info from base.extras."""
         from aiida.orm.utils.serialize import deserialize_unsafe
 
-        value = deserialize_unsafe(self.node.base.extras.get(f"_task_{key}_{name}", ""))
+        if key == "process":
+            value = deserialize_unsafe(
+                self.node.base.extras.get(f"_task_{key}_{name}", "")
+            )
+        else:
+            value = self.node.base.extras.get(f"_task_{key}_{name}", "")
         return value
 
     def set_task_state_info(self, name: str, key: str, value: any) -> None:
         """Set task state info to base.extras."""
         from aiida.orm.utils.serialize import serialize
 
-        self.node.base.extras.set(f"_task_{key}_{name}", serialize(value))
+        if key == "process":
+            self.node.base.extras.set(f"_task_{key}_{name}", serialize(value))
+        else:
+            self.node.base.extras.set(f"_task_{key}_{name}", value)
 
     def init_ctx(self, wgdata: t.Dict[str, t.Any]) -> None:
         """Init the context from the workgraph data."""
