@@ -11,7 +11,8 @@ def get_serializer_from_entry_points() -> dict:
 
     # ts = time.time()
     configs = load_config()
-    excludes = configs.get("excludes", [])
+    serializers = configs.get("serializers", {})
+    excludes = serializers.get("excludes", [])
     # Retrieve the entry points for 'aiida.data' and store them in a dictionary
     eps = {}
     for ep in entry_points().get("aiida.data", []):
@@ -25,15 +26,14 @@ def get_serializer_from_entry_points() -> dict:
 
     # print("Time to load entry points: ", time.time() - ts)
     # check if there are duplicates
-    selects = configs.get("select", {})
     for key, value in eps.items():
         if len(value) > 1:
-            if key in selects:
-                [ep for ep in value if ep.name == selects[key]]
-                eps[key] = [ep for ep in value if ep.name == selects[key]]
+            if key in serializers:
+                [ep for ep in value if ep.name == serializers[key]]
+                eps[key] = [ep for ep in value if ep.name == serializers[key]]
                 if not eps[key]:
                     raise ValueError(
-                        f"Entry point {configs['select'][key]} not found for {key}"
+                        f"Entry point {serializers[key]} not found for {key}"
                     )
             else:
                 msg = f"Duplicate entry points for {key}: {[ep.name for ep in value]}"
