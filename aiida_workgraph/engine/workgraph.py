@@ -549,7 +549,7 @@ class WorkGraphEngine(Process, metaclass=Protect):
                     ).outputs
                     # self.ctx.new_data[name] = task["results"]
                 self.set_task_state_info(task["name"], "state", "FINISHED")
-                self.task_to_context(name)
+                self.task_set_context(name)
                 self.report(f"Task: {name} finished.")
             # all other states are considered as failed
             else:
@@ -793,9 +793,9 @@ class WorkGraphEngine(Process, metaclass=Protect):
                 kwargs[key] = args[i]
             # update the port namespace
             kwargs = update_nested_dict_with_special_keys(kwargs)
-            print("args: ", args)
-            print("kwargs: ", kwargs)
-            print("var_kwargs: ", var_kwargs)
+            # print("args: ", args)
+            # print("kwargs: ", kwargs)
+            # print("var_kwargs: ", var_kwargs)
             # kwargs["meta.label"] = name
             # output must be a Data type or a mapping of {string: Data}
             task["results"] = {}
@@ -806,7 +806,7 @@ class WorkGraphEngine(Process, metaclass=Protect):
                 task["results"] = {task["outputs"][0]["name"]: results}
                 self.ctx.input_tasks[name] = results
                 self.set_task_state_info(name, "state", "FINISHED")
-                self.task_to_context(name)
+                self.task_set_context(name)
                 # ValueError: attempted to add an input link after the process node was already stored.
                 # self.node.base.links.add_incoming(results, "INPUT_WORK", name)
                 self.report(f"Task: {name} finished.")
@@ -821,7 +821,7 @@ class WorkGraphEngine(Process, metaclass=Protect):
                 self.set_task_state_info(task["name"], "process", results)
                 self.ctx.new_data[name] = results
                 self.set_task_state_info(name, "state", "FINISHED")
-                self.task_to_context(name)
+                self.task_set_context(name)
                 self.report(f"Task: {name} finished.")
                 if continue_workgraph:
                     self.continue_workgraph(names)
@@ -848,7 +848,7 @@ class WorkGraphEngine(Process, metaclass=Protect):
                     # print("results: ", results)
                     self.set_task_state_info(task["name"], "process", process)
                     self.set_task_state_info(name, "state", "FINISHED")
-                    self.task_to_context(name)
+                    self.task_set_context(name)
                     self.report(f"Task: {name} finished.")
                 except Exception as e:
                     print(e)
@@ -983,7 +983,7 @@ class WorkGraphEngine(Process, metaclass=Protect):
                 # self.save_results_to_extras(name)
                 self.ctx.input_tasks[name] = results
                 self.set_task_state_info(name, "state", "FINISHED")
-                self.task_to_context(name)
+                self.task_set_context(name)
                 self.report(f"Task: {name} finished.")
                 if continue_workgraph:
                     self.continue_workgraph(names)
@@ -1098,18 +1098,14 @@ class WorkGraphEngine(Process, metaclass=Protect):
             return get_nested_dict(self.ctx, name)
         return value
 
-    def task_to_context(self, name: str) -> None:
+    def task_set_context(self, name: str) -> None:
         """Export task result to context."""
         from aiida_workgraph.utils import update_nested_dict
-        from aiida.common.exceptions import NotExistentKeyError
 
-        items = self.ctx.tasks[name]["to_context"]
-        for item in items:
-            try:
-                result = self.ctx.tasks[name]["results"][item[0]]
-                update_nested_dict(self.ctx, item[1], result)
-            except NotExistentKeyError as e:
-                print(f"Warning: {e}. Skipping update for item {item[0]}")
+        items = self.ctx.tasks[name]["context_mapping"]
+        for key, value in items.items():
+            result = self.ctx.tasks[name]["results"][key]
+            update_nested_dict(self.ctx, value, result)
 
     def check_task_state(self, name: str) -> None:
         """Check task states.

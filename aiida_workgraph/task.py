@@ -24,11 +24,11 @@ class Task(GraphNode):
 
     def __init__(
         self,
-        to_context: Optional[List[Any]] = None,
+        context_mapping: Optional[List[Any]] = None,
         wait: List[Union[str, GraphNode]] = [],
         process: Optional[aiida.orm.ProcessNode] = None,
         pk: Optional[int] = None,
-        **kwargs: Any
+        **kwargs: Any,
     ) -> None:
         """
         Initialize a Task instance.
@@ -37,9 +37,9 @@ class Task(GraphNode):
             property_collection_class=WorkGraphPropertyCollection,
             input_collection_class=WorkGraphInputSocketCollection,
             output_collection_class=WorkGraphOutputSocketCollection,
-            **kwargs
+            **kwargs,
         )
-        self.to_context = [] if to_context is None else to_context
+        self.context_mapping = {} if context_mapping is None else context_mapping
         self.wait = [] if wait is None else wait
         self.process = process
         self.pk = pk
@@ -52,7 +52,7 @@ class Task(GraphNode):
 
     def to_dict(self) -> Dict[str, Any]:
         tdata = super().to_dict()
-        tdata["to_context"] = [] if self.to_context is None else self.to_context
+        tdata["context_mapping"] = self.context_mapping
         tdata["wait"] = [
             task if isinstance(task, str) else task.name for task in self.wait
         ]
@@ -61,6 +61,15 @@ class Task(GraphNode):
         tdata["metadata"]["is_aiida_component"] = self.is_aiida_component
 
         return tdata
+
+    def set_context(self, context: Dict[str, Any]) -> None:
+        """Update the context mappings for this task."""
+        # all keys should belong to the outputs.keys()
+        remain_keys = set(context.keys()).difference(self.outputs.keys())
+        if remain_keys:
+            msg = f"Keys {remain_keys} are not in the outputs of this task."
+            raise ValueError(msg)
+        self.context_mapping.update(context)
 
     def set_from_protocol(self, *args: Any, **kwargs: Any) -> None:
         """Set the task inputs from protocol data."""
@@ -96,7 +105,7 @@ class Task(GraphNode):
         from aiida_workgraph.tasks import task_pool
 
         task = super().from_dict(data, node_pool=task_pool)
-        task.to_context = data.get("to_context", [])
+        task.context_mapping = data.get("context_mapping", {})
         task.wait = data.get("wait", [])
         task.process = data.get("process", None)
 
