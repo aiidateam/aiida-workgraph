@@ -7,7 +7,7 @@ load_profile()
 
 def test_for(decorated_add: Callable, decorated_multiply: Callable) -> None:
     # Create a WorkGraph will loop the a sequence
-    @task.graph_builder(outputs=[["context.total", "result"]])
+    @task.graph_builder(outputs=[{"name": "result", "from": "context.total"}])
     def add_multiply_for(sequence):
         wg = WorkGraph("add_multiply_for")
         # tell the engine that this is a `for` workgraph
