@@ -12,7 +12,6 @@ This section contains a collection of HowTos for various topics.
    parallel
    if
    while
-   for
    context
    wait
    combine_workgraph
