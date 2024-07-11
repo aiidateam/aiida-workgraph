@@ -70,5 +70,6 @@ def test_decorator_graph_builder(decorated_add_multiply_group: Callable) -> None
     wg.links.new(add1.outputs[0], add_multiply1.inputs["x"])
     wg.links.new(add_multiply1.outputs["result"], sum_diff1.inputs["x"])
     wg.submit(wait=True)
+    assert wg.tasks["add_multiply1"].process.outputs.result.value == 32
     assert wg.tasks["add_multiply1"].outputs["result"].value == 32
     assert wg.tasks["sum_diff1"].outputs["sum"].value == 32

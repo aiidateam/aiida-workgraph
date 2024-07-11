@@ -81,8 +81,9 @@ class WorkGraphEngine(Process, metaclass=Protect):
         spec.input_namespace("input_tasks", dynamic=True, required=False)
         spec.exit_code(2, "ERROR_SUBPROCESS", message="A subprocess has failed.")
 
+        spec.outputs.dynamic = True
+
         spec.output_namespace("new_data", dynamic=True)
-        spec.output_namespace("group_outputs", dynamic=True)
         spec.output(
             "execution_count",
             valid_type=orm.Int,
@@ -524,15 +525,7 @@ class WorkGraphEngine(Process, metaclass=Protect):
             ).process_state.value.upper()
             if self.get_task_state_info(task["name"], "process").is_finished_ok:
                 self.set_task_state_info(task["name"], "state", state)
-                if task["metadata"]["node_type"].upper() == "GRAPH_BUILDER":
-                    # expose the outputs of workgraph
-                    task["results"] = getattr(
-                        self.get_task_state_info(task["name"], "process").outputs,
-                        "group_outputs",
-                        None,
-                    )
-                    # self.ctx.new_data[name] = outputs
-                elif task["metadata"]["node_type"].upper() == "WORKGRAPH":
+                if task["metadata"]["node_type"].upper() == "WORKGRAPH":
                     # expose the outputs of all the tasks in the workgraph
                     task["results"] = {}
                     outgoing = self.get_task_state_info(
@@ -1266,23 +1259,25 @@ class WorkGraphEngine(Process, metaclass=Protect):
         """"""
         from aiida_workgraph.utils import get_nested_dict, update_nested_dict
 
-        # expose group outputs
+        # expose outputs of the workgraph
         group_outputs = {}
-        print("group outputs: ", self.ctx.workgraph["metadata"]["group_outputs"])
+        print("workgraph outputs: ", self.ctx.workgraph["metadata"]["group_outputs"])
         for output in self.ctx.workgraph["metadata"]["group_outputs"]:
             print("output: ", output)
-            task_name, socket_name = output[0].split(".")
+            task_name, socket_name = output["from"].split(".")
             if task_name == "context":
                 update_nested_dict(
-                    group_outputs, output[1], get_nested_dict(self.ctx, socket_name)
+                    group_outputs,
+                    output["name"],
+                    get_nested_dict(self.ctx, socket_name),
                 )
             else:
                 update_nested_dict(
                     group_outputs,
-                    output[1],
+                    output["name"],
                     self.ctx.tasks[task_name]["results"][socket_name],
                 )
-        self.out("group_outputs", group_outputs)
+        self.out_many(group_outputs)
         self.out("new_data", self.ctx.new_data)
         self.out("execution_count", orm.Int(self.ctx._execution_count).store())
         self.report("Finalize")

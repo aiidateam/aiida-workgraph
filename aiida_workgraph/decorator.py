@@ -391,7 +391,10 @@ def build_task_from_workgraph(wg: any) -> Task:
                 {"identifier": "General", "name": f"{task.name}.{socket.name}"}
             )
             group_outputs.append(
-                [f"{task.name}.{socket.name}", f"{task.name}.{socket.name}"]
+                {
+                    "name": f"{task.name}.{socket.name}",
+                    "from": f"{task.name}.{socket.name}",
+                }
             )
     kwargs = [input["name"] for input in inputs]
     # add built-in sockets
@@ -540,7 +543,7 @@ class TaskDecoratorCollection:
             func.identifier = identifier
 
             task_outputs = [
-                {"identifier": "General", "name": output[1]} for output in outputs
+                {"identifier": "General", "name": output["name"]} for output in outputs
             ]
             # print(task_inputs, task_outputs)
             #

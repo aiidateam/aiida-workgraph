@@ -105,6 +105,7 @@ def test_extend_workgraph(decorated_add_multiply_group):
 
 
 def test_node_from_workgraph(decorated_add_multiply_group):
+    """Build a task from a workgraph."""
     wg = WorkGraph("test_node_from_workgraph")
     add1 = wg.tasks.new("AiiDAAdd", "add1", x=2, y=3)
     add2 = wg.tasks.new("AiiDAAdd", "add2", y=3)
