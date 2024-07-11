@@ -87,7 +87,9 @@ def node_to_short_json(workgraph_pk: int, tdata: Dict[str, Any]) -> Dict[str, An
         ],
         "executor": executor,
     }
-    process_info = get_processes_latest(workgraph_pk).get(tdata["name"], {})
+    process_info = get_processes_latest(workgraph_pk, tdata["name"]).get(
+        tdata["name"], {}
+    )
     tdata_short["process"] = process_info
     if process_info is not None:
         tdata_short["metadata"].append(["pk", process_info.get("pk")])

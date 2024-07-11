@@ -121,9 +121,9 @@ class WorkGraphSaver:
         task_processes = {}
         task_actions = {}
         for name, task in self.wgdata["tasks"].items():
-            task_states[f"_task_state_{name}"] = serialize(task["state"])
+            task_states[f"_task_state_{name}"] = task["state"]
             task_processes[f"_task_process_{name}"] = serialize(task["process"])
-            task_actions[f"_task_action_{name}"] = serialize(task["action"])
+            task_actions[f"_task_action_{name}"] = task["action"]
         self.process.base.extras.set_many(task_states)
         self.process.base.extras.set_many(task_processes)
         self.process.base.extras.set_many(task_actions)

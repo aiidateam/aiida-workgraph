@@ -1,6 +1,7 @@
 from fastapi import APIRouter, HTTPException, Query
 from aiida import orm
 from typing import List
+import time
 
 router = APIRouter()
 
@@ -41,6 +42,7 @@ async def read_workgraph_task(id: int, node_name: str):
     from aiida_workgraph.engine.workgraph import WorkGraphEngine
 
     try:
+        tstart = time.time()
         qb = QueryBuilder()
         projections = [f"extras._workgraph.tasks.{node_name}"]
         qb.append(
@@ -52,6 +54,8 @@ async def read_workgraph_task(id: int, node_name: str):
             return
         ndata = deserialize_unsafe(results[0][0])
         content = node_to_short_json(id, ndata)
+        print(f"Time to convert to json: {time.time() - tstart}")
+        tstart = time.time()
         return content
     except KeyError:
         raise HTTPException(
@@ -66,9 +70,11 @@ async def read_workgraph(id: int):
         get_node_inputs,
         get_node_outputs,
     )
-    from aiida_workgraph.utils import get_parent_workgraphs, get_processes_latest
+    from aiida_workgraph.utils import get_parent_workgraphs
 
     try:
+        tstart = time.time()
+
         node = orm.load_node(id)
 
         content = node.base.extras.get("_workgraph_short", None)
@@ -83,10 +89,11 @@ async def read_workgraph(id: int):
 
         parent_workgraphs = get_parent_workgraphs(id)
         parent_workgraphs.reverse()
-        processes_info = get_processes_latest(id)
+        print(f"Time to load process latest: {time.time() - tstart}")
+        tstart = time.time()
         content["summary"] = summary
         content["parent_workgraphs"] = parent_workgraphs
-        content["processes_info"] = processes_info
+        content["processes_info"] = {}
         return content
     except KeyError:
         raise HTTPException(status_code=404, detail=f"Workgraph {id} not found")
