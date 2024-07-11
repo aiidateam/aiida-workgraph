@@ -227,6 +227,9 @@ class WorkGraph(node_graph.NodeGraph):
         """
         # from aiida_workgraph.utils import get_executor
 
+        if self.process is None:
+            return
+
         self.state = self.process.process_state.value.upper()
         outgoing = self.process.base.links.get_outgoing()
         for link in outgoing.all():
