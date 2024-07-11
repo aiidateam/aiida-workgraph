@@ -1264,20 +1264,32 @@ class WorkGraphEngine(Process, metaclass=Protect):
         print("workgraph outputs: ", self.ctx.workgraph["metadata"]["group_outputs"])
         for output in self.ctx.workgraph["metadata"]["group_outputs"]:
             print("output: ", output)
-            task_name, socket_name = output["from"].split(".")
-            if task_name == "context":
+            names = output["from"].split(".", 1)
+            if names[0] == "context":
+                if len(names) == 1:
+                    raise ValueError("The output name should be context.key")
                 update_nested_dict(
                     group_outputs,
                     output["name"],
-                    get_nested_dict(self.ctx, socket_name),
+                    get_nested_dict(self.ctx, names[1]),
                 )
             else:
-                update_nested_dict(
-                    group_outputs,
-                    output["name"],
-                    self.ctx.tasks[task_name]["results"][socket_name],
-                )
+                # expose the whole outputs of the tasks
+                if len(names) == 1:
+                    update_nested_dict(
+                        group_outputs,
+                        output["name"],
+                        self.ctx.tasks[names[0]]["results"],
+                    )
+                else:
+                    # expose one output of the task
+                    update_nested_dict(
+                        group_outputs,
+                        output["name"],
+                        self.ctx.tasks[names[0]]["results"][names[1]],
+                    )
         self.out_many(group_outputs)
+        # output the new data
         self.out("new_data", self.ctx.new_data)
         self.out("execution_count", orm.Int(self.ctx._execution_count).store())
         self.report("Finalize")
