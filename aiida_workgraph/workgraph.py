@@ -385,6 +385,8 @@ class WorkGraph(node_graph.NodeGraph):
         """Pause the given tasks."""
         from aiida_workgraph.utils.control import pause_tasks
 
+        self.update()
+
         if self.process is None:
             for name in tasks:
                 self.tasks[name].action = "PAUSE"
