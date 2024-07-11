@@ -1,5 +1,6 @@
 from typing import Optional, Dict, Tuple, List
-import datetime
+
+# import datetime
 from aiida.orm import ProcessNode
 
 
@@ -99,12 +100,18 @@ class WorkGraphSaver:
         - all tasks
         """
         from aiida.orm.utils.serialize import serialize
+        from aiida_workgraph.utils import workgraph_to_short_json
 
         # pprint(self.wgdata)
-        self.wgdata["created"] = datetime.datetime.utcnow()
-        self.wgdata["lastUpdate"] = datetime.datetime.utcnow()
-        self.process.base.extras.set("_workgraph", serialize(self.wgdata))
+        # self.wgdata["created"] = datetime.datetime.utcnow()
+        # self.wgdata["lastUpdate"] = datetime.datetime.utcnow()
+        short_wgdata = workgraph_to_short_json(self.wgdata)
+        self.process.base.extras.set("_workgraph_short", short_wgdata)
         self.save_task_states()
+        for name, task in self.wgdata["tasks"].items():
+            self.wgdata["tasks"][name] = serialize(task)
+        self.wgdata["error_handlers"] = serialize(self.wgdata["error_handlers"])
+        self.process.base.extras.set("_workgraph", self.wgdata)
 
     def save_task_states(self) -> Dict:
         """Get task states."""

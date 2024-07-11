@@ -37,16 +37,21 @@ async def read_workgraph_data(search: str = Query(None)):
 async def read_workgraph_task(id: int, node_name: str):
     from .utils import node_to_short_json
     from aiida.orm.utils.serialize import deserialize_unsafe
+    from aiida.orm import QueryBuilder
+    from aiida_workgraph.engine.workgraph import WorkGraphEngine
 
     try:
-        node = orm.load_node(id)
-        wgdata = node.base.extras.get("_workgraph", None)
-        if wgdata is None:
+        qb = QueryBuilder()
+        projections = [f"extras._workgraph.tasks.{node_name}"]
+        qb.append(
+            WorkGraphEngine, filters={"id": id}, project=projections, tag="process"
+        )
+        results = qb.all()
+        if len(results) == 0:
             print("No workgraph data found in the node.")
             return
-
-        wgdata = deserialize_unsafe(wgdata)
-        content = node_to_short_json(id, wgdata["tasks"][node_name])
+        ndata = deserialize_unsafe(results[0][0])
+        content = node_to_short_json(id, ndata)
         return content
     except KeyError:
         raise HTTPException(
@@ -57,23 +62,19 @@ async def read_workgraph_task(id: int, node_name: str):
 @router.get("/api/workgraph/{id}")
 async def read_workgraph(id: int):
     from .utils import (
-        workgraph_to_short_json,
         get_node_summary,
         get_node_inputs,
         get_node_outputs,
     )
-    from aiida.orm.utils.serialize import deserialize_unsafe
     from aiida_workgraph.utils import get_parent_workgraphs, get_processes_latest
 
     try:
         node = orm.load_node(id)
 
-        wgdata = node.base.extras.get("_workgraph", None)
-        if wgdata is None:
+        content = node.base.extras.get("_workgraph_short", None)
+        if content is None:
             print("No workgraph data found in the node.")
             return
-        wgdata = deserialize_unsafe(wgdata)
-        content = workgraph_to_short_json(wgdata)
         summary = {
             "table": get_node_summary(node),
             "inputs": get_node_inputs(id),

@@ -439,7 +439,10 @@ class WorkGraphEngine(Process, metaclass=Protect):
         """Read workgraph data from base.extras."""
         from aiida.orm.utils.serialize import deserialize_unsafe
 
-        wgdata = deserialize_unsafe(self.node.base.extras.get("_workgraph"))
+        wgdata = self.node.base.extras.get("_workgraph")
+        for name, task in wgdata["tasks"].items():
+            wgdata["tasks"][name] = deserialize_unsafe(task)
+        wgdata["error_handlers"] = deserialize_unsafe(wgdata["error_handlers"])
         return wgdata
 
     def update_workgraph_from_base(self) -> None:

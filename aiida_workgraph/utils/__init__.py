@@ -1,4 +1,4 @@
-from typing import Any, Dict, Optional, Union, Callable
+from typing import Any, Dict, Optional, Union, Callable, List
 from aiida.engine.processes import Process
 from aiida import orm
 from aiida.common.exceptions import NotExistent
@@ -173,6 +173,14 @@ def get_dict_from_builder(builder: Any) -> Dict:
         return builder
 
 
+def serialize_workgraph_data(wgdata: Dict[str, Any]) -> Dict[str, Any]:
+    from aiida.orm.utils.serialize import serialize
+
+    for name, task in wgdata["tasks"].items():
+        wgdata["tasks"][name] = serialize(task)
+    wgdata["error_handlers"] = serialize(wgdata["error_handlers"])
+
+
 def get_workgraph_data(process: Union[int, orm.Node]) -> Optional[Dict[str, Any]]:
     """Get the workgraph data from the process node."""
     from aiida.orm.utils.serialize import deserialize_unsafe
@@ -183,7 +191,9 @@ def get_workgraph_data(process: Union[int, orm.Node]) -> Optional[Dict[str, Any]
     wgdata = process.base.extras.get("_workgraph", None)
     if wgdata is None:
         return
-    wgdata = deserialize_unsafe(wgdata)
+    for name, task in wgdata["tasks"].items():
+        wgdata["tasks"][name] = deserialize_unsafe(task)
+    wgdata["error_handlers"] = deserialize_unsafe(wgdata["error_handlers"])
     return wgdata
 
 
@@ -535,3 +545,43 @@ def serialize_function(func: Callable) -> Dict[str, Any]:
         "function_source_code_without_decorator": function_source_code_without_decorator,
         "import_statements": import_statements,
     }
+
+
+def workgraph_to_short_json(
+    wgdata: Dict[str, Union[str, List, Dict]]
+) -> Dict[str, Union[str, Dict]]:
+    """Export a workgraph to a rete js editor data."""
+    wgdata_short = {
+        "name": wgdata["name"],
+        "uuid": wgdata["uuid"],
+        "state": wgdata["state"],
+        "nodes": {},
+        "links": wgdata["links"],
+    }
+    #
+    for name, task in wgdata["tasks"].items():
+        # Add required inputs to nodes
+        inputs = [
+            input
+            for input in task["inputs"]
+            if input["name"] in task["metadata"]["args"]
+        ]
+        wgdata_short["nodes"][name] = {
+            "label": task["name"],
+            "inputs": inputs,
+            "outputs": [],
+            "position": task["position"],
+        }
+    # Add links to nodes
+    for link in wgdata["links"]:
+        wgdata_short["nodes"][link["to_node"]]["inputs"].append(
+            {
+                "name": link["to_socket"],
+            }
+        )
+        wgdata_short["nodes"][link["from_node"]]["outputs"].append(
+            {
+                "name": link["from_socket"],
+            }
+        )
+    return wgdata_short
