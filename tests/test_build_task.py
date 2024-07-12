@@ -52,8 +52,8 @@ def test_calcfunction():
     AddTask = build_task(
         add_minus,
         outputs=[
-            {"identifier": "General", "name": "sum"},
-            {"identifier": "General", "name": "difference"},
+            {"identifier": "Any", "name": "sum"},
+            {"identifier": "Any", "name": "difference"},
         ],
     )
     assert issubclass(AddTask, Task)

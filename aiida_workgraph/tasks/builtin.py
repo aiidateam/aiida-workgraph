@@ -14,9 +14,9 @@ class AiiDAGather(Task):
     def create_sockets(self) -> None:
         self.inputs.clear()
         self.outputs.clear()
-        inp = self.inputs.new("General", "datas")
+        inp = self.inputs.new("Any", "datas")
         inp.link_limit = 100000
-        self.outputs.new("General", "result")
+        self.outputs.new("Any", "result")
 
     def get_executor(self) -> Dict[str, str]:
         return {
@@ -37,9 +37,9 @@ class AiiDAToCtx(Task):
     def create_sockets(self) -> None:
         self.inputs.clear()
         self.outputs.clear()
-        self.inputs.new("General", "key")
-        self.inputs.new("General", "value")
-        self.outputs.new("General", "result")
+        self.inputs.new("Any", "key")
+        self.inputs.new("Any", "value")
+        self.outputs.new("Any", "result")
 
     def get_executor(self) -> Dict[str, str]:
         return {
@@ -60,8 +60,8 @@ class AiiDAFromCtx(Task):
     def create_sockets(self) -> None:
         self.inputs.clear()
         self.outputs.clear()
-        self.inputs.new("General", "key")
-        self.outputs.new("General", "result")
+        self.inputs.new("Any", "key")
+        self.outputs.new("Any", "result")
 
     def get_executor(self) -> Dict[str, str]:
         return {

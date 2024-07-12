@@ -15,7 +15,7 @@ class AiiDAKpoint(Task):
         self.properties.new("AiiDAIntVector", "offset", default=[0, 0, 0], size=3)
 
     def create_sockets(self) -> None:
-        self.outputs.new("General", "Kpoint")
+        self.outputs.new("Any", "Kpoint")
 
     def get_executor(self) -> Dict[str, str]:
         return {
@@ -41,7 +41,7 @@ class AiiDAStructure(Task):
         self.properties.new("BaseList", "sites", default=[])
 
     def create_sockets(self) -> None:
-        self.outputs.new("General", "Structure")
+        self.outputs.new("Any", "Structure")
 
     def get_executor(self) -> Dict[str, str]:
         return {
@@ -64,8 +64,8 @@ class AiiDAPWPseudo(Task):
         )
 
     def create_sockets(self) -> None:
-        self.inputs.new("General", "structure")
-        self.outputs.new("General", "Pseudo")
+        self.inputs.new("Any", "structure")
+        self.outputs.new("Any", "Pseudo")
 
     def get_executor(self) -> Dict[str, str]:
         return {

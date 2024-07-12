@@ -13,11 +13,11 @@ from node_graph.properties.builtin import (
 from aiida import orm
 
 
-class GeneralProperty(NodeProperty, SerializePickle):
-    """A new class for General type."""
+class AnyProperty(NodeProperty, SerializePickle):
+    """A new class for Any type."""
 
-    identifier: str = "General"
-    data_type = "General"
+    identifier: str = "Any"
+    data_type = "Any"
 
     def __init__(
         self,
@@ -345,7 +345,7 @@ property_list = [
     FloatProperty,
     BoolProperty,
     StringProperty,
-    GeneralProperty,
+    AnyProperty,
     BaseDictProperty,
     BaseListProperty,
     AiiDAIntProperty,
