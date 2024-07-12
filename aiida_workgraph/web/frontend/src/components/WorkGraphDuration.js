@@ -26,7 +26,7 @@ const NodeDurationGraph = ({ id }) => {
         fetchData();
 
         // Set up polling (optional)
-        const interval = setInterval(fetchData, 1000); // Adjust interval as needed
+        const interval = setInterval(fetchData, 5000); // Adjust interval as needed
 
         return () => clearInterval(interval); // Clear interval on cleanup
     }, [id]);
@@ -38,20 +38,28 @@ const NodeDurationGraph = ({ id }) => {
             title: key
         }));
 
-        const newItems = Object.entries(processesInfo).map(([key, { ctime, mtime }], idx) => ({
-            id: idx,
-            group: idx,
-            title: key,
-            start_time: moment(ctime),
-            end_time: moment(mtime)
-        }));
+
+        const newItems = Object.entries(processesInfo).map(([key, { ctime, mtime, process_type }], idx) => {
+            if (process_type) {
+            return {
+                id: idx,
+                group: idx,
+                title: key,
+                start_time: ctime ? moment(ctime) : null,
+                end_time: mtime ? moment(mtime) : null
+            };
+            }
+            return null;
+        }).filter(item => item !== null);
 
         setGroups(newGroups);
         setItems(newItems);
     }, [processesInfo]);
 
-    const defaultTimeStart = moment.min(items.map(item => item.start_time));
-    const defaultTimeEnd = moment.max(items.map(item => item.end_time));
+    const validStartTimes = items.map(item => item.start_time).filter(time => time !== null);
+    const validEndTimes = items.map(item => item.end_time).filter(time => time !== null);
+    const defaultTimeStart = moment.min(validStartTimes);
+    const defaultTimeEnd = moment.max(validEndTimes);
 
     // Define minimum and maximum zoom (in milliseconds)
     const minZoom = 10000; // 1 second in milliseconds
@@ -61,8 +69,8 @@ const NodeDurationGraph = ({ id }) => {
         <Timeline
             groups={groups}
             items={items}
-            defaultTimeStart={defaultTimeStart}
-            defaultTimeEnd={defaultTimeEnd}
+            visibleTimeStart={defaultTimeStart}
+            visibleTimeEnd={defaultTimeEnd}
             lineHeight={50}
             minZoom={minZoom}
             maxZoom={maxZoom}
