@@ -62,6 +62,17 @@ The tasks will be executed when:
 - All input tasks finish.
 
 
+Group outputs
+=====================================
+One can output the results of the tasks as the output of the WorkGraph.
+
+.. code-block:: python
+
+    wg = WorkGraph("test_workgraph_group_outputs")
+    wg.tasks.new(add, "add1", x=2, y=3)
+    wg.group_outputs = [{"name": "sum", "from": "add1.result"}]
+    wg.submit(wait=True)
+    assert wg.process.outputs.sum.value == 5
 
 
 List of all Methods

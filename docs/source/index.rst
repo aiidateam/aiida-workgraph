@@ -42,7 +42,7 @@ Sections
       .. container:: descr
 
          :doc:`/tutorial/index`
-            A step-by-step guide to creating a simple workflow.
+            A step-by-step guide to creating a real-world workflow using AiiDA WorkGraph.
 
       .. container:: descr
 
