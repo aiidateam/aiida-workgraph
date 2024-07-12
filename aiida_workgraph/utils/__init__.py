@@ -255,6 +255,7 @@ def get_processes_latest(
         task_process = deserialize_unsafe(results[f"extras._task_process_{name}"])
         tasks[name] = {
             "pk": task_process.pk if task_process else None,
+            "process_type": task_process.process_type if task_process else "",
             "state": state,
             "ctime": task_process.ctime if task_process else None,
             "mtime": task_process.mtime if task_process else None,
