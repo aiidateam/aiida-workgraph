@@ -55,7 +55,7 @@ def add_input_recursive(
                 {
                     "identifier": "Namespace",
                     "name": port_name,
-                    "property": {"identifier": "General", "default": {}},
+                    "property": {"identifier": "Any", "default": {}},
                 }
             )
         if required:
@@ -71,11 +71,11 @@ def add_input_recursive(
             # port.valid_type can be a single type or a tuple of types,
             # we only support single type for now
             if isinstance(port.valid_type, tuple) and len(port.valid_type) > 1:
-                socket_type = "General"
+                socket_type = "Any"
             if isinstance(port.valid_type, tuple) and len(port.valid_type) == 1:
-                socket_type = aiida_socket_maping.get(port.valid_type[0], "General")
+                socket_type = aiida_socket_maping.get(port.valid_type[0], "Any")
             else:
-                socket_type = aiida_socket_maping.get(port.valid_type, "General")
+                socket_type = aiida_socket_maping.get(port.valid_type, "Any")
             inputs.append({"identifier": socket_type, "name": port_name})
         if required:
             args.append(port_name)
@@ -107,7 +107,7 @@ def add_output_recursive(
             add_output_recursive(outputs, value, prefix=port_name, required=required)
     else:
         if port_name not in output_names:
-            outputs.append({"identifier": "General", "name": port_name})
+            outputs.append({"identifier": "Any", "name": port_name})
     return outputs
 
 
@@ -219,9 +219,9 @@ def build_task_from_AiiDA(
         tdata["var_kwargs"] = name
         inputs.append(
             {
-                "identifier": "General",
+                "identifier": "Any",
                 "name": name,
-                "property": {"identifier": "General", "default": {}},
+                "property": {"identifier": "Any", "default": {}},
             }
         )
     # TODO In order to reload the WorkGraph from process, "is_pickle" should be True
@@ -234,17 +234,15 @@ def build_task_from_AiiDA(
         "is_pickle": True,
     }
     if tdata["task_type"].upper() in ["CALCFUNCTION", "WORKFUNCTION"]:
-        outputs = (
-            [{"identifier": "General", "name": "result"}] if not outputs else outputs
-        )
+        outputs = [{"identifier": "Any", "name": "result"}] if not outputs else outputs
         # get the source code of the function
         tdata["executor"] = serialize_function(executor)
         # tdata["executor"]["type"] = tdata["task_type"]
     # print("kwargs: ", kwargs)
     # add built-in sockets
-    outputs.append({"identifier": "General", "name": "_outputs"})
-    outputs.append({"identifier": "General", "name": "_wait"})
-    inputs.append({"identifier": "General", "name": "_wait", "link_limit": 1e6})
+    outputs.append({"identifier": "Any", "name": "_outputs"})
+    outputs.append({"identifier": "Any", "name": "_wait"})
+    inputs.append({"identifier": "Any", "name": "_wait", "link_limit": 1e6})
     tdata["node_class"] = Task
     tdata["args"] = args
     tdata["kwargs"] = kwargs
@@ -321,7 +319,7 @@ def build_shelljob_task(
     nodes = {} if nodes is None else nodes
     keys = list(nodes.keys())
     for key in keys:
-        inputs.append({"identifier": "General", "name": f"nodes.{key}"})
+        inputs.append({"identifier": "Any", "name": f"nodes.{key}"})
         # input is a output of another task, we make a link
         if isinstance(nodes[key], NodeSocket):
             links[f"nodes.{key}"] = nodes[key]
@@ -334,14 +332,14 @@ def build_shelljob_task(
     # Extend the outputs
     tdata["outputs"].extend(
         [
-            {"identifier": "General", "name": "stdout"},
-            {"identifier": "General", "name": "stderr"},
+            {"identifier": "Any", "name": "stdout"},
+            {"identifier": "Any", "name": "stderr"},
         ]
     )
     outputs = [] if outputs is None else outputs
     parser_outputs = [] if parser_outputs is None else parser_outputs
     outputs = [
-        {"identifier": "General", "name": ShellParser.format_link_label(output)}
+        {"identifier": "Any", "name": ShellParser.format_link_label(output)}
         for output in outputs
     ]
     outputs.extend(parser_outputs)
@@ -353,8 +351,8 @@ def build_shelljob_task(
     tdata["identifier"] = "ShellJob"
     tdata["inputs"].extend(
         [
-            {"identifier": "General", "name": "command"},
-            {"identifier": "General", "name": "resolve_command"},
+            {"identifier": "Any", "name": "command"},
+            {"identifier": "Any", "name": "resolve_command"},
         ]
     )
     tdata["kwargs"].extend(["command", "resolve_command"])
@@ -375,21 +373,17 @@ def build_task_from_workgraph(wg: any) -> Task:
     # add all the inputs/outputs from the tasks in the workgraph
     for task in wg.tasks:
         # inputs
-        inputs.append({"identifier": "General", "name": f"{task.name}"})
+        inputs.append({"identifier": "Any", "name": f"{task.name}"})
         for socket in task.inputs:
             if socket.name == "_wait":
                 continue
-            inputs.append(
-                {"identifier": "General", "name": f"{task.name}.{socket.name}"}
-            )
+            inputs.append({"identifier": "Any", "name": f"{task.name}.{socket.name}"})
         # outputs
-        outputs.append({"identifier": "General", "name": f"{task.name}"})
+        outputs.append({"identifier": "Any", "name": f"{task.name}"})
         for socket in task.outputs:
             if socket.name in ["_wait", "_outputs"]:
                 continue
-            outputs.append(
-                {"identifier": "General", "name": f"{task.name}.{socket.name}"}
-            )
+            outputs.append({"identifier": "Any", "name": f"{task.name}.{socket.name}"})
             group_outputs.append(
                 {
                     "name": f"{task.name}.{socket.name}",
@@ -398,9 +392,9 @@ def build_task_from_workgraph(wg: any) -> Task:
             )
     kwargs = [input["name"] for input in inputs]
     # add built-in sockets
-    outputs.append({"identifier": "General", "name": "_outputs"})
-    outputs.append({"identifier": "General", "name": "_wait"})
-    inputs.append({"identifier": "General", "name": "_wait", "link_limit": 1e6})
+    outputs.append({"identifier": "Any", "name": "_outputs"})
+    outputs.append({"identifier": "Any", "name": "_wait"})
+    inputs.append({"identifier": "Any", "name": "_wait", "link_limit": 1e6})
     tdata["node_class"] = Task
     tdata["kwargs"] = kwargs
     tdata["inputs"] = inputs
@@ -440,9 +434,9 @@ def generate_tdata(
     )
     task_outputs = outputs
     # add built-in sockets
-    _inputs.append({"identifier": "General", "name": "_wait", "link_limit": 1e6})
-    task_outputs.append({"identifier": "General", "name": "_wait"})
-    task_outputs.append({"identifier": "General", "name": "_outputs"})
+    _inputs.append({"identifier": "Any", "name": "_wait", "link_limit": 1e6})
+    task_outputs.append({"identifier": "Any", "name": "_wait"})
+    task_outputs.append({"identifier": "Any", "name": "_outputs"})
     tdata = {
         "node_class": Task,
         "identifier": identifier,
@@ -501,7 +495,7 @@ class TaskDecoratorCollection:
                 func,
                 identifier,
                 inputs or [],
-                outputs or [{"identifier": "General", "name": "result"}],
+                outputs or [{"identifier": "Any", "name": "result"}],
                 properties or [],
                 catalog,
                 task_type,
@@ -543,7 +537,7 @@ class TaskDecoratorCollection:
             func.identifier = identifier
 
             task_outputs = [
-                {"identifier": "General", "name": output["name"]} for output in outputs
+                {"identifier": "Any", "name": output["name"]} for output in outputs
             ]
             # print(task_inputs, task_outputs)
             #

@@ -69,8 +69,8 @@ def test_PythonJob_outputs():
 
     @task(
         outputs=[
-            {"identifier": "General", "name": "sum"},
-            {"identifier": "General", "name": "diff"},
+            {"identifier": "Any", "name": "sum"},
+            {"identifier": "Any", "name": "diff"},
         ]
     )
     def add(x, y):
