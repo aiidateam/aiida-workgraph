@@ -150,3 +150,15 @@ def test_pause_task_after_submit(wg_calcjob):
     wg.play_tasks(["add2"])
     wg.wait()
     assert wg.tasks["add2"].outputs["sum"].value == 9
+
+
+def test_workgraph_group_outputs(decorated_add):
+    wg = WorkGraph("test_workgraph_group_outputs")
+    wg.tasks.new(decorated_add, "add1", x=2, y=3)
+    wg.group_outputs = [
+        {"name": "sum", "from": "add1.result"},
+        {"name": "add1", "from": "add1"},
+    ]
+    wg.submit(wait=True)
+    assert wg.process.outputs.sum.value == 5
+    assert wg.process.outputs.add1.result.value == 5
