@@ -365,6 +365,7 @@ def build_shelljob_task(
 def build_task_from_workgraph(wg: any) -> Task:
     """Build task from workgraph."""
     from aiida_workgraph.task import Task
+    from aiida.orm.utils.serialize import serialize
 
     tdata = {"task_type": "workgraph"}
     inputs = []
@@ -405,7 +406,7 @@ def build_task_from_workgraph(wg: any) -> Task:
     # we need to update the node_graph to support the path and name of the function
     executor = {
         "executor": None,
-        "wgdata": wg.to_dict(),
+        "wgdata": serialize(wg.to_dict(store_nodes=True)),
         "type": tdata["task_type"],
         "is_pickle": True,
     }

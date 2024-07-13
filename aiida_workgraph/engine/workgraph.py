@@ -1283,11 +1283,13 @@ class WorkGraphEngine(Process, metaclass=Protect):
                     )
                 else:
                     # expose one output of the task
-                    update_nested_dict(
-                        group_outputs,
-                        output["name"],
-                        self.ctx.tasks[names[0]]["results"][names[1]],
-                    )
+                    # note, the output may not exist
+                    if names[1] in self.ctx.tasks[names[0]]["results"]:
+                        update_nested_dict(
+                            group_outputs,
+                            output["name"],
+                            self.ctx.tasks[names[0]]["results"][names[1]],
+                        )
         self.out_many(group_outputs)
         # output the new data
         self.out("new_data", self.ctx.new_data)

@@ -173,7 +173,7 @@ class WorkGraph(node_graph.NodeGraph):
         )
         saver.save()
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self, store_nodes=False) -> Dict[str, Any]:
         import cloudpickle as pickle
 
         wgdata = super().to_dict()
@@ -193,6 +193,11 @@ class WorkGraph(node_graph.NodeGraph):
         )
         wgdata["error_handlers"] = pickle.dumps(self.error_handlers)
         wgdata["tasks"] = wgdata.pop("nodes")
+        if store_nodes:
+            for task in wgdata["tasks"].values():
+                for prop in task["properties"].values():
+                    if isinstance(prop["value"], aiida.orm.Node):
+                        prop["value"].store()
 
         return wgdata
 
@@ -226,6 +231,7 @@ class WorkGraph(node_graph.NodeGraph):
         linked to the current process, and data nodes linked to the current process.
         """
         # from aiida_workgraph.utils import get_executor
+        from aiida_workgraph.utils import get_nested_dict
 
         if self.process is None:
             return
@@ -250,7 +256,9 @@ class WorkGraph(node_graph.NodeGraph):
                     # update the output sockets
                     i = 0
                     for socket in self.tasks[link.link_label].outputs:
-                        socket.value = getattr(node.outputs, socket.name, None)
+                        socket.value = get_nested_dict(
+                            node.outputs, socket.name, allow_none=True
+                        )
                         i += 1
             elif isinstance(node, aiida.orm.Data):
                 if link.link_label.startswith("new_data__"):
