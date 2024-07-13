@@ -52,7 +52,7 @@ def create_data_node(executor: orm.Data, args: list, kwargs: dict) -> orm.Node:
     return data_node
 
 
-def get_nested_dict(d: Dict, name: str) -> Any:
+def get_nested_dict(d: Dict, name: str, allow_none: bool = False) -> Any:
     """
     name = "base.pw.parameters"
     """
@@ -60,7 +60,10 @@ def get_nested_dict(d: Dict, name: str) -> Any:
     current = d
     for key in keys:
         if key not in current:
-            raise ValueError(f"Context variable {name} not found.")
+            if allow_none:
+                return None
+            else:
+                raise ValueError(f"{name} not exist in {d}")
         current = current[key]
     return current
 

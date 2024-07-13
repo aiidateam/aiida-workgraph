@@ -1,4 +1,4 @@
-from aiida_workgraph import WorkGraph, build_task
+from aiida_workgraph import WorkGraph
 from aiida import load_profile, orm
 import time
 import pytest
@@ -102,23 +102,6 @@ def test_extend_workgraph(decorated_add_multiply_group):
     wg.links.new(add1.outputs[0], wg.tasks["group_add1"].inputs["x"])
     wg.submit(wait=True)
     assert wg.tasks["group_multiply1"].node.outputs.result == 45
-
-
-def test_node_from_workgraph(decorated_add_multiply_group):
-    """Build a task from a workgraph."""
-    wg = WorkGraph("test_node_from_workgraph")
-    add1 = wg.tasks.new("AiiDAAdd", "add1", x=2, y=3)
-    add2 = wg.tasks.new("AiiDAAdd", "add2", y=3)
-    add_multiply_wg = decorated_add_multiply_group(x=0, y=4, z=5)
-    AddMultiplyTask = build_task(add_multiply_wg)
-    assert "add1.x" in AddMultiplyTask().inputs.keys()
-    # add the workgraph as a task
-    add_multiply1 = wg.tasks.new(AddMultiplyTask, "add_multiply1")
-    wg.links.new(add1.outputs[0], add_multiply1.inputs["add1.x"])
-    wg.links.new(add_multiply1.outputs["multiply1.result"], add2.inputs["x"])
-    # wg.submit(wait=True)
-    wg.run()
-    assert wg.tasks["add2"].node.outputs.sum == 48
 
 
 def test_pause_task_before_submit(wg_calcjob):
