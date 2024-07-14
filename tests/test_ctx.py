@@ -1,10 +1,9 @@
-import aiida
+import pytest
 from aiida_workgraph import WorkGraph
 from typing import Callable
 
-aiida.load_profile()
 
-
+@pytest.mark.usefixtures("started_daemon_client")
 def test_workgraph_ctx(decorated_add: Callable) -> None:
     """Set/get data to/from context."""
     from aiida.orm import Float

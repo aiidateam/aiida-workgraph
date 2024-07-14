@@ -1,9 +1,8 @@
-import aiida
+import pytest
 from typing import Callable
 
-aiida.load_profile()
 
-
+@pytest.mark.usefixtures("started_daemon_client")
 def test_node_wait(decorated_add: Callable) -> None:
     """Run simple calcfunction."""
     from aiida_workgraph import WorkGraph

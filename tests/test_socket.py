@@ -1,8 +1,5 @@
 import pytest
 from aiida_workgraph import WorkGraph
-import aiida
-
-aiida.load_profile()
 
 
 def test_socket(decorated_multiply) -> None:
@@ -60,6 +57,7 @@ def test_AiiDA_socket():
     assert wg.tasks["add1"].outputs["result"].value == 3.0
 
 
+@pytest.mark.usefixtures("started_daemon_client")
 def test_numpy_array(decorated_normal_add):
     """Test data type with numpy array."""
     import numpy as np

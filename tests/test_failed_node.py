@@ -1,9 +1,8 @@
+import pytest
 from typing import Callable
-import aiida
-
-aiida.load_profile()
 
 
+@pytest.mark.usefixtures("started_daemon_client")
 def test_failed_node(decorated_sqrt: Callable, decorated_add: Callable) -> None:
     """Submit simple calcfunction."""
     from aiida_workgraph import WorkGraph

@@ -1,8 +1,6 @@
-import aiida
+import pytest
 from aiida_workgraph import WorkGraph
 from typing import Callable
-
-aiida.load_profile()
 
 
 def test_args() -> None:
@@ -41,6 +39,7 @@ def test_inputs_outputs_workchain() -> None:
     assert "dos.remote_folder" in pdos.outputs.keys()
 
 
+@pytest.mark.usefixtures("started_daemon_client")
 def test_decorator_calcfunction(decorated_add: Callable) -> None:
     """Run simple calcfunction."""
 

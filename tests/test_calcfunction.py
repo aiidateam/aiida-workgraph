@@ -1,7 +1,5 @@
-import aiida
+import pytest
 from aiida_workgraph import WorkGraph
-
-aiida.load_profile()
 
 
 def test_run(wg_calcfunction: WorkGraph) -> None:
@@ -15,6 +13,7 @@ def test_run(wg_calcfunction: WorkGraph) -> None:
     assert wg.tasks["sumdiff2"].outputs["sum"].value == 9
 
 
+@pytest.mark.usefixtures("started_daemon_client")
 def test_submit(wg_calcfunction: WorkGraph) -> None:
     """Submit simple calcfunction."""
     wg = wg_calcfunction

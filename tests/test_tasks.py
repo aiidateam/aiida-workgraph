@@ -1,10 +1,8 @@
-import aiida
+import pytest
 from aiida_workgraph import WorkGraph
 
 
-aiida.load_profile()
-
-
+@pytest.mark.usefixtures("started_daemon_client")
 def test_build_task_from_workgraph(wg_calcfunction, decorated_add):
 
     wg = WorkGraph("build_task_from_workgraph")

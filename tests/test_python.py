@@ -1,11 +1,10 @@
-import aiida
+import pytest
 from aiida_workgraph import WorkGraph, task
 from typing import Any
 
-aiida.load_profile()
 
-
-def test_PythonJob_kwargs():
+@pytest.mark.usefixtures("started_daemon_client")
+def test_PythonJob_kwargs(fixture_localhost):
     """Test function with kwargs."""
 
     def add(x, **kwargs):
@@ -27,7 +26,7 @@ def test_PythonJob_kwargs():
     assert wg.tasks["add"].outputs["result"].value.value == 6
 
 
-def test_PythonJob_typing():
+def test_PythonJob_typing(fixture_localhost):
     """Test function with typing."""
     from numpy import array
 
@@ -64,7 +63,7 @@ def test_PythonJob_typing():
     assert (wg.tasks["multiply"].outputs["result"].value.value == array([12, 20])).all()
 
 
-def test_PythonJob_outputs():
+def test_PythonJob_outputs(fixture_localhost):
     """Test function with multiple outputs."""
 
     @task(
@@ -92,7 +91,7 @@ def test_PythonJob_outputs():
     assert wg.tasks["add"].outputs["diff"].value.value == -1
 
 
-def test_PythonJob_namespace_output():
+def test_PythonJob_namespace_output(fixture_localhost):
     """Test function with namespace output and input."""
 
     # output namespace
@@ -133,7 +132,7 @@ def test_PythonJob_namespace_output():
     assert wg.tasks["myfunc"].outputs["add_multiply"].value.multiply.value == 2
 
 
-def test_PythonJob_namespace_output_input():
+def test_PythonJob_namespace_output_input(fixture_localhost):
     """Test function with namespace output and input."""
 
     # output namespace
@@ -199,7 +198,7 @@ def test_PythonJob_namespace_output_input():
     assert wg.tasks["myfunc3"].outputs["result"].value.value == 7
 
 
-def test_PythonJob_parent_folder():
+def test_PythonJob_parent_folder(fixture_localhost):
     """Test function with parent folder."""
 
     def add(x, y):
@@ -241,7 +240,7 @@ def test_PythonJob_parent_folder():
     assert wg.tasks["multiply"].outputs["result"].value.value == 17
 
 
-def test_PythonJob_upload_files():
+def test_PythonJob_upload_files(fixture_localhost):
     """Test function with upload files."""
 
     # create a temporary file "input.txt" in the current directory
@@ -286,7 +285,7 @@ def test_PythonJob_upload_files():
     assert wg.tasks["add"].outputs["result"].value.value == 5
 
 
-def test_PythonJob_copy_files():
+def test_PythonJob_copy_files(fixture_localhost):
     """Test function with copy files."""
 
     # define add task
@@ -346,7 +345,7 @@ def test_PythonJob_copy_files():
     assert wg.tasks["multiply"].outputs["result"].value.value == 25
 
 
-def test_PythonJob_retrieve_files():
+def test_PythonJob_retrieve_files(fixture_localhost):
     """Test retrieve files."""
 
     def add(x, y):
@@ -378,7 +377,7 @@ def test_PythonJob_retrieve_files():
     )
 
 
-def test_data_serializer():
+def test_data_serializer(fixture_localhost):
     from ase import Atoms
     from ase.build import bulk
 

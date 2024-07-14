@@ -58,6 +58,7 @@ pre-commit = [
     "pylint~=2.17.4",
 ]
 tests = [
+    'pgtest~=1.3',
     "pytest~=7.0",
     "pytest-cov~=2.7,<2.11",
     "playwright",
