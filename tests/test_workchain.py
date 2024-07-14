@@ -1,9 +1,8 @@
-import aiida
+import pytest
 from aiida.workflows.arithmetic.multiply_add import MultiplyAddWorkChain
 
-aiida.load_profile()
 
-
+@pytest.mark.usefixtures("started_daemon_client")
 def test_workchain(wg_workchain):
     """Submit simple calcjob."""
     wg = wg_workchain
@@ -25,14 +24,14 @@ def test_build_workchain_inputs_outputs():
     assert len(node.outputs) == 3
 
 
-def test_build_workchain():
+@pytest.mark.usefixtures("started_daemon_client")
+def test_build_workchain(add_code):
     """Submit simple calcjob."""
-    from aiida.orm import load_code, Int
+    from aiida.orm import Int
     from aiida_workgraph import WorkGraph
 
-    code = load_code("add@localhost")
     wg = WorkGraph(name="test_debug_math")
-    code1 = wg.tasks.new("AiiDACode", "code1", pk=code.pk)
+    code1 = wg.tasks.new("AiiDACode", "code1", pk=add_code.pk)
     multiply_add1 = wg.tasks.new(
         MultiplyAddWorkChain,
         "multiply_add1",

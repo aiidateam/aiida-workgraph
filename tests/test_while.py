@@ -1,9 +1,9 @@
+import pytest
 from aiida_workgraph import task, WorkGraph
-from aiida import load_profile, orm
-
-load_profile()
+from aiida import orm
 
 
+@pytest.mark.usefixtures("started_daemon_client")
 def test_while(decorated_add, decorated_multiply, decorated_compare):
     # Create a WorkGraph will repeat itself based on the conditions
     wg = WorkGraph("while_workgraph")

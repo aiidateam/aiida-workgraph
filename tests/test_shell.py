@@ -1,11 +1,10 @@
-import aiida
+import pytest
 from aiida_workgraph import WorkGraph
 from aiida_shell.launch import prepare_code
 from aiida.orm import SinglefileData
 
-aiida.load_profile()
 
-
+@pytest.mark.usefixtures("started_daemon_client")
 def test_shell_command():
     """Test the ShellJob with command as a string."""
     wg = WorkGraph(name="test_shell_command")

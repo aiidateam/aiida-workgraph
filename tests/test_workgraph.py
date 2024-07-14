@@ -1,10 +1,8 @@
-from aiida_workgraph import WorkGraph
-from aiida import load_profile, orm
-import time
 import pytest
+from aiida_workgraph import WorkGraph
+from aiida import orm
+import time
 from aiida.calculations.arithmetic.add import ArithmeticAddCalculation
-
-load_profile()
 
 
 def test_to_dict(wg_calcjob):
@@ -55,6 +53,7 @@ def test_pause(wg_engine):
     assert wg.process.process_state.value.upper() == "PAUSED"
 
 
+@pytest.mark.usefixtures("started_daemon_client")
 def test_reset_message(wg_calcjob):
     """Modify a node and save the workgraph.
     This will add a message to the workgraph_queue extra field."""

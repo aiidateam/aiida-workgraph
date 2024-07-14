@@ -1,8 +1,6 @@
-import aiida
+import pytest
 from aiida_workgraph import WorkGraph
 from typing import Callable
-
-aiida.load_profile()
 
 
 def test_normal_function_run(
@@ -17,6 +15,7 @@ def test_normal_function_run(
     assert wg.tasks["add2"].node.outputs.result == 11
 
 
+@pytest.mark.usefixtures("started_daemon_client")
 def test_normal_function_submit(
     decorated_normal_add: Callable, decorated_add: Callable
 ) -> None:

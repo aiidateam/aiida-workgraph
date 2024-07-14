@@ -1,10 +1,10 @@
+import pytest
 from aiida_workgraph import task, WorkGraph
-from aiida import load_profile, orm
+from aiida import orm
 from typing import Callable
 
-load_profile()
 
-
+@pytest.mark.usefixtures("started_daemon_client")
 def test_for(decorated_add: Callable, decorated_multiply: Callable) -> None:
     # Create a WorkGraph will loop the a sequence
     @task.graph_builder(outputs=[{"name": "result", "from": "context.total"}])

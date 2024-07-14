@@ -1,16 +1,13 @@
-import aiida
 from aiida_workgraph import WorkGraph
 import os
 import pytest
-
-aiida.load_profile()
 
 cwd = os.path.dirname(os.path.abspath(__file__))
 
 
 def test_calcfunction():
     wg = WorkGraph.from_yaml(os.path.join(cwd, "datas/test_calcfunction.yaml"))
-    wg.submit(wait=True)
+    wg.run()
     assert wg.tasks["sumdiff2"].node.outputs.sum == 9
 
 

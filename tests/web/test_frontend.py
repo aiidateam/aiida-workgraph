@@ -15,8 +15,11 @@ def test_homepage(page):
         pytest.fail("Element 'a[href='/wortre']' not found on the page")
 
 
+@pytest.mark.skip(
+    reason="The test does not work because rest api does not the profile fixture."
+)
 def test_workgraph(page, wg_calcfunction):
-    wg_calcfunction.submit(wait=True)
+    wg_calcfunction.run()
     page.goto("http://localhost:8000/workgraph")
 
     # Check for the existence of a specific element on the page
@@ -46,7 +49,7 @@ def test_workgraph(page, wg_calcfunction):
 def test_workgraph_item(page, wg_calcfunction):
 
     wg = wg_calcfunction
-    wg.submit(wait=True)
+    wg.run()
     page.goto("http://localhost:8000/workgraph/{}".format(wg.pk))
     page.wait_for_timeout(8000)
 

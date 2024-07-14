@@ -1,8 +1,6 @@
-import aiida
+import pytest
 from aiida_workgraph import WorkGraph
 from typing import Callable
-
-aiida.load_profile()
 
 
 def test_args() -> None:
@@ -30,17 +28,16 @@ def test_args() -> None:
 
 
 def test_inputs_outputs_workchain() -> None:
-    from aiida_quantumespresso.workflows.pdos import PdosWorkChain
+    from aiida.workflows.arithmetic.multiply_add import MultiplyAddWorkChain
 
     wg = WorkGraph()
-    pdos = wg.tasks.new(PdosWorkChain)
-    assert "scf" in pdos.inputs.keys()
-    assert "scf.pw" in pdos.inputs.keys()
-    assert "scf.pw.metadata" in pdos.inputs.keys()
-    assert "dos" in pdos.outputs.keys()
-    assert "dos.remote_folder" in pdos.outputs.keys()
+    task = wg.tasks.new(MultiplyAddWorkChain)
+    assert "metadata" in task.inputs.keys()
+    assert "metadata.call_link_label" in task.inputs.keys()
+    assert "result" in task.outputs.keys()
 
 
+@pytest.mark.usefixtures("started_daemon_client")
 def test_decorator_calcfunction(decorated_add: Callable) -> None:
     """Run simple calcfunction."""
 

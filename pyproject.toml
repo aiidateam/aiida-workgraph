@@ -26,12 +26,12 @@ keywords = ["aiida", "workflows"]
 requires-python = ">=3.9"
 dependencies = [
     "numpy~=1.21",
+    "scipy",
+    "ase",
     "node-graph>=0.0.11",
     "anywidget>=0.9.11",
     "aiida-core>=2.3",
     "cloudpickle",
-    "aiida-pseudo",
-    "aiida-quantumespresso",
     "aiida-shell",
     "fastapi",
     "uvicorn",
@@ -58,6 +58,7 @@ pre-commit = [
     "pylint~=2.17.4",
 ]
 tests = [
+    'pgtest~=1.3',
     "pytest~=7.0",
     "pytest-cov~=2.7,<2.11",
     "playwright",

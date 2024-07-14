@@ -1,8 +1,7 @@
-import aiida
-
-aiida.load_profile()
+import pytest
 
 
+@pytest.mark.usefixtures("started_daemon_client")
 def test_multiply_link() -> None:
     """Test multiply link."""
 

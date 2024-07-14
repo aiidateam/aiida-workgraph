@@ -1,10 +1,59 @@
 import pytest
 from aiida_workgraph import task, WorkGraph
 from aiida.engine import calcfunction, workfunction
-from aiida.orm import Float, Int, load_code, StructureData
+from aiida.orm import Float, Int, StructureData
 from aiida.calculations.arithmetic.add import ArithmeticAddCalculation
 from typing import Callable, Any, Union
 import time
+
+pytest_plugins = "aiida.tools.pytest_fixtures"
+
+
+@pytest.fixture(scope="session", autouse=True)
+def aiida_profile(aiida_config, aiida_profile_factory):
+    """Create and load a profile with RabbitMQ as broker."""
+    with aiida_profile_factory(aiida_config, broker_backend="core.rabbitmq") as profile:
+        yield profile
+
+
+@pytest.fixture
+def fixture_localhost(aiida_localhost):
+    """Return a localhost `Computer`."""
+    localhost = aiida_localhost
+    localhost.set_default_mpiprocs_per_machine(1)
+    return localhost
+
+
+@pytest.fixture
+def add_code(fixture_localhost):
+    from aiida.orm import InstalledCode
+
+    code = InstalledCode(computer=fixture_localhost, filepath_executable="/bin/bash")
+    code.store()
+    return code
+
+
+@pytest.fixture
+def fixture_code(fixture_localhost):
+    """Return an ``InstalledCode`` instance configured to run calculations of given entry point on localhost."""
+
+    def _fixture_code(entry_point_name):
+        from aiida.common import exceptions
+        from aiida.orm import InstalledCode, load_code
+
+        label = f"test.{entry_point_name}"
+
+        try:
+            return load_code(label=label)
+        except exceptions.NotExistent:
+            return InstalledCode(
+                label=label,
+                computer=fixture_localhost,
+                filepath_executable="/bin/true",
+                default_calc_job_plugin=entry_point_name,
+            )
+
+    return _fixture_code
 
 
 @pytest.fixture
@@ -23,13 +72,14 @@ def wg_calcfunction() -> WorkGraph:
 
 
 @pytest.fixture
-def wg_calcjob() -> WorkGraph:
+def wg_calcjob(add_code) -> WorkGraph:
     """A workgraph with calcjob."""
 
-    code = load_code("add@localhost")
+    print("add_code", add_code)
+
     wg = WorkGraph(name="test_debug_math")
     int1 = wg.tasks.new("AiiDANode", "int1", pk=Int(3).store().pk)
-    code1 = wg.tasks.new("AiiDACode", "code1", pk=code.pk)
+    code1 = wg.tasks.new("AiiDACode", "code1", pk=add_code.pk)
     add1 = wg.tasks.new(ArithmeticAddCalculation, "add1", x=Int(2).store())
     add2 = wg.tasks.new(ArithmeticAddCalculation, "add2", x=Int(4).store())
     add3 = wg.tasks.new(ArithmeticAddCalculation, "add3", x=Int(4).store())
@@ -43,14 +93,13 @@ def wg_calcjob() -> WorkGraph:
 
 
 @pytest.fixture
-def wg_workchain() -> WorkGraph:
+def wg_workchain(add_code) -> WorkGraph:
     """A workgraph with workchain."""
 
-    code = load_code("add@localhost")
     wg = WorkGraph(name="test_debug_math")
     int1 = wg.tasks.new("AiiDANode", "int1", pk=Int(2).store().pk)
     int2 = wg.tasks.new("AiiDANode", "int2", pk=Int(3).store().pk)
-    code1 = wg.tasks.new("AiiDACode", "code1", pk=code.pk)
+    code1 = wg.tasks.new("AiiDACode", "code1", pk=add_code.pk)
     multiply_add1 = wg.tasks.new(
         "AiiDAArithmeticMultiplyAdd", "multiply_add1", x=Int(4).store()
     )
@@ -193,9 +242,9 @@ def wg_structure_si() -> WorkGraph:
 
 
 @pytest.fixture
-def wg_engine(decorated_add) -> WorkGraph:
+def wg_engine(decorated_add, add_code) -> WorkGraph:
     """Use to test the engine."""
-    code = load_code("add@localhost")
+    code = add_code
     x = Int(2)
     wg = WorkGraph(name="test_run_order")
     add0 = wg.tasks.new(ArithmeticAddCalculation, "add0", x=x, y=Int(0), code=code)
