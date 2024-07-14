@@ -159,7 +159,8 @@ class WorkGraph(node_graph.NodeGraph):
             self.process_inited = process_inited
             process_inited.close()
             print(f"WorkGraph process created, PK: {self.process.pk}")
-        self.save_to_base(inputs["wg"])
+        else:
+            self.save_to_base(inputs["wg"])
         self.update()
 
     def save_to_base(self, wgdata: Dict[str, Any]) -> None:
@@ -184,6 +185,9 @@ class WorkGraph(node_graph.NodeGraph):
         }
         wgdata.update(
             {
+                "restart_process": aiida.orm.Int(self.restart_process.pk)
+                if self.restart_process
+                else None,
                 "max_iteration": self.max_iteration,
                 "execution_count": self.execution_count,
                 "workgraph_type": self.workgraph_type,

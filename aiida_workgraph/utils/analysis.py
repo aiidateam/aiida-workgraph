@@ -141,7 +141,10 @@ class WorkGraphSaver:
         from aiida_workgraph.utils.control import create_task_action
 
         # print("process state: ", self.process.process_state.value.upper())
-        if self.process.process_state.value.upper() == "CREATED":
+        if (
+            self.process.process_state is None
+            or self.process.process_state.value.upper() == "CREATED"
+        ):
             for name in tasks:
                 self.wgdata["tasks"][name]["state"] = "PLANNED"
                 self.wgdata["tasks"][name]["process"] = None

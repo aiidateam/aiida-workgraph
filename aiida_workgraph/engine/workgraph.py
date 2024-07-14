@@ -400,6 +400,21 @@ class WorkGraphEngine(Process, metaclass=Protect):
         """Use the workgraph name as the process label."""
         return f"WorkGraph<{self.inputs.wg['name']}>"
 
+    def on_create(self) -> None:
+        """Called when a Process is created."""
+        from aiida_workgraph.utils.analysis import WorkGraphSaver
+
+        super().on_create()
+        wgdata = self.inputs.wg._dict
+        # print("wgdata: ", wgdata)
+        restart_process = (
+            orm.load_node(wgdata["restart_process"].value)
+            if wgdata.get("restart_process")
+            else None
+        )
+        saver = WorkGraphSaver(self.node, wgdata, restart_process=restart_process)
+        saver.save()
+
     def setup(self) -> None:
         # track if the awaitable callback is added to the runner
         self.ctx._awaitable_actions = []
@@ -893,15 +908,10 @@ class WorkGraphEngine(Process, metaclass=Protect):
                 self.to_context(**{name: process})
             elif task["metadata"]["node_type"].upper() in ["WORKGRAPH"]:
                 from .utils import prepare_for_workgraph_task
-                from aiida_workgraph.utils.analysis import WorkGraphSaver
 
-                inputs, wgdata = prepare_for_workgraph_task(task, kwargs)
-                process_inited = WorkGraphEngine(inputs=inputs)
-                process_inited.runner.persister.save_checkpoint(process_inited)
-                saver = WorkGraphSaver(process_inited.node, wgdata)
-                saver.save()
+                inputs, _ = prepare_for_workgraph_task(task, kwargs)
                 print("submit workgraph: ")
-                process = self.submit(process_inited)
+                process = self.submit(WorkGraphEngine, inputs=inputs)
                 self.set_task_state_info(task["name"], "process", process)
                 self.set_task_state_info(name, "state", "RUNNING")
                 self.to_context(**{name: process})
