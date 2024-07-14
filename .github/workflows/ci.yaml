@@ -137,3 +137,9 @@ jobs:
             with:
                 token: ${{ secrets.CODECOV_TOKEN }}
                 flags: python-${{ matrix.python-version }}
+
+        -   uses: actions/upload-artifact@v4
+            if: ${{ !cancelled() }}
+            with:
+                name: playwright-traces
+                path: tests/web/snapshots/
