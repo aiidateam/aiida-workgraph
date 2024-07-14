@@ -1,7 +1,5 @@
 import aiida
 
-aiida.load_profile()
-
 
 def test_python_job():
     """Test a simple python node."""

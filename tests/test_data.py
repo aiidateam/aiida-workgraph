@@ -1,8 +1,3 @@
-import aiida
-
-aiida.load_profile()
-
-
 def test_AtomsData():
     from aiida_workgraph.orm.atoms import AtomsData
     from ase.build import bulk

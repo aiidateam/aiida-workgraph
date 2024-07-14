@@ -73,25 +73,12 @@ jobs:
         -   name: Install aiida-core
             run: pip install aiida-core==${{ matrix.aiida-core-version }}
 
-        -   name: Install system dependencies
-            run: sudo apt update && sudo apt install --no-install-recommends libfftw3-dev quantum-espresso
-
         -   name: Install Python dependencies
             run: |
                 pip install -e .[pre-commit,tests]
                 playwright install
                 pip list
 
-        -   name: Create AiiDA profile
-            run: verdi setup -n --config .github/config/profile.yaml
-
-        -   name: Setup SSSP
-            run: |
-                aiida-pseudo install sssp -v 1.3 -x PBEsol -p efficiency
-                aiida-pseudo install sssp -v 1.3 -x PBE -p efficiency
-
-        -   name: Start AiiDA daemon
-            run: verdi daemon start 2
 
         -   name: Install Dependencies for widget
             working-directory: aiida_workgraph/widget

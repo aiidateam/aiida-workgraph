@@ -30,8 +30,6 @@ dependencies = [
     "anywidget>=0.9.11",
     "aiida-core>=2.3",
     "cloudpickle",
-    "aiida-pseudo",
-    "aiida-quantumespresso",
     "aiida-shell",
     "fastapi",
     "uvicorn",
