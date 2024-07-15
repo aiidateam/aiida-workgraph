@@ -1,7 +1,6 @@
 import aiida.orm
 import node_graph
 import aiida
-from aiida.manage import get_manager
 from aiida_workgraph.tasks import task_pool
 import time
 from aiida_workgraph.collection import TaskCollection
@@ -98,13 +97,8 @@ class WorkGraph(node_graph.NodeGraph):
             print("Your workgraph is already created. Please use the submit() method.")
             return
         inputs = self.prepare_inputs(metadata=metadata)
-        # init a process
-        runner = get_manager().get_runner()
-        process_inited = WorkGraphEngine(runner=runner, inputs=inputs)
-        self.process = process_inited.node
-        # save workgraph data into process node
-        self.save_to_base(inputs["wg"])
-        result = aiida.engine.run(process_inited)
+        result, node = aiida.engine.run_get_node(WorkGraphEngine, inputs=inputs)
+        self.process = node
         self.update()
         return result
 
