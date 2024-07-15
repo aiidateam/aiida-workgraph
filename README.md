@@ -115,7 +115,7 @@ verdi node generate pk
 ### Pre-commit and Tests
 To contribute to this repository, please enable pre-commit so the code in commits are conform to the standards.
 ```console
-pip install -e .[tests, pre-commit]
+pip install -e .[tests,pre-commit]
 pre-commit install
 ```
 
