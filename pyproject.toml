@@ -39,7 +39,7 @@ dependencies = [
 
 [project.urls]
 Documentation = "https://aiida-workgraph.readthedocs.io"
-Source = "https://github.com/superstar54/aiida-workgraph"
+Source = "https://github.com/aiidateam/aiida-workgraph"
 
 [project.optional-dependencies]
 docs = [

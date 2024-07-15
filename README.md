@@ -1,6 +1,6 @@
 # AiiDA-WorkGraph
 [![PyPI version](https://badge.fury.io/py/aiida-workgraph.svg)](https://badge.fury.io/py/aiida-workgraph)
-[![Unit test](https://github.com/superstar54/aiida-workgraph/actions/workflows/ci.yaml/badge.svg)](https://github.com/superstar54/aiida-workgraph/actions/workflows/ci.yaml)
+[![Unit test](https://github.com/aiidateam/aiida-workgraph/actions/workflows/ci.yaml/badge.svg)](https://github.com/aiidateam/aiida-workgraph/actions/workflows/ci.yaml)
 [![codecov](https://codecov.io/gh/superstar54/aiida-workgraph/branch/main/graph/badge.svg)](https://codecov.io/gh/superstar54/aiida-workgraph)
 [![Docs status](https://readthedocs.org/projects/aiida-workgraph/badge)](http://aiida-workgraph.readthedocs.io/)
 
@@ -38,7 +38,7 @@ Here is a detailed comparison between the ``WorkGraph`` with two AiiDA built-in 
 To install the latest version from source, first clone the repository and then install using `pip`:
 
 ```console
-git clone https://github.com/superstar54/aiida-workgraph
+git clone https://github.com/aiidateam/aiida-workgraph
 pip install -e aiida-workgraph
 # build widget
 cd aiida_workgraph/widget/
@@ -120,10 +120,10 @@ pre-commit install
 ```
 
 ### Widget
-See the [README.md](https://github.com/superstar54/aiida-workgraph/blob/main/aiida_workgraph/widget/README.md)
+See the [README.md](https://github.com/aiidateam/aiida-workgraph/blob/main/aiida_workgraph/widget/README.md)
 
 ### Web app
-See the [README.md](https://github.com/superstar54/aiida-workgraph/blob/main/aiida_workgraph/web/README.md)
+See the [README.md](https://github.com/aiidateam/aiida-workgraph/blob/main/aiida_workgraph/web/README.md)
 
 
 ## License
