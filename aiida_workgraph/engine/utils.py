@@ -131,12 +131,33 @@ def prepare_for_shell_task(task: dict, kwargs: dict) -> dict:
         if key.startswith("nodes."):
             nodes[key[6:]] = kwargs.pop(key)
     metadata.update({"call_link_label": task["name"]})
+
+    # we extract the workgraph outputs to remove them before passing to shell task
+    if kwargs.get("parser") is None:
+        workgraph_outputs = set(
+            [
+                "remote_folder",
+                "remote_stash",
+                "retrieved",
+                "_outputs",
+                "_wait",
+                "stdout",
+                "stderr",
+            ]
+        )
+        task_outputs = set(
+            [task["outputs"][i]["name"] for i in range(len(task["outputs"]))]
+        )
+        task_outputs.update(set(kwargs.pop("outputs", [])))
+        shell_task_outputs = list(task_outputs.difference(workgraph_outputs))
+    else:
+        shell_task_outputs = []
     inputs = {
         "code": code,
         "nodes": nodes,
         "filenames": kwargs.pop("filenames", {}),
         "arguments": kwargs.pop("arguments", []),
-        "outputs": kwargs.pop("outputs", []),
+        "outputs": shell_task_outputs,
         "parser": kwargs.pop("parser", None),
         "metadata": metadata or {},
     }
