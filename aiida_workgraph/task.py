@@ -1,7 +1,10 @@
 from node_graph.node import Node as GraphNode
+from aiida_workgraph import USE_WIDGET
 from aiida_workgraph.properties import property_pool
 from aiida_workgraph.sockets import socket_pool
-from aiida_workgraph.widget import NodeGraphWidget
+
+if USE_WIDGET:
+    from aiida_workgraph.widget import NodeGraphWidget
 from aiida_workgraph.collection import (
     WorkGraphPropertyCollection,
     WorkGraphInputSocketCollection,
@@ -43,10 +46,13 @@ class Task(GraphNode):
         self.wait = [] if wait is None else wait
         self.process = process
         self.pk = pk
-        self._widget = NodeGraphWidget(
-            settings={"minmap": False},
-            style={"width": "80%", "height": "600px"},
-        )
+        if USE_WIDGET:
+            self._widget = NodeGraphWidget(
+                settings={"minmap": False},
+                style={"width": "80%", "height": "600px"},
+            )
+        else:
+            self._widget = None
         self.state = "PLANNED"
         self.action = ""
 
