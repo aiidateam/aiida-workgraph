@@ -7,7 +7,7 @@ from node_graph.collection import (
 from typing import Any, Callable, Optional, Union
 
 
-class WorkGraphNodeCollection(NodeCollection):
+class TaskCollection(NodeCollection):
     def new(
         self,
         identifier: Union[Callable, str],
@@ -15,12 +15,31 @@ class WorkGraphNodeCollection(NodeCollection):
         uuid: Optional[str] = None,
         **kwargs: Any
     ) -> Any:
-        from aiida_workgraph.decorator import build_node_from_callable
+        from aiida_workgraph.decorator import (
+            build_task_from_callable,
+            build_pythonjob_task,
+            build_shelljob_task,
+            build_task_from_workgraph,
+        )
+        from aiida_workgraph.workgraph import WorkGraph
 
-        # build the node on the fly if the identifier is a callable
+        # build the task on the fly if the identifier is a callable
         if callable(identifier):
-            identifier = build_node_from_callable(identifier)
-        # Call the original new method
+            identifier = build_task_from_callable(identifier)
+        if isinstance(identifier, str) and identifier.upper() == "PYTHONJOB":
+            identifier, _ = build_pythonjob_task(kwargs.pop("function"))
+        if isinstance(identifier, str) and identifier.upper() == "SHELLJOB":
+            identifier, _, links = build_shelljob_task(
+                nodes=kwargs.get("nodes", {}),
+                outputs=kwargs.get("outputs", None),
+                parser_outputs=kwargs.pop("parser_outputs", None),
+            )
+            task = super().new(identifier, name, uuid, **kwargs)
+            # make links between the tasks
+            task.set(links)
+            return task
+        if isinstance(identifier, WorkGraph):
+            identifier = build_task_from_workgraph(identifier)
         return super().new(identifier, name, uuid, **kwargs)
 
 

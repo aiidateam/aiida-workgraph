@@ -191,7 +191,7 @@ export async function createEditor(container: HTMLElement, settings: any) {
   arrange.addPreset(ArrangePresets.classic.setup());
 
   editor.use(area);
-  area.use(connection);
+  // area.use(connection);
   area.use(render);
   area.use(arrange);
   area.use(contextMenu);

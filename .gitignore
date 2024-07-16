@@ -71,6 +71,7 @@ instance/
 
 # Sphinx documentation
 docs/_build/
+docs/source/**/*.txt
 
 # PyBuilder
 target/
@@ -133,3 +134,4 @@ dmypy.json
 *.pdf
 tests/work
 /tests/**/*.png
+/tests/**/*txt

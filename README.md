@@ -1,12 +1,11 @@
 # AiiDA-WorkGraph
 [![PyPI version](https://badge.fury.io/py/aiida-workgraph.svg)](https://badge.fury.io/py/aiida-workgraph)
-[![Unit test](https://github.com/superstar54/aiida-workgraph/actions/workflows/ci.yaml/badge.svg)](https://github.com/superstar54/aiida-workgraph/actions/workflows/ci.yaml)
+[![Unit test](https://github.com/aiidateam/aiida-workgraph/actions/workflows/ci.yaml/badge.svg)](https://github.com/aiidateam/aiida-workgraph/actions/workflows/ci.yaml)
 [![codecov](https://codecov.io/gh/superstar54/aiida-workgraph/branch/main/graph/badge.svg)](https://codecov.io/gh/superstar54/aiida-workgraph)
 [![Docs status](https://readthedocs.org/projects/aiida-workgraph/badge)](http://aiida-workgraph.readthedocs.io/)
 
-Provides the third workflow component: `WorkGraph`, to design flexible node-based workflows using AiiDA.
+Efficiently design and manage flexible workflows with AiiDA, featuring an interactive GUI, checkpoints, provenance tracking, and remote execution capabilities.
 
-In AiiDA, there are two workflow components: `workfunction` and `WorkChain`. Workfunction is easy to implement but it does not support automatic checkpointing, which is important for long-running calculations. Workchain supports automatic checkpointing but it is difficult to implement and also not as flexible as the `workfunction`. AiiDA-WorkGraph provides the third component: `WorkGraph`. It is easy to implement and supports automatic checkpointing. It is also flexible and can be used to design complex workflows.
 
 
 Here is a detailed comparison between the ``WorkGraph`` with two AiiDA built-in workflow components.
@@ -39,19 +38,30 @@ Here is a detailed comparison between the ``WorkGraph`` with two AiiDA built-in 
 To install the latest version from source, first clone the repository and then install using `pip`:
 
 ```console
-git clone https://github.com/superstar54/aiida-workgraph
+git clone https://github.com/aiidateam/aiida-workgraph
 cd aiida-workgraph
 pip install -e .
 ```
-In order to use the widget, you also need to run:
+
+To install the jupyter widget support you need to in addition build the JavaScript packages:
+
 ```console
+pip install .[widget]
+# build widget
 cd aiida_workgraph/widget/
+npm install
+npm run build
+# build web frontend
+cd ../../aiida_workgraph/web/frontend/
 npm install
 npm run build
 ```
 
 ## Documentation
-Check the [docs](https://aiida-workgraph.readthedocs.io/en/latest/) and learn about the features.
+Explore the comprehensive [documentation](https://aiida-workgraph.readthedocs.io/en/latest/) to discover all the features and capabilities of AiiDA Workgraph.
+
+## Demo
+Visit the [Workgraph Collections repository](https://github.com/superstar54/workgraph-collections) to see demonstrations of how to utilize AiiDA Workgraph for different computational codes.
 
 ## Examples
 Suppose we want to calculate ```(x + y) * z ``` in two steps. First, add `x` and `y`, then multiply the result with `z`.
@@ -70,11 +80,11 @@ def add(x, y):
 def multiply(x, y):
     return x*y
 
-# Create a workgraph to link the nodes.
+# Create a workgraph to link the tasks.
 wg = WorkGraph("test_add_multiply")
-wg.nodes.new(add, name="add1")
-wg.nodes.new(multiply, name="multiply1")
-wg.links.new(wg.nodes["add1"].outputs["result"], wg.nodes["multiply1"].inputs["x"])
+wg.tasks.new(add, name="add1")
+wg.tasks.new(multiply, name="multiply1")
+wg.links.new(wg.tasks["add1"].outputs["result"], wg.tasks["multiply1"].inputs["x"])
 
 ```
 
@@ -86,7 +96,7 @@ from aiida import load_profile
 load_profile()
 
 wg.submit(inputs = {"add1": {"x": 2, "y": 3}, "multiply1": {"y": 4}}, wait=True)
-print("Result of multiply1 is", wg.nodes["multiply1"].outputs[0].value)
+print("Result of multiply1 is", wg.tasks["multiply1"].outputs[0].value)
 ```
 
 Start the web app, open a terminal and run:
@@ -112,24 +122,16 @@ verdi node generate pk
 ### Pre-commit and Tests
 To contribute to this repository, please enable pre-commit so the code in commits are conform to the standards.
 ```console
-pip install -e .[tests, pre-commit]
+pip install -e .[tests,pre-commit]
 pre-commit install
 ```
 
-### Web app
-See the [README.md](https://github.com/superstar54/aiida-workgraph/blob/main/aiida_workgraph/web/README.md)
+### Widget
+See the [README.md](https://github.com/aiidateam/aiida-workgraph/blob/main/aiida_workgraph/widget/README.md)
 
-### Build and publish
-Build package:
-```console
-pip install build
-python -m build
-```
-Upload to PyPI:
-```console
-pip install twine
-twine upload dist/*
-```
+### Web app
+See the [README.md](https://github.com/aiidateam/aiida-workgraph/blob/main/aiida_workgraph/web/README.md)
+
 
 ## License
 [MIT](http://opensource.org/licenses/MIT)

@@ -7,6 +7,6 @@ Concepts
    :maxdepth: 2
    :caption: Contents:
 
-   node
+   task
    workgraph
    socket

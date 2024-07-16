@@ -1,10 +1,59 @@
 import pytest
-from aiida_workgraph import node, WorkGraph
+from aiida_workgraph import task, WorkGraph
 from aiida.engine import calcfunction, workfunction
-from aiida.orm import Float, Int, load_code, StructureData
+from aiida.orm import Float, Int, StructureData
 from aiida.calculations.arithmetic.add import ArithmeticAddCalculation
 from typing import Callable, Any, Union
 import time
+
+pytest_plugins = "aiida.tools.pytest_fixtures"
+
+
+@pytest.fixture(scope="session", autouse=True)
+def aiida_profile(aiida_config, aiida_profile_factory):
+    """Create and load a profile with RabbitMQ as broker."""
+    with aiida_profile_factory(aiida_config, broker_backend="core.rabbitmq") as profile:
+        yield profile
+
+
+@pytest.fixture
+def fixture_localhost(aiida_localhost):
+    """Return a localhost `Computer`."""
+    localhost = aiida_localhost
+    localhost.set_default_mpiprocs_per_machine(1)
+    return localhost
+
+
+@pytest.fixture
+def add_code(fixture_localhost):
+    from aiida.orm import InstalledCode
+
+    code = InstalledCode(computer=fixture_localhost, filepath_executable="/bin/bash")
+    code.store()
+    return code
+
+
+@pytest.fixture
+def fixture_code(fixture_localhost):
+    """Return an ``InstalledCode`` instance configured to run calculations of given entry point on localhost."""
+
+    def _fixture_code(entry_point_name):
+        from aiida.common import exceptions
+        from aiida.orm import InstalledCode, load_code
+
+        label = f"test.{entry_point_name}"
+
+        try:
+            return load_code(label=label)
+        except exceptions.NotExistent:
+            return InstalledCode(
+                label=label,
+                computer=fixture_localhost,
+                filepath_executable="/bin/true",
+                default_calc_job_plugin=entry_point_name,
+            )
+
+    return _fixture_code
 
 
 @pytest.fixture
@@ -12,10 +61,10 @@ def wg_calcfunction() -> WorkGraph:
     """A workgraph with calcfunction."""
 
     wg = WorkGraph(name="test_debug_math")
-    float1 = wg.nodes.new("AiiDANode", "float1", pk=Float(3.0).store().pk)
-    sumdiff1 = wg.nodes.new("AiiDASumDiff", "sumdiff1", x=2)
-    sumdiff2 = wg.nodes.new("AiiDASumDiff", "sumdiff2", x=4)
-    sumdiff3 = wg.nodes.new("AiiDASumDiff", "sumdiff3", x=6)
+    float1 = wg.tasks.new("AiiDANode", "float1", pk=Float(3.0).store().pk)
+    sumdiff1 = wg.tasks.new("AiiDASumDiff", "sumdiff1", x=2)
+    sumdiff2 = wg.tasks.new("AiiDASumDiff", "sumdiff2", x=4)
+    sumdiff3 = wg.tasks.new("AiiDASumDiff", "sumdiff3", x=6)
     wg.links.new(float1.outputs[0], sumdiff1.inputs[1])
     wg.links.new(sumdiff1.outputs[0], sumdiff2.inputs[1])
     wg.links.new(sumdiff2.outputs[0], sumdiff3.inputs[1])
@@ -23,16 +72,17 @@ def wg_calcfunction() -> WorkGraph:
 
 
 @pytest.fixture
-def wg_calcjob() -> WorkGraph:
+def wg_calcjob(add_code) -> WorkGraph:
     """A workgraph with calcjob."""
 
-    code = load_code("add@localhost")
+    print("add_code", add_code)
+
     wg = WorkGraph(name="test_debug_math")
-    int1 = wg.nodes.new("AiiDANode", "int1", pk=Int(3).store().pk)
-    code1 = wg.nodes.new("AiiDACode", "code1", pk=code.pk)
-    add1 = wg.nodes.new(ArithmeticAddCalculation, "add1", x=Int(2).store())
-    add2 = wg.nodes.new(ArithmeticAddCalculation, "add2", x=Int(4).store())
-    add3 = wg.nodes.new(ArithmeticAddCalculation, "add3", x=Int(4).store())
+    int1 = wg.tasks.new("AiiDANode", "int1", pk=Int(3).store().pk)
+    code1 = wg.tasks.new("AiiDACode", "code1", pk=add_code.pk)
+    add1 = wg.tasks.new(ArithmeticAddCalculation, "add1", x=Int(2).store())
+    add2 = wg.tasks.new(ArithmeticAddCalculation, "add2", x=Int(4).store())
+    add3 = wg.tasks.new(ArithmeticAddCalculation, "add3", x=Int(4).store())
     wg.links.new(code1.outputs[0], add1.inputs["code"])
     wg.links.new(int1.outputs[0], add1.inputs["y"])
     wg.links.new(code1.outputs[0], add2.inputs["code"])
@@ -43,18 +93,17 @@ def wg_calcjob() -> WorkGraph:
 
 
 @pytest.fixture
-def wg_workchain() -> WorkGraph:
+def wg_workchain(add_code) -> WorkGraph:
     """A workgraph with workchain."""
 
-    code = load_code("add@localhost")
     wg = WorkGraph(name="test_debug_math")
-    int1 = wg.nodes.new("AiiDANode", "int1", pk=Int(2).store().pk)
-    int2 = wg.nodes.new("AiiDANode", "int2", pk=Int(3).store().pk)
-    code1 = wg.nodes.new("AiiDACode", "code1", pk=code.pk)
-    multiply_add1 = wg.nodes.new(
+    int1 = wg.tasks.new("AiiDANode", "int1", pk=Int(2).store().pk)
+    int2 = wg.tasks.new("AiiDANode", "int2", pk=Int(3).store().pk)
+    code1 = wg.tasks.new("AiiDACode", "code1", pk=add_code.pk)
+    multiply_add1 = wg.tasks.new(
         "AiiDAArithmeticMultiplyAdd", "multiply_add1", x=Int(4).store()
     )
-    multiply_add2 = wg.nodes.new(
+    multiply_add2 = wg.tasks.new(
         "AiiDAArithmeticMultiplyAdd",
         "multiply_add2",
         x=Int(2).store(),
@@ -72,7 +121,7 @@ def wg_workchain() -> WorkGraph:
 def decorated_normal_add() -> Callable:
     """Generate a decorated node for test."""
 
-    @node()
+    @task()
     def add(x: Any, y: Any) -> Any:
         return x + y
 
@@ -126,8 +175,8 @@ def decorated_sqrt() -> Callable:
 def decorated_compare() -> Callable:
     """Generate a decorated node for test."""
 
-    # define compare node
-    @node()
+    # define compare task
+    @task()
     def compare(x, y):
         return x < y
 
@@ -152,12 +201,12 @@ def decorated_add_multiply(decorated_add, decorated_multiply) -> Callable:
 def decorated_add_multiply_group(decorated_add, decorated_multiply) -> Callable:
     """Generate a decorated node for test."""
 
-    @node.graph_builder(outputs=[["multiply1.result", "result"]])
+    @task.graph_builder(outputs=[{"name": "result", "from": "multiply1.result"}])
     def add_multiply_group(x, y, z):
         wg = WorkGraph("add_multiply_group")
-        add1 = wg.nodes.new(decorated_add, name="add1", x=x, y=y)
-        multiply = wg.nodes.new(decorated_multiply, name="multiply1", x=z)
-        # link the output of int node to the input of add node
+        add1 = wg.tasks.new(decorated_add, name="add1", x=x, y=y)
+        multiply = wg.tasks.new(decorated_multiply, name="multiply1", x=z)
+        # link the output of a task to the input of another task
         wg.links.new(add1.outputs[0], multiply.inputs["y"])
         return wg
 
@@ -176,7 +225,7 @@ def structure_si() -> StructureData:
 @pytest.fixture
 def wg_structure_si() -> WorkGraph:
     wg = WorkGraph(name="test_structure")
-    structure1 = wg.nodes.new("AiiDAStructure", "structure1")
+    structure1 = wg.tasks.new("AiiDAStructure", "structure1")
     data = {
         "cell": [[0.0, 2.715, 2.715], [2.715, 0.0, 2.715], [2.715, 2.715, 0.0]],
         "kinds": [{"mass": 28.085, "name": "Si", "symbols": ["Si"], "weights": [1.0]}],
@@ -193,20 +242,20 @@ def wg_structure_si() -> WorkGraph:
 
 
 @pytest.fixture
-def wg_engine(decorated_add) -> WorkGraph:
+def wg_engine(decorated_add, add_code) -> WorkGraph:
     """Use to test the engine."""
-    code = load_code("add@localhost")
+    code = add_code
     x = Int(2)
     wg = WorkGraph(name="test_run_order")
-    add0 = wg.nodes.new(ArithmeticAddCalculation, "add0", x=x, y=Int(0), code=code)
+    add0 = wg.tasks.new(ArithmeticAddCalculation, "add0", x=x, y=Int(0), code=code)
     add0.set({"metadata.options.sleep": 15})
-    add1 = wg.nodes.new(decorated_add, "add1", x=x, y=Int(1), t=Int(1))
-    add2 = wg.nodes.new(ArithmeticAddCalculation, "add2", x=x, y=Int(2), code=code)
+    add1 = wg.tasks.new(decorated_add, "add1", x=x, y=Int(1), t=Int(1))
+    add2 = wg.tasks.new(ArithmeticAddCalculation, "add2", x=x, y=Int(2), code=code)
     add2.set({"metadata.options.sleep": 1})
-    add3 = wg.nodes.new(decorated_add, "add3", x=x, y=Int(3), t=Int(1))
-    add4 = wg.nodes.new(ArithmeticAddCalculation, "add4", x=x, y=Int(4), code=code)
+    add3 = wg.tasks.new(decorated_add, "add3", x=x, y=Int(3), t=Int(1))
+    add4 = wg.tasks.new(ArithmeticAddCalculation, "add4", x=x, y=Int(4), code=code)
     add4.set({"metadata.options.sleep": 1})
-    add5 = wg.nodes.new(decorated_add, "add5", x=x, y=Int(5), t=Int(1))
+    add5 = wg.tasks.new(decorated_add, "add5", x=x, y=Int(5), t=Int(1))
     wg.links.new(add0.outputs["sum"], add2.inputs["x"])
     wg.links.new(add1.outputs[0], add3.inputs["x"])
     wg.links.new(add3.outputs[0], add4.inputs["x"])

@@ -1,7 +1,0 @@
----
-label: qe-7.2-pw
-description: Quantum ESPRESSO pw.x
-default_calc_job_plugin: quantumespresso.pw
-computer: localhost
-prepend_text: ' '
-append_text: ' '

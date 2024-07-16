@@ -6,17 +6,17 @@ import functools
 import logging
 import typing as t
 
+from plumpy import process_comms
 from plumpy.persistence import auto_persist
 from plumpy.process_states import Continue, Wait
 from plumpy.workchains import _PropagateReturn
+import kiwipy
 
 from aiida.common import exceptions
 from aiida.common.extendeddicts import AttributeDict
 from aiida.common.lang import override
 from aiida import orm
-from aiida.orm import Node, ProcessNode, WorkChainNode
-from aiida.orm.utils import load_node
-
+from aiida.orm import load_node, Node, ProcessNode, WorkChainNode
 
 from aiida.engine.processes.exit_code import ExitCode
 from aiida.engine.processes.process import Process
@@ -29,7 +29,8 @@ from aiida.engine.processes.workchains.awaitable import (
 )
 from aiida.engine.processes.workchains.workchain import Protect, WorkChainSpec
 from aiida.engine import run_get_node
-
+from aiida_workgraph.utils import create_and_pause_process
+from aiida_workgraph.task import Task
 
 if t.TYPE_CHECKING:
     from aiida.engine.runners import Runner  # pylint: disable=unused-import
@@ -41,7 +42,7 @@ MAX_NUMBER_AWAITABLES_MSG = "The maximum number of subprocesses has been reached
 
 
 @auto_persist("_awaitables")
-class WorkGraph(Process, metaclass=Protect):
+class WorkGraphEngine(Process, metaclass=Protect):
     """The `WorkGraph` class is used to construct workflows in AiiDA."""
 
     # used to create a process node that represents what happened in this process.
@@ -77,11 +78,12 @@ class WorkGraph(Process, metaclass=Protect):
         spec.input_namespace(
             "wg", dynamic=True, required=False, help="WorkGraph inputs"
         )
-        spec.input_namespace("input_nodes", dynamic=True, required=False)
+        spec.input_namespace("input_tasks", dynamic=True, required=False)
         spec.exit_code(2, "ERROR_SUBPROCESS", message="A subprocess has failed.")
 
+        spec.outputs.dynamic = True
+
         spec.output_namespace("new_data", dynamic=True)
-        spec.output_namespace("group_outputs", dynamic=True)
         spec.output(
             "execution_count",
             valid_type=orm.Int,
@@ -92,7 +94,7 @@ class WorkGraph(Process, metaclass=Protect):
         spec.exit_code(
             201, "UNKNOWN_MESSAGE_TYPE", message="The message type is unknown."
         )
-        spec.exit_code(202, "UNKNOWN_NODE_TYPE", message="The node type is unknown.")
+        spec.exit_code(202, "UNKNOWN_TASK_TYPE", message="The task type is unknown.")
         #
         spec.exit_code(
             301,
@@ -101,13 +103,13 @@ class WorkGraph(Process, metaclass=Protect):
         )
         spec.exit_code(
             302,
-            "NODE_FAILED",
-            message="Some of the nodes failed.",
+            "TASK_FAILED",
+            message="Some of the tasks failed.",
         )
         spec.exit_code(
             303,
-            "NODE_NON_ZERO_EXIT_STATUS",
-            message="Some of the nodes exited with non-zero status.",
+            "TASK_NON_ZERO_EXIT_STATUS",
+            message="Some of the tasks exited with non-zero status.",
         )
 
     @property
@@ -283,7 +285,7 @@ class WorkGraph(Process, metaclass=Protect):
         except _PropagateReturn as exception:
             finished, result = True, exception.exit_code
         else:
-            finished = self.is_workgraph_finished()
+            finished, result = self.is_workgraph_finished()
 
         # If the workgraph is finished or the result is an ExitCode, we exit by returning
         if finished:
@@ -384,9 +386,9 @@ class WorkGraph(Process, metaclass=Protect):
 
         self._resolve_awaitable(awaitable, value)
 
-        # node finished, update the node state and result
-        # udpate the node state
-        self.update_node_state(awaitable.key)
+        # node finished, update the task state and result
+        # udpate the task state
+        self.update_task_state(awaitable.key)
         # try to resume the workgraph, if the workgraph is already resumed
         # by other awaitable, this will not work
         try:
@@ -394,55 +396,108 @@ class WorkGraph(Process, metaclass=Protect):
         except Exception as e:
             print(e)
 
+    def _build_process_label(self) -> str:
+        """Use the workgraph name as the process label."""
+        return f"WorkGraph<{self.inputs.wg['name']}>"
+
+    def on_create(self) -> None:
+        """Called when a Process is created."""
+        from aiida_workgraph.utils.analysis import WorkGraphSaver
+
+        super().on_create()
+        wgdata = self.inputs.wg._dict
+        # print("wgdata: ", wgdata)
+        restart_process = (
+            orm.load_node(wgdata["restart_process"].value)
+            if wgdata.get("restart_process")
+            else None
+        )
+        saver = WorkGraphSaver(self.node, wgdata, restart_process=restart_process)
+        saver.save()
+
     def setup(self) -> None:
         # track if the awaitable callback is added to the runner
         self.ctx._awaitable_actions = []
         self.ctx.new_data = dict()
-        self.ctx.input_nodes = dict()
+        self.ctx.input_tasks = dict()
         # read the latest workgraph data
         wgdata = self.read_wgdata_from_base()
         self.init_ctx(wgdata)
         #
         self.ctx.msgs = []
-        self.node.set_process_label(f"WorkGraph: {self.ctx.workgraph['name']}")
         self.ctx._execution_count = 0
-        # init node results
-        self.set_node_results()
+        # init task results
+        self.set_task_results()
         # while workgraph
         if self.ctx.workgraph["workgraph_type"].upper() == "WHILE":
             self.ctx._max_iteration = self.ctx.workgraph.get("max_iteration", 1000)
             should_run = self.check_while_conditions()
             if not should_run:
-                self.set_node_state(self.ctx.nodes.keys(), "SKIPPED")
+                self.set_tasks_state(self.ctx.tasks.keys(), "SKIPPED")
         # for workgraph
         if self.ctx.workgraph["workgraph_type"].upper() == "FOR":
             should_run = self.check_for_conditions()
             if not should_run:
-                self.set_node_state(self.ctx.nodes.keys(), "SKIPPED")
+                self.set_tasks_state(self.ctx.tasks.keys(), "SKIPPED")
 
     def setup_ctx_workgraph(self, wgdata: t.Dict[str, t.Any]) -> None:
         """setup the workgraph in the context."""
-        self.ctx.nodes = wgdata["nodes"]
+        import cloudpickle as pickle
+
+        self.ctx.tasks = wgdata["tasks"]
         self.ctx.links = wgdata["links"]
         self.ctx.connectivity = wgdata["connectivity"]
         self.ctx.ctrl_links = wgdata["ctrl_links"]
         self.ctx.workgraph = wgdata
+        self.ctx.error_handlers = pickle.loads(wgdata["error_handlers"])
 
     def read_wgdata_from_base(self) -> t.Dict[str, t.Any]:
         """Read workgraph data from base.extras."""
         from aiida.orm.utils.serialize import deserialize_unsafe
 
-        wgdata = deserialize_unsafe(self.node.base.extras.get("workgraph"))
+        wgdata = self.node.base.extras.get("_workgraph")
+        for name, task in wgdata["tasks"].items():
+            wgdata["tasks"][name] = deserialize_unsafe(task)
+        wgdata["error_handlers"] = deserialize_unsafe(wgdata["error_handlers"])
         return wgdata
 
     def update_workgraph_from_base(self) -> None:
         """Update the ctx from base.extras."""
         wgdata = self.read_wgdata_from_base()
-        for name, node in wgdata["nodes"].items():
-            node["state"] = self.ctx.nodes[name]["state"]
-            node["results"] = self.ctx.nodes[name].get("results")
-            node["process"] = self.ctx.nodes[name].get("process")
+        for name, task in wgdata["tasks"].items():
+            task["results"] = self.ctx.tasks[name].get("results")
         self.setup_ctx_workgraph(wgdata)
+
+    def get_task(self, name: str):
+        """Get task from the context."""
+        task = Task.from_dict(self.ctx.tasks[name])
+        return task
+
+    def update_task(self, task: Task):
+        """Update task in the context."""
+        self.ctx.tasks[task.name]["properties"] = task.properties_to_dict()
+        self.reset_task(task.name)
+
+    def get_task_state_info(self, name: str, key: str) -> str:
+        """Get task state info from base.extras."""
+        from aiida.orm.utils.serialize import deserialize_unsafe
+
+        if key == "process":
+            value = deserialize_unsafe(
+                self.node.base.extras.get(f"_task_{key}_{name}", "")
+            )
+        else:
+            value = self.node.base.extras.get(f"_task_{key}_{name}", "")
+        return value
+
+    def set_task_state_info(self, name: str, key: str, value: any) -> None:
+        """Set task state info to base.extras."""
+        from aiida.orm.utils.serialize import serialize
+
+        if key == "process":
+            self.node.base.extras.set(f"_task_{key}_{name}", serialize(value))
+        else:
+            self.node.base.extras.set(f"_task_{key}_{name}", value)
 
     def init_ctx(self, wgdata: t.Dict[str, t.Any]) -> None:
         """Init the context from the workgraph data."""
@@ -459,133 +514,184 @@ class WorkGraph(Process, metaclass=Protect):
         # set up the workgraph
         self.setup_ctx_workgraph(wgdata)
 
-    def set_node_results(self) -> None:
-        for _, node in self.ctx.nodes.items():
-            if node.get("process"):
-                if isinstance(node["process"], str):
-                    node["process"] = orm.load_node(node["process"])
-                self.set_node_result(node)
-            self.set_node_result(node)
-
-    def set_node_result(self, node: t.Dict[str, t.Any]) -> None:
-        name = node["name"]
-        # print(f"set node result: {name}")
-        if node.get("process"):
-            # print(f"set node result: {name} process")
-            state = node["process"].process_state.value.upper()
-            if state == "FINISHED":
-                node["state"] = state
-                if node["metadata"]["node_type"].upper() == "GRAPH_BUILDER":
-                    # expose the outputs of workgraph
-                    node["results"] = getattr(
-                        node["process"].outputs, "group_outputs", None
+    def set_task_results(self) -> None:
+        for name, task in self.ctx.tasks.items():
+            if self.get_task_state_info(name, "action").upper() == "RESET":
+                self.reset_task(task["name"])
+            if self.get_task_state_info(name, "process"):
+                if isinstance(self.get_task_state_info(task["name"], "process"), str):
+                    self.set_task_state_info(
+                        task["name"],
+                        "process",
+                        orm.load_node(
+                            self.get_task_state_info(task["name"], "process")
+                        ),
                     )
-                    # self.ctx.new_data[name] = outputs
-                elif node["metadata"]["node_type"].upper() == "WORKGRAPH":
-                    # expose the outputs of all the nodes in the workgraph
-                    node["results"] = {}
-                    outgoing = node["process"].base.links.get_outgoing()
+                self.set_task_result(task)
+            self.set_task_result(task)
+
+    def set_task_result(self, task: t.Dict[str, t.Any]) -> None:
+        name = task["name"]
+        # print(f"set task result: {name}")
+        if self.get_task_state_info(name, "process"):
+            # print(f"set task result: {name} process")
+            state = self.get_task_state_info(
+                task["name"], "process"
+            ).process_state.value.upper()
+            if self.get_task_state_info(task["name"], "process").is_finished_ok:
+                self.set_task_state_info(task["name"], "state", state)
+                if task["metadata"]["node_type"].upper() == "WORKGRAPH":
+                    # expose the outputs of all the tasks in the workgraph
+                    task["results"] = {}
+                    outgoing = self.get_task_state_info(
+                        task["name"], "process"
+                    ).base.links.get_outgoing()
                     for link in outgoing.all():
                         if isinstance(link.node, ProcessNode) and getattr(
                             link.node, "process_state", False
                         ):
-                            node["results"][link.link_label] = link.node.outputs
+                            task["results"][link.link_label] = link.node.outputs
                 else:
-                    node["results"] = node["process"].outputs
-                    # self.ctx.new_data[name] = node["results"]
-                self.ctx.nodes[name]["state"] = "FINISHED"
-                self.node_to_context(name)
-                self.report(f"Node: {name} finished.")
-            elif state == "EXCEPTED":
-                node["state"] = state
-                node["results"] = node["process"].outputs
-                # self.ctx.new_data[name] = node["results"]
-                self.ctx.nodes[name]["state"] = "FAILED"
-                # set child state to FAILED
-                self.set_node_state(self.ctx.connectivity["child_node"][name], "FAILED")
-                self.report(f"Node: {name} failed.")
-        else:
-            node["results"] = None
-
-    def apply_actions(self) -> None:
-        """Apply actions to the workgraph.
-        The actions are stored in the base.extras["workgraph_queue"].
-        The index of the last applied action is stored in the base.extras["workgraph_queue_index"].
-        """
-        msgs = self.node.base.extras.get("workgraph_queue", [])
-        index = self.node.base.extras.get("workgraph_queue_index", 0)
-        for msg in msgs[index:]:
-            header, msg = msg.split(",")
-            if header == "node":
-                self.apply_node_actions(msg)
+                    task["results"] = self.get_task_state_info(
+                        task["name"], "process"
+                    ).outputs
+                    # self.ctx.new_data[name] = task["results"]
+                self.set_task_state_info(task["name"], "state", "FINISHED")
+                self.task_set_context(name)
+                self.report(f"Task: {name} finished.")
+            # all other states are considered as failed
             else:
-                self.report(f"Unknow message type {msg}")
-            index += 1
-            self.report("Apply actions: {}".format(msg))
-            msgs = self.node.base.extras.set("workgraph_queue_index", index)
+                task["results"] = self.get_task_state_info(
+                    task["name"], "process"
+                ).outputs
+                # self.ctx.new_data[name] = task["results"]
+                self.set_task_state_info(task["name"], "state", "FAILED")
+                # set child tasks state to SKIPPED
+                self.set_tasks_state(
+                    self.ctx.connectivity["child_node"][name], "SKIPPED"
+                )
+                self.report(f"Task: {name} failed.")
+                self.run_error_handlers(name)
+        else:
+            task["results"] = None
 
-    def apply_node_actions(self, msg: str) -> None:
-        """Apply node actions to the workgraph."""
-        name, action = msg.split(":")
-        print("apply node actions: ", name, action)
-        if action == "RESET":
-            self.reset_node(name)
+    def apply_action(self, msg: dict) -> None:
 
-    def reset_node(self, name: str) -> None:
-        """Reset node."""
-        self.ctx.nodes[name]["state"] = "CREATED"
-        # reset its child nodes
+        if msg["catalog"] == "task":
+            self.apply_task_actions(msg)
+        else:
+            self.report(f"Unknow message type {msg}")
+
+    def apply_task_actions(self, msg: dict) -> None:
+        """Apply task actions to the workgraph."""
+        action = msg["action"]
+        tasks = msg["tasks"]
+        self.report(f"Action: {action}. {tasks}")
+        if action.upper() == "RESET":
+            for name in tasks:
+                self.reset_task(name)
+        if action.upper() == "PAUSE":
+            for name in tasks:
+                self.pause_task(name)
+        if action.upper() == "PLAY":
+            for name in tasks:
+                self.play_task(name)
+        if action.upper() == "SKIP":
+            pass
+
+    def reset_task(self, name: str) -> None:
+        """Reset task."""
+
+        self.report(f"Task {name} action: RESET.")
+        self.set_task_state_info(name, "state", "PLANNED")
+        self.set_task_state_info(name, "process", None)
+        # reset its child tasks
         names = self.ctx.connectivity["child_node"][name]
         for name in names:
-            self.ctx.nodes[name]["state"] = "CREATED"
-            self.ctx.nodes[name]["result"] = None
-            self.ctx.nodes[name]["process"] = None
+            self.set_task_state_info(name, "state", "PLANNED")
+            self.ctx.tasks[name]["result"] = None
+            self.set_task_state_info(name, "process", None)
+
+    def pause_task(self, name: str) -> None:
+        """Pause task."""
+        self.report(f"Task {name} action: PAUSE.")
+
+    def play_task(self, name: str) -> None:
+        """Play task."""
+        self.report(f"Task {name} action: PLAY.")
 
     def continue_workgraph(self, exclude: t.Optional[t.List[str]] = None) -> None:
         print("Continue workgraph.")
         exclude = exclude or []
         self.report("Continue workgraph.")
-        self.update_workgraph_from_base()
-        self.apply_actions()
-        node_to_run = []
-        for name, node in self.ctx.nodes.items():
-            # update node state
-            if node["state"] in ["RUNNING", "FINISHED", "FAILED", "SKIPPED"]:
+        # self.update_workgraph_from_base()
+        task_to_run = []
+        for name, task in self.ctx.tasks.items():
+            # update task state
+            if self.get_task_state_info(task["name"], "state") in [
+                "CREATED",
+                "RUNNING",
+                "FINISHED",
+                "FAILED",
+                "SKIPPED",
+            ]:
                 continue
             ready, output = self.check_parent_state(name)
             if ready and name not in exclude:
-                node_to_run.append(name)
+                task_to_run.append(name)
         #
-        self.report("nodes ready to run: {}".format(",".join(node_to_run)))
-        self.run_nodes(node_to_run)
+        self.report("tasks ready to run: {}".format(",".join(task_to_run)))
+        self.run_tasks(task_to_run)
 
-    def update_node_state(self, name: str) -> None:
-        """Update ndoe state if node is a Awaitable."""
-        print("update node state: ", name)
-        node = self.ctx.nodes[name]
-        if (
-            node["metadata"]["node_type"].upper()
-            in [
-                "CALCFUNCTION",
-                "WORKFUNCTION",
-                "CALCJOB",
-                "WORKCHAIN",
-                "GRAPH_BUILDER",
-                "WORKGRAPH",
-            ]
-            and node["state"] == "RUNNING"
-        ):
-            self.set_node_result(node)
+    def update_task_state(self, name: str) -> None:
+        """Update task state if task is a Awaitable."""
+        print("update task state: ", name)
+        task = self.ctx.tasks[name]
+        if task["metadata"]["node_type"].upper() in [
+            "CALCFUNCTION",
+            "WORKFUNCTION",
+            "CALCJOB",
+            "WORKCHAIN",
+            "GRAPH_BUILDER",
+            "WORKGRAPH",
+            "PYTHONJOB",
+            "SHELLJOB",
+        ] and self.get_task_state_info(task["name"], "state") in ["CREATED", "RUNNING"]:
+            self.set_task_result(task)
+
+    def run_error_handlers(self, task_name: str) -> None:
+        """Run error handler."""
+        node = self.get_task_state_info(task_name, "process")
+        if not node or not node.exit_status:
+            return
+        for _, data in self.ctx.error_handlers.items():
+            if task_name in data["tasks"]:
+                handler = data["handler"]
+                metadata = data["tasks"][task_name]
+                if node.exit_code.status in metadata.get("exit_codes", []):
+                    self.report(f"Run error handler: {metadata}")
+                    metadata.setdefault("retry", 0)
+                    if metadata["retry"] < metadata["max_retries"]:
+                        handler(self, task_name, **metadata.get("kwargs", {}))
+                        metadata["retry"] += 1
 
     def is_workgraph_finished(self) -> bool:
         """Check if the workgraph is finished.
         For `while` workgraph, we need check its conditions"""
         is_finished = True
-        for name, node in self.ctx.nodes.items():
-            # self.update_node_state(name)
-            print("node: ", name, node["state"])
-            if node["state"] in ["RUNNING", "CREATED", "READY"]:
+        failed_tasks = []
+        for name, task in self.ctx.tasks.items():
+            # self.update_task_state(name)
+            print("task: ", name, self.get_task_state_info(task["name"], "state"))
+            if self.get_task_state_info(task["name"], "state") in [
+                "RUNNING",
+                "CREATED",
+                "PLANNED",
+                "READY",
+            ]:
                 is_finished = False
+            elif self.get_task_state_info(task["name"], "state") == "FAILED":
+                failed_tasks.append(name)
         if is_finished:
             if self.ctx.workgraph["workgraph_type"].upper() == "WHILE":
                 should_run = self.check_while_conditions()
@@ -594,11 +700,17 @@ class WorkGraph(Process, metaclass=Protect):
                 should_run = self.check_for_conditions()
                 is_finished = not should_run
         print("is workgraph finished: ", is_finished)
-        return is_finished
+        if is_finished and len(failed_tasks) > 0:
+            message = f"WorkGraph finished, but tasks: {failed_tasks} failed. Thus all their child tasks are skipped."
+            self.report(message)
+            result = ExitCode(302, message)
+        else:
+            result = None
+        return is_finished, result
 
     def check_while_conditions(self) -> bool:
         """Check while conditions.
-        Run all condition nodes and check if all the conditions are True.
+        Run all condition tasks and check if all the conditions are True.
         """
         print("Is a while workgraph")
         print(
@@ -612,45 +724,45 @@ class WorkGraph(Process, metaclass=Protect):
             print("Max iteration reached.")
             self.report("Max iteration reached.")
             return False
-        condition_nodes = []
+        condition_tasks = []
         for c in self.ctx.workgraph["conditions"]:
-            node_name, socket_name = c.split(".")
-            if "node_name" != "context":
-                condition_nodes.append(node_name)
-        self.run_nodes(condition_nodes, continue_workgraph=False)
+            task_name, socket_name = c.split(".")
+            if "task_name" != "context":
+                condition_tasks.append(task_name)
+        self.run_tasks(condition_tasks, continue_workgraph=False)
         conditions = []
         for c in self.ctx.workgraph["conditions"]:
-            node_name, socket_name = c.split(".")
-            if node_name == "context":
+            task_name, socket_name = c.split(".")
+            if task_name == "context":
                 conditions.append(self.ctx[socket_name])
             else:
-                conditions.append(self.ctx.nodes[node_name]["results"][socket_name])
+                conditions.append(self.ctx.tasks[task_name]["results"][socket_name])
         print("conditions: ", conditions)
         should_run = False not in conditions
         if should_run:
             self.reset()
-            self.set_node_state(condition_nodes, "SKIPPED")
+            self.set_tasks_state(condition_tasks, "SKIPPED")
         return should_run
 
     def check_for_conditions(self) -> bool:
         print("Is a for workgraph")
-        condition_nodes = [c[0] for c in self.ctx.workgraph["conditions"]]
-        self.run_nodes(condition_nodes)
+        condition_tasks = [c[0] for c in self.ctx.workgraph["conditions"]]
+        self.run_tasks(condition_tasks)
         conditions = [self.ctx._count < len(self.ctx.sequence)] + [
-            self.ctx.nodes[c[0]]["results"][c[1]]
+            self.ctx.tasks[c[0]]["results"][c[1]]
             for c in self.ctx.workgraph["conditions"]
         ]
         print("conditions: ", conditions)
         should_run = False not in conditions
         if should_run:
             self.reset()
-            self.set_node_state(condition_nodes, "SKIPPED")
+            self.set_tasks_state(condition_tasks, "SKIPPED")
             self.ctx["i"] = self.ctx.sequence[self.ctx._count]
         self.ctx._count += 1
         return should_run
 
-    def run_nodes(self, names: t.List[str], continue_workgraph: bool = True) -> None:
-        """Run node
+    def run_tasks(self, names: t.List[str], continue_workgraph: bool = True) -> None:
+        """Run task
         Here we use ToContext to pass the results of the run to the next step.
         This will force the engine to wait for all the submitted processes to
         finish before continuing to the next step.
@@ -663,12 +775,14 @@ class WorkGraph(Process, metaclass=Protect):
 
         for name in names:
             print("-" * 60)
-            node = self.ctx.nodes[name]
-            if node["metadata"]["node_type"].upper() in [
+            task = self.ctx.tasks[name]
+            if task["metadata"]["node_type"].upper() in [
                 "CALCJOB",
                 "WORKCHAIN",
                 "GRAPH_BUILDER",
                 "WORKGRAPH",
+                "PYTHONJOB",
+                "SHELLJOB",
             ]:
                 if len(self._awaitables) > self.ctx.max_number_awaitables:
                     print(
@@ -677,13 +791,13 @@ class WorkGraph(Process, metaclass=Protect):
                         )
                     )
                     continue
-            self.report(f"Run node: {name}, type: {node['metadata']['node_type']}")
-            # print("Run node: ", name)
-            # print("executor: ", node["executor"])
-            executor, _ = get_executor(node["executor"])
+            self.report(f"Run task: {name}, type: {task['metadata']['node_type']}")
+            # print("Run task: ", name)
+            # print("executor: ", task["executor"])
+            executor, _ = get_executor(task["executor"])
             print("executor: ", executor)
-            args, kwargs, var_args, var_kwargs, args_dict = self.get_inputs(node)
-            for i, key in enumerate(self.ctx.nodes[name]["metadata"]["args"]):
+            args, kwargs, var_args, var_kwargs, args_dict = self.get_inputs(task)
+            for i, key in enumerate(self.ctx.tasks[name]["metadata"]["args"]):
                 kwargs[key] = args[i]
             # update the port namespace
             kwargs = update_nested_dict_with_special_keys(kwargs)
@@ -692,38 +806,38 @@ class WorkGraph(Process, metaclass=Protect):
             # print("var_kwargs: ", var_kwargs)
             # kwargs["meta.label"] = name
             # output must be a Data type or a mapping of {string: Data}
-            node["results"] = {}
-            if node["metadata"]["node_type"].upper() == "NODE":
-                print("node  type: node.")
+            task["results"] = {}
+            if task["metadata"]["node_type"].upper() == "NODE":
+                print("task  type: node.")
                 results = self.run_executor(executor, [], kwargs, var_args, var_kwargs)
-                node["process"] = results
-                node["results"] = {node["outputs"][0]["name"]: results}
-                self.ctx.input_nodes[name] = results
-                self.ctx.nodes[name]["state"] = "FINISHED"
-                self.node_to_context(name)
+                self.set_task_state_info(task["name"], "process", results)
+                task["results"] = {task["outputs"][0]["name"]: results}
+                self.ctx.input_tasks[name] = results
+                self.set_task_state_info(name, "state", "FINISHED")
+                self.task_set_context(name)
                 # ValueError: attempted to add an input link after the process node was already stored.
                 # self.node.base.links.add_incoming(results, "INPUT_WORK", name)
-                self.report(f"Node: {name} finished.")
+                self.report(f"Task: {name} finished.")
                 if continue_workgraph:
                     self.continue_workgraph(names)
-            elif node["metadata"]["node_type"].upper() == "DATA":
-                print("node  type: data.")
-                for key in self.ctx.nodes[name]["metadata"]["args"]:
+            elif task["metadata"]["node_type"].upper() == "DATA":
+                print("task  type: data.")
+                for key in self.ctx.tasks[name]["metadata"]["args"]:
                     kwargs.pop(key, None)
                 results = create_data_node(executor, args, kwargs)
-                node["results"] = {node["outputs"][0]["name"]: results}
-                node["process"] = results
+                task["results"] = {task["outputs"][0]["name"]: results}
+                self.set_task_state_info(task["name"], "process", results)
                 self.ctx.new_data[name] = results
-                self.ctx.nodes[name]["state"] = "FINISHED"
-                self.node_to_context(name)
-                self.report(f"Node: {name} finished.")
+                self.set_task_state_info(name, "state", "FINISHED")
+                self.task_set_context(name)
+                self.report(f"Task: {name} finished.")
                 if continue_workgraph:
                     self.continue_workgraph(names)
-            elif node["metadata"]["node_type"].upper() in [
+            elif task["metadata"]["node_type"].upper() in [
                 "CALCFUNCTION",
                 "WORKFUNCTION",
             ]:
-                print("node type: calcfunction/workfunction.")
+                print("task type: calcfunction/workfunction.")
                 kwargs.setdefault("metadata", {})
                 kwargs["metadata"].update({"call_link_label": name})
                 try:
@@ -737,118 +851,153 @@ class WorkGraph(Process, metaclass=Protect):
                     process.label = name
                     # only one output
                     if isinstance(results, orm.Data):
-                        results = {node["outputs"][0]["name"]: results}
-                    node["results"] = results
+                        results = {task["outputs"][0]["name"]: results}
+                    task["results"] = results
                     # print("results: ", results)
-                    node["process"] = process
-                    self.ctx.nodes[name]["state"] = "FINISHED"
-                    self.node_to_context(name)
-                    self.report(f"Node: {name} finished.")
+                    self.set_task_state_info(task["name"], "process", process)
+                    self.set_task_state_info(name, "state", "FINISHED")
+                    self.task_set_context(name)
+                    self.report(f"Task: {name} finished.")
                 except Exception as e:
                     print(e)
                     self.report(e)
-                    self.ctx.nodes[name]["state"] = "FAILED"
+                    self.set_task_state_info(task["name"], "state", "FAILED")
                     # set child state to FAILED
-                    self.set_node_state(
-                        self.ctx.connectivity["child_node"][name], "FAILED"
+                    self.set_tasks_state(
+                        self.ctx.connectivity["child_node"][name], "SKIPPED"
                     )
-                    print(f"Node: {name} failed.")
-                    self.report(f"Node: {name} failed.")
-                # exclude the current nodes from the next run
+                    print(f"Task: {name} failed.")
+                    self.report(f"Task: {name} failed.")
+                # exclude the current tasks from the next run
                 if continue_workgraph:
                     self.continue_workgraph(names)
-            elif node["metadata"]["node_type"].upper() in ["CALCJOB", "WORKCHAIN"]:
+            elif task["metadata"]["node_type"].upper() in ["CALCJOB", "WORKCHAIN"]:
                 # process = run_get_node(executor, *args, **kwargs)
-                print("node  type: calcjob/workchain.")
+                print("task type: calcjob/workchain.")
                 kwargs.setdefault("metadata", {})
                 kwargs["metadata"].update({"call_link_label": name})
                 # transfer the args to kwargs
-                process = self.submit(executor, **kwargs)
+                if self.get_task_state_info(name, "action").upper() == "PAUSE":
+                    self.set_task_state_info(name, "action", "")
+                    self.report(f"Task {name} is created and paused.")
+                    process = create_and_pause_process(
+                        self.runner,
+                        executor,
+                        kwargs,
+                        state_msg="Paused through WorkGraph",
+                    )
+                    self.set_task_state_info(name, "state", "CREATED")
+                    process = process.node
+                else:
+                    process = self.submit(executor, **kwargs)
+                    self.set_task_state_info(name, "state", "RUNNING")
                 process.label = name
-                node["process"] = process
-                self.ctx.nodes[name]["state"] = "RUNNING"
+                self.set_task_state_info(task["name"], "process", process)
                 self.to_context(**{name: process})
-            elif node["metadata"]["node_type"].upper() in ["GRAPH_BUILDER"]:
-                print("node  type: graph_builder.")
+            elif task["metadata"]["node_type"].upper() in ["GRAPH_BUILDER"]:
+                print("task type: graph_builder.")
                 wg = self.run_executor(executor, [], kwargs, var_args, var_kwargs)
                 wg.name = name
-                wg.group_outputs = self.ctx.nodes[name]["metadata"]["group_outputs"]
+                wg.group_outputs = self.ctx.tasks[name]["metadata"]["group_outputs"]
                 wg.parent_uuid = self.node.uuid
                 wg.save(metadata={"call_link_label": name})
                 print("submit workgraph: ")
                 process = self.submit(wg.process_inited)
-                node["process"] = process
-                self.ctx.nodes[name]["state"] = "RUNNING"
+                self.set_task_state_info(task["name"], "process", process)
+                self.set_task_state_info(name, "state", "RUNNING")
                 self.to_context(**{name: process})
-            elif node["metadata"]["node_type"].upper() in ["WORKGRAPH"]:
-                from aiida_workgraph.utils import merge_properties
-                from aiida_workgraph.utils.analysis import WorkGraphSaver
+            elif task["metadata"]["node_type"].upper() in ["WORKGRAPH"]:
+                from .utils import prepare_for_workgraph_task
 
-                print("node  type: workgraph.")
-                wgdata = node["executor"]["wgdata"]
-                wgdata["name"] = name
-                wgdata["metadata"]["group_outputs"] = self.ctx.nodes[name]["metadata"][
-                    "group_outputs"
-                ]
-                # update the workgraph data by kwargs
-                for node_name, data in kwargs.items():
-                    # because kwargs is updated using update_nested_dict_with_special_keys
-                    # which means the data is grouped by the node name
-                    for socket_name, value in data.items():
-                        wgdata["nodes"][node_name]["properties"][socket_name][
-                            "value"
-                        ] = value
-                # merge the properties
-                merge_properties(wgdata)
-                metadata = {"call_link_label": name}
-                inputs = {"wg": wgdata, "metadata": metadata}
-                process_inited = WorkGraph(inputs=inputs)
-                process_inited.runner.persister.save_checkpoint(process_inited)
-                saver = WorkGraphSaver(process_inited.node, wgdata)
-                saver.save()
+                inputs, _ = prepare_for_workgraph_task(task, kwargs)
                 print("submit workgraph: ")
-                process = self.submit(process_inited)
-                node["process"] = process
-                self.ctx.nodes[name]["state"] = "RUNNING"
+                process = self.submit(WorkGraphEngine, inputs=inputs)
+                self.set_task_state_info(task["name"], "process", process)
+                self.set_task_state_info(name, "state", "RUNNING")
                 self.to_context(**{name: process})
-            elif node["metadata"]["node_type"].upper() in ["NORMAL"]:
-                print("node  type: Normal.")
+            elif task["metadata"]["node_type"].upper() in ["PYTHONJOB"]:
+                from aiida_workgraph.calculations.python import PythonJob
+                from .utils import prepare_for_python_task
+
+                inputs = prepare_for_python_task(task, kwargs, var_kwargs)
+                # since aiida 2.5.0, we can pass inputs directly to the submit, no need to use **inputs
+                if self.get_task_state_info(name, "action").upper() == "PAUSE":
+                    self.set_task_state_info(name, "action", "")
+                    self.report(f"Task {name} is created and paused.")
+                    process = create_and_pause_process(
+                        self.runner,
+                        PythonJob,
+                        inputs,
+                        state_msg="Paused through WorkGraph",
+                    )
+                    self.set_task_state_info(name, "state", "CREATED")
+                    process = process.node
+                else:
+                    process = self.submit(PythonJob, **inputs)
+                    self.set_task_state_info(name, "state", "RUNNING")
+                process.label = name
+                self.set_task_state_info(task["name"], "process", process)
+                self.to_context(**{name: process})
+            elif task["metadata"]["node_type"].upper() in ["SHELLJOB"]:
+                from aiida_shell.calculations.shell import ShellJob
+                from .utils import prepare_for_shell_task
+
+                inputs = prepare_for_shell_task(task, kwargs)
+                if self.get_task_state_info(name, "action").upper() == "PAUSE":
+                    self.set_task_state_info(name, "action", "")
+                    self.report(f"Task {name} is created and paused.")
+                    process = create_and_pause_process(
+                        self.runner,
+                        ShellJob,
+                        inputs,
+                        state_msg="Paused through WorkGraph",
+                    )
+                    self.set_task_state_info(name, "state", "CREATED")
+                    process = process.node
+                else:
+                    process = self.submit(ShellJob, **inputs)
+                    self.set_task_state_info(name, "state", "RUNNING")
+                process.label = name
+                self.set_task_state_info(task["name"], "process", process)
+                self.to_context(**{name: process})
+            elif task["metadata"]["node_type"].upper() in ["NORMAL"]:
+                print("Task  type: Normal.")
                 # normal function does not have a process
-                if "context" in node["metadata"]["kwargs"]:
-                    self.ctx.node_name = name
+                if "context" in task["metadata"]["kwargs"]:
+                    self.ctx.task_name = name
                     kwargs.update({"context": self.ctx})
-                for key in self.ctx.nodes[name]["metadata"]["args"]:
+                for key in self.ctx.tasks[name]["metadata"]["args"]:
                     kwargs.pop(key, None)
                 results = self.run_executor(
                     executor, args, kwargs, var_args, var_kwargs
                 )
-                # node["process"] = results
+                # self.set_task_state_info(task["name"], "process", results)
                 if isinstance(results, tuple):
-                    if len(node["outputs"]) != len(results):
+                    if len(task["outputs"]) != len(results):
                         return self.exit_codes.OUTPUS_NOT_MATCH_RESULTS
-                    for i in range(len(node["outputs"])):
-                        node["results"][node["outputs"][i]["name"]] = results[i]
+                    for i in range(len(task["outputs"])):
+                        task["results"][task["outputs"][i]["name"]] = results[i]
                 elif isinstance(results, dict):
-                    node["results"] = results
+                    task["results"] = results
                 else:
-                    node["results"][node["outputs"][0]["name"]] = results
-                # save the results to the database (as a extra field of the node)
+                    task["results"][task["outputs"][0]["name"]] = results
+                # save the results to the database (as a extra field of the task)
                 # this is disabled
                 # self.save_results_to_extras(name)
-                self.ctx.input_nodes[name] = results
-                self.ctx.nodes[name]["state"] = "FINISHED"
-                self.node_to_context(name)
-                self.report(f"Node: {name} finished.")
+                self.ctx.input_tasks[name] = results
+                self.set_task_state_info(name, "state", "FINISHED")
+                self.task_set_context(name)
+                self.report(f"Task: {name} finished.")
                 if continue_workgraph:
                     self.continue_workgraph(names)
-                # print("result from node: ", node["results"])
+                # print("result from node: ", task["results"])
             else:
-                print("node  type: unknown.")
-                # self.report("Unknow node type {}".format(node["metadata"]["node_type"]))
-                return self.exit_codes.UNKNOWN_NODE_TYPE
+                print("Task type: unknown.")
+                # self.report("Unknow task type {}".format(task["metadata"]["node_type"]))
+                return self.exit_codes.UNKNOWN_TASK_TYPE
 
     def get_inputs(
-        self, node: t.Dict[str, t.Any]
+        self, task: t.Dict[str, t.Any]
     ) -> t.Tuple[
         t.List[t.Any],
         t.Dict[str, t.Any],
@@ -864,10 +1013,10 @@ class WorkGraph(Process, metaclass=Protect):
         kwargs = {}
         var_args = None
         var_kwargs = None
-        properties = node.get("properties", {})
+        properties = task.get("properties", {})
         # TODO: check if input is linked, otherwise use the property value
         inputs = {}
-        for input in node["inputs"]:
+        for input in task["inputs"]:
             # print(f"input: {input['name']}")
             if len(input["links"]) == 0:
                 inputs[input["name"]] = self.update_context_variable(
@@ -875,19 +1024,19 @@ class WorkGraph(Process, metaclass=Protect):
                 )
             elif len(input["links"]) == 1:
                 link = input["links"][0]
-                if self.ctx.nodes[link["from_node"]]["results"] is None:
+                if self.ctx.tasks[link["from_node"]]["results"] is None:
                     inputs[input["name"]] = None
                 else:
                     # handle the special socket _wait, _outputs
                     if link["from_socket"] == "_wait":
                         continue
                     elif link["from_socket"] == "_outputs":
-                        inputs[input["name"]] = self.ctx.nodes[link["from_node"]][
+                        inputs[input["name"]] = self.ctx.tasks[link["from_node"]][
                             "results"
                         ]
                     else:
                         inputs[input["name"]] = get_nested_dict(
-                            self.ctx.nodes[link["from_node"]]["results"],
+                            self.ctx.tasks[link["from_node"]]["results"],
                             link["from_socket"],
                         )
             # handle the case of multiple outputs
@@ -898,14 +1047,14 @@ class WorkGraph(Process, metaclass=Protect):
                     # handle the special socket _wait, _outputs
                     if link["from_socket"] == "_wait":
                         continue
-                    if self.ctx.nodes[link["from_node"]]["results"] is None:
+                    if self.ctx.tasks[link["from_node"]]["results"] is None:
                         value[name] = None
                     else:
-                        value[name] = self.ctx.nodes[link["from_node"]]["results"][
+                        value[name] = self.ctx.tasks[link["from_node"]]["results"][
                             link["from_socket"]
                         ]
                 inputs[input["name"]] = value
-        for name in node["metadata"].get("args", []):
+        for name in task["metadata"].get("args", []):
             if name in inputs:
                 args.append(inputs[name])
                 args_dict[name] = inputs[name]
@@ -913,21 +1062,21 @@ class WorkGraph(Process, metaclass=Protect):
                 value = self.update_context_variable(properties[name]["value"])
                 args.append(value)
                 args_dict[name] = value
-        for name in node["metadata"].get("kwargs", []):
+        for name in task["metadata"].get("kwargs", []):
             if name in inputs:
                 kwargs[name] = inputs[name]
             else:
                 value = self.update_context_variable(properties[name]["value"])
                 kwargs[name] = value
-        if node["metadata"]["var_args"] is not None:
-            name = node["metadata"]["var_args"]
+        if task["metadata"]["var_args"] is not None:
+            name = task["metadata"]["var_args"]
             if name in inputs:
                 var_args = inputs[name]
             else:
                 value = self.update_context_variable(properties[name]["value"])
                 var_args = value
-        if node["metadata"]["var_kwargs"] is not None:
-            name = node["metadata"]["var_kwargs"]
+        if task["metadata"]["var_kwargs"] is not None:
+            name = task["metadata"]["var_kwargs"]
             if name in inputs:
                 var_kwargs = inputs[name]
             else:
@@ -952,60 +1101,59 @@ class WorkGraph(Process, metaclass=Protect):
             return get_nested_dict(self.ctx, name)
         return value
 
-    def node_to_context(self, name: str) -> None:
-        """Export node result to context."""
+    def task_set_context(self, name: str) -> None:
+        """Export task result to context."""
         from aiida_workgraph.utils import update_nested_dict
 
-        items = self.ctx.nodes[name]["to_context"]
-        for item in items:
-            update_nested_dict(
-                self.ctx, item[1], self.ctx.nodes[name]["results"][item[0]]
-            )
+        items = self.ctx.tasks[name]["context_mapping"]
+        for key, value in items.items():
+            result = self.ctx.tasks[name]["results"][key]
+            update_nested_dict(self.ctx, value, result)
 
-    def check_node_state(self, name: str) -> None:
-        """Check node states.
+    def check_task_state(self, name: str) -> None:
+        """Check task states.
 
-        - if all input nodes finished, launch node
-        - if node is a scatter node, check if all scattered nodes finished
+        - if all input tasks finished, launch task
+        - if task is a scatter task, check if all scattered tasks finished
         """
-        # print(f"    Check node {name} state: ")
-        if self.ctx.nodes[name]["state"] in ["CREATED", "WAITING"]:
+        # print(f"    Check task {name} state: ")
+        if self.get_task_state_info(name, "state") in ["PLANNED", "WAITING"]:
             ready, output = self.check_parent_state(name)
             if ready:
-                # print(f"    Node {name} is ready to launch.")
-                self.ctx.msgs.append(f"node,{name}:action:LAUNCH")  # noqa E231
-        elif self.ctx.nodes[name]["state"] in ["SCATTERED"]:
+                # print(f"    Task {name} is ready to launch.")
+                self.ctx.msgs.append(f"task,{name}:action:LAUNCH")  # noqa E231
+        elif self.get_task_state_info(name, "state") in ["SCATTERED"]:
             state, action = self.check_scattered_state(name)
-            self.ctx.msgs.append(f"node,{name}:state:{state}")  # noqa E231
+            self.ctx.msgs.append(f"task,{name}:state:{state}")  # noqa E231
         else:
-            # print(f"    Node {name} is in state {self.ctx.nodes[name]['state']}")
+            # print(f"    Task {name} is in state {self.ctx.tasks[name]['state']}")
             pass
 
     def check_parent_state(self, name: str) -> t.Tuple[bool, t.Optional[str]]:
-        node = self.ctx.nodes[name]
-        inputs = node.get("inputs", None)
-        wait_nodes = self.ctx.nodes[name].get("wait", [])
-        # print("    wait_nodes: ", wait_nodes)
+        task = self.ctx.tasks[name]
+        inputs = task.get("inputs", None)
+        wait_tasks = self.ctx.tasks[name].get("wait", [])
+        # print("    wait_tasks: ", wait_tasks)
         ready = True
-        if inputs is None and len(wait_nodes) == 0:
+        if inputs is None and len(wait_tasks) == 0:
             return ready
         else:
-            # check the wait node first
-            for node_name in wait_nodes:
-                # in case the node is removed
-                if node_name not in self.ctx.nodes:
+            # check the wait task first
+            for task_name in wait_tasks:
+                # in case the task is removed
+                if task_name not in self.ctx.tasks:
                     continue
-                if self.ctx.nodes[node_name]["state"] not in [
+                if self.get_task_state_info(task_name, "state") not in [
                     "FINISHED",
                     "SKIPPED",
                     "FAILED",
                 ]:
                     ready = False
-                    return ready, f"Node {name} wait for {node_name}"
+                    return ready, f"Task {name} wait for {task_name}"
             for input in inputs:
-                # print("    input, ", input["from_node"], self.ctx.nodes[input["from_node"]]["state"])
+                # print("    input, ", input["from_node"], self.ctx.tasks[input["from_node"]]["state"])
                 for link in input["links"]:
-                    if self.ctx.nodes[link["from_node"]]["state"] not in [
+                    if self.get_task_state_info(link["from_node"], "state") not in [
                         "FINISHED",
                         "SKIPPED",
                         "FAILED",
@@ -1013,30 +1161,30 @@ class WorkGraph(Process, metaclass=Protect):
                         ready = False
                         return (
                             ready,
-                            f"{name}, input: {link['from_node']} is {self.ctx.nodes[link['from_node']]['state']}",
+                            f"{name}, input: {link['from_node']} is {self.ctx.tasks[link['from_node']]['state']}",
                         )
         return ready, None
 
     # def expose_graph_build_outputs(self, name):
     #     # print("expose_graph_build_outputs")
     #     outputs = {}
-    #     process = self.ctx.nodes[name]["process"]
+    #     process = self.ctx.tasks[name]["process"]
     #     outgoing = process.base.links.get_outgoing()
-    #     for output in self.ctx.nodes[name]["group_outputs"]:
+    #     for output in self.ctx.tasks[name]["group_outputs"]:
     #         node = outgoing.get_node_by_label(output[0])
     #         outputs[output[2]] = getattr(node.outputs, output[1])
     #     return outputs
     def reset(self) -> None:
         print("Reset")
         self.ctx._execution_count += 1
-        self.set_node_state(self.ctx.nodes.keys(), "CREATED")
+        self.set_tasks_state(self.ctx.tasks.keys(), "PLANNED")
 
-    def set_node_state(
-        self, names: t.Union[t.List[str], t.Sequence[str]], value: str
+    def set_tasks_state(
+        self, tasks: t.Union[t.List[str], t.Sequence[str]], value: str
     ) -> None:
-        """Set node state"""
-        for name in names:
-            self.ctx.nodes[name]["state"] = value
+        """Set tasks state"""
+        for name in tasks:
+            self.set_task_state_info(name, "state", value)
 
     def run_executor(
         self,
@@ -1054,13 +1202,13 @@ class WorkGraph(Process, metaclass=Protect):
 
     def save_results_to_extras(self, name: str) -> None:
         """Save the results to the base.extras.
-        For the outputs of a Normal node, they are not saved to the database like the calcjob or workchain.
+        For the outputs of a Normal task, they are not saved to the database like the calcjob or workchain.
         One temporary solution is to save the results to the base.extras. In order to do this, we need to
         serialize the results
         """
         from aiida_workgraph.utils import get_executor
 
-        results = self.ctx.nodes[name]["results"]
+        results = self.ctx.tasks[name]["results"]
         if results is None:
             return
         datas = {}
@@ -1068,7 +1216,7 @@ class WorkGraph(Process, metaclass=Protect):
             # find outptus sockets with the name as key
             output = [
                 output
-                for output in self.ctx.nodes[name]["outputs"]
+                for output in self.ctx.tasks[name]["outputs"]
                 if output["name"] == key
             ]
             if len(output) == 0:
@@ -1078,33 +1226,87 @@ class WorkGraph(Process, metaclass=Protect):
             datas[key] = Executor(value)
         self.node.set_extra(f"nodes__results__{name}", datas)
 
+    def message_receive(
+        self, _comm: kiwipy.Communicator, msg: t.Dict[str, t.Any]
+    ) -> t.Any:
+        """
+        Coroutine called when the process receives a message from the communicator
+
+        :param _comm: the communicator that sent the message
+        :param msg: the message
+        :return: the outcome of processing the message, the return value will be sent back as a response to the sender
+        """
+        self.logger.debug(
+            "Process<%s>: received RPC message with communicator '%s': %r",
+            self.pid,
+            _comm,
+            msg,
+        )
+
+        intent = msg[process_comms.INTENT_KEY]
+
+        if intent == process_comms.Intent.PLAY:
+            return self._schedule_rpc(self.play)
+        if intent == process_comms.Intent.PAUSE:
+            return self._schedule_rpc(
+                self.pause, msg=msg.get(process_comms.MESSAGE_KEY, None)
+            )
+        if intent == process_comms.Intent.KILL:
+            return self._schedule_rpc(
+                self.kill, msg=msg.get(process_comms.MESSAGE_KEY, None)
+            )
+        if intent == process_comms.Intent.STATUS:
+            status_info: t.Dict[str, t.Any] = {}
+            self.get_status_info(status_info)
+            return status_info
+        if intent == "custom":
+            return self._schedule_rpc(self.apply_action, msg=msg)
+
+        # Didn't match any known intents
+        raise RuntimeError("Unknown intent")
+
     def finalize(self) -> t.Optional[ExitCode]:
         """"""
         from aiida_workgraph.utils import get_nested_dict, update_nested_dict
 
-        # expose group outputs
+        # expose outputs of the workgraph
         group_outputs = {}
-        print("group outputs: ", self.ctx.workgraph["metadata"]["group_outputs"])
+        print("workgraph outputs: ", self.ctx.workgraph["metadata"]["group_outputs"])
         for output in self.ctx.workgraph["metadata"]["group_outputs"]:
             print("output: ", output)
-            node_name, socket_name = output[0].split(".")
-            if node_name == "context":
-                update_nested_dict(
-                    group_outputs, output[1], get_nested_dict(self.ctx, socket_name)
-                )
-            else:
+            names = output["from"].split(".", 1)
+            if names[0] == "context":
+                if len(names) == 1:
+                    raise ValueError("The output name should be context.key")
                 update_nested_dict(
                     group_outputs,
-                    output[1],
-                    self.ctx.nodes[node_name]["results"][socket_name],
+                    output["name"],
+                    get_nested_dict(self.ctx, names[1]),
                 )
-        self.out("group_outputs", group_outputs)
+            else:
+                # expose the whole outputs of the tasks
+                if len(names) == 1:
+                    update_nested_dict(
+                        group_outputs,
+                        output["name"],
+                        self.ctx.tasks[names[0]]["results"],
+                    )
+                else:
+                    # expose one output of the task
+                    # note, the output may not exist
+                    if names[1] in self.ctx.tasks[names[0]]["results"]:
+                        update_nested_dict(
+                            group_outputs,
+                            output["name"],
+                            self.ctx.tasks[names[0]]["results"][names[1]],
+                        )
+        self.out_many(group_outputs)
+        # output the new data
         self.out("new_data", self.ctx.new_data)
         self.out("execution_count", orm.Int(self.ctx._execution_count).store())
         self.report("Finalize")
-        for name, node in self.ctx.nodes.items():
-            if node["state"] == "FAILED":
-                print(f"    Node {name} failed.")
-                return self.exit_codes.NODE_FAILED
+        for name, task in self.ctx.tasks.items():
+            if self.get_task_state_info(task["name"], "state") == "FAILED":
+                print(f"    Task {name} failed.")
+                return self.exit_codes.TASK_FAILED
         print(f"Finalize workgraph {self.ctx.workgraph['name']}\n")
-        # check if all nodes are finished with nonzero exit code

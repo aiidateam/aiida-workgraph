@@ -5,55 +5,22 @@ from dateutil import relativedelta
 from dateutil.tz import tzlocal
 
 
-def workgraph_to_short_json(
-    wgdata: Dict[str, Union[str, List, Dict]]
-) -> Dict[str, Union[str, Dict]]:
-    """Export a workgraph to a rete js editor data."""
-    wgdata_short = {
-        "name": wgdata["name"],
-        "uuid": wgdata["uuid"],
-        "state": wgdata["state"],
-        "nodes": {},
-        "links": wgdata["links"],
-    }
-    #
-    for name, node in wgdata["nodes"].items():
-        # Add required inputs to nodes
-        inputs = [
-            input
-            for input in node["inputs"]
-            if input["name"] in node["metadata"]["args"]
-        ]
-        wgdata_short["nodes"][name] = {
-            "label": node["name"],
-            "inputs": inputs,
-            "outputs": [],
-            "position": node["position"],
-        }
-    # Add links to nodes
-    for link in wgdata["links"]:
-        wgdata_short["nodes"][link["to_node"]]["inputs"].append(
-            {
-                "name": link["to_socket"],
-            }
-        )
-        wgdata_short["nodes"][link["from_node"]]["outputs"].append(
-            {
-                "name": link["from_socket"],
-            }
-        )
-    return wgdata_short
-
-
-def is_function_and_get_source(obj: Any) -> Tuple[bool, Optional[str]]:
+def get_executor_source(tdata: Any) -> Tuple[bool, Optional[str]]:
+    """Get the source code of the executor."""
     import inspect
+    from aiida_workgraph.utils import get_executor
 
-    if callable(obj):
-        source_lines, _ = inspect.getsourcelines(obj)
-        source_code = "".join(source_lines)
-        return True, source_code
+    executor, _ = get_executor(tdata["executor"])
+    if callable(executor):
+        try:
+            source_lines, _ = inspect.getsourcelines(executor)
+            source_code = "".join(source_lines)
+            return source_code
+        except (TypeError, OSError):
+            source_code = tdata["executor"].get("function_source_code", "")
+            return source_code
     else:
-        return False, None
+        return str(executor)
 
 
 def get_node_recursive(links: Dict) -> Dict[str, Union[List[int], str]]:
@@ -106,39 +73,36 @@ def get_node_outputs(pk: Optional[int]) -> Union[str, Dict[str, Union[List[int],
     return result
 
 
-def node_to_short_json(workgraph_pk: int, ndata: Dict[str, Any]) -> Dict[str, Any]:
+def node_to_short_json(workgraph_pk: int, tdata: Dict[str, Any]) -> Dict[str, Any]:
     """Export a node to a rete js node."""
-    from aiida_workgraph.utils import get_executor, get_processes_latest
+    from aiida_workgraph.utils import get_processes_latest
 
-    executor, _ = get_executor(ndata["executor"])
-    is_function, source_code = is_function_and_get_source(executor)
-    if is_function:
-        executor = source_code
-    else:
-        executor = str(executor)
-    ndata_short = {
-        "node_type": ndata["metadata"]["node_type"],
+    executor = get_executor_source(tdata)
+    tdata_short = {
+        "node_type": tdata["metadata"]["node_type"],
         "metadata": [
-            ["name", ndata["name"]],
-            ["node_type", ndata["metadata"]["node_type"]],
-            ["identifier", ndata["metadata"]["identifier"]],
+            ["name", tdata["name"]],
+            ["node_type", tdata["metadata"]["node_type"]],
+            ["identifier", tdata["metadata"]["identifier"]],
         ],
         "executor": executor,
     }
-    process_info = get_processes_latest(workgraph_pk).get(ndata["name"], {})
-    ndata_short["process"] = process_info
+    process_info = get_processes_latest(workgraph_pk, tdata["name"]).get(
+        tdata["name"], {}
+    )
+    tdata_short["process"] = process_info
     if process_info is not None:
-        ndata_short["metadata"].append(["pk", process_info.get("pk")])
-        ndata_short["metadata"].append(["state", process_info.get("state")])
-        ndata_short["metadata"].append(["ctime", process_info.get("ctime")])
-        ndata_short["metadata"].append(["mtime", process_info.get("mtime")])
-        ndata_short["inputs"] = get_node_inputs(process_info.get("pk"))
-        ndata_short["outputs"] = get_node_outputs(process_info.get("pk"))
+        tdata_short["metadata"].append(["pk", process_info.get("pk")])
+        tdata_short["metadata"].append(["state", process_info.get("state")])
+        tdata_short["metadata"].append(["ctime", process_info.get("ctime")])
+        tdata_short["metadata"].append(["mtime", process_info.get("mtime")])
+        tdata_short["inputs"] = get_node_inputs(process_info.get("pk"))
+        tdata_short["outputs"] = get_node_outputs(process_info.get("pk"))
     else:
-        ndata_short["inputs"] = ""
-        ndata_short["outputs"] = ""
+        tdata_short["inputs"] = ""
+        tdata_short["outputs"] = ""
 
-    return ndata_short
+    return tdata_short
 
 
 def get_node_summary(node: Node) -> List[List[str]]:

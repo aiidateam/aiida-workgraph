@@ -1,11 +1,14 @@
 from typing import Dict
-from aiida_workgraph import node
+from aiida_workgraph import task
 from aiida.orm import StructureData, UpfData
 
 
-@node(
-    inputs=[["String", "pseudo_family"], [StructureData, "structure"]],
-    outputs=[[UpfData, "Pseudo"]],
+@task(
+    inputs=[
+        {"identifier": "String", "name": "pseudo_family"},
+        {"identifier": StructureData, "name": "structure"},
+    ],
+    outputs=[{"identifier": UpfData, "name": "Pseudo"}],
 )
 def get_pseudo_from_structure(
     pseudo_family: str, structure: StructureData
