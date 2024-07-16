@@ -25,7 +25,7 @@ The recommended method of installation is to use the Python package manager |pip
 
 .. code-block:: console
 
-    $ pip install aiida-workgraph
+    $ pip install aiida-workgraph[widget]
 
 This will install the latest stable version that was released to PyPI.
 
@@ -33,8 +33,18 @@ To install the package from source, first clone the repository and then install 
 
 .. code-block:: console
 
-    $ git clone https://github.com/superstar54/aiida-workgraph
-    $ pip install -e aiida-workgraph
+    $ git clone https://github.com/aiidateam/aiida-workgraph
+    $ cd aiida-workgraph
+    $ pip install -e .
+
+The ``-e`` flag will install the package in editable mode, meaning that changes to the source code will be automatically picked up.
+To install the jupyter widget support you need to in addition build the JavaScript packages:
+
+.. code-block:: console
+
+    $ pip install .[widget]
+    $ cd aiida-workgraph
+    $ pip install -e .
     $ # build widget
     $ cd aiida_workgraph/widget/
     $ npm install
@@ -43,9 +53,6 @@ To install the package from source, first clone the repository and then install 
     $ cd ../../aiida_workgraph/web/frontend/
     $ npm install
     $ npm run build
-
-The ``-e`` flag will install the package in editable mode, meaning that changes to the source code will be automatically picked up.
-
 
 
 .. |pip| replace:: ``pip``

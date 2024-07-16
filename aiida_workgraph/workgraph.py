@@ -1,6 +1,7 @@
 import aiida.orm
 import node_graph
 import aiida
+from aiida_workgraph import USE_WIDGET
 from aiida_workgraph.tasks import task_pool
 import time
 from aiida_workgraph.collection import TaskCollection
@@ -10,7 +11,9 @@ from aiida_workgraph.utils.graph import (
     link_creation_hook,
     link_deletion_hook,
 )
-from aiida_workgraph.widget import NodeGraphWidget
+
+if USE_WIDGET:
+    from aiida_workgraph.widget import NodeGraphWidget
 from typing import Any, Dict, List, Optional
 
 
@@ -54,7 +57,7 @@ class WorkGraph(node_graph.NodeGraph):
         self.links.post_creation_hooks = [link_creation_hook]
         self.links.post_deletion_hooks = [link_deletion_hook]
         self.error_handlers = {}
-        self._widget = NodeGraphWidget(parent=self)
+        self._widget = NodeGraphWidget(parent=self) if USE_WIDGET else None
 
     @property
     def tasks(self) -> TaskCollection:
@@ -290,7 +293,8 @@ class WorkGraph(node_graph.NodeGraph):
             #         except Exception:
             #             pass
             #         node.outputs[key].value = value
-        self._widget.states = {task.name: node.state for node in self.tasks}
+        if self._widget is not None:
+            self._widget.states = {task.name: node.state for node in self.tasks}
 
     @property
     def pk(self) -> Optional[int]:
@@ -463,6 +467,12 @@ class WorkGraph(node_graph.NodeGraph):
         self.error_handlers[name] = {"handler": handler, "tasks": tasks}
 
     def _repr_mimebundle_(self, *args, **kwargs):
+        from aiida_workgraph.utils.message import WIDGET_INSTALLATION_MESSAGE
+
+        if self._widget is None:
+            print(WIDGET_INSTALLATION_MESSAGE)
+            return
+
         # if ipywdigets > 8.0.0, use _repr_mimebundle_ instead of _ipython_display_
         self._widget.from_workgraph(self)
         if hasattr(self._widget, "_repr_mimebundle_"):

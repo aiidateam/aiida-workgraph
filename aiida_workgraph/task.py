@@ -1,7 +1,10 @@
 from node_graph.node import Node as GraphNode
+from aiida_workgraph import USE_WIDGET
 from aiida_workgraph.properties import property_pool
 from aiida_workgraph.sockets import socket_pool
-from aiida_workgraph.widget import NodeGraphWidget
+
+if USE_WIDGET:
+    from aiida_workgraph.widget import NodeGraphWidget
 from aiida_workgraph.collection import (
     WorkGraphPropertyCollection,
     WorkGraphInputSocketCollection,
@@ -43,10 +46,13 @@ class Task(GraphNode):
         self.wait = [] if wait is None else wait
         self.process = process
         self.pk = pk
-        self._widget = NodeGraphWidget(
-            settings={"minmap": False},
-            style={"width": "80%", "height": "600px"},
-        )
+        if USE_WIDGET:
+            self._widget = NodeGraphWidget(
+                settings={"minmap": False},
+                style={"width": "80%", "height": "600px"},
+            )
+        else:
+            self._widget = None
         self.state = "PLANNED"
         self.action = ""
 
@@ -116,6 +122,11 @@ class Task(GraphNode):
         self.state = "PLANNED"
 
     def _repr_mimebundle_(self, *args: Any, **kwargs: Any) -> any:
+        from aiida_workgraph.utils.message import WIDGET_INSTALLATION_MESSAGE
+
+        if self._widget is None:
+            print(WIDGET_INSTALLATION_MESSAGE)
+            return
         # if ipywdigets > 8.0.0, use _repr_mimebundle_ instead of _ipython_display_
         self._widget.from_node(self)
         if hasattr(self._widget, "_repr_mimebundle_"):

@@ -39,7 +39,14 @@ To install the latest version from source, first clone the repository and then i
 
 ```console
 git clone https://github.com/aiidateam/aiida-workgraph
-pip install -e aiida-workgraph
+cd aiida-workgraph
+pip install -e .
+```
+
+To install the jupyter widget support you need to in addition build the JavaScript packages:
+
+```console
+pip install .[widget]
 # build widget
 cd aiida_workgraph/widget/
 npm install
@@ -115,7 +122,7 @@ verdi node generate pk
 ### Pre-commit and Tests
 To contribute to this repository, please enable pre-commit so the code in commits are conform to the standards.
 ```console
-pip install -e .[tests, pre-commit]
+pip install -e .[tests,pre-commit]
 pre-commit install
 ```
 
