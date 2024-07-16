@@ -12,7 +12,6 @@ from aiida_workgraph.utils.graph import (
     link_creation_hook,
     link_deletion_hook,
 )
-from aiida_workgraph.widget import NodeGraphWidget
 from typing import Any, Dict, List, Optional, Union
 
 if USE_WIDGET:

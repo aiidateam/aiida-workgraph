@@ -38,7 +38,7 @@ def test_max_number_jobs(add_code) -> None:
     N = 9
     # Create N nodes
     for i in range(N):
-        temp = wg.tasks.new(
+        temp = wg.add_task(
             ArithmeticAddCalculation, name=f"add{i}", x=Int(1), y=Int(1), code=add_code
         )
         # Set a sleep option for each job (e.g., 2 seconds per job)

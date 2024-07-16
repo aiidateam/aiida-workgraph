@@ -22,14 +22,14 @@ def test_decorator(fixture_localhost):
     decorted_multiply = task.pythonjob()(multiply)
 
     wg = WorkGraph("test_PythonJob_outputs")
-    wg.tasks.new(
+    wg.add_task(
         add,
         name="add",
         x=1,
         y=2,
         computer="localhost",
     )
-    wg.tasks.new(
+    wg.add_task(
         decorted_multiply,
         name="multiply",
         x=wg.tasks["add"].outputs["sum"],
@@ -53,7 +53,7 @@ def test_PythonJob_kwargs(fixture_localhost):
         return x
 
     wg = WorkGraph("test_PythonJob")
-    wg.tasks.new("PythonJob", function=add, name="add")
+    wg.add_task("PythonJob", function=add, name="add")
     wg.run(
         inputs={
             "add": {
@@ -77,8 +77,8 @@ def test_PythonJob_typing(fixture_localhost):
         return x * y
 
     wg = WorkGraph("test_PythonJob")
-    wg.tasks.new("PythonJob", function=add, name="add")
-    wg.tasks.new(
+    wg.add_task("PythonJob", function=add, name="add")
+    wg.add_task(
         "PythonJob", function=multiply, name="multiply", x=wg.tasks["add"].outputs[0]
     )
     #
@@ -116,7 +116,7 @@ def test_PythonJob_outputs(fixture_localhost):
         return {"sum": x + y, "diff": x - y}
 
     wg = WorkGraph("test_PythonJob_outputs")
-    wg.tasks.new(
+    wg.add_task(
         "PythonJob",
         function=add,
         name="add",
@@ -156,7 +156,7 @@ def test_PythonJob_namespace_output(fixture_localhost):
         }
 
     wg = WorkGraph("test_namespace_outputs")
-    wg.tasks.new("PythonJob", function=myfunc, name="myfunc")
+    wg.add_task("PythonJob", function=myfunc, name="myfunc")
     wg.submit(
         wait=True,
         inputs={
@@ -202,14 +202,14 @@ def test_PythonJob_namespace_output_input(fixture_localhost):
         return x + y
 
     wg = WorkGraph("test_namespace_outputs")
-    wg.tasks.new("PythonJob", function=myfunc, name="myfunc")
-    wg.tasks.new(
+    wg.add_task("PythonJob", function=myfunc, name="myfunc")
+    wg.add_task(
         "PythonJob",
         function=myfunc2,
         name="myfunc2",
         x=wg.tasks["myfunc"].outputs["add_multiply"],
     )
-    wg.tasks.new(
+    wg.add_task(
         "PythonJob",
         function=myfunc3,
         name="myfunc3",
@@ -253,8 +253,8 @@ def test_PythonJob_parent_folder(fixture_localhost):
         return x * y + z
 
     wg = WorkGraph("test_PythonJob_parent_folder")
-    wg.tasks.new("PythonJob", function=add, name="add")
-    wg.tasks.new(
+    wg.add_task("PythonJob", function=add, name="add")
+    wg.add_task(
         "PythonJob",
         function=multiply,
         name="multiply",
@@ -303,7 +303,7 @@ def test_PythonJob_upload_files(fixture_localhost):
         return a + b
 
     wg = WorkGraph("test_PythonJob_upload_files")
-    wg.tasks.new("PythonJob", function=add, name="add")
+    wg.add_task("PythonJob", function=add, name="add")
 
     # ------------------------- Submit the calculation -------------------
     # we need use full path to the file
@@ -346,18 +346,18 @@ def test_PythonJob_copy_files(fixture_localhost):
         return x * y
 
     wg = WorkGraph("test_PythonJob_parent_folder")
-    wg.tasks.new("PythonJob", function=add, name="add1")
-    wg.tasks.new("PythonJob", function=add, name="add2")
-    wg.tasks.new(
+    wg.add_task("PythonJob", function=add, name="add1")
+    wg.add_task("PythonJob", function=add, name="add2")
+    wg.add_task(
         "PythonJob",
         function=multiply,
         name="multiply",
     )
-    wg.links.new(
+    wg.add_link(
         wg.tasks["add1"].outputs["remote_folder"],
         wg.tasks["multiply"].inputs["copy_files"],
     )
-    wg.links.new(
+    wg.add_link(
         wg.tasks["add2"].outputs["remote_folder"],
         wg.tasks["multiply"].inputs["copy_files"],
     )
@@ -395,7 +395,7 @@ def test_PythonJob_retrieve_files(fixture_localhost):
         return x + y
 
     wg = WorkGraph("test_PythonJob_retrieve_files")
-    wg.tasks.new("PythonJob", function=add, name="add")
+    wg.add_task("PythonJob", function=add, name="add")
     # ------------------------- Submit the calculation -------------------
     wg.submit(
         inputs={
@@ -429,7 +429,7 @@ def test_data_serializer(fixture_localhost):
     atoms = bulk("Si")
 
     wg = WorkGraph("test_PythonJob_retrieve_files")
-    wg.tasks.new(
+    wg.add_task(
         "PythonJob", function=make_supercell, atoms=atoms, dim=2, name="make_supercell"
     )
     # ------------------------- Submit the calculation -------------------

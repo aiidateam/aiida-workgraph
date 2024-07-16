@@ -61,13 +61,13 @@ def wg_calcfunction() -> WorkGraph:
     """A workgraph with calcfunction."""
 
     wg = WorkGraph(name="test_debug_math")
-    float1 = wg.tasks.new("AiiDANode", "float1", pk=Float(3.0).store().pk)
-    sumdiff1 = wg.tasks.new("AiiDASumDiff", "sumdiff1", x=2)
-    sumdiff2 = wg.tasks.new("AiiDASumDiff", "sumdiff2", x=4)
-    sumdiff3 = wg.tasks.new("AiiDASumDiff", "sumdiff3", x=6)
-    wg.links.new(float1.outputs[0], sumdiff1.inputs[1])
-    wg.links.new(sumdiff1.outputs[0], sumdiff2.inputs[1])
-    wg.links.new(sumdiff2.outputs[0], sumdiff3.inputs[1])
+    float1 = wg.add_task("AiiDANode", "float1", pk=Float(3.0).store().pk)
+    sumdiff1 = wg.add_task("AiiDASumDiff", "sumdiff1", x=2)
+    sumdiff2 = wg.add_task("AiiDASumDiff", "sumdiff2", x=4)
+    sumdiff3 = wg.add_task("AiiDASumDiff", "sumdiff3", x=6)
+    wg.add_link(float1.outputs[0], sumdiff1.inputs[1])
+    wg.add_link(sumdiff1.outputs[0], sumdiff2.inputs[1])
+    wg.add_link(sumdiff2.outputs[0], sumdiff3.inputs[1])
     return wg
 
 
@@ -78,17 +78,17 @@ def wg_calcjob(add_code) -> WorkGraph:
     print("add_code", add_code)
 
     wg = WorkGraph(name="test_debug_math")
-    int1 = wg.tasks.new("AiiDANode", "int1", pk=Int(3).store().pk)
-    code1 = wg.tasks.new("AiiDACode", "code1", pk=add_code.pk)
-    add1 = wg.tasks.new(ArithmeticAddCalculation, "add1", x=Int(2).store())
-    add2 = wg.tasks.new(ArithmeticAddCalculation, "add2", x=Int(4).store())
-    add3 = wg.tasks.new(ArithmeticAddCalculation, "add3", x=Int(4).store())
-    wg.links.new(code1.outputs[0], add1.inputs["code"])
-    wg.links.new(int1.outputs[0], add1.inputs["y"])
-    wg.links.new(code1.outputs[0], add2.inputs["code"])
-    wg.links.new(add1.outputs["sum"], add2.inputs["y"])
-    wg.links.new(code1.outputs[0], add3.inputs["code"])
-    wg.links.new(add2.outputs["sum"], add3.inputs["y"])
+    int1 = wg.add_task("AiiDANode", "int1", pk=Int(3).store().pk)
+    code1 = wg.add_task("AiiDACode", "code1", pk=add_code.pk)
+    add1 = wg.add_task(ArithmeticAddCalculation, "add1", x=Int(2).store())
+    add2 = wg.add_task(ArithmeticAddCalculation, "add2", x=Int(4).store())
+    add3 = wg.add_task(ArithmeticAddCalculation, "add3", x=Int(4).store())
+    wg.add_link(code1.outputs[0], add1.inputs["code"])
+    wg.add_link(int1.outputs[0], add1.inputs["y"])
+    wg.add_link(code1.outputs[0], add2.inputs["code"])
+    wg.add_link(add1.outputs["sum"], add2.inputs["y"])
+    wg.add_link(code1.outputs[0], add3.inputs["code"])
+    wg.add_link(add2.outputs["sum"], add3.inputs["y"])
     return wg
 
 
@@ -97,23 +97,23 @@ def wg_workchain(add_code) -> WorkGraph:
     """A workgraph with workchain."""
 
     wg = WorkGraph(name="test_debug_math")
-    int1 = wg.tasks.new("AiiDANode", "int1", pk=Int(2).store().pk)
-    int2 = wg.tasks.new("AiiDANode", "int2", pk=Int(3).store().pk)
-    code1 = wg.tasks.new("AiiDACode", "code1", pk=add_code.pk)
-    multiply_add1 = wg.tasks.new(
+    int1 = wg.add_task("AiiDANode", "int1", pk=Int(2).store().pk)
+    int2 = wg.add_task("AiiDANode", "int2", pk=Int(3).store().pk)
+    code1 = wg.add_task("AiiDACode", "code1", pk=add_code.pk)
+    multiply_add1 = wg.add_task(
         "AiiDAArithmeticMultiplyAdd", "multiply_add1", x=Int(4).store()
     )
-    multiply_add2 = wg.tasks.new(
+    multiply_add2 = wg.add_task(
         "AiiDAArithmeticMultiplyAdd",
         "multiply_add2",
         x=Int(2).store(),
         y=Int(3).store(),
     )
-    wg.links.new(code1.outputs[0], multiply_add1.inputs["code"])
-    wg.links.new(int1.outputs[0], multiply_add1.inputs["y"])
-    wg.links.new(int2.outputs[0], multiply_add1.inputs["z"])
-    wg.links.new(code1.outputs[0], multiply_add2.inputs["code"])
-    wg.links.new(multiply_add1.outputs[0], multiply_add2.inputs["z"])
+    wg.add_link(code1.outputs[0], multiply_add1.inputs["code"])
+    wg.add_link(int1.outputs[0], multiply_add1.inputs["y"])
+    wg.add_link(int2.outputs[0], multiply_add1.inputs["z"])
+    wg.add_link(code1.outputs[0], multiply_add2.inputs["code"])
+    wg.add_link(multiply_add1.outputs[0], multiply_add2.inputs["z"])
     return wg
 
 
@@ -204,10 +204,10 @@ def decorated_add_multiply_group(decorated_add, decorated_multiply) -> Callable:
     @task.graph_builder(outputs=[{"name": "result", "from": "multiply1.result"}])
     def add_multiply_group(x, y, z):
         wg = WorkGraph("add_multiply_group")
-        add1 = wg.tasks.new(decorated_add, name="add1", x=x, y=y)
-        multiply = wg.tasks.new(decorated_multiply, name="multiply1", x=z)
+        add1 = wg.add_task(decorated_add, name="add1", x=x, y=y)
+        multiply = wg.add_task(decorated_multiply, name="multiply1", x=z)
         # link the output of a task to the input of another task
-        wg.links.new(add1.outputs[0], multiply.inputs["y"])
+        wg.add_link(add1.outputs[0], multiply.inputs["y"])
         return wg
 
     return add_multiply_group
@@ -225,7 +225,7 @@ def structure_si() -> StructureData:
 @pytest.fixture
 def wg_structure_si() -> WorkGraph:
     wg = WorkGraph(name="test_structure")
-    structure1 = wg.tasks.new("AiiDAStructure", "structure1")
+    structure1 = wg.add_task("AiiDAStructure", "structure1")
     data = {
         "cell": [[0.0, 2.715, 2.715], [2.715, 0.0, 2.715], [2.715, 2.715, 0.0]],
         "kinds": [{"mass": 28.085, "name": "Si", "symbols": ["Si"], "weights": [1.0]}],
@@ -247,18 +247,18 @@ def wg_engine(decorated_add, add_code) -> WorkGraph:
     code = add_code
     x = Int(2)
     wg = WorkGraph(name="test_run_order")
-    add0 = wg.tasks.new(ArithmeticAddCalculation, "add0", x=x, y=Int(0), code=code)
+    add0 = wg.add_task(ArithmeticAddCalculation, "add0", x=x, y=Int(0), code=code)
     add0.set({"metadata.options.sleep": 15})
-    add1 = wg.tasks.new(decorated_add, "add1", x=x, y=Int(1), t=Int(1))
-    add2 = wg.tasks.new(ArithmeticAddCalculation, "add2", x=x, y=Int(2), code=code)
+    add1 = wg.add_task(decorated_add, "add1", x=x, y=Int(1), t=Int(1))
+    add2 = wg.add_task(ArithmeticAddCalculation, "add2", x=x, y=Int(2), code=code)
     add2.set({"metadata.options.sleep": 1})
-    add3 = wg.tasks.new(decorated_add, "add3", x=x, y=Int(3), t=Int(1))
-    add4 = wg.tasks.new(ArithmeticAddCalculation, "add4", x=x, y=Int(4), code=code)
+    add3 = wg.add_task(decorated_add, "add3", x=x, y=Int(3), t=Int(1))
+    add4 = wg.add_task(ArithmeticAddCalculation, "add4", x=x, y=Int(4), code=code)
     add4.set({"metadata.options.sleep": 1})
-    add5 = wg.tasks.new(decorated_add, "add5", x=x, y=Int(5), t=Int(1))
-    wg.links.new(add0.outputs["sum"], add2.inputs["x"])
-    wg.links.new(add1.outputs[0], add3.inputs["x"])
-    wg.links.new(add3.outputs[0], add4.inputs["x"])
-    wg.links.new(add2.outputs["sum"], add5.inputs["x"])
-    wg.links.new(add4.outputs["sum"], add5.inputs["y"])
+    add5 = wg.add_task(decorated_add, "add5", x=x, y=Int(5), t=Int(1))
+    wg.add_link(add0.outputs["sum"], add2.inputs["x"])
+    wg.add_link(add1.outputs[0], add3.inputs["x"])
+    wg.add_link(add3.outputs[0], add4.inputs["x"])
+    wg.add_link(add2.outputs["sum"], add5.inputs["x"])
+    wg.add_link(add4.outputs["sum"], add5.inputs["y"])
     return wg
