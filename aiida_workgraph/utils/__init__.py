@@ -260,11 +260,9 @@ def get_processes_latest(
     from aiida.orm.utils.serialize import deserialize_unsafe
     from aiida.orm import QueryBuilder
     from aiida_workgraph.engine.workgraph import WorkGraphEngine
-    import time
 
     tasks = {}
     node_names = [node_name] if node_name else []
-    tstart = time.time()
     if node_name:
         projections = [
             f"extras._task_state_{node_name}",
@@ -297,9 +295,6 @@ def get_processes_latest(
             "ctime": task_process.ctime if task_process else None,
             "mtime": task_process.mtime if task_process else None,
         }
-    # print("tasks: ", tasks)
-    print(f"Time to deserialize data: {time.time() - tstart}")
-
     return tasks
 
 
