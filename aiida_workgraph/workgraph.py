@@ -1,9 +1,11 @@
 import aiida.orm
 import node_graph
 import aiida
+import node_graph.link
 from aiida_workgraph.socket import NodeSocket
 from aiida_workgraph import USE_WIDGET
 from aiida_workgraph.tasks import task_pool
+from aiida_workgraph.task import Task
 import time
 from aiida_workgraph.collection import TaskCollection
 from aiida_workgraph.utils.graph import (
@@ -481,12 +483,16 @@ class WorkGraph(node_graph.NodeGraph):
         else:
             return self._widget._ipython_display_(*args, **kwargs)
 
-    def add_task(self, identifier: Union[str, callable], name: str, **kwargs) -> None:
+    def add_task(
+        self, identifier: Union[str, callable], name: str = None, **kwargs
+    ) -> Task:
         """Add a task to the workgraph."""
         node = self.tasks.new(identifier, name, **kwargs)
         return node
 
-    def add_link(self, source: NodeSocket, target: NodeSocket) -> None:
+    def add_link(
+        self, source: NodeSocket, target: NodeSocket
+    ) -> node_graph.link.NodeLink:
         """Add a link between two nodes."""
         link = self.links.new(source, target)
         return link
