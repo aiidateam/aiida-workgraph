@@ -438,3 +438,27 @@ def test_data_serializer(fixture_localhost):
         wg.tasks["make_supercell"].outputs["result"].value.value.get_chemical_formula()
         == "Si16"
     )
+
+
+def test_load_pythonjob(fixture_localhost):
+    """Test function with typing."""
+
+    @task.pythonjob()
+    def add(x: str, y: str) -> str:
+        return x + y
+
+    wg = WorkGraph("test_PythonJob")
+    wg.add_task(add, name="add")
+
+    wg.run(
+        inputs={
+            "add": {
+                "x": "Hello, ",
+                "y": "World!",
+                "computer": "localhost",
+            },
+        },
+        # wait=True,
+    )
+    assert wg.tasks["add"].outputs["result"].value.value == "Hello, World!"
+    wg = WorkGraph.load(wg.pk)
