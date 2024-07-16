@@ -31,7 +31,7 @@ def test_inputs_outputs_workchain() -> None:
     from aiida.workflows.arithmetic.multiply_add import MultiplyAddWorkChain
 
     wg = WorkGraph()
-    task = wg.tasks.new(MultiplyAddWorkChain)
+    task = wg.add_task(MultiplyAddWorkChain)
     assert "metadata" in task.inputs.keys()
     assert "metadata.call_link_label" in task.inputs.keys()
     assert "result" in task.outputs.keys()
@@ -42,7 +42,7 @@ def test_decorator_calcfunction(decorated_add: Callable) -> None:
     """Run simple calcfunction."""
 
     wg = WorkGraph(name="test_decorator_calcfunction")
-    wg.tasks.new(decorated_add, "add1", x=2, y=3)
+    wg.add_task(decorated_add, "add1", x=2, y=3)
     wg.submit(wait=True, timeout=100)
     assert wg.tasks["add1"].outputs["result"].value == 5
 
@@ -51,7 +51,7 @@ def test_decorator_workfunction(decorated_add_multiply: Callable) -> None:
     """Run simple calcfunction."""
 
     wg = WorkGraph(name="test_decorator_workfunction")
-    wg.tasks.new(decorated_add_multiply, "add_multiply1", x=2, y=3, z=4)
+    wg.add_task(decorated_add_multiply, "add_multiply1", x=2, y=3, z=4)
     wg.submit(wait=True, timeout=100)
     assert wg.tasks["add_multiply1"].outputs["result"].value == 20
 
@@ -59,13 +59,11 @@ def test_decorator_workfunction(decorated_add_multiply: Callable) -> None:
 def test_decorator_graph_builder(decorated_add_multiply_group: Callable) -> None:
     """Test graph build."""
     wg = WorkGraph("test_graph_builder")
-    add1 = wg.tasks.new("AiiDAAdd", "add1", x=2, y=3, t=10)
-    add_multiply1 = wg.tasks.new(
-        decorated_add_multiply_group, "add_multiply1", y=3, z=4
-    )
-    sum_diff1 = wg.tasks.new("AiiDASumDiff", "sum_diff1")
-    wg.links.new(add1.outputs[0], add_multiply1.inputs["x"])
-    wg.links.new(add_multiply1.outputs["result"], sum_diff1.inputs["x"])
+    add1 = wg.add_task("AiiDAAdd", "add1", x=2, y=3, t=10)
+    add_multiply1 = wg.add_task(decorated_add_multiply_group, "add_multiply1", y=3, z=4)
+    sum_diff1 = wg.add_task("AiiDASumDiff", "sum_diff1")
+    wg.add_link(add1.outputs[0], add_multiply1.inputs["x"])
+    wg.add_link(add_multiply1.outputs["result"], sum_diff1.inputs["x"])
     wg.submit(wait=True)
     assert wg.tasks["add_multiply1"].process.outputs.result.value == 32
     assert wg.tasks["add_multiply1"].outputs["result"].value == 32

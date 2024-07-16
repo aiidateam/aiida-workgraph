@@ -22,12 +22,14 @@ def test_from_dict(wg_calcjob):
     assert len(wg.links) == len(wg1.links)
 
 
-def test_new_node(wg_calcjob):
-    """Add new task."""
-    wg = wg_calcjob
-    n = len(wg.tasks)
-    wg.tasks.new(ArithmeticAddCalculation)
-    assert len(wg.tasks) == n + 1
+def test_add_task():
+    """Add add task."""
+    wg = WorkGraph("test_add_task")
+    add1 = wg.add_task(ArithmeticAddCalculation, name="add1")
+    add2 = wg.add_task(ArithmeticAddCalculation, name="add2")
+    wg.add_link(add1.outputs["sum"], add2.inputs["x"])
+    assert len(wg.tasks) == 2
+    assert len(wg.links) == 1
 
 
 def test_save_load(wg_calcjob):
@@ -94,11 +96,11 @@ def test_extend_workgraph(decorated_add_multiply_group):
     from aiida_workgraph import WorkGraph
 
     wg = WorkGraph("test_graph_build")
-    add1 = wg.tasks.new("AiiDAAdd", "add1", x=2, y=3)
+    add1 = wg.add_task("AiiDAAdd", "add1", x=2, y=3)
     add_multiply_wg = decorated_add_multiply_group(x=0, y=4, z=5)
     # extend workgraph
     wg.extend(add_multiply_wg, prefix="group_")
-    wg.links.new(add1.outputs[0], wg.tasks["group_add1"].inputs["x"])
+    wg.add_link(add1.outputs[0], wg.tasks["group_add1"].inputs["x"])
     wg.submit(wait=True)
     assert wg.tasks["group_multiply1"].node.outputs.result == 45
 
@@ -136,7 +138,7 @@ def test_pause_task_after_submit(wg_calcjob):
 
 def test_workgraph_group_outputs(decorated_add):
     wg = WorkGraph("test_workgraph_group_outputs")
-    wg.tasks.new(decorated_add, "add1", x=2, y=3)
+    wg.add_task(decorated_add, "add1", x=2, y=3)
     wg.group_outputs = [
         {"name": "sum", "from": "add1.result"},
         {"name": "add1", "from": "add1"},

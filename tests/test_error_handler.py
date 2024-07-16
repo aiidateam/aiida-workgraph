@@ -25,7 +25,7 @@ def test_error_handlers(add_code):
         self.update_task(task)
 
     wg = WorkGraph("restart_graph")
-    wg.tasks.new(ArithmeticAddCalculation, name="add1")
+    wg.add_task(ArithmeticAddCalculation, name="add1")
     wg.attach_error_handler(
         handle_negative_sum,
         name="handle_negative_sum",

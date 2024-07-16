@@ -31,23 +31,23 @@ def test_build_workchain(add_code):
     from aiida_workgraph import WorkGraph
 
     wg = WorkGraph(name="test_debug_math")
-    code1 = wg.tasks.new("AiiDACode", "code1", pk=add_code.pk)
-    multiply_add1 = wg.tasks.new(
+    code1 = wg.add_task("AiiDACode", "code1", pk=add_code.pk)
+    multiply_add1 = wg.add_task(
         MultiplyAddWorkChain,
         "multiply_add1",
         x=Int(4).store(),
         y=Int(2).store(),
         z=Int(3).store(),
     )
-    multiply_add2 = wg.tasks.new(
+    multiply_add2 = wg.add_task(
         MultiplyAddWorkChain,
         "multiply_add2",
         x=Int(2).store(),
         y=Int(3).store(),
     )
-    wg.links.new(code1.outputs[0], multiply_add1.inputs["code"])
-    wg.links.new(code1.outputs[0], multiply_add2.inputs["code"])
-    wg.links.new(multiply_add1.outputs[0], multiply_add2.inputs["z"])
+    wg.add_link(code1.outputs[0], multiply_add1.inputs["code"])
+    wg.add_link(code1.outputs[0], multiply_add2.inputs["code"])
+    wg.add_link(multiply_add1.outputs[0], multiply_add2.inputs["z"])
     wg.submit(wait=True, timeout=100)
     assert wg.tasks["multiply_add2"].node.outputs.result == 17
     # reload wg

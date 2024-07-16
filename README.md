@@ -82,9 +82,9 @@ def multiply(x, y):
 
 # Create a workgraph to link the tasks.
 wg = WorkGraph("test_add_multiply")
-wg.tasks.new(add, name="add1")
-wg.tasks.new(multiply, name="multiply1")
-wg.links.new(wg.tasks["add1"].outputs["result"], wg.tasks["multiply1"].inputs["x"])
+wg.add_task(add, name="add1")
+wg.add_task(multiply, name="multiply1")
+wg.add_link(wg.tasks["add1"].outputs["result"], wg.tasks["multiply1"].inputs["x"])
 
 ```
 
