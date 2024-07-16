@@ -25,7 +25,7 @@ The recommended method of installation is to use the Python package manager |pip
 
 .. code-block:: console
 
-    $ pip install aiida-workgraph aiida-workgraph[widget]
+    $ pip install aiida-workgraph[widget]
 
 This will install the latest stable version that was released to PyPI.
 

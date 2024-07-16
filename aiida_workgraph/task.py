@@ -122,6 +122,11 @@ class Task(GraphNode):
         self.state = "PLANNED"
 
     def _repr_mimebundle_(self, *args: Any, **kwargs: Any) -> any:
+        from aiida_workgraph.utils.message import WIDGET_INSTALLATION_MESSAGE
+
+        if self._widget is None:
+            print(WIDGET_INSTALLATION_MESSAGE)
+            return
         # if ipywdigets > 8.0.0, use _repr_mimebundle_ instead of _ipython_display_
         self._widget.from_node(self)
         if hasattr(self._widget, "_repr_mimebundle_"):

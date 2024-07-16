@@ -467,6 +467,12 @@ class WorkGraph(node_graph.NodeGraph):
         self.error_handlers[name] = {"handler": handler, "tasks": tasks}
 
     def _repr_mimebundle_(self, *args, **kwargs):
+        from aiida_workgraph.utils.message import WIDGET_INSTALLATION_MESSAGE
+
+        if self._widget is None:
+            print(WIDGET_INSTALLATION_MESSAGE)
+            return
+
         # if ipywdigets > 8.0.0, use _repr_mimebundle_ instead of _ipython_display_
         self._widget.from_workgraph(self)
         if hasattr(self._widget, "_repr_mimebundle_"):
