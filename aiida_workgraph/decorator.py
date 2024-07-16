@@ -596,6 +596,24 @@ class TaskDecoratorCollection:
 
         return decorator
 
+    @staticmethod
+    def pythonjob(**kwargs: Any) -> Callable:
+        def decorator(func):
+            # first create a task from the function
+            task_decorated = build_task_from_callable(
+                func,
+                inputs=kwargs.get("inputs", []),
+                outputs=kwargs.get("outputs", []),
+            )
+            # then build a PythonJob task from the function task
+            task_decorated, _ = build_pythonjob_task(func)
+            func.identifier = "PythonJob"
+            func.task = func.node = task_decorated
+
+            return func
+
+        return decorator
+
     # Making decorator_task accessible as 'task'
     task = decorator_task
 
