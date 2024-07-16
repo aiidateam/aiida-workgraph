@@ -4,6 +4,46 @@ from typing import Any
 
 
 @pytest.mark.usefixtures("started_daemon_client")
+def test_decorator(fixture_localhost):
+    """Test decorator."""
+
+    @task.pythonjob(
+        outputs=[
+            {"identifier": "Any", "name": "sum"},
+            {"identifier": "Any", "name": "diff"},
+        ]
+    )
+    def add(x, y):
+        return {"sum": x + y, "diff": x - y}
+
+    def multiply(x: Any, y: Any) -> Any:
+        return x * y
+
+    decorted_multiply = task.pythonjob()(multiply)
+
+    wg = WorkGraph("test_PythonJob_outputs")
+    wg.tasks.new(
+        add,
+        name="add",
+        x=1,
+        y=2,
+        computer="localhost",
+    )
+    wg.tasks.new(
+        decorted_multiply,
+        name="multiply",
+        x=wg.tasks["add"].outputs["sum"],
+        y=3,
+        computer="localhost",
+    )
+    # wg.submit(wait=True)
+    wg.run()
+    assert wg.tasks["add"].outputs["sum"].value.value == 3
+    assert wg.tasks["add"].outputs["diff"].value.value == -1
+    assert wg.tasks["multiply"].outputs["result"].value.value == 9
+
+
+@pytest.mark.usefixtures("started_daemon_client")
 def test_PythonJob_kwargs(fixture_localhost):
     """Test function with kwargs."""
 
