@@ -244,9 +244,9 @@ class WorkGraph(node_graph.NodeGraph):
         processes_data = get_processes_latest(self.pk)
         for name, data in processes_data.items():
             self.tasks[name].state = data["state"]
-            self.tasks[name].pk = data["pk"]
             self.tasks[name].ctime = data["ctime"]
             self.tasks[name].mtime = data["mtime"]
+            self.tasks[name].pk = data["pk"]
             if data["pk"] is not None:
                 node = aiida.orm.load_node(data["pk"])
                 self.tasks[name].process = self.tasks[name].node = node
@@ -261,9 +261,9 @@ class WorkGraph(node_graph.NodeGraph):
                                 node.outputs, socket.name, allow_none=True
                             )
                             i += 1
-            # read results from the process outputs
-            if self.tasks[name].node_type.upper() == "DATA":
-                self.tasks[name].outputs[0].value = node
+                # read results from the process outputs
+                elif isinstance(node, aiida.orm.Data):
+                    self.tasks[name].outputs[0].value = node
         execution_count = getattr(self.process.outputs, "execution_count", None)
         self.execution_count = execution_count if execution_count else 0
         if self._widget is not None:
