@@ -17,6 +17,7 @@ from aiida.common.extendeddicts import AttributeDict
 from aiida.common.lang import override
 from aiida import orm
 from aiida.orm import load_node, Node, ProcessNode, WorkChainNode
+from aiida.orm.utils.serialize import deserialize_unsafe, serialize
 
 from aiida.engine.processes.exit_code import ExitCode
 from aiida.engine.processes.process import Process
@@ -453,7 +454,6 @@ class WorkGraphEngine(Process, metaclass=Protect):
 
     def read_wgdata_from_base(self) -> t.Dict[str, t.Any]:
         """Read workgraph data from base.extras."""
-        from aiida.orm.utils.serialize import deserialize_unsafe
 
         wgdata = self.node.base.extras.get("_workgraph")
         for name, task in wgdata["tasks"].items():
@@ -480,7 +480,6 @@ class WorkGraphEngine(Process, metaclass=Protect):
 
     def get_task_state_info(self, name: str, key: str) -> str:
         """Get task state info from base.extras."""
-        from aiida.orm.utils.serialize import deserialize_unsafe
 
         if key == "process":
             value = deserialize_unsafe(
@@ -492,7 +491,6 @@ class WorkGraphEngine(Process, metaclass=Protect):
 
     def set_task_state_info(self, name: str, key: str, value: any) -> None:
         """Set task state info to base.extras."""
-        from aiida.orm.utils.serialize import serialize
 
         if key == "process":
             self.node.base.extras.set(f"_task_{key}_{name}", serialize(value))
@@ -518,52 +516,40 @@ class WorkGraphEngine(Process, metaclass=Protect):
         for name, task in self.ctx.tasks.items():
             if self.get_task_state_info(name, "action").upper() == "RESET":
                 self.reset_task(task["name"])
-            if self.get_task_state_info(name, "process"):
-                if isinstance(self.get_task_state_info(task["name"], "process"), str):
-                    self.set_task_state_info(
-                        task["name"],
-                        "process",
-                        orm.load_node(
-                            self.get_task_state_info(task["name"], "process")
-                        ),
-                    )
+            process = self.get_task_state_info(name, "process")
+            if process:
                 self.set_task_result(task)
             self.set_task_result(task)
 
     def set_task_result(self, task: t.Dict[str, t.Any]) -> None:
         name = task["name"]
         # print(f"set task result: {name}")
-        if self.get_task_state_info(name, "process"):
+        node = self.get_task_state_info(name, "process")
+        if isinstance(node, orm.ProcessNode):
             # print(f"set task result: {name} process")
             state = self.get_task_state_info(
                 task["name"], "process"
             ).process_state.value.upper()
-            if self.get_task_state_info(task["name"], "process").is_finished_ok:
+            if node.is_finished_ok:
                 self.set_task_state_info(task["name"], "state", state)
                 if task["metadata"]["node_type"].upper() == "WORKGRAPH":
                     # expose the outputs of all the tasks in the workgraph
                     task["results"] = {}
-                    outgoing = self.get_task_state_info(
-                        task["name"], "process"
-                    ).base.links.get_outgoing()
+                    outgoing = node.base.links.get_outgoing()
                     for link in outgoing.all():
                         if isinstance(link.node, ProcessNode) and getattr(
                             link.node, "process_state", False
                         ):
                             task["results"][link.link_label] = link.node.outputs
                 else:
-                    task["results"] = self.get_task_state_info(
-                        task["name"], "process"
-                    ).outputs
+                    task["results"] = node.outputs
                     # self.ctx.new_data[name] = task["results"]
                 self.set_task_state_info(task["name"], "state", "FINISHED")
                 self.task_set_context(name)
                 self.report(f"Task: {name} finished.")
             # all other states are considered as failed
             else:
-                task["results"] = self.get_task_state_info(
-                    task["name"], "process"
-                ).outputs
+                task["results"] = node.outputs
                 # self.ctx.new_data[name] = task["results"]
                 self.set_task_state_info(task["name"], "state", "FAILED")
                 # set child tasks state to SKIPPED
@@ -572,6 +558,11 @@ class WorkGraphEngine(Process, metaclass=Protect):
                 )
                 self.report(f"Task: {name} failed.")
                 self.run_error_handlers(name)
+        elif isinstance(node, orm.Data):
+            task["results"] = {task["outputs"][0]["name"]: node}
+            self.set_task_state_info(task["name"], "state", "FINISHED")
+            self.task_set_context(name)
+            self.report(f"Task: {name} finished.")
         else:
             task["results"] = None
 
@@ -801,8 +792,8 @@ class WorkGraphEngine(Process, metaclass=Protect):
                 kwargs[key] = args[i]
             # update the port namespace
             kwargs = update_nested_dict_with_special_keys(kwargs)
-            # print("args: ", args)
-            # print("kwargs: ", kwargs)
+            print("args: ", args)
+            print("kwargs: ", kwargs)
             # print("var_kwargs: ", var_kwargs)
             # kwargs["meta.label"] = name
             # output must be a Data type or a mapping of {string: Data}

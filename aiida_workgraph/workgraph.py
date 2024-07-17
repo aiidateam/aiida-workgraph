@@ -235,69 +235,40 @@ class WorkGraph(node_graph.NodeGraph):
         linked to the current process, and data nodes linked to the current process.
         """
         # from aiida_workgraph.utils import get_executor
-        from aiida_workgraph.utils import get_nested_dict
+        from aiida_workgraph.utils import get_nested_dict, get_processes_latest
 
         if self.process is None:
             return
 
         self.state = self.process.process_state.value.upper()
-        outgoing = self.process.base.links.get_outgoing()
-        for link in outgoing.all():
-            node = link.node
-            # the link is added in order
-            # so the restarted node will be the last one
-            # thus the task is correct
-            if isinstance(node, aiida.orm.ProcessNode) and getattr(
-                node, "process_state", False
-            ):
-                self.tasks[link.link_label].process = node
-                self.tasks[link.link_label].state = node.process_state.value.upper()
-                self.tasks[link.link_label].node = node
-                self.tasks[link.link_label].pk = node.pk
-                self.tasks[link.link_label].ctime = node.ctime
-                self.tasks[link.link_label].mtime = node.mtime
-                if self.tasks[link.link_label].state == "FINISHED":
-                    # update the output sockets
-                    i = 0
-                    for socket in self.tasks[link.link_label].outputs:
-                        socket.value = get_nested_dict(
-                            node.outputs, socket.name, allow_none=True
-                        )
-                        i += 1
-            elif isinstance(node, aiida.orm.Data):
-                if link.link_label.startswith("new_data__"):
-                    label = link.link_label.split("__", 1)[1]
-                    if label in self.tasks.keys():
-                        self.tasks[label].state = "FINISHED"
-                        self.tasks[label].node = node
-                        self.tasks[label].pk = node.pk
-                elif link.link_label == "execution_count":
-                    self.execution_count = node.value
-        # read results from the process outputs
-        for task in self.tasks:
-            if task.node_type.upper() == "DATA":
-                if not getattr(self.process.outputs, "new_data", False):
-                    continue
-                task.outputs[0].value = getattr(
-                    self.process.outputs.new_data, task.name, None
-                )
-            # for normal tasks, we try to read the results from the extras of the task
-            # this is disabled for now
-            # if task.node_type.upper() == "NORMAL":
-            #     results = self.process.base.extras.get(
-            #         f"nodes__results__{task.name}", {}
-            #     )
-            #     for key, value in results.items():
-            #         # if value is an AiiDA data node, we don't need to deserialize it
-            #         deserializer = node.outputs[key].get_deserialize()
-            #         executor = get_executor(deserializer)[0]
-            #         try:
-            #             value = executor(bytes(value))
-            #         except Exception:
-            #             pass
-            #         node.outputs[key].value = value
+        processes_data = get_processes_latest(self.pk)
+        for name, data in processes_data.items():
+            self.tasks[name].state = data["state"]
+            self.tasks[name].ctime = data["ctime"]
+            self.tasks[name].mtime = data["mtime"]
+            self.tasks[name].pk = data["pk"]
+            if data["pk"] is not None:
+                node = aiida.orm.load_node(data["pk"])
+                self.tasks[name].process = self.tasks[name].node = node
+                if isinstance(node, aiida.orm.ProcessNode) and getattr(
+                    node, "process_state", False
+                ):
+                    if self.tasks[name].state == "FINISHED":
+                        # update the output sockets
+                        i = 0
+                        for socket in self.tasks[name].outputs:
+                            socket.value = get_nested_dict(
+                                node.outputs, socket.name, allow_none=True
+                            )
+                            i += 1
+                # read results from the process outputs
+                elif isinstance(node, aiida.orm.Data):
+                    self.tasks[name].outputs[0].value = node
+        execution_count = getattr(self.process.outputs, "execution_count", None)
+        self.execution_count = execution_count if execution_count else 0
         if self._widget is not None:
-            self._widget.states = {task.name: node.state for node in self.tasks}
+            states = {name: data["state"] for name, data in processes_data.items()}
+            self._widget.states = states
 
     @property
     def pk(self) -> Optional[int]:

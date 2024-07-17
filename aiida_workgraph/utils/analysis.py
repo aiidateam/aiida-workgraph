@@ -2,6 +2,7 @@ from typing import Optional, Dict, Tuple, List
 
 # import datetime
 from aiida.orm import ProcessNode
+from aiida.orm.utils.serialize import serialize, deserialize_unsafe
 
 
 class WorkGraphSaver:
@@ -99,7 +100,6 @@ class WorkGraphSaver:
         - workgraph
         - all tasks
         """
-        from aiida.orm.utils.serialize import serialize
         from aiida_workgraph.utils import workgraph_to_short_json
 
         # pprint(self.wgdata)
@@ -117,14 +117,13 @@ class WorkGraphSaver:
 
     def save_task_states(self) -> Dict:
         """Get task states."""
-        from aiida.orm.utils.serialize import serialize
 
         task_states = {}
         task_processes = {}
         task_actions = {}
         for name, task in self.wgdata["tasks"].items():
             task_states[f"_task_state_{name}"] = task["state"]
-            task_processes[f"_task_process_{name}"] = serialize(task["process"])
+            task_processes[f"_task_process_{name}"] = task["process"]
             task_actions[f"_task_action_{name}"] = task["action"]
         self.process.base.extras.set_many(task_states)
         self.process.base.extras.set_many(task_processes)
@@ -147,13 +146,13 @@ class WorkGraphSaver:
         ):
             for name in tasks:
                 self.wgdata["tasks"][name]["state"] = "PLANNED"
-                self.wgdata["tasks"][name]["process"] = None
+                self.wgdata["tasks"][name]["process"] = serialize(None)
                 self.wgdata["tasks"][name]["result"] = None
                 names = self.wgdata["connectivity"]["child_node"][name]
                 for name in names:
                     self.wgdata["tasks"][name]["state"] = "PLANNED"
                     self.wgdata["tasks"][name]["result"] = None
-                    self.wgdata["tasks"][name]["process"] = None
+                    self.wgdata["tasks"][name]["process"] = serialize(None)
         else:
             create_task_action(self.process.pk, tasks=tasks, action="reset")
 
@@ -166,7 +165,6 @@ class WorkGraphSaver:
     def get_wgdata_from_db(
         self, process: Optional[ProcessNode] = None
     ) -> Optional[Dict]:
-        from aiida.orm.utils.serialize import deserialize_unsafe
 
         process = self.process if process is None else process
         wgdata = process.base.extras.get("_workgraph", None)
