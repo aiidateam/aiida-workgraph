@@ -597,12 +597,14 @@ class WorkGraphEngine(Process, metaclass=Protect):
         self.report(f"Task {name} action: RESET.")
         self.set_task_state_info(name, "state", "PLANNED")
         self.set_task_state_info(name, "process", None)
+        self.ctx.executed_tasks.remove(name)
         # reset its child tasks
         names = self.ctx.connectivity["child_node"][name]
         for name in names:
             self.set_task_state_info(name, "state", "PLANNED")
             self.ctx.tasks[name]["result"] = None
             self.set_task_state_info(name, "process", None)
+            self.ctx.executed_tasks.remove(name)
 
     def pause_task(self, name: str) -> None:
         """Pause task."""
@@ -1175,6 +1177,7 @@ class WorkGraphEngine(Process, metaclass=Protect):
         print("Reset")
         self.ctx._execution_count += 1
         self.set_tasks_state(self.ctx.tasks.keys(), "PLANNED")
+        self.ctx.executed_tasks = []
 
     def set_tasks_state(
         self, tasks: t.Union[t.List[str], t.Sequence[str]], value: str
