@@ -614,9 +614,8 @@ class WorkGraphEngine(Process, metaclass=Protect):
         """Play task."""
         self.report(f"Task {name} action: PLAY.")
 
-    def continue_workgraph(self, exclude: t.Optional[t.List[str]] = None) -> None:
+    def continue_workgraph(self) -> None:
         print("Continue workgraph.")
-        exclude = exclude or []
         self.report("Continue workgraph.")
         # self.update_workgraph_from_base()
         task_to_run = []
@@ -631,7 +630,7 @@ class WorkGraphEngine(Process, metaclass=Protect):
             ]:
                 continue
             ready, output = self.check_parent_state(name)
-            if ready and name not in exclude:
+            if ready and name not in self.ctx.executed_tasks:
                 task_to_run.append(name)
         #
         self.report("tasks ready to run: {}".format(",".join(task_to_run)))
@@ -768,6 +767,11 @@ class WorkGraphEngine(Process, metaclass=Protect):
         )
 
         for name in names:
+            # This task is already executed
+            if name in self.ctx.executed_tasks:
+                continue
+            else:
+                self.ctx.executed_tasks.append(name)
             print("-" * 60)
             task = self.ctx.tasks[name]
             if task["metadata"]["node_type"].upper() in [
@@ -785,11 +789,7 @@ class WorkGraphEngine(Process, metaclass=Protect):
                         )
                     )
                     continue
-            # This task is already executed
-            if name in self.ctx.executed_tasks:
-                continue
-            else:
-                self.ctx.executed_tasks.append(name)
+
             self.report(f"Run task: {name}, type: {task['metadata']['node_type']}")
             # print("Run task: ", name)
             # print("executor: ", task["executor"])
@@ -818,7 +818,7 @@ class WorkGraphEngine(Process, metaclass=Protect):
                 # self.node.base.links.add_incoming(results, "INPUT_WORK", name)
                 self.report(f"Task: {name} finished.")
                 if continue_workgraph:
-                    self.continue_workgraph(names)
+                    self.continue_workgraph()
             elif task["metadata"]["node_type"].upper() == "DATA":
                 print("task  type: data.")
                 for key in self.ctx.tasks[name]["metadata"]["args"]:
@@ -831,7 +831,7 @@ class WorkGraphEngine(Process, metaclass=Protect):
                 self.task_set_context(name)
                 self.report(f"Task: {name} finished.")
                 if continue_workgraph:
-                    self.continue_workgraph(names)
+                    self.continue_workgraph()
             elif task["metadata"]["node_type"].upper() in [
                 "CALCFUNCTION",
                 "WORKFUNCTION",
@@ -869,7 +869,7 @@ class WorkGraphEngine(Process, metaclass=Protect):
                     self.report(f"Task: {name} failed.")
                 # exclude the current tasks from the next run
                 if continue_workgraph:
-                    self.continue_workgraph(names)
+                    self.continue_workgraph()
             elif task["metadata"]["node_type"].upper() in ["CALCJOB", "WORKCHAIN"]:
                 # process = run_get_node(executor, *args, **kwargs)
                 print("task type: calcjob/workchain.")
@@ -988,7 +988,7 @@ class WorkGraphEngine(Process, metaclass=Protect):
                 self.task_set_context(name)
                 self.report(f"Task: {name} finished.")
                 if continue_workgraph:
-                    self.continue_workgraph(names)
+                    self.continue_workgraph()
                 # print("result from node: ", task["results"])
             else:
                 print("Task type: unknown.")
