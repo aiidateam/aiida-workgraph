@@ -597,14 +597,14 @@ class WorkGraphEngine(Process, metaclass=Protect):
         self.report(f"Task {name} action: RESET.")
         self.set_task_state_info(name, "state", "PLANNED")
         self.set_task_state_info(name, "process", None)
-        self.ctx.executed_tasks.remove(name)
+        self.remove_executed_task(name)
         # reset its child tasks
         names = self.ctx.connectivity["child_node"][name]
         for name in names:
             self.set_task_state_info(name, "state", "PLANNED")
             self.ctx.tasks[name]["result"] = None
             self.set_task_state_info(name, "process", None)
-            self.ctx.executed_tasks.remove(name)
+            self.remove_executed_task(name)
 
     def pause_task(self, name: str) -> None:
         """Pause task."""
@@ -630,7 +630,7 @@ class WorkGraphEngine(Process, metaclass=Protect):
             ]:
                 continue
             ready, output = self.check_parent_state(name)
-            if ready and name not in self.ctx.executed_tasks:
+            if ready and self.task_should_run(name):
                 task_to_run.append(name)
         #
         self.report("tasks ready to run: {}".format(",".join(task_to_run)))
@@ -754,6 +754,30 @@ class WorkGraphEngine(Process, metaclass=Protect):
         self.ctx._count += 1
         return should_run
 
+    def task_should_run(self, name: str, uuid: str = None) -> bool:
+        """Check if the task should not run.
+        If name not in executed tasks, return True.
+        If uuid is not None, check if the task with the same name and uuid is the first one.
+        In a extreme case, the engine try to run the same task multiple times at the same time.
+        We only allow the first one to run.
+        """
+        name_and_uuids = [
+            label.split(".")
+            for label in self.ctx.executed_tasks
+            if label.split(".")[0] == name
+        ]
+        if len(name_and_uuids) == 0:
+            return True
+        # find the index of current uuid
+        index = [i for i, item in enumerate(name_and_uuids) if item[1] == uuid][0]
+        return index == 0
+
+    def remove_executed_task(self, name: str) -> None:
+        """Remove labels with name from executed tasks."""
+        self.ctx.executed_tasks = [
+            label for label in self.ctx.executed_tasks if label.split(".")[0] != name
+        ]
+
     def run_tasks(self, names: t.List[str], continue_workgraph: bool = True) -> None:
         """Run task
         Here we use ToContext to pass the results of the run to the next step.
@@ -765,14 +789,10 @@ class WorkGraphEngine(Process, metaclass=Protect):
             create_data_node,
             update_nested_dict_with_special_keys,
         )
+        from uuid import uuid4
 
         for name in names:
-            # This task is already executed
-            if name in self.ctx.executed_tasks:
-                continue
-            else:
-                self.ctx.executed_tasks.append(name)
-            print("-" * 60)
+            # skip if the max number of awaitables is reached
             task = self.ctx.tasks[name]
             if task["metadata"]["node_type"].upper() in [
                 "CALCJOB",
@@ -789,6 +809,15 @@ class WorkGraphEngine(Process, metaclass=Protect):
                         )
                     )
                     continue
+            # skip if the task is already executed
+            if name in self.ctx.executed_tasks:
+                continue
+            else:
+                uuid = str(uuid4())
+                self.ctx.executed_tasks.append(f"{name}.{uuid}")
+                if not self.task_should_run(name, uuid):
+                    continue
+            print("-" * 60)
 
             self.report(f"Run task: {name}, type: {task['metadata']['node_type']}")
             # print("Run task: ", name)
