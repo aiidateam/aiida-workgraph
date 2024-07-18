@@ -782,18 +782,28 @@ class WorkGraphEngine(Process, metaclass=Protect):
                         )
                     )
                     continue
+            # This calcfuntion/workfunction is already run
+            if (
+                task["metadata"]["node_type"].upper()
+                in [
+                    "CALCFUNCTION",
+                    "WORKFUNCTION",
+                ]
+                and self.get_task_state_info(name, "state").upper() != "PLANNED"
+            ):
+                continue
             self.report(f"Run task: {name}, type: {task['metadata']['node_type']}")
             # print("Run task: ", name)
             # print("executor: ", task["executor"])
             executor, _ = get_executor(task["executor"])
-            print("executor: ", executor)
+            # print("executor: ", executor)
             args, kwargs, var_args, var_kwargs, args_dict = self.get_inputs(task)
             for i, key in enumerate(self.ctx.tasks[name]["metadata"]["args"]):
                 kwargs[key] = args[i]
             # update the port namespace
             kwargs = update_nested_dict_with_special_keys(kwargs)
-            print("args: ", args)
-            print("kwargs: ", kwargs)
+            # print("args: ", args)
+            # print("kwargs: ", kwargs)
             # print("var_kwargs: ", var_kwargs)
             # kwargs["meta.label"] = name
             # output must be a Data type or a mapping of {string: Data}
