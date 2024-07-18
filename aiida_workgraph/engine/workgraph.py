@@ -419,8 +419,9 @@ class WorkGraphEngine(Process, metaclass=Protect):
     def setup(self) -> None:
         # track if the awaitable callback is added to the runner
         self.ctx._awaitable_actions = []
-        self.ctx.new_data = dict()
-        self.ctx.input_tasks = dict()
+        self.ctx.new_data = {}
+        self.ctx.input_tasks = {}
+        self.ctx.executed_tasks = []
         # read the latest workgraph data
         wgdata = self.read_wgdata_from_base()
         self.init_ctx(wgdata)
@@ -782,16 +783,11 @@ class WorkGraphEngine(Process, metaclass=Protect):
                         )
                     )
                     continue
-            # This calcfuntion/workfunction is already run
-            if (
-                task["metadata"]["node_type"].upper()
-                in [
-                    "CALCFUNCTION",
-                    "WORKFUNCTION",
-                ]
-                and self.get_task_state_info(name, "state").upper() != "PLANNED"
-            ):
+            # This task is already executed
+            if name in self.ctx.executed_tasks:
                 continue
+            else:
+                self.ctx.executed_tasks.append(name)
             self.report(f"Run task: {name}, type: {task['metadata']['node_type']}")
             # print("Run task: ", name)
             # print("executor: ", task["executor"])
