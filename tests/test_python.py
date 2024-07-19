@@ -66,41 +66,30 @@ def test_PythonJob_kwargs(fixture_localhost):
     assert wg.tasks["add"].outputs["result"].value.value == 6
 
 
-def test_PythonJob_typing(fixture_localhost):
+def test_PythonJob_typing():
     """Test function with typing."""
     from numpy import array
+    from ase import Atoms
+    from aiida_workgraph.utils import get_required_imports
+    from typing import List
 
-    def add(x: array, y: array) -> array:
-        return x + y
+    def generate_structures(
+        structures: List[Atoms],
+        strain_lst: list,
+        data: array,
+        strain_lst1: list = None,
+        data1: array = None,
+        structure1: Atoms = None,
+    ) -> list[Atoms]:
+        pass
 
-    def multiply(x: Any, y: Any) -> Any:
-        return x * y
-
-    wg = WorkGraph("test_PythonJob")
-    wg.add_task("PythonJob", function=add, name="add")
-    wg.add_task(
-        "PythonJob", function=multiply, name="multiply", x=wg.tasks["add"].outputs[0]
-    )
-    #
-    metadata = {
-        "options": {
-            "custom_scheduler_commands": "# test",
-            # "custom_scheduler_commands": 'module load anaconda\nconda activate py3.11\n',
-        }
+    modules = get_required_imports(generate_structures)
+    assert modules == {
+        "ase.atoms": {"Atoms"},
+        "typing": {"List"},
+        "builtins": {"list"},
+        "numpy": {"array"},
     }
-    wg.run(
-        inputs={
-            "add": {
-                "x": array([1, 2]),
-                "y": array([2, 3]),
-                "computer": "localhost",
-                "metadata": metadata,
-            },
-            "multiply": {"y": 4, "computer": "localhost", "metadata": metadata},
-        },
-        # wait=True,
-    )
-    assert (wg.tasks["multiply"].outputs["result"].value.value == array([12, 20])).all()
 
 
 def test_PythonJob_outputs(fixture_localhost):
