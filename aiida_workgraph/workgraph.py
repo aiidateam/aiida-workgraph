@@ -4,6 +4,7 @@ import aiida
 import node_graph.link
 from aiida_workgraph.socket import NodeSocket
 from aiida_workgraph import USE_WIDGET
+from aiida_workgraph.utils.message import WIDGET_INSTALLATION_MESSAGE
 from aiida_workgraph.tasks import task_pool
 from aiida_workgraph.task import Task
 import time
@@ -441,7 +442,6 @@ class WorkGraph(node_graph.NodeGraph):
         self.error_handlers[name] = {"handler": handler, "tasks": tasks}
 
     def _repr_mimebundle_(self, *args, **kwargs):
-        from aiida_workgraph.utils.message import WIDGET_INSTALLATION_MESSAGE
 
         if self._widget is None:
             print(WIDGET_INSTALLATION_MESSAGE)
@@ -470,5 +470,8 @@ class WorkGraph(node_graph.NodeGraph):
 
     def to_html(self, output: str = None, **kwargs):
         """Write a standalone html file to visualize the workgraph."""
+        if self._widget is None:
+            print(WIDGET_INSTALLATION_MESSAGE)
+            return
         self._widget.from_workgraph(self)
         return self._widget.to_html(output=output, **kwargs)
