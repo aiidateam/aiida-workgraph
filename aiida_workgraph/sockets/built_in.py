@@ -47,6 +47,24 @@ class SocketNamespace(TaskSocket, SerializePickle):
         self.add_property("Any", name, **kwargs)
 
 
+class SocketNamespaceList(TaskSocket, SerializePickle):
+    """NamespaceList socket."""
+
+    identifier: str = "NamespaceList"
+
+    def __init__(
+        self,
+        name: str,
+        node: Optional[Any] = None,
+        type: str = "INPUT",
+        index: int = 0,
+        uuid: Optional[str] = None,
+        **kwargs: Any
+    ) -> None:
+        super().__init__(name, node, type, index, uuid=uuid)
+        self.add_property("Any", name, **kwargs)
+
+
 class SocketAiiDAFloat(TaskSocket, SerializeJson):
     """AiiDAFloat socket."""
 
@@ -158,6 +176,7 @@ class SocketAiiDAFloatVector(TaskSocket, SerializeJson):
 socket_list = [
     SocketAny,
     SocketNamespace,
+    SocketNamespaceList,
     SocketInt,
     SocketFloat,
     SocketString,
