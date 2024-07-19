@@ -535,8 +535,10 @@ def get_required_imports(func):
             type_hint, "__origin__"
         ):  # This checks for higher-order types like List, Dict
             module_name = type_hint.__module__
-            type_name = type_hint._name
-            for arg in type_hint.__args__:
+            type_name = getattr(type_hint, "_name", None) or getattr(
+                type_hint.__origin__, "__name__", None
+            )
+            for arg in getattr(type_hint, "__args__", []):
                 if arg is type(None):  # noqa: E721
                     continue
                 add_imports(arg)  # Recursively add imports for each argument
