@@ -1,6 +1,6 @@
 name: ci
 
-on: [push, pull_request]
+on: [pull_request]
 
 jobs:
 
@@ -36,8 +36,8 @@ jobs:
 
         strategy:
             matrix:
-                python-version: ['3.9', '3.11']
-                aiida-core-version: ['2.4', '2.5']
+                python-version: ['3.9', '3.11', '3.12']
+                aiida-core-version: ['2.5', '2.6']
 
         services:
             postgres:
