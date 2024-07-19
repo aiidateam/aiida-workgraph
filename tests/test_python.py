@@ -235,22 +235,23 @@ def test_PythonJob_namespace_list(fixture_localhost):
         outputs=[
             {
                 "name": "result",
-                "identifier": "NamespaceList",
+                "identifier": "Namespace",
             },
         ]
     )
     def myfunc(x, y):
         return [x + i for i in range(y)]
 
+    # task use list as input
     @task.pythonjob()
     def myfunc2(x):
         return sum(x)
 
+    #
     wg = WorkGraph("test_namespace_outputs")
     wg.add_task(myfunc, name="myfunc")
     wg.add_task(myfunc2, name="myfunc2", x=wg.tasks["myfunc"].outputs["result"])
-    wg.submit(
-        wait=True,
+    wg.run(
         inputs={
             "myfunc": {
                 "x": 1,

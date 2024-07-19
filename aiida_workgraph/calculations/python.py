@@ -247,7 +247,15 @@ Only AiiDA SinglefileData and FolderData are allowed."""
             # TODO: should check this recursively
             elif isinstance(value, (AttributeDict, dict)):
                 # if the value is an AttributeDict, use recursively
-                input_values[key] = {k: v.value for k, v in value.items()}
+                if len(value.keys()) > 0 and list(value.keys())[0].startswith(
+                    "list_data_"
+                ):
+                    ndata = len(value.keys())
+                    input_values[key] = [
+                        value[f"list_data_{i}"].value for i in range(ndata)
+                    ]
+                else:
+                    input_values[key] = {k: v.value for k, v in value.items()}
             else:
                 raise ValueError(
                     f"Input data {value} is not supported. Only AiiDA data Node with a value attribute is allowed. "

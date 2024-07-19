@@ -116,6 +116,12 @@ class PythonParser(Parser):
                     else:
                         serialized_result[key] = general_serializer(value)
                 return serialized_result
+            elif isinstance(result, list):
+                serialized_result = {}
+                for i, value in enumerate(result):
+                    key = f"list_data_{i}"
+                    serialized_result[key] = general_serializer(value)
+                return serialized_result
             else:
                 self.exit_codes.ERROR_INVALID_OUTPUT
         else:
