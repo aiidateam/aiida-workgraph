@@ -12,6 +12,7 @@ from aiida_workgraph.collection import (
 )
 import aiida
 from typing import Any, Dict, Optional, Union, Callable, List
+from aiida_workgraph.utils.message import WIDGET_INSTALLATION_MESSAGE
 
 
 class Task(GraphNode):
@@ -124,7 +125,6 @@ class Task(GraphNode):
         self.state = "PLANNED"
 
     def _repr_mimebundle_(self, *args: Any, **kwargs: Any) -> any:
-        from aiida_workgraph.utils.message import WIDGET_INSTALLATION_MESSAGE
 
         if self._widget is None:
             print(WIDGET_INSTALLATION_MESSAGE)
@@ -138,5 +138,8 @@ class Task(GraphNode):
 
     def to_html(self, output: str = None, **kwargs):
         """Write a standalone html file to visualize the task."""
+        if self._widget is None:
+            print(WIDGET_INSTALLATION_MESSAGE)
+            return
         self._widget.from_node(self)
         return self._widget.to_html(output=output, **kwargs)
