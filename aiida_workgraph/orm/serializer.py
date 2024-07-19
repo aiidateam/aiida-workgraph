@@ -3,6 +3,7 @@ from aiida import orm, common
 from importlib.metadata import entry_points
 from typing import Any
 from aiida_workgraph.config import load_config
+import sys
 
 
 def get_serializer_from_entry_points() -> dict:
@@ -14,8 +15,13 @@ def get_serializer_from_entry_points() -> dict:
     serializers = configs.get("serializers", {})
     excludes = serializers.get("excludes", [])
     # Retrieve the entry points for 'aiida.data' and store them in a dictionary
+    eps = entry_points()
+    if sys.version_info >= (3, 10):
+        group = eps.select(group="aiida.data")
+    else:
+        group = eps.get("aiida.data", [])
     eps = {}
-    for ep in entry_points().get("aiida.data", []):
+    for ep in group:
         # split the entry point name by first ".", and check the last part
         key = ep.name.split(".", 1)[-1]
         # skip key without "." because it is not a module name for a data type
