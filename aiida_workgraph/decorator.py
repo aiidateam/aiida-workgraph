@@ -268,6 +268,11 @@ def build_pythonjob_task(func: Callable) -> Task:
     tdata = {"executor": PythonJob, "task_type": "CALCJOB"}
     _, tdata_py = build_task_from_AiiDA(tdata)
     tdata = deepcopy(func.tdata)
+    # if the function has var_kwargs, we need to change the input type to Namespace
+    if tdata["var_kwargs"]:
+        for input in tdata["inputs"]:
+            if input["name"] == tdata["var_kwargs"]:
+                input["identifier"] = "Namespace"
     # merge the inputs and outputs from the PythonJob task to the function task
     # skip the already existed inputs and outputs
     inputs = tdata["inputs"]

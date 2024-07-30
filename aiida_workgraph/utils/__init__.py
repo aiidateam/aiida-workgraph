@@ -334,20 +334,28 @@ def serialize_pythonjob_properties(wgdata):
         if not task["metadata"]["node_type"].upper() == "PYTHONJOB":
             continue
         # get the names kwargs for the PythonJob, which are the inputs before _wait
-        input_kwargs = []
         for input in task["inputs"]:
             if input["name"] == "_wait":
                 break
-            input_kwargs.append(input["name"])
-        for name in input_kwargs:
-            prop = task["properties"][name]
-            # if value is not None, not {}
-            if not (
-                prop["value"] is None
-                or isinstance(prop["value"], dict)
-                and prop["value"] == {}
-            ):
-                prop["value"] = general_serializer(prop["value"])
+            prop = task["properties"][input["name"]]
+            if input["identifier"] == "Namespace":
+                if isinstance(prop["value"], list):
+                    prop["value"] = {
+                        f"list_data_{i}": general_serializer(v)
+                        for i, v in enumerate(prop["value"])
+                    }
+                elif isinstance(prop["value"], dict):
+                    prop["value"] = {
+                        k: general_serializer(v) for k, v in prop["value"].items()
+                    }
+            else:
+                # if value is not None, not {}
+                if not (
+                    prop["value"] is None
+                    or isinstance(prop["value"], dict)
+                    and prop["value"] == {}
+                ):
+                    prop["value"] = general_serializer(prop["value"])
 
 
 def generate_bash_to_create_python_env(
