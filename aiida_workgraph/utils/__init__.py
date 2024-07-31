@@ -565,31 +565,37 @@ def serialize_function(func: Callable) -> Dict[str, Any]:
     import textwrap
     import cloudpickle as pickle
 
-    # we need save the source code explicitly, because in the case of jupyter notebook,
-    # the source code is not saved in the pickle file
-    source_code = inspect.getsource(func)
-    # Split the source into lines for processing
-    source_code_lines = source_code.split("\n")
-    function_source_code = "\n".join(source_code_lines)
-    # Find the first line of the actual function definition
-    for i, line in enumerate(source_code_lines):
-        if line.strip().startswith("def "):
-            break
-    function_source_code_without_decorator = "\n".join(source_code_lines[i:])
-    function_source_code_without_decorator = textwrap.dedent(
-        function_source_code_without_decorator
-    )
-    # we also need to include the necessary imports for the types used in the type hints.
     try:
-        required_imports = get_required_imports(func)
+        # we need save the source code explicitly, because in the case of jupyter notebook,
+        # the source code is not saved in the pickle file
+        source_code = inspect.getsource(func)
+        # Split the source into lines for processing
+        source_code_lines = source_code.split("\n")
+        function_source_code = "\n".join(source_code_lines)
+        # Find the first line of the actual function definition
+        for i, line in enumerate(source_code_lines):
+            if line.strip().startswith("def "):
+                break
+        function_source_code_without_decorator = "\n".join(source_code_lines[i:])
+        function_source_code_without_decorator = textwrap.dedent(
+            function_source_code_without_decorator
+        )
+        # we also need to include the necessary imports for the types used in the type hints.
+        try:
+            required_imports = get_required_imports(func)
+        except Exception as e:
+            required_imports = {}
+            print(f"Failed to get required imports for function {func.__name__}: {e}")
+        # Generate import statements
+        import_statements = "\n".join(
+            f"from {module} import {', '.join(types)}"
+            for module, types in required_imports.items()
+        )
     except Exception as e:
-        required_imports = {}
-        print(f"Failed to get required imports for function {func.__name__}: {e}")
-    # Generate import statements
-    import_statements = "\n".join(
-        f"from {module} import {', '.join(types)}"
-        for module, types in required_imports.items()
-    )
+        print(f"Failed to serialize function {func.__name__}: {e}")
+        function_source_code = ""
+        function_source_code_without_decorator = ""
+        import_statements = ""
     return {
         "executor": pickle.dumps(func),
         "type": "function",
