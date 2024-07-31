@@ -62,16 +62,27 @@ async def read_data_node_item(id: int) -> Dict[str, Any]:
 @router.delete("/api/datanode/delete/{id}")
 async def delete_data_node(
     id: int,
-) -> Dict[str, str]:
+    dry_run: bool = False,
+) -> Dict[str, bool | str | List[int]]:
     from aiida.tools import delete_nodes
 
     try:
         # Perform the delete action here
-        _, was_deleted = delete_nodes([id], dry_run=False)
-
+        deleted_nodes, was_deleted = delete_nodes([id], dry_run=dry_run)
         if was_deleted:
-            return {"message": f"Deleted datanode {id}"}
+            return {
+                "deleted": True,
+                "message": f"Deleted data node {id}",
+                "deleted_nodes": deleted_nodes,
+            }
         else:
-            return {"message": f"Failed to delete datanode {id}"}
+            message = f"Did not delete data node {id}"
+            if dry_run:
+                message += " [dry-run]"
+            return {
+                "deleted": False,
+                "message": message,
+                "deleted_nodes": deleted_nodes,
+            }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

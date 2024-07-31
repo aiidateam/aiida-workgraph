@@ -180,9 +180,10 @@ def test_workgraph_delete(web_server, page, ran_wg_calcfunction):
     expect(page.locator(":nth-match(tr, 2)")).to_be_visible()
 
     header_and_rows = page.get_by_role("row").all()
-
     first_row = header_and_rows[1]
     delete_button = first_row.locator(".delete-button")
+
+    # Verify that confirming the prompt does delete the node
     delete_button.click()
     first_row.wait_for(state="hidden")
     assert first_row.is_hidden()
@@ -197,12 +198,26 @@ def test_datanode_delete(web_server, page, ran_wg_calcfunction):
     page.click('a[href="/datanode"]')
 
     # Ensures that the first data row has appeared, the first row is header
-    expect(page.locator(":nth-match(tr, 2)")).to_be_visible()
+    last_row = page.locator(":nth-match(tr, 11)")
+    expect(last_row).to_be_visible()
+    # verify that this is the last row
+    expect(page.locator(":nth-match(tr, 12)")).to_be_hidden()
 
-    header_and_rows = page.get_by_role("row").all()
+    delete_button = last_row.locator(".delete-button")
 
-    first_row = header_and_rows[1]
-    delete_button = first_row.locator(".delete-button")
+    # Verify that cancel or closing the prompt does not delete the node
     delete_button.click()
-    first_row.wait_for(state="hidden")
-    assert first_row.is_hidden()
+    expect(page.get_by_text("Confirm deletion")).to_be_visible()
+    page.get_by_label("Close").click()
+    expect(last_row).to_be_visible()
+
+    delete_button.click()
+    expect(page.get_by_text("Confirm deletion")).to_be_visible()
+    page.get_by_role("button", name="Cancel").click()
+    expect(last_row).to_be_visible()
+
+    # Verify that confirming the prompt does delete the node
+    delete_button.click()
+    expect(page.get_by_text("Confirm deletion")).to_be_visible()
+    page.get_by_role("button", name="Confirm").click()
+    expect(last_row).to_be_hidden()
