@@ -5,6 +5,8 @@ import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { FaPlay, FaPause, FaTrash } from 'react-icons/fa'; // Import icons from react-icons
 import './WorkGraphTable.css'; // Import a custom CSS file for styling
+import WorkGraphDeleteNodePrompt from './WorkGraphPrompt';
+import Button from 'react-bootstrap/Button';
 
 
 function WorkGraph() {
@@ -119,8 +121,17 @@ function WorkGraph() {
         .catch(error => console.error('Error deleting item: ', error));
     };
 
+    const [modalShow, setModalShow] = React.useState(false);
+
     return (
         <div>
+        <div>
+            <Button variant="primary" onClick={() => setModalShow(true)}>
+              Launch vertically centered modal
+            </Button>
+            <Button variant="primary" onClick={() => setModalShow(false)}>
+              Delaunch vertically centered modal
+            </Button>
             <h2>WorkGraph</h2>
             <div className="search-container">
                 <input
@@ -175,7 +186,15 @@ function WorkGraph() {
             />
             <ToastContainer autoClose={3000} />
         </div>
-    );
+        <div>
+        <WorkGraphDeleteNodePrompt
+            show={modalShow}
+            onHide={() => setModalShow(false)}
+            fullscreen={true}
+        />
+        </div>
+        </div>
+  );
 }
 
 export default WorkGraph;
