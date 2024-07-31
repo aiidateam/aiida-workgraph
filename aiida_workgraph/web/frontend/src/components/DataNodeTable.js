@@ -5,6 +5,7 @@ import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { FaPlay, FaPause, FaTrash } from 'react-icons/fa';
 import './WorkGraphTable.css';
+import WorkGraphDeleteNodePrompt from './WorkGraphPrompt';
 
 function DataNode() {
     const [data, setData] = useState([]);
@@ -49,7 +50,7 @@ function DataNode() {
         setCurrentPage(event.selected);
     };
 
-    const handleDeleteClick = (item) => {
+    const handleDeleteConfirmClick = (item) => {
         fetch(`http://localhost:8000/api/workgraph/delete/${item.pk}`, {
             method: 'DELETE',
         })
@@ -67,6 +68,8 @@ function DataNode() {
         })
         .catch(error => console.error('Error deleting item: ', error));
     };
+
+    const [modalShow, setModalShow] = React.useState(false);
 
     return (
         <div>
@@ -107,8 +110,14 @@ function DataNode() {
                             <td>{item.node_type}</td>
                             <td>{item.label}</td>
                             <td>
-                                <button onClick={() => handleDeleteClick(item)} className="action-button delete-button"><FaTrash /></button>
+                                <button onClick={() => setModalShow(true)} className="action-button delete-button"><FaTrash /></button>
                             </td>
+                            <WorkGraphDeleteNodePrompt
+                                show={modalShow}
+                                item={item}
+                                onYesClick={() => handleDeleteConfirmClick(item)}
+                                onNoClick={() => setModalShow(false)}
+                            />
                         </tr>
                     ))}
                 </tbody>

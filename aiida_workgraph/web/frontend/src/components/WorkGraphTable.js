@@ -6,7 +6,6 @@ import 'react-toastify/dist/ReactToastify.css';
 import { FaPlay, FaPause, FaTrash } from 'react-icons/fa'; // Import icons from react-icons
 import './WorkGraphTable.css'; // Import a custom CSS file for styling
 import WorkGraphDeleteNodePrompt from './WorkGraphPrompt';
-import Button from 'react-bootstrap/Button';
 
 
 function WorkGraph() {
@@ -98,8 +97,7 @@ function WorkGraph() {
         .catch(error => console.error('Error playing item: ', error));
     };
 
-    // Function to handle delete click
-    const handleDeleteClick = (item) => {
+    const handleDeleteConfirmClick = (item) => {
         // Make an API request to delete the workgraph item
         fetch(`http://localhost:8000/api/workgraph/delete/${item.pk}`, {
             method: 'DELETE',
@@ -119,19 +117,17 @@ function WorkGraph() {
             }
         })
         .catch(error => console.error('Error deleting item: ', error));
-    };
+    }
 
     const [modalShow, setModalShow] = React.useState(false);
+    // Function to handle delete click
+    const handleDeleteClick = (item) => {
+      setModalShow(true)
+    };
+
 
     return (
         <div>
-        <div>
-            <Button variant="primary" onClick={() => setModalShow(true)}>
-              Launch vertically centered modal
-            </Button>
-            <Button variant="primary" onClick={() => setModalShow(false)}>
-              Delaunch vertically centered modal
-            </Button>
             <h2>WorkGraph</h2>
             <div className="search-container">
                 <input
@@ -165,6 +161,12 @@ function WorkGraph() {
                                 <button onClick={() => handlePauseClick(item)} className="action-button pause-button"><FaPause /></button>
                                 <button onClick={() => handlePlayClick(item)} className="action-button play-button"><FaPlay /></button>
                                 <button onClick={() => handleDeleteClick(item)} className="action-button delete-button"><FaTrash /></button>
+                                <WorkGraphDeleteNodePrompt
+                                    show={modalShow}
+                                    item={item}
+                                    onYesClick={() => handleDeleteConfirmClick(item)}
+                                    onNoClick={() => setModalShow(false)}
+                                />
                             </td>
                         </tr>
                     ))}
@@ -185,14 +187,6 @@ function WorkGraph() {
                 breakClassName={'pageBreak'}
             />
             <ToastContainer autoClose={3000} />
-        </div>
-        <div>
-        <WorkGraphDeleteNodePrompt
-            show={modalShow}
-            onHide={() => setModalShow(false)}
-            fullscreen={true}
-        />
-        </div>
         </div>
   );
 }
