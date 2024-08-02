@@ -38,4 +38,4 @@ function WorkGraphConfirmModal(props) {
       </Modal>
   );
 }
-export default WorkGraphDeleteNodePrompt;
+export default WorkGraphConfirmModal;
