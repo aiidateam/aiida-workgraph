@@ -5,7 +5,7 @@ import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { FaPlay, FaPause, FaTrash } from 'react-icons/fa';
 import './WorkGraphTable.css';
-import WorkGraphDeleteNodePrompt from './WorkGraphPrompt';
+import WorkGraphConfirmModal from './WorkGraphModals';
 
 function DataNode() {
     const [data, setData] = useState([]);
@@ -151,7 +151,7 @@ function DataNode() {
                 breakClassName={'pageBreak'}
             />
             <ToastContainer autoClose={3000} />
-            <WorkGraphDeleteNodePrompt
+            <WorkGraphConfirmModal
                 show={showConfirmDeleteModal}
                 setShow={setShowConfirmDeleteModal}
                 confirmAction={() => handleDeleteNode(toDeleteItem)}
