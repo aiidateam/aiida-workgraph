@@ -19,7 +19,7 @@ function WorkGraphDeleteNodePrompt(props) {
 
   return (
       <Modal 
-        {...props}
+        show={props.show}
       >
       <Modal.Header closeButton>
         <Modal.Title id="contained-modal-title-vcenter">
@@ -28,7 +28,8 @@ function WorkGraphDeleteNodePrompt(props) {
       </Modal.Header>
       <Modal.Body>
         <p>
-          Are you sure you want to delete node? <b>A deletion is irreversible.</b>
+          {props.bodyText}
+          
         </p>
       </Modal.Body>
       <Modal.Footer>

@@ -50,6 +50,7 @@ function DataNode() {
         setCurrentPage(event.selected);
     };
 
+
     const handleDeleteNode = (item) => {
         fetch(`http://localhost:8000/api/workgraph/delete/${item.pk}`, {
             method: 'DELETE',
@@ -69,8 +70,18 @@ function DataNode() {
         .catch(error => console.error('Error deleting item: ', error));
     };
 
-    const [toDeleteItem, setToDeleteItem] = React.useState(); // TODO this will not always work
+    const [toDeleteItem, setToDeleteItem] = useState({pk:0});
     const [showConfirmDeleteModal, setShowConfirmDeleteModal] = useState(false);
+    const [bodyTextConfirmDeleteModal, setBodyTextConfirmDeleteModal] =  useState(<p></p>);
+    // Need to useEffect to ensure this happens after the item has been updated
+    // on delete button click
+    useEffect(() => {
+        setBodyTextConfirmDeleteModal(
+          <p>
+            Are you sure you want to delete node {toDeleteItem.pk}?
+            <b> A deletion is irreversible.</b>
+          </p>);
+      }, [toDeleteItem]);
 
     return (
         <div>
@@ -109,10 +120,17 @@ function DataNode() {
                             </td>
                             <td>{item.ctime}</td>
                             <td>{item.node_type}</td>
-                            <td>{item.label}</td>
+                            <td>{item.label}</td> 
                             <td>
-                                <button onClick={() => { setToDeleteItem(item); setShowConfirmDeleteModal(true); }}
-                                        className="action-button delete-button"><FaTrash /></button>
+                                <button
+                                  onClick={
+                                    () => 
+                                    { 
+                                      setToDeleteItem(item);
+                                      setShowConfirmDeleteModal(true);
+                                    }
+                                  }
+                                  className="action-button delete-button"><FaTrash /></button>
                             </td>
                         </tr>
                     ))}
@@ -138,6 +156,7 @@ function DataNode() {
                 setShow={setShowConfirmDeleteModal}
                 confirmAction={() => handleDeleteNode(toDeleteItem)}
                 cancelAction={() => {}}
+                bodyText={bodyTextConfirmDeleteModal}
             />
         </div>
     );
