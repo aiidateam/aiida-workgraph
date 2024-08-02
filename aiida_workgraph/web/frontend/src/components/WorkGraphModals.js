@@ -20,7 +20,7 @@ function WorkGraphConfirmModal(props) {
       <Modal 
         show={props.show}
       >
-      <Modal.Header closeButton>
+      <Modal.Header closeButton onClick={() => handleCancelClick()}>
         <Modal.Title id="contained-modal-title-vcenter">
           Confirm deletion 
         </Modal.Title>
