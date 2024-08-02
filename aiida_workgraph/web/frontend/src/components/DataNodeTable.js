@@ -50,7 +50,7 @@ function DataNode() {
         setCurrentPage(event.selected);
     };
 
-    const handleDeleteConfirmClick = (item) => {
+    const handleDeleteNode = (item) => {
         fetch(`http://localhost:8000/api/workgraph/delete/${item.pk}`, {
             method: 'DELETE',
         })
@@ -58,7 +58,7 @@ function DataNode() {
         .then(data => {
             if (data.message) {
                 toast.success(data.message);
-                fetch(`http://localhost:8000/api/workgraph-data?TypeSearch=${searchTypeQuery}&labelSearch=${searchLabelQuery}`) // Include labelSearch in refresh
+                fetch(`http://localhost:8000/api/datanode-data?TypeSearch=${searchTypeQuery}&labelSearch=${searchLabelQuery}`) // Include labelSearch in refresh
                     .then(response => response.json())
                     .then(data => setData(data))
                     .catch(error => console.error('Error fetching data: ', error));
@@ -69,7 +69,8 @@ function DataNode() {
         .catch(error => console.error('Error deleting item: ', error));
     };
 
-    const [modalShow, setModalShow] = React.useState(false);
+    const [toDeleteItem, setToDeleteItem] = React.useState(); // TODO this will not always work
+    const [showConfirmDeleteModal, setShowConfirmDeleteModal] = useState(false);
 
     return (
         <div>
@@ -110,14 +111,9 @@ function DataNode() {
                             <td>{item.node_type}</td>
                             <td>{item.label}</td>
                             <td>
-                                <button onClick={() => setModalShow(true)} className="action-button delete-button"><FaTrash /></button>
+                                <button onClick={() => { setToDeleteItem(item); setShowConfirmDeleteModal(true); }}
+                                        className="action-button delete-button"><FaTrash /></button>
                             </td>
-                            <WorkGraphDeleteNodePrompt
-                                show={modalShow}
-                                item={item}
-                                onYesClick={() => handleDeleteConfirmClick(item)}
-                                onNoClick={() => setModalShow(false)}
-                            />
                         </tr>
                     ))}
                 </tbody>
@@ -137,6 +133,12 @@ function DataNode() {
                 breakClassName={'pageBreak'}
             />
             <ToastContainer autoClose={3000} />
+            <WorkGraphDeleteNodePrompt
+                show={showConfirmDeleteModal}
+                setShow={setShowConfirmDeleteModal}
+                confirmAction={() => handleDeleteNode(toDeleteItem)}
+                cancelAction={() => {}}
+            />
         </div>
     );
 }
