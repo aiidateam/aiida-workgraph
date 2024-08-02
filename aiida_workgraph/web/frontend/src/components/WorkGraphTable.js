@@ -5,7 +5,6 @@ import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { FaPlay, FaPause, FaTrash } from 'react-icons/fa'; // Import icons from react-icons
 import './WorkGraphTable.css'; // Import a custom CSS file for styling
-import WorkGraphDeleteNodePrompt from './WorkGraphPrompt';
 
 
 function WorkGraph() {
@@ -97,7 +96,8 @@ function WorkGraph() {
         .catch(error => console.error('Error playing item: ', error));
     };
 
-    const handleDeleteConfirmClick = (item) => {
+    // Function to handle delete click
+    const handleDeleteClick = (item) => {
         // Make an API request to delete the workgraph item
         fetch(`http://localhost:8000/api/workgraph/delete/${item.pk}`, {
             method: 'DELETE',
@@ -117,14 +117,7 @@ function WorkGraph() {
             }
         })
         .catch(error => console.error('Error deleting item: ', error));
-    }
-
-    const [modalShow, setModalShow] = React.useState(false);
-    // Function to handle delete click
-    const handleDeleteClick = (item) => {
-      setModalShow(true)
     };
-
 
     return (
         <div>
@@ -161,12 +154,6 @@ function WorkGraph() {
                                 <button onClick={() => handlePauseClick(item)} className="action-button pause-button"><FaPause /></button>
                                 <button onClick={() => handlePlayClick(item)} className="action-button play-button"><FaPlay /></button>
                                 <button onClick={() => handleDeleteClick(item)} className="action-button delete-button"><FaTrash /></button>
-                                <WorkGraphDeleteNodePrompt
-                                    show={modalShow}
-                                    item={item}
-                                    onYesClick={() => handleDeleteConfirmClick(item)}
-                                    onNoClick={() => setModalShow(false)}
-                                />
                             </td>
                         </tr>
                     ))}
@@ -188,7 +175,7 @@ function WorkGraph() {
             />
             <ToastContainer autoClose={3000} />
         </div>
-  );
+    );
 }
 
 export default WorkGraph;
