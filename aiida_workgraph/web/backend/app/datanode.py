@@ -74,8 +74,11 @@ async def delete_data_node(
                     "message": f"Deleted datanode {id}",
                     "deleted_nodes": deleted_nodes}
         else:
+            message = f"Did not delete datanode {id}"
+            if dry_run:
+                message += " [dry-run]"
             return {"deleted": False,
-                    "message": f"Did no delete datanode {id}",
+                    "message": message,
                     "deleted_nodes": deleted_nodes}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
