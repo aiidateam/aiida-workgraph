@@ -4,21 +4,31 @@ import Modal from 'react-bootstrap/Modal';
 import Button from 'react-bootstrap/Button';
 
 
-function WorkGraphConfirmModal(props) {
+function WorkGraphConfirmModal({ confirmAction, cancelAction, bodyText, show, setShow }) {
 
   const handleConfirmClick = () => {
-    props.confirmAction();
-    props.setShow(false);
+    try {
+      confirmAction();
+    } catch(error) {
+      console.error('While executing the modal confirm action, an action error was raised: ', error)
+    } finally {
+      setShow(false);
+    }
   };
 
   const handleCancelClick = () => {
-    props.cancelAction();
-    props.setShow(false);
+    try {
+      cancelAction();
+    } catch(error) {
+      console.error('While executing the modal cancel action, an action error was raised: ', error)
+    } finally {
+      setShow(false);
+    }
   };
 
   return (
       <Modal 
-        show={props.show}
+        show={show}
       >
       <Modal.Header closeButton onClick={() => handleCancelClick()}>
         <Modal.Title id="contained-modal-title-vcenter">
@@ -27,8 +37,7 @@ function WorkGraphConfirmModal(props) {
       </Modal.Header>
       <Modal.Body>
         <p>
-          {props.bodyText}
-          
+          {bodyText}
         </p>
       </Modal.Body>
       <Modal.Footer>

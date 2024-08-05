@@ -50,14 +50,13 @@ function DataNode() {
         setCurrentPage(event.selected);
     };
 
-
     const handleDeleteNode = (item) => {
-        fetch(`http://localhost:8000/api/workgraph/delete/${item.pk}`, {
+        fetch(`http://localhost:8000/api/datanode/delete/${item.pk}`, {
             method: 'DELETE',
         })
         .then(response => response.json())
         .then(data => {
-            if (data.message) {
+            if (data.deleted) {
                 toast.success(data.message);
                 fetch(`http://localhost:8000/api/datanode-data?TypeSearch=${searchTypeQuery}&labelSearch=${searchLabelQuery}`) // Include labelSearch in refresh
                     .then(response => response.json())
@@ -70,18 +69,51 @@ function DataNode() {
         .catch(error => console.error('Error deleting item: ', error));
     };
 
-    const [toDeleteItem, setToDeleteItem] = useState({pk:0});
+    const [toDeleteItem, setToDeleteItem] = useState(null);
     const [showConfirmDeleteModal, setShowConfirmDeleteModal] = useState(false);
     const [bodyTextConfirmDeleteModal, setBodyTextConfirmDeleteModal] =  useState(<p></p>);
     // Need to useEffect to ensure this happens after the item has been updated
     // on delete button click
     useEffect(() => {
-        setBodyTextConfirmDeleteModal(
-          <p>
-            Are you sure you want to delete node {toDeleteItem.pk}?
-            <b> A deletion is irreversible.</b>
-          </p>);
+        if (toDeleteItem != null) {
+          fetch(`http://localhost:8000/api/datanode/delete/${toDeleteItem.pk}?dry_run=True`, {
+              method: 'DELETE',
+          })
+          .then(response => response.json())
+          .then(data => {
+              if (data.deleted_nodes.length > 0) {
+                // the node {item.pk} will be always in the list if the deletion is successfull
+                if (data.deleted_nodes.length > 1) {
+                  let formatted_pks = data.deleted_nodes.map((x) => ` PK<${x.toString()}>`);
+                  data.deleted_nodes.splice(data.deleted_nodes.indexOf(toDeleteItem.pk), 1)
+                  setBodyTextConfirmDeleteModal(
+                    <p>
+                    Are you sure you want to delete node PK&lt;{toDeleteItem.pk}&gt; and {data.deleted_nodes.length} its dependencies?
+                    <b> A deletion is irreversible.</b>
+                    <br/><br/>
+                    List of items dependent on item PK&lt;{toDeleteItem.pk}&gt; that also will be deleted:
+                    <br/> {formatted_pks.toString()}
+                    </p>
+                  );
+                } else {
+                  setBodyTextConfirmDeleteModal(
+                    <p>
+                    Are you sure you want to delete node {toDeleteItem.pk}?
+                    <b> A deletion is irreversible.</b>
+                    </p>
+                  );
+                }
+                setShowConfirmDeleteModal(true)
+              } else {
+                  toast.error('Error deleting item.');
+              }
+          })
+          .catch(error => console.error('Error deleting item: ', error));
+        };
       }, [toDeleteItem]);
+
+    const getConfirmDeleteMessage = (item) => {
+    };
 
     return (
         <div>
@@ -126,8 +158,9 @@ function DataNode() {
                                   onClick={
                                     () => 
                                     { 
-                                      setToDeleteItem(item);
-                                      setShowConfirmDeleteModal(true);
+                                      // we need to copy it to change the reference
+                                      // so useEffect hook gets activated
+                                      setToDeleteItem(structuredClone(item));
                                     }
                                   }
                                   className="action-button delete-button"><FaTrash /></button>
