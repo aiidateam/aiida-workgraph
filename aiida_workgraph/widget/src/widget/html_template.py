@@ -21,7 +21,7 @@ html_template = """
     <script src="https://cdn.jsdelivr.net/npm/rete-react-plugin@2.0.5/rete-react-plugin.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/rete-auto-arrange-plugin@2.0.1/rete-auto-arrange-plugin.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/rete-minimap-plugin@2.0.1/rete-minimap-plugin.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/rete-comment-plugin@2.0.0/rete-comment-plugin.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/rete-scopes-plugin@2.1.0/rete-scopes-plugin.min.js"></script>
 
     <style>
         .App {
@@ -53,6 +53,7 @@ html_template = """
         const { createRoot } = ReactDOM;
         const { NodeEditor, ClassicPreset } = Rete;
         const { AreaPlugin, AreaExtensions } = ReteAreaPlugin;
+        const { ScopesPlugin, Presets: ScopesPresets } = ReteScopesPlugin;
         const { ConnectionPlugin, Presets: ConnectionPresets } = ReteConnectionPlugin;
         const { ReactPlugin, Presets } = ReteReactPlugin;
         const { AutoArrangePlugin, Presets: ArrangePresets, ArrangeAppliers} = ReteAutoArrangePlugin;
@@ -142,6 +143,23 @@ html_template = """
           workgraphData.links.forEach(async (link) => { // Specify the type of link here
             await addLink(editor, area, layout, link);
           });
+
+          // Add while zones
+          console.log("Adding while zone: ");
+          for (const nodeId in workgraphData.nodes) {
+            const nodeData = workgraphData.nodes[nodeId];
+            // if node_type is "WHILE", find all
+            if (nodeData['node_type'] === "WHILE") {
+              // find the node
+              const node = editor.nodeMap[nodeData.label];
+              const tasks = nodeData['properties']['tasks']['value'];
+              // find the id of all nodes in the editor that has a label in while_zone
+              for (const nodeId in tasks) {
+                const node1 = editor.nodeMap[tasks[nodeId]];
+                node1.parent = node.id;
+              }
+            }
+          }
         }
 
         async function createEditor(container) {
@@ -151,6 +169,7 @@ html_template = """
             const area = new AreaPlugin(container);
             const connection = new ConnectionPlugin();
             const render = new ReactPlugin({ createRoot });
+            const scopes = new ScopesPlugin();
             const arrange = new AutoArrangePlugin();
 
             const minimap = new MinimapPlugin({
@@ -165,6 +184,7 @@ html_template = """
             render.addPreset(Presets.minimap.setup({ size: 200 }));
 
             connection.addPreset(ConnectionPresets.classic.setup());
+            scopes.addPreset(ScopesPresets.classic.setup());
 
             const applier = new ArrangeAppliers.TransitionApplier({
               duration: 500,
@@ -180,6 +200,7 @@ html_template = """
             editor.use(area);
             // area.use(connection);
             area.use(render);
+            area.use(scopes);
             area.use(arrange);
             area.use(minimap);
 
@@ -224,6 +245,7 @@ html_template = """
                           // aplly layout twice to ensure all nodes are arranged
                           editor?.layout(false).then(() => editor?.layout(true));
                         });
+                        window.editor = editor;
                     });
                 }
                 if (document.getElementById('fullscreen-btn')) {

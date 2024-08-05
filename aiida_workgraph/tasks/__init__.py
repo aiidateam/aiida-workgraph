@@ -1,5 +1,5 @@
 from node_graph.utils import get_entries
-from .builtin import AiiDAGather, AiiDAToCtx, AiiDAFromCtx
+from .builtin import AiiDAGather, AiiDAToCtx, AiiDAFromCtx, While
 from .test import (
     AiiDAInt,
     AiiDAFloat,
@@ -20,6 +20,7 @@ from .qe import (
 )
 
 task_list = [
+    While,
     AiiDAGather,
     AiiDAToCtx,
     AiiDAFromCtx,

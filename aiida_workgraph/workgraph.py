@@ -479,24 +479,3 @@ class WorkGraph(node_graph.NodeGraph):
             return
         self._widget.from_workgraph(self)
         return self._widget.to_html(output=output, **kwargs)
-
-
-class WhileZone:
-    def __init__(
-        self,
-        workgraph: WorkGraph = None,
-        tasks: List[str] = None,
-        conditions: List[str] = None,
-        update_inputs: Dict[str, Any] = None,
-    ):
-        self.workgraph = workgraph
-        self.tasks = tasks
-        self.conditions = conditions
-        self.update_inputs = update_inputs
-
-    def to_dict(self):
-        return {
-            "tasks": self.tasks,
-            "conditions": self.conditions,
-            "update_inputs": self.update_inputs,
-        }

@@ -33,6 +33,7 @@
     "rete-area-3d-plugin": "^2.0.3",
     "rete-area-plugin": "^2.0.1",
     "rete-auto-arrange-plugin": "^2.0.0",
+		"rete-scopes-plugin": "2.1.0",
     "rete-connection-plugin": "^2.0.0",
     "rete-connection-reroute-plugin": "^2.0.0",
     "rete-context-menu-plugin": "^2.0.0",
