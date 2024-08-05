@@ -72,8 +72,7 @@ function DataNode() {
     const [toDeleteItem, setToDeleteItem] = useState(null);
     const [showConfirmDeleteModal, setShowConfirmDeleteModal] = useState(false);
     const [bodyTextConfirmDeleteModal, setBodyTextConfirmDeleteModal] =  useState(<p></p>);
-    // Need to useEffect to ensure this happens after the item has been updated
-    // on delete button click
+    // useEffect to ensure this happens after the toDeletItem has been updated by the delete button click
     useEffect(() => {
         if (toDeleteItem != null) {
           fetch(`http://localhost:8000/api/datanode/delete/${toDeleteItem.pk}?dry_run=True`, {
@@ -152,7 +151,7 @@ function DataNode() {
                             </td>
                             <td>{item.ctime}</td>
                             <td>{item.node_type}</td>
-                            <td>{item.label}</td> 
+                            <td>{item.label}</td>
                             <td>
                                 <button
                                   onClick={
