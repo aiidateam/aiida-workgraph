@@ -11,10 +11,10 @@ from node_graph.sockets.builtin import (
 )
 
 
-class SocketGeneral(TaskSocket, SerializePickle):
-    """General socket."""
+class SocketAny(TaskSocket, SerializePickle):
+    """Socket for any time."""
 
-    identifier: str = "General"
+    identifier: str = "Any"
 
     def __init__(
         self,
@@ -26,7 +26,25 @@ class SocketGeneral(TaskSocket, SerializePickle):
         **kwargs: Any
     ) -> None:
         super().__init__(name, node, type, index, uuid=uuid)
-        self.add_property("General", name, **kwargs)
+        self.add_property("Any", name, **kwargs)
+
+
+class SocketNamespace(TaskSocket, SerializePickle):
+    """Namespace socket."""
+
+    identifier: str = "Namespace"
+
+    def __init__(
+        self,
+        name: str,
+        node: Optional[Any] = None,
+        type: str = "INPUT",
+        index: int = 0,
+        uuid: Optional[str] = None,
+        **kwargs: Any
+    ) -> None:
+        super().__init__(name, node, type, index, uuid=uuid)
+        self.add_property("Any", name, **kwargs)
 
 
 class SocketAiiDAFloat(TaskSocket, SerializeJson):
@@ -138,7 +156,8 @@ class SocketAiiDAFloatVector(TaskSocket, SerializeJson):
 
 
 socket_list = [
-    SocketGeneral,
+    SocketAny,
+    SocketNamespace,
     SocketInt,
     SocketFloat,
     SocketString,

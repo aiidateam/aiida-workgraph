@@ -30,7 +30,7 @@ class NodeGraphWidget(anywidget.AnyWidget):
         super().__init__(**kwargs)
 
     def from_workgraph(self, workgraph: Any) -> None:
-        from aiida_workgraph.web.backend.app.utils import workgraph_to_short_json
+        from aiida_workgraph.utils import workgraph_to_short_json
 
         wgdata = workgraph.to_dict()
         wait_to_link(wgdata)

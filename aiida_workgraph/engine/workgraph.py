@@ -17,6 +17,7 @@ from aiida.common.extendeddicts import AttributeDict
 from aiida.common.lang import override
 from aiida import orm
 from aiida.orm import load_node, Node, ProcessNode, WorkChainNode
+from aiida.orm.utils.serialize import deserialize_unsafe, serialize
 
 from aiida.engine.processes.exit_code import ExitCode
 from aiida.engine.processes.process import Process
@@ -81,8 +82,9 @@ class WorkGraphEngine(Process, metaclass=Protect):
         spec.input_namespace("input_tasks", dynamic=True, required=False)
         spec.exit_code(2, "ERROR_SUBPROCESS", message="A subprocess has failed.")
 
+        spec.outputs.dynamic = True
+
         spec.output_namespace("new_data", dynamic=True)
-        spec.output_namespace("group_outputs", dynamic=True)
         spec.output(
             "execution_count",
             valid_type=orm.Int,
@@ -399,11 +401,27 @@ class WorkGraphEngine(Process, metaclass=Protect):
         """Use the workgraph name as the process label."""
         return f"WorkGraph<{self.inputs.wg['name']}>"
 
+    def on_create(self) -> None:
+        """Called when a Process is created."""
+        from aiida_workgraph.utils.analysis import WorkGraphSaver
+
+        super().on_create()
+        wgdata = self.inputs.wg._dict
+        # print("wgdata: ", wgdata)
+        restart_process = (
+            orm.load_node(wgdata["restart_process"].value)
+            if wgdata.get("restart_process")
+            else None
+        )
+        saver = WorkGraphSaver(self.node, wgdata, restart_process=restart_process)
+        saver.save()
+
     def setup(self) -> None:
         # track if the awaitable callback is added to the runner
         self.ctx._awaitable_actions = []
-        self.ctx.new_data = dict()
-        self.ctx.input_tasks = dict()
+        self.ctx.new_data = {}
+        self.ctx.input_tasks = {}
+        self.ctx.executed_tasks = []
         # read the latest workgraph data
         wgdata = self.read_wgdata_from_base()
         self.init_ctx(wgdata)
@@ -437,9 +455,11 @@ class WorkGraphEngine(Process, metaclass=Protect):
 
     def read_wgdata_from_base(self) -> t.Dict[str, t.Any]:
         """Read workgraph data from base.extras."""
-        from aiida.orm.utils.serialize import deserialize_unsafe
 
-        wgdata = deserialize_unsafe(self.node.base.extras.get("_workgraph"))
+        wgdata = self.node.base.extras.get("_workgraph")
+        for name, task in wgdata["tasks"].items():
+            wgdata["tasks"][name] = deserialize_unsafe(task)
+        wgdata["error_handlers"] = deserialize_unsafe(wgdata["error_handlers"])
         return wgdata
 
     def update_workgraph_from_base(self) -> None:
@@ -461,16 +481,22 @@ class WorkGraphEngine(Process, metaclass=Protect):
 
     def get_task_state_info(self, name: str, key: str) -> str:
         """Get task state info from base.extras."""
-        from aiida.orm.utils.serialize import deserialize_unsafe
 
-        value = deserialize_unsafe(self.node.base.extras.get(f"_task_{key}_{name}", ""))
+        if key == "process":
+            value = deserialize_unsafe(
+                self.node.base.extras.get(f"_task_{key}_{name}", "")
+            )
+        else:
+            value = self.node.base.extras.get(f"_task_{key}_{name}", "")
         return value
 
     def set_task_state_info(self, name: str, key: str, value: any) -> None:
         """Set task state info to base.extras."""
-        from aiida.orm.utils.serialize import serialize
 
-        self.node.base.extras.set(f"_task_{key}_{name}", serialize(value))
+        if key == "process":
+            self.node.base.extras.set(f"_task_{key}_{name}", serialize(value))
+        else:
+            self.node.base.extras.set(f"_task_{key}_{name}", value)
 
     def init_ctx(self, wgdata: t.Dict[str, t.Any]) -> None:
         """Init the context from the workgraph data."""
@@ -491,60 +517,40 @@ class WorkGraphEngine(Process, metaclass=Protect):
         for name, task in self.ctx.tasks.items():
             if self.get_task_state_info(name, "action").upper() == "RESET":
                 self.reset_task(task["name"])
-            if self.get_task_state_info(name, "process"):
-                if isinstance(self.get_task_state_info(task["name"], "process"), str):
-                    self.set_task_state_info(
-                        task["name"],
-                        "process",
-                        orm.load_node(
-                            self.get_task_state_info(task["name"], "process")
-                        ),
-                    )
+            process = self.get_task_state_info(name, "process")
+            if process:
                 self.set_task_result(task)
             self.set_task_result(task)
 
     def set_task_result(self, task: t.Dict[str, t.Any]) -> None:
         name = task["name"]
         # print(f"set task result: {name}")
-        if self.get_task_state_info(name, "process"):
+        node = self.get_task_state_info(name, "process")
+        if isinstance(node, orm.ProcessNode):
             # print(f"set task result: {name} process")
             state = self.get_task_state_info(
                 task["name"], "process"
             ).process_state.value.upper()
-            if self.get_task_state_info(task["name"], "process").is_finished_ok:
+            if node.is_finished_ok:
                 self.set_task_state_info(task["name"], "state", state)
-                if task["metadata"]["node_type"].upper() == "GRAPH_BUILDER":
-                    # expose the outputs of workgraph
-                    task["results"] = getattr(
-                        self.get_task_state_info(task["name"], "process").outputs,
-                        "group_outputs",
-                        None,
-                    )
-                    # self.ctx.new_data[name] = outputs
-                elif task["metadata"]["node_type"].upper() == "WORKGRAPH":
+                if task["metadata"]["node_type"].upper() == "WORKGRAPH":
                     # expose the outputs of all the tasks in the workgraph
                     task["results"] = {}
-                    outgoing = self.get_task_state_info(
-                        task["name"], "process"
-                    ).base.links.get_outgoing()
+                    outgoing = node.base.links.get_outgoing()
                     for link in outgoing.all():
                         if isinstance(link.node, ProcessNode) and getattr(
                             link.node, "process_state", False
                         ):
                             task["results"][link.link_label] = link.node.outputs
                 else:
-                    task["results"] = self.get_task_state_info(
-                        task["name"], "process"
-                    ).outputs
+                    task["results"] = node.outputs
                     # self.ctx.new_data[name] = task["results"]
                 self.set_task_state_info(task["name"], "state", "FINISHED")
-                self.task_to_context(name)
+                self.task_set_context(name)
                 self.report(f"Task: {name} finished.")
             # all other states are considered as failed
             else:
-                task["results"] = self.get_task_state_info(
-                    task["name"], "process"
-                ).outputs
+                task["results"] = node.outputs
                 # self.ctx.new_data[name] = task["results"]
                 self.set_task_state_info(task["name"], "state", "FAILED")
                 # set child tasks state to SKIPPED
@@ -553,6 +559,11 @@ class WorkGraphEngine(Process, metaclass=Protect):
                 )
                 self.report(f"Task: {name} failed.")
                 self.run_error_handlers(name)
+        elif isinstance(node, orm.Data):
+            task["results"] = {task["outputs"][0]["name"]: node}
+            self.set_task_state_info(task["name"], "state", "FINISHED")
+            self.task_set_context(name)
+            self.report(f"Task: {name} finished.")
         else:
             task["results"] = None
 
@@ -586,12 +597,14 @@ class WorkGraphEngine(Process, metaclass=Protect):
         self.report(f"Task {name} action: RESET.")
         self.set_task_state_info(name, "state", "PLANNED")
         self.set_task_state_info(name, "process", None)
+        self.remove_executed_task(name)
         # reset its child tasks
         names = self.ctx.connectivity["child_node"][name]
         for name in names:
             self.set_task_state_info(name, "state", "PLANNED")
             self.ctx.tasks[name]["result"] = None
             self.set_task_state_info(name, "process", None)
+            self.remove_executed_task(name)
 
     def pause_task(self, name: str) -> None:
         """Pause task."""
@@ -601,9 +614,8 @@ class WorkGraphEngine(Process, metaclass=Protect):
         """Play task."""
         self.report(f"Task {name} action: PLAY.")
 
-    def continue_workgraph(self, exclude: t.Optional[t.List[str]] = None) -> None:
+    def continue_workgraph(self) -> None:
         print("Continue workgraph.")
-        exclude = exclude or []
         self.report("Continue workgraph.")
         # self.update_workgraph_from_base()
         task_to_run = []
@@ -618,7 +630,7 @@ class WorkGraphEngine(Process, metaclass=Protect):
             ]:
                 continue
             ready, output = self.check_parent_state(name)
-            if ready and name not in exclude:
+            if ready and self.task_should_run(name):
                 task_to_run.append(name)
         #
         self.report("tasks ready to run: {}".format(",".join(task_to_run)))
@@ -742,6 +754,30 @@ class WorkGraphEngine(Process, metaclass=Protect):
         self.ctx._count += 1
         return should_run
 
+    def task_should_run(self, name: str, uuid: str = None) -> bool:
+        """Check if the task should not run.
+        If name not in executed tasks, return True.
+        If uuid is not None, check if the task with the same name and uuid is the first one.
+        In a extreme case, the engine try to run the same task multiple times at the same time.
+        We only allow the first one to run.
+        """
+        name_and_uuids = [
+            label.split(".")
+            for label in self.ctx.executed_tasks
+            if label.split(".")[0] == name
+        ]
+        if len(name_and_uuids) == 0:
+            return True
+        # find the index of current uuid
+        index = [i for i, item in enumerate(name_and_uuids) if item[1] == uuid][0]
+        return index == 0
+
+    def remove_executed_task(self, name: str) -> None:
+        """Remove labels with name from executed tasks."""
+        self.ctx.executed_tasks = [
+            label for label in self.ctx.executed_tasks if label.split(".")[0] != name
+        ]
+
     def run_tasks(self, names: t.List[str], continue_workgraph: bool = True) -> None:
         """Run task
         Here we use ToContext to pass the results of the run to the next step.
@@ -753,9 +789,10 @@ class WorkGraphEngine(Process, metaclass=Protect):
             create_data_node,
             update_nested_dict_with_special_keys,
         )
+        from uuid import uuid4
 
         for name in names:
-            print("-" * 60)
+            # skip if the max number of awaitables is reached
             task = self.ctx.tasks[name]
             if task["metadata"]["node_type"].upper() in [
                 "CALCJOB",
@@ -772,19 +809,29 @@ class WorkGraphEngine(Process, metaclass=Protect):
                         )
                     )
                     continue
+            # skip if the task is already executed
+            if name in self.ctx.executed_tasks:
+                continue
+            else:
+                uuid = str(uuid4())
+                self.ctx.executed_tasks.append(f"{name}.{uuid}")
+                if not self.task_should_run(name, uuid):
+                    continue
+            print("-" * 60)
+
             self.report(f"Run task: {name}, type: {task['metadata']['node_type']}")
             # print("Run task: ", name)
             # print("executor: ", task["executor"])
             executor, _ = get_executor(task["executor"])
-            print("executor: ", executor)
+            # print("executor: ", executor)
             args, kwargs, var_args, var_kwargs, args_dict = self.get_inputs(task)
             for i, key in enumerate(self.ctx.tasks[name]["metadata"]["args"]):
                 kwargs[key] = args[i]
             # update the port namespace
             kwargs = update_nested_dict_with_special_keys(kwargs)
-            print("args: ", args)
-            print("kwargs: ", kwargs)
-            print("var_kwargs: ", var_kwargs)
+            # print("args: ", args)
+            # print("kwargs: ", kwargs)
+            # print("var_kwargs: ", var_kwargs)
             # kwargs["meta.label"] = name
             # output must be a Data type or a mapping of {string: Data}
             task["results"] = {}
@@ -795,12 +842,12 @@ class WorkGraphEngine(Process, metaclass=Protect):
                 task["results"] = {task["outputs"][0]["name"]: results}
                 self.ctx.input_tasks[name] = results
                 self.set_task_state_info(name, "state", "FINISHED")
-                self.task_to_context(name)
+                self.task_set_context(name)
                 # ValueError: attempted to add an input link after the process node was already stored.
                 # self.node.base.links.add_incoming(results, "INPUT_WORK", name)
                 self.report(f"Task: {name} finished.")
                 if continue_workgraph:
-                    self.continue_workgraph(names)
+                    self.continue_workgraph()
             elif task["metadata"]["node_type"].upper() == "DATA":
                 print("task  type: data.")
                 for key in self.ctx.tasks[name]["metadata"]["args"]:
@@ -810,10 +857,10 @@ class WorkGraphEngine(Process, metaclass=Protect):
                 self.set_task_state_info(task["name"], "process", results)
                 self.ctx.new_data[name] = results
                 self.set_task_state_info(name, "state", "FINISHED")
-                self.task_to_context(name)
+                self.task_set_context(name)
                 self.report(f"Task: {name} finished.")
                 if continue_workgraph:
-                    self.continue_workgraph(names)
+                    self.continue_workgraph()
             elif task["metadata"]["node_type"].upper() in [
                 "CALCFUNCTION",
                 "WORKFUNCTION",
@@ -837,7 +884,7 @@ class WorkGraphEngine(Process, metaclass=Protect):
                     # print("results: ", results)
                     self.set_task_state_info(task["name"], "process", process)
                     self.set_task_state_info(name, "state", "FINISHED")
-                    self.task_to_context(name)
+                    self.task_set_context(name)
                     self.report(f"Task: {name} finished.")
                 except Exception as e:
                     print(e)
@@ -851,7 +898,7 @@ class WorkGraphEngine(Process, metaclass=Protect):
                     self.report(f"Task: {name} failed.")
                 # exclude the current tasks from the next run
                 if continue_workgraph:
-                    self.continue_workgraph(names)
+                    self.continue_workgraph()
             elif task["metadata"]["node_type"].upper() in ["CALCJOB", "WORKCHAIN"]:
                 # process = run_get_node(executor, *args, **kwargs)
                 print("task type: calcjob/workchain.")
@@ -889,15 +936,10 @@ class WorkGraphEngine(Process, metaclass=Protect):
                 self.to_context(**{name: process})
             elif task["metadata"]["node_type"].upper() in ["WORKGRAPH"]:
                 from .utils import prepare_for_workgraph_task
-                from aiida_workgraph.utils.analysis import WorkGraphSaver
 
-                inputs, wgdata = prepare_for_workgraph_task(task, kwargs)
-                process_inited = WorkGraphEngine(inputs=inputs)
-                process_inited.runner.persister.save_checkpoint(process_inited)
-                saver = WorkGraphSaver(process_inited.node, wgdata)
-                saver.save()
+                inputs, _ = prepare_for_workgraph_task(task, kwargs)
                 print("submit workgraph: ")
-                process = self.submit(process_inited)
+                process = self.submit(WorkGraphEngine, inputs=inputs)
                 self.set_task_state_info(task["name"], "process", process)
                 self.set_task_state_info(name, "state", "RUNNING")
                 self.to_context(**{name: process})
@@ -919,9 +961,7 @@ class WorkGraphEngine(Process, metaclass=Protect):
                     self.set_task_state_info(name, "state", "CREATED")
                     process = process.node
                 else:
-                    print("inputs: ", inputs)
                     process = self.submit(PythonJob, **inputs)
-                    print("process: ", process)
                     self.set_task_state_info(name, "state", "RUNNING")
                 process.label = name
                 self.set_task_state_info(task["name"], "process", process)
@@ -974,10 +1014,10 @@ class WorkGraphEngine(Process, metaclass=Protect):
                 # self.save_results_to_extras(name)
                 self.ctx.input_tasks[name] = results
                 self.set_task_state_info(name, "state", "FINISHED")
-                self.task_to_context(name)
+                self.task_set_context(name)
                 self.report(f"Task: {name} finished.")
                 if continue_workgraph:
-                    self.continue_workgraph(names)
+                    self.continue_workgraph()
                 # print("result from node: ", task["results"])
             else:
                 print("Task type: unknown.")
@@ -1089,18 +1129,14 @@ class WorkGraphEngine(Process, metaclass=Protect):
             return get_nested_dict(self.ctx, name)
         return value
 
-    def task_to_context(self, name: str) -> None:
+    def task_set_context(self, name: str) -> None:
         """Export task result to context."""
         from aiida_workgraph.utils import update_nested_dict
-        from aiida.common.exceptions import NotExistentKeyError
 
-        items = self.ctx.tasks[name]["to_context"]
-        for item in items:
-            try:
-                result = self.ctx.tasks[name]["results"][item[0]]
-                update_nested_dict(self.ctx, item[1], result)
-            except NotExistentKeyError as e:
-                print(f"Warning: {e}. Skipping update for item {item[0]}")
+        items = self.ctx.tasks[name]["context_mapping"]
+        for key, value in items.items():
+            result = self.ctx.tasks[name]["results"][key]
+            update_nested_dict(self.ctx, value, result)
 
     def check_task_state(self, name: str) -> None:
         """Check task states.
@@ -1170,6 +1206,7 @@ class WorkGraphEngine(Process, metaclass=Protect):
         print("Reset")
         self.ctx._execution_count += 1
         self.set_tasks_state(self.ctx.tasks.keys(), "PLANNED")
+        self.ctx.executed_tasks = []
 
     def set_tasks_state(
         self, tasks: t.Union[t.List[str], t.Sequence[str]], value: str
@@ -1261,23 +1298,39 @@ class WorkGraphEngine(Process, metaclass=Protect):
         """"""
         from aiida_workgraph.utils import get_nested_dict, update_nested_dict
 
-        # expose group outputs
+        # expose outputs of the workgraph
         group_outputs = {}
-        print("group outputs: ", self.ctx.workgraph["metadata"]["group_outputs"])
+        print("workgraph outputs: ", self.ctx.workgraph["metadata"]["group_outputs"])
         for output in self.ctx.workgraph["metadata"]["group_outputs"]:
             print("output: ", output)
-            task_name, socket_name = output[0].split(".")
-            if task_name == "context":
-                update_nested_dict(
-                    group_outputs, output[1], get_nested_dict(self.ctx, socket_name)
-                )
-            else:
+            names = output["from"].split(".", 1)
+            if names[0] == "context":
+                if len(names) == 1:
+                    raise ValueError("The output name should be context.key")
                 update_nested_dict(
                     group_outputs,
-                    output[1],
-                    self.ctx.tasks[task_name]["results"][socket_name],
+                    output["name"],
+                    get_nested_dict(self.ctx, names[1]),
                 )
-        self.out("group_outputs", group_outputs)
+            else:
+                # expose the whole outputs of the tasks
+                if len(names) == 1:
+                    update_nested_dict(
+                        group_outputs,
+                        output["name"],
+                        self.ctx.tasks[names[0]]["results"],
+                    )
+                else:
+                    # expose one output of the task
+                    # note, the output may not exist
+                    if names[1] in self.ctx.tasks[names[0]]["results"]:
+                        update_nested_dict(
+                            group_outputs,
+                            output["name"],
+                            self.ctx.tasks[names[0]]["results"][names[1]],
+                        )
+        self.out_many(group_outputs)
+        # output the new data
         self.out("new_data", self.ctx.new_data)
         self.out("execution_count", orm.Int(self.ctx._execution_count).store())
         self.report("Finalize")

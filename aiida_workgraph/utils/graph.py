@@ -8,9 +8,13 @@ def task_creation_hook(self, task: Any) -> None:
         task (Task): a task to be created.
     """
     # send message to the widget
-    self.parent._widget.send(
-        {"type": "add_task", "data": {"label": task.name, "inputs": [], "outputs": []}}
-    )
+    if self.parent._widget is not None:
+        self.parent._widget.send(
+            {
+                "type": "add_task",
+                "data": {"label": task.name, "inputs": [], "outputs": []},
+            }
+        )
 
 
 def task_deletion_hook(self, task: Any) -> None:
@@ -25,7 +29,8 @@ def task_deletion_hook(self, task: Any) -> None:
         if link.from_node.name == task.name or link.to_node.name == task.name:
             link_index.append(index)
     del self.parent.links[link_index]
-    self.parent._widget.send({"type": "delete_node", "data": {"name": task.name}})
+    if self._widget is not None:
+        self.parent._widget.send({"type": "delete_node", "data": {"name": task.name}})
 
 
 def link_creation_hook(self, link: Any) -> None:
@@ -34,17 +39,18 @@ def link_creation_hook(self, link: Any) -> None:
     Args:
         link (Link): a link to be created.
     """
-    self.parent._widget.send(
-        {
-            "type": "add_link",
-            "data": {
-                "from_node": link.from_node.name,
-                "from_socket": link.from_socket.name,
-                "to_node": link.to_node.name,
-                "to_socket": link.to_socket.name,
-            },
-        }
-    )
+    if self.parent._widget is not None:
+        self.parent._widget.send(
+            {
+                "type": "add_link",
+                "data": {
+                    "from_node": link.from_node.name,
+                    "from_socket": link.from_socket.name,
+                    "to_node": link.to_node.name,
+                    "to_socket": link.to_socket.name,
+                },
+            }
+        )
 
 
 def link_deletion_hook(self, link: Any) -> None:
@@ -53,14 +59,15 @@ def link_deletion_hook(self, link: Any) -> None:
     Args:
         link (Link): a link to be deleted.
     """
-    self.parent._widget.send(
-        {
-            "type": "delete_link",
-            "data": {
-                "from_node": link.from_node.name,
-                "from_socket": link.from_socket.name,
-                "to_node": link.to_node.name,
-                "to_socket": link.to_socket.name,
-            },
-        }
-    )
+    if self.parent._widget is not None:
+        self.parent._widget.send(
+            {
+                "type": "delete_link",
+                "data": {
+                    "from_node": link.from_node.name,
+                    "from_socket": link.from_socket.name,
+                    "to_node": link.to_node.name,
+                    "to_socket": link.to_socket.name,
+                },
+            }
+        )

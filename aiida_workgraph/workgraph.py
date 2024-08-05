@@ -1,8 +1,12 @@
 import aiida.orm
 import node_graph
 import aiida
-from aiida.manage import get_manager
+import node_graph.link
+from aiida_workgraph.socket import NodeSocket
+from aiida_workgraph import USE_WIDGET
+from aiida_workgraph.utils.message import WIDGET_INSTALLATION_MESSAGE
 from aiida_workgraph.tasks import task_pool
+from aiida_workgraph.task import Task
 import time
 from aiida_workgraph.collection import TaskCollection
 from aiida_workgraph.utils.graph import (
@@ -11,8 +15,10 @@ from aiida_workgraph.utils.graph import (
     link_creation_hook,
     link_deletion_hook,
 )
-from aiida_workgraph.widget import NodeGraphWidget
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Union
+
+if USE_WIDGET:
+    from aiida_workgraph.widget import NodeGraphWidget
 
 
 class WorkGraph(node_graph.NodeGraph):
@@ -56,7 +62,7 @@ class WorkGraph(node_graph.NodeGraph):
         self.links.post_deletion_hooks = [link_deletion_hook]
         self.error_handlers = {}
         self.while_zones = {}
-        self._widget = NodeGraphWidget(parent=self)
+        self._widget = NodeGraphWidget(parent=self) if USE_WIDGET else None
 
     @property
     def tasks(self) -> TaskCollection:
@@ -99,13 +105,8 @@ class WorkGraph(node_graph.NodeGraph):
             print("Your workgraph is already created. Please use the submit() method.")
             return
         inputs = self.prepare_inputs(metadata=metadata)
-        # init a process
-        runner = get_manager().get_runner()
-        process_inited = WorkGraphEngine(runner=runner, inputs=inputs)
-        self.process = process_inited.node
-        # save workgraph data into process node
-        self.save_to_base(inputs["wg"])
-        result = aiida.engine.run(process_inited)
+        result, node = aiida.engine.run_get_node(WorkGraphEngine, inputs=inputs)
+        self.process = node
         self.update()
         return result
 
@@ -160,7 +161,8 @@ class WorkGraph(node_graph.NodeGraph):
             self.process_inited = process_inited
             process_inited.close()
             print(f"WorkGraph process created, PK: {self.process.pk}")
-        self.save_to_base(inputs["wg"])
+        else:
+            self.save_to_base(inputs["wg"])
         self.update()
 
     def save_to_base(self, wgdata: Dict[str, Any]) -> None:
@@ -174,7 +176,7 @@ class WorkGraph(node_graph.NodeGraph):
         )
         saver.save()
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self, store_nodes=False) -> Dict[str, Any]:
         import cloudpickle as pickle
 
         wgdata = super().to_dict()
@@ -185,6 +187,9 @@ class WorkGraph(node_graph.NodeGraph):
         }
         wgdata.update(
             {
+                "restart_process": aiida.orm.Int(self.restart_process.pk)
+                if self.restart_process
+                else None,
                 "max_iteration": self.max_iteration,
                 "execution_count": self.execution_count,
                 "workgraph_type": self.workgraph_type,
@@ -197,6 +202,11 @@ class WorkGraph(node_graph.NodeGraph):
             key: value.to_dict() for key, value in self.while_zones.items()
         }
         wgdata["tasks"] = wgdata.pop("nodes")
+        if store_nodes:
+            for task in wgdata["tasks"].values():
+                for prop in task["properties"].values():
+                    if isinstance(prop["value"], aiida.orm.Node):
+                        prop["value"].store()
 
         return wgdata
 
@@ -230,71 +240,40 @@ class WorkGraph(node_graph.NodeGraph):
         linked to the current process, and data nodes linked to the current process.
         """
         # from aiida_workgraph.utils import get_executor
+        from aiida_workgraph.utils import get_nested_dict, get_processes_latest
+
+        if self.process is None:
+            return
 
         self.state = self.process.process_state.value.upper()
-        outgoing = self.process.base.links.get_outgoing()
-        for link in outgoing.all():
-            node = link.node
-            # the link is added in order
-            # so the restarted node will be the last one
-            # thus the task is correct
-            if isinstance(node, aiida.orm.ProcessNode) and getattr(
-                node, "process_state", False
-            ):
-                self.tasks[link.link_label].process = node
-                self.tasks[link.link_label].state = node.process_state.value.upper()
-                self.tasks[link.link_label].node = node
-                self.tasks[link.link_label].pk = node.pk
-                self.tasks[link.link_label].ctime = node.ctime
-                self.tasks[link.link_label].mtime = node.mtime
-                if self.tasks[link.link_label].state == "FINISHED":
-                    # update the output sockets
-                    i = 0
-                    for socket in self.tasks[link.link_label].outputs:
-                        if self.tasks[link.link_label].node_type == "graph_builder":
-                            if not getattr(node.outputs, "group_outputs", False):
-                                continue
-                            socket.value = getattr(
-                                node.outputs.group_outputs, socket.name, None
+        processes_data = get_processes_latest(self.pk)
+        for name, data in processes_data.items():
+            self.tasks[name].state = data["state"]
+            self.tasks[name].ctime = data["ctime"]
+            self.tasks[name].mtime = data["mtime"]
+            self.tasks[name].pk = data["pk"]
+            if data["pk"] is not None:
+                node = aiida.orm.load_node(data["pk"])
+                self.tasks[name].process = self.tasks[name].node = node
+                if isinstance(node, aiida.orm.ProcessNode) and getattr(
+                    node, "process_state", False
+                ):
+                    if self.tasks[name].state == "FINISHED":
+                        # update the output sockets
+                        i = 0
+                        for socket in self.tasks[name].outputs:
+                            socket.value = get_nested_dict(
+                                node.outputs, socket.name, allow_none=True
                             )
-                        else:
-                            socket.value = getattr(node.outputs, socket.name, None)
-                        i += 1
-            elif isinstance(node, aiida.orm.Data):
-                if link.link_label.startswith(
-                    "group_outputs__"
-                ) or link.link_label.startswith("new_data__"):
-                    label = link.link_label.split("__", 1)[1]
-                    if label in self.tasks.keys():
-                        self.tasks[label].state = "FINISHED"
-                        self.tasks[label].node = node
-                        self.tasks[label].pk = node.pk
-                elif link.link_label == "execution_count":
-                    self.execution_count = node.value
-        # read results from the process outputs
-        for task in self.tasks:
-            if task.node_type.upper() == "DATA":
-                if not getattr(self.process.outputs, "new_data", False):
-                    continue
-                task.outputs[0].value = getattr(
-                    self.process.outputs.new_data, task.name, None
-                )
-            # for normal tasks, we try to read the results from the extras of the task
-            # this is disabled for now
-            # if task.node_type.upper() == "NORMAL":
-            #     results = self.process.base.extras.get(
-            #         f"nodes__results__{task.name}", {}
-            #     )
-            #     for key, value in results.items():
-            #         # if value is an AiiDA data node, we don't need to deserialize it
-            #         deserializer = node.outputs[key].get_deserialize()
-            #         executor = get_executor(deserializer)[0]
-            #         try:
-            #             value = executor(bytes(value))
-            #         except Exception:
-            #             pass
-            #         node.outputs[key].value = value
-        self._widget.states = {task.name: node.state for node in self.tasks}
+                            i += 1
+                # read results from the process outputs
+                elif isinstance(node, aiida.orm.Data):
+                    self.tasks[name].outputs[0].value = node
+        execution_count = getattr(self.process.outputs, "execution_count", None)
+        self.execution_count = execution_count if execution_count else 0
+        if self._widget is not None:
+            states = {name: data["state"] for name, data in processes_data.items()}
+            self._widget.states = states
 
     @property
     def pk(self) -> Optional[int]:
@@ -389,6 +368,8 @@ class WorkGraph(node_graph.NodeGraph):
         """Pause the given tasks."""
         from aiida_workgraph.utils.control import pause_tasks
 
+        self.update()
+
         if self.process is None:
             for name in tasks:
                 self.tasks[name].action = "PAUSE"
@@ -465,6 +446,11 @@ class WorkGraph(node_graph.NodeGraph):
         self.error_handlers[name] = {"handler": handler, "tasks": tasks}
 
     def _repr_mimebundle_(self, *args, **kwargs):
+
+        if self._widget is None:
+            print(WIDGET_INSTALLATION_MESSAGE)
+            return
+
         # if ipywdigets > 8.0.0, use _repr_mimebundle_ instead of _ipython_display_
         self._widget.from_workgraph(self)
         if hasattr(self._widget, "_repr_mimebundle_"):
@@ -472,8 +458,25 @@ class WorkGraph(node_graph.NodeGraph):
         else:
             return self._widget._ipython_display_(*args, **kwargs)
 
+    def add_task(
+        self, identifier: Union[str, callable], name: str = None, **kwargs
+    ) -> Task:
+        """Add a task to the workgraph."""
+        node = self.tasks.new(identifier, name, **kwargs)
+        return node
+
+    def add_link(
+        self, source: NodeSocket, target: NodeSocket
+    ) -> node_graph.link.NodeLink:
+        """Add a link between two nodes."""
+        link = self.links.new(source, target)
+        return link
+
     def to_html(self, output: str = None, **kwargs):
         """Write a standalone html file to visualize the workgraph."""
+        if self._widget is None:
+            print(WIDGET_INSTALLATION_MESSAGE)
+            return
         self._widget.from_workgraph(self)
         return self._widget.to_html(output=output, **kwargs)
 

@@ -26,12 +26,11 @@ keywords = ["aiida", "workflows"]
 requires-python = ">=3.9"
 dependencies = [
     "numpy~=1.21",
-    "node-graph>=0.0.6",
-    "anywidget>=0.9.11",
+    "scipy",
+    "ase",
+    "node-graph>=0.0.11",
     "aiida-core>=2.3",
     "cloudpickle",
-    "aiida-pseudo",
-    "aiida-quantumespresso",
     "aiida-shell",
     "fastapi",
     "uvicorn",
@@ -39,9 +38,12 @@ dependencies = [
 
 [project.urls]
 Documentation = "https://aiida-workgraph.readthedocs.io"
-Source = "https://github.com/superstar54/aiida-workgraph"
+Source = "https://github.com/aiidateam/aiida-workgraph"
 
 [project.optional-dependencies]
+widget = [
+    "anywidget>=0.9.11",
+]
 docs = [
     "sphinx_rtd_theme",
     "sphinx~=7.2",
@@ -58,6 +60,7 @@ pre-commit = [
     "pylint~=2.17.4",
 ]
 tests = [
+    'pgtest~=1.3',
     "pytest~=7.0",
     "pytest-cov~=2.7,<2.11",
     "playwright",
@@ -78,13 +81,13 @@ workgraph = "aiida_workgraph.cli.cmd_workgraph:workgraph"
 
 [project.entry-points."aiida.data"]
 "workgraph.general" = "aiida_workgraph.orm.general_data:GeneralData"
-"ase.atoms.Atoms" = "aiida_workgraph.orm.atoms:AtomsData"
-"builtins.int" = "aiida.orm.nodes.data.int:Int"
-"builtins.float" = "aiida.orm.nodes.data.float:Float"
-"builtins.str" = "aiida.orm.nodes.data.str:Str"
-"builtins.bool" = "aiida.orm.nodes.data.bool:Bool"
-"builtins.list"="aiida_workgraph.orm.general_data:List"
-"builtins.dict"="aiida_workgraph.orm.general_data:Dict"
+"workgraph.ase.atoms.Atoms" = "aiida_workgraph.orm.atoms:AtomsData"
+"workgraph.builtins.int" = "aiida.orm.nodes.data.int:Int"
+"workgraph.builtins.float" = "aiida.orm.nodes.data.float:Float"
+"workgraph.builtins.str" = "aiida.orm.nodes.data.str:Str"
+"workgraph.builtins.bool" = "aiida.orm.nodes.data.bool:Bool"
+"workgraph.builtins.list"="aiida_workgraph.orm.general_data:List"
+"workgraph.builtins.dict"="aiida_workgraph.orm.general_data:Dict"
 
 
 [project.entry-points."aiida.node"]

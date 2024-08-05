@@ -6,9 +6,10 @@ from aiida.common.extendeddicts import AttributeDict
 def prepare_for_workgraph_task(task: dict, kwargs: dict) -> tuple:
     """Prepare the inputs for WorkGraph task"""
     from aiida_workgraph.utils import merge_properties
+    from aiida.orm.utils.serialize import deserialize_unsafe
 
     print("Task type: workgraph.")
-    wgdata = task["executor"]["wgdata"]
+    wgdata = deserialize_unsafe(task["executor"]["wgdata"])
     wgdata["name"] = task["name"]
     wgdata["metadata"]["group_outputs"] = task["metadata"]["group_outputs"]
     # update the workgraph data by kwargs
@@ -89,7 +90,7 @@ def prepare_for_python_task(task: dict, kwargs: dict, var_kwargs: dict) -> dict:
         + task["executor"]["function_source_code_without_decorator"]
     )
     # outputs
-    output_name_list = [output["name"] for output in task["outputs"]]
+    output_info = task["outputs"]
     # serialize the kwargs into AiiDA Data
     function_kwargs = serialize_to_aiida_nodes(function_kwargs)
     # transfer the args to kwargs
@@ -99,7 +100,7 @@ def prepare_for_python_task(task: dict, kwargs: dict, var_kwargs: dict) -> dict:
         "code": code,
         "function_kwargs": function_kwargs,
         "upload_files": new_upload_files,
-        "output_name_list": orm.List(output_name_list),
+        "output_info": orm.List(output_info),
         "metadata": metadata,
         **kwargs,
     }

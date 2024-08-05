@@ -1,4 +1,4 @@
-from typing import Any, Dict, Optional, Union, Callable
+from typing import Any, Dict, Optional, Union, Callable, List
 from aiida.engine.processes import Process
 from aiida import orm
 from aiida.common.exceptions import NotExistent
@@ -52,7 +52,7 @@ def create_data_node(executor: orm.Data, args: list, kwargs: dict) -> orm.Node:
     return data_node
 
 
-def get_nested_dict(d: Dict, name: str) -> Any:
+def get_nested_dict(d: Dict, name: str, allow_none: bool = False) -> Any:
     """
     name = "base.pw.parameters"
     """
@@ -60,7 +60,10 @@ def get_nested_dict(d: Dict, name: str) -> Any:
     current = d
     for key in keys:
         if key not in current:
-            raise ValueError(f"Context variable {name} not found.")
+            if allow_none:
+                return None
+            else:
+                raise ValueError(f"{name} not exist in {d}")
         current = current[key]
     return current
 
@@ -173,6 +176,46 @@ def get_dict_from_builder(builder: Any) -> Dict:
         return builder
 
 
+def get_pythonjob_data(tdata: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Process the task data dictionary for a PythonJob.
+    It load the orignal Python data from the AiiDA Data node for the
+    args and kwargs of the function.
+
+    Args:
+        tdata (Dict[str, Any]): The input data dictionary.
+
+    Returns:
+        Dict[str, Any]: The processed data dictionary.
+    """
+    for name in tdata["metadata"]["args"]:
+        if tdata["properties"][name]["value"] is None:
+            continue
+        if name in tdata["properties"]:
+            tdata["properties"][name]["value"] = tdata["properties"][name][
+                "value"
+            ].value
+    for name in tdata["metadata"]["kwargs"]:
+        # all the kwargs are after computer is the input for the PythonJob, should be AiiDA Data node
+        if tdata["properties"][name]["value"] is None:
+            continue
+        if name == "computer":
+            break
+        if name in tdata["properties"]:
+            tdata["properties"][name]["value"] = tdata["properties"][name][
+                "value"
+            ].value
+    return tdata
+
+
+def serialize_workgraph_data(wgdata: Dict[str, Any]) -> Dict[str, Any]:
+    from aiida.orm.utils.serialize import serialize
+
+    for name, task in wgdata["tasks"].items():
+        wgdata["tasks"][name] = serialize(task)
+    wgdata["error_handlers"] = serialize(wgdata["error_handlers"])
+
+
 def get_workgraph_data(process: Union[int, orm.Node]) -> Optional[Dict[str, Any]]:
     """Get the workgraph data from the process node."""
     from aiida.orm.utils.serialize import deserialize_unsafe
@@ -183,7 +226,11 @@ def get_workgraph_data(process: Union[int, orm.Node]) -> Optional[Dict[str, Any]
     wgdata = process.base.extras.get("_workgraph", None)
     if wgdata is None:
         return
-    wgdata = deserialize_unsafe(wgdata)
+    for name, task in wgdata["tasks"].items():
+        wgdata["tasks"][name] = deserialize_unsafe(task)
+        if wgdata["tasks"][name]["metadata"]["node_type"].upper() == "PYTHONJOB":
+            get_pythonjob_data(wgdata["tasks"][name])
+    wgdata["error_handlers"] = deserialize_unsafe(wgdata["error_handlers"])
     return wgdata
 
 
@@ -205,34 +252,49 @@ def get_parent_workgraphs(pk: int) -> list:
     return parent_workgraphs
 
 
-def get_processes_latest(pk: int) -> Dict[str, Dict[str, Union[int, str]]]:
+def get_processes_latest(
+    pk: int, node_name: str = None
+) -> Dict[str, Dict[str, Union[int, str]]]:
     """Get the latest info of all tasks from the process."""
     import aiida
     from aiida.orm.utils.serialize import deserialize_unsafe
+    from aiida.orm import QueryBuilder
+    from aiida_workgraph.engine.workgraph import WorkGraphEngine
 
-    process = aiida.orm.load_node(pk)
     tasks = {}
-    for key in process.base.extras.keys():
-        if key.startswith("_task_state"):
-            name = key[12:]
-            state = deserialize_unsafe(process.base.extras.get(key))
-            task_process = deserialize_unsafe(
-                process.base.extras.get(f"_task_process_{name}")
-            )
-            if task_process:
-                tasks[name] = {
-                    "pk": task_process.pk,
-                    "state": state,
-                    "ctime": task_process.ctime,
-                    "mtime": task_process.mtime,
-                }
-            else:
-                tasks[name] = {
-                    "pk": None,
-                    "state": state,
-                    "ctime": None,
-                    "mtime": None,
-                }
+    node_names = [node_name] if node_name else []
+    if node_name:
+        projections = [
+            f"extras._task_state_{node_name}",
+            f"extras._task_process_{node_name}",
+        ]
+    else:
+        projections = []
+        process = aiida.orm.load_node(pk)
+        node_names = [
+            key[12:]
+            for key in process.base.extras.keys()
+            if key.startswith("_task_state")
+        ]
+        projections = [f"extras._task_state_{name}" for name in node_names]
+        projections.extend([f"extras._task_process_{name}" for name in node_names])
+    qb = QueryBuilder()
+    qb.append(WorkGraphEngine, filters={"id": pk}, project=projections)
+    # print("projections: ", projections)
+    results = qb.all()
+    # change results to dict
+    results = dict(zip(projections, results[0]))
+    # print("results: ", results)
+    for name in node_names:
+        state = results[f"extras._task_state_{name}"]
+        task_process = deserialize_unsafe(results[f"extras._task_process_{name}"])
+        tasks[name] = {
+            "pk": task_process.pk if task_process else None,
+            "process_type": task_process.process_type if task_process else "",
+            "state": state,
+            "ctime": task_process.ctime if task_process else None,
+            "mtime": task_process.mtime if task_process else None,
+        }
     return tasks
 
 
@@ -473,8 +535,10 @@ def get_required_imports(func):
             type_hint, "__origin__"
         ):  # This checks for higher-order types like List, Dict
             module_name = type_hint.__module__
-            type_name = type_hint._name
-            for arg in type_hint.__args__:
+            type_name = getattr(type_hint, "_name", None) or getattr(
+                type_hint.__origin__, "__name__", None
+            )
+            for arg in getattr(type_hint, "__args__", []):
                 if arg is type(None):  # noqa: E721
                     continue
                 add_imports(arg)  # Recursively add imports for each argument
@@ -501,31 +565,37 @@ def serialize_function(func: Callable) -> Dict[str, Any]:
     import textwrap
     import cloudpickle as pickle
 
-    # we need save the source code explicitly, because in the case of jupyter notebook,
-    # the source code is not saved in the pickle file
-    source_code = inspect.getsource(func)
-    # Split the source into lines for processing
-    source_code_lines = source_code.split("\n")
-    function_source_code = "\n".join(source_code_lines)
-    # Find the first line of the actual function definition
-    for i, line in enumerate(source_code_lines):
-        if line.strip().startswith("def "):
-            break
-    function_source_code_without_decorator = "\n".join(source_code_lines[i:])
-    function_source_code_without_decorator = textwrap.dedent(
-        function_source_code_without_decorator
-    )
-    # we also need to include the necessary imports for the types used in the type hints.
     try:
-        required_imports = get_required_imports(func)
+        # we need save the source code explicitly, because in the case of jupyter notebook,
+        # the source code is not saved in the pickle file
+        source_code = inspect.getsource(func)
+        # Split the source into lines for processing
+        source_code_lines = source_code.split("\n")
+        function_source_code = "\n".join(source_code_lines)
+        # Find the first line of the actual function definition
+        for i, line in enumerate(source_code_lines):
+            if line.strip().startswith("def "):
+                break
+        function_source_code_without_decorator = "\n".join(source_code_lines[i:])
+        function_source_code_without_decorator = textwrap.dedent(
+            function_source_code_without_decorator
+        )
+        # we also need to include the necessary imports for the types used in the type hints.
+        try:
+            required_imports = get_required_imports(func)
+        except Exception as e:
+            required_imports = {}
+            print(f"Failed to get required imports for function {func.__name__}: {e}")
+        # Generate import statements
+        import_statements = "\n".join(
+            f"from {module} import {', '.join(types)}"
+            for module, types in required_imports.items()
+        )
     except Exception as e:
-        required_imports = {}
-        print(f"Failed to get required imports for function {func.__name__}: {e}")
-    # Generate import statements
-    import_statements = "\n".join(
-        f"from {module} import {', '.join(types)}"
-        for module, types in required_imports.items()
-    )
+        print(f"Failed to serialize function {func.__name__}: {e}")
+        function_source_code = ""
+        function_source_code_without_decorator = ""
+        import_statements = ""
     return {
         "executor": pickle.dumps(func),
         "type": "function",
@@ -535,3 +605,43 @@ def serialize_function(func: Callable) -> Dict[str, Any]:
         "function_source_code_without_decorator": function_source_code_without_decorator,
         "import_statements": import_statements,
     }
+
+
+def workgraph_to_short_json(
+    wgdata: Dict[str, Union[str, List, Dict]]
+) -> Dict[str, Union[str, Dict]]:
+    """Export a workgraph to a rete js editor data."""
+    wgdata_short = {
+        "name": wgdata["name"],
+        "uuid": wgdata["uuid"],
+        "state": wgdata["state"],
+        "nodes": {},
+        "links": wgdata["links"],
+    }
+    #
+    for name, task in wgdata["tasks"].items():
+        # Add required inputs to nodes
+        inputs = [
+            input
+            for input in task["inputs"]
+            if input["name"] in task["metadata"]["args"]
+        ]
+        wgdata_short["nodes"][name] = {
+            "label": task["name"],
+            "inputs": inputs,
+            "outputs": [],
+            "position": task["position"],
+        }
+    # Add links to nodes
+    for link in wgdata["links"]:
+        wgdata_short["nodes"][link["to_node"]]["inputs"].append(
+            {
+                "name": link["to_socket"],
+            }
+        )
+        wgdata_short["nodes"][link["from_node"]]["outputs"].append(
+            {
+                "name": link["from_socket"],
+            }
+        )
+    return wgdata_short

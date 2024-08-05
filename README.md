@@ -1,6 +1,6 @@
 # AiiDA-WorkGraph
 [![PyPI version](https://badge.fury.io/py/aiida-workgraph.svg)](https://badge.fury.io/py/aiida-workgraph)
-[![Unit test](https://github.com/superstar54/aiida-workgraph/actions/workflows/ci.yaml/badge.svg)](https://github.com/superstar54/aiida-workgraph/actions/workflows/ci.yaml)
+[![Unit test](https://github.com/aiidateam/aiida-workgraph/actions/workflows/ci.yaml/badge.svg)](https://github.com/aiidateam/aiida-workgraph/actions/workflows/ci.yaml)
 [![codecov](https://codecov.io/gh/superstar54/aiida-workgraph/branch/main/graph/badge.svg)](https://codecov.io/gh/superstar54/aiida-workgraph)
 [![Docs status](https://readthedocs.org/projects/aiida-workgraph/badge)](http://aiida-workgraph.readthedocs.io/)
 
@@ -38,8 +38,15 @@ Here is a detailed comparison between the ``WorkGraph`` with two AiiDA built-in 
 To install the latest version from source, first clone the repository and then install using `pip`:
 
 ```console
-git clone https://github.com/superstar54/aiida-workgraph
-pip install -e aiida-workgraph
+git clone https://github.com/aiidateam/aiida-workgraph
+cd aiida-workgraph
+pip install -e .
+```
+
+To install the jupyter widget support you need to in addition build the JavaScript packages:
+
+```console
+pip install .[widget]
 # build widget
 cd aiida_workgraph/widget/
 npm install
@@ -75,9 +82,9 @@ def multiply(x, y):
 
 # Create a workgraph to link the tasks.
 wg = WorkGraph("test_add_multiply")
-wg.tasks.new(add, name="add1")
-wg.tasks.new(multiply, name="multiply1")
-wg.links.new(wg.tasks["add1"].outputs["result"], wg.tasks["multiply1"].inputs["x"])
+wg.add_task(add, name="add1")
+wg.add_task(multiply, name="multiply1")
+wg.add_link(wg.tasks["add1"].outputs["result"], wg.tasks["multiply1"].inputs["x"])
 
 ```
 
@@ -115,15 +122,15 @@ verdi node generate pk
 ### Pre-commit and Tests
 To contribute to this repository, please enable pre-commit so the code in commits are conform to the standards.
 ```console
-pip install -e .[tests, pre-commit]
+pip install -e .[tests,pre-commit]
 pre-commit install
 ```
 
 ### Widget
-See the [README.md](https://github.com/superstar54/aiida-workgraph/blob/main/aiida_workgraph/widget/README.md)
+See the [README.md](https://github.com/aiidateam/aiida-workgraph/blob/main/aiida_workgraph/widget/README.md)
 
 ### Web app
-See the [README.md](https://github.com/superstar54/aiida-workgraph/blob/main/aiida_workgraph/web/README.md)
+See the [README.md](https://github.com/aiidateam/aiida-workgraph/blob/main/aiida_workgraph/web/README.md)
 
 
 ## License

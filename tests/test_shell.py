@@ -1,15 +1,14 @@
-import aiida
+import pytest
 from aiida_workgraph import WorkGraph
 from aiida_shell.launch import prepare_code
 from aiida.orm import SinglefileData
 
-aiida.load_profile()
 
-
+@pytest.mark.usefixtures("started_daemon_client")
 def test_shell_command():
     """Test the ShellJob with command as a string."""
     wg = WorkGraph(name="test_shell_command")
-    job1 = wg.tasks.new(
+    job1 = wg.add_task(
         "ShellJob",
         command="cat",
         resolve_command=True,
@@ -27,7 +26,7 @@ def test_shell_code():
     """Test the ShellJob with code."""
     cat_code = prepare_code("cat")
     wg = WorkGraph(name="test_shell_code")
-    job1 = wg.tasks.new(
+    job1 = wg.add_task(
         "ShellJob",
         command=cat_code,
         arguments=["{file_a}", "{file_b}"],
@@ -43,7 +42,7 @@ def test_shell_code():
 def test_shell_set():
     """Set the nodes during/after the creation of the task."""
     wg = WorkGraph(name="test_shell_set")
-    echo_task = wg.tasks.new(
+    echo_task = wg.add_task(
         "ShellJob",
         name="echo",
         command="cp",
@@ -52,14 +51,14 @@ def test_shell_set():
         outputs=["copied_file"],
     )
 
-    cat_task = wg.tasks.new(
+    cat_task = wg.add_task(
         "ShellJob",
         name="cat",
         command="cat",
         arguments=["{input}"],
         nodes={"input": None},
     )
-    wg.links.new(echo_task.outputs["copied_file"], cat_task.inputs["nodes.input"])
+    wg.add_link(echo_task.outputs["copied_file"], cat_task.inputs["nodes.input"])
     wg.submit(wait=True)
     assert cat_task.outputs["stdout"].value.get_content() == "1 5 1"
 
@@ -77,7 +76,7 @@ def test_shell_workflow():
     # Create a workgraph
     wg = WorkGraph(name="shell_add_mutiply_workflow")
     # echo x + y expression
-    job1 = wg.tasks.new(
+    job1 = wg.add_task(
         "ShellJob",
         name="job1",
         command="echo",
@@ -88,7 +87,7 @@ def test_shell_workflow():
         },
     )
     # bc command to calculate the expression
-    job2 = wg.tasks.new(
+    job2 = wg.add_task(
         "ShellJob",
         name="job2",
         command="bc",
@@ -96,11 +95,11 @@ def test_shell_workflow():
         nodes={"expression": job1.outputs["stdout"]},
         parser=PickledData(parser),
         parser_outputs=[
-            {"identifier": "General", "name": "result"}
+            {"identifier": "Any", "name": "result"}
         ],  # add a "result" output socket from the parser
     )
     # echo result + y expression
-    job3 = wg.tasks.new(
+    job3 = wg.add_task(
         "ShellJob",
         name="job3",
         command="echo",
@@ -108,7 +107,7 @@ def test_shell_workflow():
         nodes={"result": job2.outputs["result"], "z": Int(4)},
     )
     # bc command to calculate the expression
-    job4 = wg.tasks.new(
+    job4 = wg.add_task(
         "ShellJob",
         name="job4",
         command="bc",
@@ -116,7 +115,7 @@ def test_shell_workflow():
         nodes={"expression": job3.outputs["stdout"]},
         parser=PickledData(parser),
         parser_outputs=[
-            {"identifier": "General", "name": "result"}
+            {"identifier": "Any", "name": "result"}
         ],  # add a "result" output socket from the parser
     )
     # there is a bug in aiida-shell, the following line will raise an error

@@ -5,47 +5,6 @@ from dateutil import relativedelta
 from dateutil.tz import tzlocal
 
 
-def workgraph_to_short_json(
-    wgdata: Dict[str, Union[str, List, Dict]]
-) -> Dict[str, Union[str, Dict]]:
-    """Export a workgraph to a rete js editor data."""
-    wgdata_short = {
-        "name": wgdata["name"],
-        "uuid": wgdata["uuid"],
-        "state": wgdata["state"],
-        "nodes": {},
-        "links": wgdata["links"],
-        "while_zones": wgdata["while_zones"],
-    }
-    #
-    for name, task in wgdata["tasks"].items():
-        # Add required inputs to nodes
-        inputs = [
-            input
-            for input in task["inputs"]
-            if input["name"] in task["metadata"]["args"]
-        ]
-        wgdata_short["nodes"][name] = {
-            "label": task["name"],
-            "inputs": inputs,
-            "outputs": [],
-            "position": task["position"],
-        }
-    # Add links to nodes
-    for link in wgdata["links"]:
-        wgdata_short["nodes"][link["to_node"]]["inputs"].append(
-            {
-                "name": link["to_socket"],
-            }
-        )
-        wgdata_short["nodes"][link["from_node"]]["outputs"].append(
-            {
-                "name": link["from_socket"],
-            }
-        )
-    return wgdata_short
-
-
 def get_executor_source(tdata: Any) -> Tuple[bool, Optional[str]]:
     """Get the source code of the executor."""
     import inspect
@@ -128,7 +87,9 @@ def node_to_short_json(workgraph_pk: int, tdata: Dict[str, Any]) -> Dict[str, An
         ],
         "executor": executor,
     }
-    process_info = get_processes_latest(workgraph_pk).get(tdata["name"], {})
+    process_info = get_processes_latest(workgraph_pk, tdata["name"]).get(
+        tdata["name"], {}
+    )
     tdata_short["process"] = process_info
     if process_info is not None:
         tdata_short["metadata"].append(["pk", process_info.get("pk")])

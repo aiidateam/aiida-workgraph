@@ -2,10 +2,52 @@ from .general_data import GeneralData
 from aiida import orm, common
 from importlib.metadata import entry_points
 from typing import Any
+from aiida_workgraph.config import load_config
+import sys
 
 
-# Retrieve the entry points for 'aiida.data' and store them in a dictionary
-eps = {ep.name: ep for ep in entry_points().get("aiida.data", [])}
+def get_serializer_from_entry_points() -> dict:
+    """Retrieve the serializer from the entry points."""
+    # import time
+
+    # ts = time.time()
+    configs = load_config()
+    serializers = configs.get("serializers", {})
+    excludes = serializers.get("excludes", [])
+    # Retrieve the entry points for 'aiida.data' and store them in a dictionary
+    eps = entry_points()
+    if sys.version_info >= (3, 10):
+        group = eps.select(group="aiida.data")
+    else:
+        group = eps.get("aiida.data", [])
+    eps = {}
+    for ep in group:
+        # split the entry point name by first ".", and check the last part
+        key = ep.name.split(".", 1)[-1]
+        # skip key without "." because it is not a module name for a data type
+        if "." not in key or key in excludes:
+            continue
+        eps.setdefault(key, [])
+        eps[key].append(ep)
+
+    # print("Time to load entry points: ", time.time() - ts)
+    # check if there are duplicates
+    for key, value in eps.items():
+        if len(value) > 1:
+            if key in serializers:
+                [ep for ep in value if ep.name == serializers[key]]
+                eps[key] = [ep for ep in value if ep.name == serializers[key]]
+                if not eps[key]:
+                    raise ValueError(
+                        f"Entry point {serializers[key]} not found for {key}"
+                    )
+            else:
+                msg = f"Duplicate entry points for {key}: {[ep.name for ep in value]}"
+                raise ValueError(msg)
+    return eps
+
+
+eps = get_serializer_from_entry_points()
 
 
 def serialize_to_aiida_nodes(inputs: dict = None) -> dict:
@@ -53,7 +95,7 @@ def general_serializer(data: Any, check_value=True) -> orm.Node:
         # search for the key in the entry points
         if ep_key in eps:
             try:
-                new_node = eps[ep_key].load()(data)
+                new_node = eps[ep_key][0].load()(data)
             except Exception as e:
                 raise ValueError(f"Error in serializing {ep_key}: {e}")
             finally:

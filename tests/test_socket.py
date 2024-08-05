@@ -1,8 +1,5 @@
 import pytest
 from aiida_workgraph import WorkGraph
-import aiida
-
-aiida.load_profile()
 
 
 def test_socket(decorated_multiply) -> None:
@@ -17,8 +14,8 @@ def test_socket(decorated_multiply) -> None:
 
     #
     wg = WorkGraph()
-    add1 = wg.tasks.new(add, name="add1")
-    multiply1 = wg.tasks.new(
+    add1 = wg.add_task(add, name="add1")
+    multiply1 = wg.add_task(
         decorated_multiply, name="multiply1", x=add1.outputs["result"], y=2
     )
     # Test setting a value that should raise an exception
@@ -45,7 +42,7 @@ def test_AiiDA_socket():
         return result
 
     wg = WorkGraph()
-    add1 = wg.tasks.new(add, name="add1")
+    add1 = wg.add_task(add, name="add1")
     # Test setting a value that should raise an exception
     with pytest.raises(Exception) as excinfo:
         add1.set(
@@ -60,6 +57,7 @@ def test_AiiDA_socket():
     assert wg.tasks["add1"].outputs["result"].value == 3.0
 
 
+@pytest.mark.usefixtures("started_daemon_client")
 def test_numpy_array(decorated_normal_add):
     """Test data type with numpy array."""
     import numpy as np
@@ -67,7 +65,7 @@ def test_numpy_array(decorated_normal_add):
     x = np.array([1, 2, 3])
     y = np.array([4, 5, 6])
     wg = WorkGraph()
-    wg.tasks.new(decorated_normal_add, name="add1", x=x, y=y)
+    wg.add_task(decorated_normal_add, name="add1", x=x, y=y)
     wg.submit(wait=True)
     # wg.run()
     assert wg.state.upper() == "FINISHED"

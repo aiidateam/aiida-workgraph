@@ -27,15 +27,15 @@ Create and use `task`.
     def add(x, y):
        return x + y
 
-    add1 = wg.tasks.new(add, name="add1")
-    add2 = wg.tasks.new(add, name="add2")
+    add1 = wg.add_task(add, name="add1")
+    add2 = wg.add_task(add, name="add2")
 
 
 - Add link between tasks:
 
 .. code-block:: python
 
-    wg.links.new(add1.outputs["result"], add2.inputs["x"])
+    wg.add_link(add1.outputs["result"], add2.inputs["x"])
 
 - Submit the workgraph:
 
@@ -62,6 +62,17 @@ The tasks will be executed when:
 - All input tasks finish.
 
 
+Group outputs
+=====================================
+One can output the results of the tasks as the output of the WorkGraph.
+
+.. code-block:: python
+
+    wg = WorkGraph("test_workgraph_group_outputs")
+    wg.add_task(add, "add1", x=2, y=3)
+    wg.group_outputs = [{"name": "sum", "from": "add1.result"}]
+    wg.submit(wait=True)
+    assert wg.process.outputs.sum.value == 5
 
 
 List of all Methods

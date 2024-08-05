@@ -13,29 +13,21 @@ class TaskCollection(NodeCollection):
         identifier: Union[Callable, str],
         name: Optional[str] = None,
         uuid: Optional[str] = None,
-        run_remotely: Optional[bool] = False,
         **kwargs: Any
     ) -> Any:
         from aiida_workgraph.decorator import (
             build_task_from_callable,
             build_pythonjob_task,
             build_shelljob_task,
+            build_task_from_workgraph,
         )
+        from aiida_workgraph.workgraph import WorkGraph
 
         # build the task on the fly if the identifier is a callable
         if callable(identifier):
             identifier = build_task_from_callable(identifier)
-            if run_remotely:
-                if identifier.node.node_type.upper() == "GRAPH_BUILDER":
-                    raise ValueError(
-                        "GraphBuilder task cannot be run remotely. Please set run_remotely=False."
-                    )
-                # this is a PythonJob
-                identifier, _ = build_pythonjob_task(identifier)
-            return super().new(identifier, name, uuid, **kwargs)
-        if isinstance(identifier, str) and identifier.upper() == "PythonJob":
+        if isinstance(identifier, str) and identifier.upper() == "PYTHONJOB":
             identifier, _ = build_pythonjob_task(kwargs.pop("function"))
-            return super().new(identifier, name, uuid, **kwargs)
         if isinstance(identifier, str) and identifier.upper() == "SHELLJOB":
             identifier, _, links = build_shelljob_task(
                 nodes=kwargs.get("nodes", {}),
@@ -46,6 +38,8 @@ class TaskCollection(NodeCollection):
             # make links between the tasks
             task.set(links)
             return task
+        if isinstance(identifier, WorkGraph):
+            identifier = build_task_from_workgraph(identifier)
         return super().new(identifier, name, uuid, **kwargs)
 
 

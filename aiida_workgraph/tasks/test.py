@@ -15,7 +15,7 @@ class AiiDAInt(Task):
         self.properties.new("AiiDAFloat", "t", default=1.0)
 
     def create_sockets(self) -> None:
-        inp = self.inputs.new("General", "value", default=0.0)
+        inp = self.inputs.new("Any", "value", default=0.0)
         inp.add_property("AiiDAInt", default=1.0)
         self.outputs.new("AiiDAInt", "result")
 
@@ -84,7 +84,7 @@ class AiiDAList(Task):
         self.properties.new("BaseList", "value", default=[])
 
     def create_sockets(self) -> None:
-        self.outputs.new("General", "Parameters")
+        self.outputs.new("Any", "Parameters")
 
     def get_executor(self) -> Dict[str, str]:
         return {
@@ -105,7 +105,7 @@ class AiiDADict(Task):
         self.properties.new("BaseDict", "value", default={})
 
     def create_sockets(self) -> None:
-        self.outputs.new("General", "Parameters")
+        self.outputs.new("Any", "Parameters")
 
     def get_executor(self) -> Dict[str, str]:
         return {
@@ -129,11 +129,11 @@ class AiiDANode(Task):
     def create_sockets(self) -> None:
         self.inputs.clear()
         self.outputs.clear()
-        self.inputs.new("General", "identifier")
-        self.inputs.new("General", "pk")
-        self.inputs.new("General", "uuid")
-        self.inputs.new("General", "label")
-        self.outputs.new("General", "node")
+        self.inputs.new("Any", "identifier")
+        self.inputs.new("Any", "pk")
+        self.inputs.new("Any", "uuid")
+        self.inputs.new("Any", "label")
+        self.outputs.new("Any", "node")
 
     def get_executor(self) -> Dict[str, str]:
         return {
@@ -154,11 +154,11 @@ class AiiDACode(Task):
     def create_sockets(self) -> None:
         self.inputs.clear()
         self.outputs.clear()
-        self.inputs.new("General", "identifier")
-        self.inputs.new("General", "pk")
-        self.inputs.new("General", "uuid")
-        self.inputs.new("General", "label")
-        self.outputs.new("General", "Code")
+        self.inputs.new("Any", "identifier")
+        self.inputs.new("Any", "pk")
+        self.inputs.new("Any", "uuid")
+        self.inputs.new("Any", "label")
+        self.outputs.new("Any", "Code")
 
     def get_executor(self) -> Dict[str, str]:
         return {
@@ -265,7 +265,7 @@ class AiiDAArithmeticMultiplyAdd(Task):
     def create_sockets(self) -> None:
         self.inputs.clear()
         self.outputs.clear()
-        self.inputs.new("General", "code")
+        self.inputs.new("Any", "code")
         inp = self.inputs.new("AiiDAInt", "x")
         inp.add_property("AiiDAInt", "x", default=0.0)
         inp = self.inputs.new("AiiDAInt", "y")

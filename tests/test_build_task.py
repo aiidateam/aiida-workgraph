@@ -15,7 +15,7 @@ def test_calcjob():
     assert issubclass(ArithmeticAddTask, Task)
     # use the class directly
     wg = WorkGraph()
-    add1 = wg.tasks.new(ArithmeticAddCalculation, name="add1")
+    add1 = wg.add_task(ArithmeticAddCalculation, name="add1")
     assert add1.name == "add1"
 
 
@@ -52,15 +52,15 @@ def test_calcfunction():
     AddTask = build_task(
         add_minus,
         outputs=[
-            {"identifier": "General", "name": "sum"},
-            {"identifier": "General", "name": "difference"},
+            {"identifier": "Any", "name": "sum"},
+            {"identifier": "Any", "name": "difference"},
         ],
     )
     assert issubclass(AddTask, Task)
     assert "sum" in AddTask().outputs.keys()
     # use the class directly
     wg = WorkGraph()
-    add1 = wg.tasks.new(add, name="add1")
+    add1 = wg.add_task(add, name="add1")
     assert "result" in add1.outputs.keys()
     assert add1.name == "add1"
 

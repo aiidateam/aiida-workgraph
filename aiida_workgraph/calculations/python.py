@@ -54,11 +54,11 @@ class PythonJob(CalcJob):
             "function_kwargs", valid_type=Data, required=False
         )  # , serializer=serialize_to_aiida_nodes)
         spec.input(
-            "output_name_list",
+            "output_info",
             valid_type=List,
             required=False,
             serializer=to_aiida_type,
-            help="The names of the output ports",
+            help="The information of the output ports",
         )
         spec.input(
             "parent_folder",
@@ -124,6 +124,12 @@ class PythonJob(CalcJob):
             "ERROR_INVALID_OUTPUT",
             invalidates_cache=True,
             message="The output file contains invalid output.",
+        )
+        spec.exit_code(
+            321,
+            "ERROR_RESULT_OUTPUT_MISMATCH",
+            invalidates_cache=True,
+            message="The number of results does not match the number of outputs.",
         )
 
     def _build_process_label(self) -> str:

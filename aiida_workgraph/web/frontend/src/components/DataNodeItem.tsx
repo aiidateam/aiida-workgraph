@@ -45,6 +45,7 @@ function DataNodeItem() {
         </tbody>
       </table>
       {NodeData.node_type === 'data.core.structure.StructureData.' && <AtomsItem data={NodeData} />}
+      {NodeData.node_type === 'data.workgraph.ase.atoms.Atoms.AtomsData.' && <AtomsItem data={NodeData} />}
     </div>
   );
 }

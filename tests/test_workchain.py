@@ -1,9 +1,8 @@
-import aiida
+import pytest
 from aiida.workflows.arithmetic.multiply_add import MultiplyAddWorkChain
 
-aiida.load_profile()
 
-
+@pytest.mark.usefixtures("started_daemon_client")
 def test_workchain(wg_workchain):
     """Submit simple calcjob."""
     wg = wg_workchain
@@ -18,34 +17,37 @@ def test_build_workchain_inputs_outputs():
     from aiida_workgraph import build_task
 
     node = build_task(MultiplyAddWorkChain)()
-    assert len(node.inputs) == 10
+    inputs = MultiplyAddWorkChain.spec().inputs
+    # inputs + metadata + _wait
+    ninput = len(inputs.ports) + len(inputs.ports["metadata"].ports) + 1
+    assert len(node.inputs) == ninput
     assert len(node.outputs) == 3
 
 
-def test_build_workchain():
+@pytest.mark.usefixtures("started_daemon_client")
+def test_build_workchain(add_code):
     """Submit simple calcjob."""
-    from aiida.orm import load_code, Int
+    from aiida.orm import Int
     from aiida_workgraph import WorkGraph
 
-    code = load_code("add@localhost")
     wg = WorkGraph(name="test_debug_math")
-    code1 = wg.tasks.new("AiiDACode", "code1", pk=code.pk)
-    multiply_add1 = wg.tasks.new(
+    code1 = wg.add_task("AiiDACode", "code1", pk=add_code.pk)
+    multiply_add1 = wg.add_task(
         MultiplyAddWorkChain,
         "multiply_add1",
         x=Int(4).store(),
         y=Int(2).store(),
         z=Int(3).store(),
     )
-    multiply_add2 = wg.tasks.new(
+    multiply_add2 = wg.add_task(
         MultiplyAddWorkChain,
         "multiply_add2",
         x=Int(2).store(),
         y=Int(3).store(),
     )
-    wg.links.new(code1.outputs[0], multiply_add1.inputs["code"])
-    wg.links.new(code1.outputs[0], multiply_add2.inputs["code"])
-    wg.links.new(multiply_add1.outputs[0], multiply_add2.inputs["z"])
+    wg.add_link(code1.outputs[0], multiply_add1.inputs["code"])
+    wg.add_link(code1.outputs[0], multiply_add2.inputs["code"])
+    wg.add_link(multiply_add1.outputs[0], multiply_add2.inputs["z"])
     wg.submit(wait=True, timeout=100)
     assert wg.tasks["multiply_add2"].node.outputs.result == 17
     # reload wg

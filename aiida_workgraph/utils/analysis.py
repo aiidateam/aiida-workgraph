@@ -1,6 +1,8 @@
 from typing import Optional, Dict, Tuple, List
-import datetime
+
+# import datetime
 from aiida.orm import ProcessNode
+from aiida.orm.utils.serialize import serialize, deserialize_unsafe
 
 
 class WorkGraphSaver:
@@ -98,25 +100,31 @@ class WorkGraphSaver:
         - workgraph
         - all tasks
         """
-        from aiida.orm.utils.serialize import serialize
+        from aiida_workgraph.utils import workgraph_to_short_json
 
         # pprint(self.wgdata)
-        self.wgdata["created"] = datetime.datetime.utcnow()
-        self.wgdata["lastUpdate"] = datetime.datetime.utcnow()
-        self.process.base.extras.set("_workgraph", serialize(self.wgdata))
+        # self.wgdata["created"] = datetime.datetime.utcnow()
+        # self.wgdata["lastUpdate"] = datetime.datetime.utcnow()
+        short_wgdata = workgraph_to_short_json(self.wgdata)
+        self.process.base.extras.set("_workgraph_short", short_wgdata)
         self.save_task_states()
+        for name, task in self.wgdata["tasks"].items():
+            self.wgdata["tasks"][name] = serialize(task)
+        # nodes is a copy of tasks, so we need to pop it out
+        self.wgdata.pop("nodes")
+        self.wgdata["error_handlers"] = serialize(self.wgdata["error_handlers"])
+        self.process.base.extras.set("_workgraph", self.wgdata)
 
     def save_task_states(self) -> Dict:
         """Get task states."""
-        from aiida.orm.utils.serialize import serialize
 
         task_states = {}
         task_processes = {}
         task_actions = {}
         for name, task in self.wgdata["tasks"].items():
-            task_states[f"_task_state_{name}"] = serialize(task["state"])
-            task_processes[f"_task_process_{name}"] = serialize(task["process"])
-            task_actions[f"_task_action_{name}"] = serialize(task["action"])
+            task_states[f"_task_state_{name}"] = task["state"]
+            task_processes[f"_task_process_{name}"] = task["process"]
+            task_actions[f"_task_action_{name}"] = task["action"]
         self.process.base.extras.set_many(task_states)
         self.process.base.extras.set_many(task_processes)
         self.process.base.extras.set_many(task_actions)
@@ -132,16 +140,19 @@ class WorkGraphSaver:
         from aiida_workgraph.utils.control import create_task_action
 
         # print("process state: ", self.process.process_state.value.upper())
-        if self.process.process_state.value.upper() == "CREATED":
+        if (
+            self.process.process_state is None
+            or self.process.process_state.value.upper() == "CREATED"
+        ):
             for name in tasks:
                 self.wgdata["tasks"][name]["state"] = "PLANNED"
-                self.wgdata["tasks"][name]["process"] = None
+                self.wgdata["tasks"][name]["process"] = serialize(None)
                 self.wgdata["tasks"][name]["result"] = None
                 names = self.wgdata["connectivity"]["child_node"][name]
                 for name in names:
                     self.wgdata["tasks"][name]["state"] = "PLANNED"
                     self.wgdata["tasks"][name]["result"] = None
-                    self.wgdata["tasks"][name]["process"] = None
+                    self.wgdata["tasks"][name]["process"] = serialize(None)
         else:
             create_task_action(self.process.pk, tasks=tasks, action="reset")
 
@@ -154,14 +165,17 @@ class WorkGraphSaver:
     def get_wgdata_from_db(
         self, process: Optional[ProcessNode] = None
     ) -> Optional[Dict]:
-        from aiida.orm.utils.serialize import deserialize_unsafe
 
         process = self.process if process is None else process
         wgdata = process.base.extras.get("_workgraph", None)
         if wgdata is None:
             print("No workgraph data found in the process node.")
             return
-        wgdata = deserialize_unsafe(wgdata)
+        for name, task in wgdata["tasks"].items():
+            wgdata["tasks"][name] = deserialize_unsafe(task)
+        # also make a alias for nodes
+        wgdata["nodes"] = wgdata["tasks"]
+        wgdata["error_handlers"] = deserialize_unsafe(wgdata["error_handlers"])
         return wgdata
 
     def check_diff(

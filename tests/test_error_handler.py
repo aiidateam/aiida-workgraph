@@ -1,13 +1,11 @@
+import pytest
 from aiida_workgraph import WorkGraph
-from aiida import load_profile, orm
+from aiida import orm
 from aiida.calculations.arithmetic.add import ArithmeticAddCalculation
 
-load_profile()
 
-code = orm.load_code("add@localhost")
-
-
-def test_error_handlers():
+@pytest.mark.usefixtures("started_daemon_client")
+def test_error_handlers(add_code):
     """Test error handlers."""
     from aiida.cmdline.utils.common import get_workchain_report
 
@@ -27,7 +25,7 @@ def test_error_handlers():
         self.update_task(task)
 
     wg = WorkGraph("restart_graph")
-    wg.tasks.new(ArithmeticAddCalculation, name="add1")
+    wg.add_task(ArithmeticAddCalculation, name="add1")
     wg.attach_error_handler(
         handle_negative_sum,
         name="handle_negative_sum",
@@ -35,7 +33,7 @@ def test_error_handlers():
     )
     wg.submit(
         inputs={
-            "add1": {"code": code, "x": orm.Int(1), "y": orm.Int(-2)},
+            "add1": {"code": add_code, "x": orm.Int(1), "y": orm.Int(-2)},
         },
         wait=True,
     )

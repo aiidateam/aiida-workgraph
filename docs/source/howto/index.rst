@@ -12,7 +12,6 @@ This section contains a collection of HowTos for various topics.
    parallel
    if
    while
-   for
    context
    wait
    combine_workgraph
@@ -24,3 +23,4 @@ This section contains a collection of HowTos for various topics.
    cli
    control
    transfer_workchain
+   workchain_call_workgraph

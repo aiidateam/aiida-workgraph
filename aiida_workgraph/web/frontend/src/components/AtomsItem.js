@@ -6,7 +6,7 @@ function AtomsItem({ data }) {
 
 
   // Convert AiiDA structure data to the format expected by Atoms
-  function convertToAtomsData(inputData) {
+  function structureToAtomsData(inputData) {
     const data = {
       cell: inputData.cell,
       pbc: [inputData.pbc1, inputData.pbc2, inputData.pbc3],
@@ -29,10 +29,28 @@ function AtomsItem({ data }) {
     return data;
 }
 
+
+  // Convert AiiDA structure data to the format expected by Atoms
+  function aseAtomsToAtomsData(inputData) {
+    const data = {
+      cell: inputData.cell,
+      pbc: inputData.pbc,
+      symbols: inputData.symbols,
+      positions: inputData.positions
+    };
+
+    return data;
+}
+
   useEffect(() => {
 
     console.log("data: ", data)
-    const atomsData = convertToAtomsData(data)
+    let atomsData = {};
+    if (data.node_type === 'data.core.structure.StructureData.') {
+      atomsData = structureToAtomsData(data)
+    } else if (data.node_type === 'data.workgraph.ase.atoms.Atoms.AtomsData.') {
+      atomsData = aseAtomsToAtomsData(data)
+    }
     const atoms = new Atoms(atomsData);
 
     if (weasContainerRef.current) {
