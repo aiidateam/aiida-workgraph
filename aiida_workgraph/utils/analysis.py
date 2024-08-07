@@ -60,6 +60,7 @@ class WorkGraphSaver:
         """
         self.build_task_link()
         self.build_connectivity()
+        self.assign_while_zone()
         if self.exist_in_db() or self.restart_process is not None:
             new_tasks, modified_tasks, update_metadata = self.check_diff(
                 self.restart_process
@@ -93,6 +94,29 @@ class WorkGraphSaver:
             ][0]
             to_socket["links"].append(link)
             from_socket["links"].append(link)
+
+    def assign_while_zone(self) -> None:
+        """Assign while zone for each task."""
+        self.wgdata["connectivity"]["while"] = {}
+        # assign while_parent for each task
+        for name, task in self.wgdata["tasks"].items():
+            if task["metadata"]["node_type"].upper() == "WHILE":
+                input_tasks = []
+                for name in task["properties"]["tasks"]["value"]:
+                    self.wgdata["tasks"][name]["while_parent"] = task["name"]
+                    # find all the input tasks which outside the while zone
+                    for input in self.wgdata["tasks"][name]["inputs"]:
+                        for link in input["links"]:
+                            print("from_node: ", link["from_node"])
+                            if (
+                                link["from_node"]
+                                not in task["properties"]["tasks"]["value"]
+                            ):
+                                input_tasks.append(link["from_node"])
+                task["execution_count"] = 0
+                self.wgdata["connectivity"]["while"][task["name"]] = {
+                    "input_tasks": input_tasks
+                }
 
     def insert_workgraph_to_db(self) -> None:
         """Save a new workgraph in the database.

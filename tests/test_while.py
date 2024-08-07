@@ -4,6 +4,39 @@ from aiida import orm
 
 
 @pytest.mark.usefixtures("started_daemon_client")
+def test_while_task(decorated_add, decorated_multiply, decorated_compare):
+    wg = WorkGraph("test_while_task")
+    # set a context variable before running.
+    wg.context = {"should_run": True}
+    add1 = wg.add_task(decorated_add, name="add1", x=1, y=1)
+    add1.set_context({"result": "n"})
+    # ---------------------------------------------------------------------
+    add2 = wg.add_task(decorated_add, name="add2", x="{{n}}", y=1)
+    add2.wait.append("add1")
+    multiply1 = wg.add_task(
+        decorated_multiply, name="multiply1", x=add2.outputs["result"], y=2
+    )
+    # update the context variable
+    multiply1.set_context({"result": "n"})
+    compare1 = wg.add_task(
+        decorated_compare, name="compare1", x=multiply1.outputs["result"], y=50
+    )
+    compare1.set_context({"result": "should_run"})
+    wg.add_task(
+        "While",
+        max_iterations=100,
+        conditions=["should_run"],
+        tasks=["add2", "multiply1", "compare1"],
+    )
+    # the `result` of compare1 taskis used as condition
+    # ---------------------------------------------------------------------
+    add3 = wg.add_task(decorated_add, name="add3", x=1, y=1)
+    wg.add_link(multiply1.outputs["result"], add3.inputs["x"])
+    wg.submit(wait=True, timeout=100)
+    assert wg.tasks["add3"].outputs["result"].value == 63
+
+
+@pytest.mark.usefixtures("started_daemon_client")
 def test_while(decorated_add, decorated_multiply, decorated_compare):
     # Create a WorkGraph will repeat itself based on the conditions
     wg = WorkGraph("while_workgraph")

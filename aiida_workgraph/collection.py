@@ -38,6 +38,9 @@ class TaskCollection(NodeCollection):
             # make links between the tasks
             task.set(links)
             return task
+        if isinstance(identifier, str) and identifier.upper() == "WHILE":
+            task = super().new(identifier, name, uuid, **kwargs)
+            return task
         if isinstance(identifier, WorkGraph):
             identifier = build_task_from_workgraph(identifier)
         return super().new(identifier, name, uuid, **kwargs)

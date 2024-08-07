@@ -27,6 +27,8 @@ def get_executor(data: Dict[str, Any]) -> Union[Process, Any]:
             executor = CalculationFactory(data["name"])
         elif type == "DataFactory":
             executor = DataFactory(data["name"])
+        elif data["name"] == "" and data["path"] == "":
+            executor = None
         else:
             module = importlib.import_module("{}".format(data.get("path", "")))
             executor = getattr(module, data["name"])
@@ -52,16 +54,20 @@ def create_data_node(executor: orm.Data, args: list, kwargs: dict) -> orm.Node:
     return data_node
 
 
-def get_nested_dict(d: Dict, name: str, allow_none: bool = False) -> Any:
-    """
+def get_nested_dict(d: Dict, name: str, **kwargs) -> Any:
+    """Get the value from a nested dictionary.
+    If default is provided, return the default value if the key is not found.
+    Otherwise, raise ValueError.
+    For example:
+    d = {"base": {"pw": {"parameters": 2}}}
     name = "base.pw.parameters"
     """
     keys = name.split(".")
     current = d
     for key in keys:
         if key not in current:
-            if allow_none:
-                return None
+            if "default" in kwargs:
+                return kwargs.get("default")
             else:
                 raise ValueError(f"{name} not exist in {d}")
         current = current[key]
