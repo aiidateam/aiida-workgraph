@@ -1,4 +1,3 @@
-from aiida_workgraph.orm.serializer import serialize_to_aiida_nodes
 from aiida import orm
 from aiida.common.extendeddicts import AttributeDict
 
@@ -91,8 +90,6 @@ def prepare_for_python_task(task: dict, kwargs: dict, var_kwargs: dict) -> dict:
     )
     # outputs
     output_info = task["outputs"]
-    # serialize the kwargs into AiiDA Data
-    function_kwargs = serialize_to_aiida_nodes(function_kwargs)
     # transfer the args to kwargs
     inputs = {
         "function_source_code": orm.Str(function_source_code),

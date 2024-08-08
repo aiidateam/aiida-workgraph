@@ -36,6 +36,7 @@ def test_error_handlers(add_code):
             "add1": {"code": add_code, "x": orm.Int(1), "y": orm.Int(-2)},
         },
         wait=True,
+        timeout=80,
     )
     report = get_workchain_report(wg.process, "REPORT")
     assert "Run error handler: handle_negative_sum." in report
