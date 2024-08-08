@@ -245,17 +245,13 @@ def wg_structure_si() -> WorkGraph:
 def wg_engine(decorated_add, add_code) -> WorkGraph:
     """Use to test the engine."""
     code = add_code
-    x = Int(2)
     wg = WorkGraph(name="test_run_order")
-    add0 = wg.add_task(ArithmeticAddCalculation, "add0", x=x, y=Int(0), code=code)
-    add0.set({"metadata.options.sleep": 15})
-    add1 = wg.add_task(decorated_add, "add1", x=x, y=Int(1), t=Int(1))
-    add2 = wg.add_task(ArithmeticAddCalculation, "add2", x=x, y=Int(2), code=code)
-    add2.set({"metadata.options.sleep": 1})
-    add3 = wg.add_task(decorated_add, "add3", x=x, y=Int(3), t=Int(1))
-    add4 = wg.add_task(ArithmeticAddCalculation, "add4", x=x, y=Int(4), code=code)
-    add4.set({"metadata.options.sleep": 1})
-    add5 = wg.add_task(decorated_add, "add5", x=x, y=Int(5), t=Int(1))
+    add0 = wg.add_task(ArithmeticAddCalculation, "add0", x=2, y=0, code=code)
+    add1 = wg.add_task(decorated_add, "add1", x=2, y=1, t=1)
+    add2 = wg.add_task(ArithmeticAddCalculation, "add2", x=2, y=2, code=code)
+    add3 = wg.add_task(decorated_add, "add3", x=2, y=3, t=1)
+    add4 = wg.add_task(ArithmeticAddCalculation, "add4", x=2, y=4, code=code)
+    add5 = wg.add_task(decorated_add, "add5", x=2, y=5, t=1)
     wg.add_link(add0.outputs["sum"], add2.inputs["x"])
     wg.add_link(add1.outputs[0], add3.inputs["x"])
     wg.add_link(add3.outputs[0], add4.inputs["x"])
