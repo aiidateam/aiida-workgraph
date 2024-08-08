@@ -838,7 +838,7 @@ class WorkGraphEngine(Process, metaclass=Protect):
                 "PYTHONJOB",
                 "SHELLJOB",
             ]:
-                if len(self._awaitables) > self.ctx.max_number_awaitables:
+                if len(self._awaitables) >= self.ctx.max_number_awaitables:
                     print(
                         MAX_NUMBER_AWAITABLES_MSG.format(
                             self.ctx.max_number_awaitables, name

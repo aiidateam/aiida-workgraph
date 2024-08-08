@@ -1,15 +1,19 @@
 import time
 import pytest
 from aiida_workgraph import WorkGraph
+from aiida.cmdline.utils.common import get_workchain_report
 
 
 @pytest.mark.usefixtures("started_daemon_client")
-def test_run_order(wg_engine: WorkGraph) -> None:
+def test_run_order(decorated_add) -> None:
     """Test the order.
     Tasks should run in parallel and only depend on the input tasks."""
-    wg = wg_engine
+    wg = WorkGraph(name="test_run_order")
+    wg.add_task(decorated_add, "add0", x=2, y=0)
+    wg.add_task(decorated_add, "add1", x=2, y=1)
     wg.submit(wait=True)
-    wg.tasks["add2"].ctime < wg.tasks["add4"].ctime
+    report = get_workchain_report(wg.process, "REPORT")
+    assert "tasks ready to run: add0,add1" in report
 
 
 @pytest.mark.skip(reason="The test is not stable.")
@@ -28,23 +32,20 @@ def test_reset_node(wg_engine: WorkGraph) -> None:
     assert len(wg.process.base.extras.get("_workgraph_queue")) == 1
 
 
-@pytest.mark.usefixtures("started_daemon_client")
 def test_max_number_jobs(add_code) -> None:
     from aiida_workgraph import WorkGraph
     from aiida.orm import Int
     from aiida.calculations.arithmetic.add import ArithmeticAddCalculation
 
     wg = WorkGraph("test_max_number_jobs")
-    N = 9
+    N = 3
     # Create N nodes
     for i in range(N):
-        temp = wg.add_task(
+        wg.add_task(
             ArithmeticAddCalculation, name=f"add{i}", x=Int(1), y=Int(1), code=add_code
         )
-        # Set a sleep option for each job (e.g., 2 seconds per job)
-        temp.set({"metadata.options.sleep": 1})
-
     # Set the maximum number of running jobs inside the WorkGraph
-    wg.max_number_jobs = 3
+    wg.max_number_jobs = 2
     wg.submit(wait=True, timeout=100)
-    wg.tasks["add1"].ctime < wg.tasks["add8"].ctime
+    report = get_workchain_report(wg.process, "REPORT")
+    assert "tasks ready to run: add2" in report

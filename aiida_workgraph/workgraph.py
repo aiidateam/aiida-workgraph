@@ -210,28 +210,36 @@ class WorkGraph(node_graph.NodeGraph):
 
         return wgdata
 
-    def wait(self, timeout: int = 50) -> None:
+    def wait(self, timeout: int = 50, tasks: dict = None) -> None:
         """
         Periodically checks and waits for the AiiDA workgraph process to finish until a given timeout.
-
         Args:
             timeout (int): The maximum time in seconds to wait for the process to finish. Defaults to 50.
         """
-
-        start = time.time()
-        self.update()
-        while self.state not in (
+        terminating_states = (
             "KILLED",
             "PAUSED",
             "FINISHED",
             "FAILED",
             "CANCELLED",
             "EXCEPTED",
-        ):
-            time.sleep(0.5)
+        )
+        start = time.time()
+        self.update()
+        finished = False
+        while not finished:
             self.update()
+            if tasks is not None:
+                states = []
+                for name, value in tasks.items():
+                    flag = self.tasks[name].state in value
+                    states.append(flag)
+                finished = all(states)
+            else:
+                finished = self.state in terminating_states
+            time.sleep(0.5)
             if time.time() - start > timeout:
-                return
+                break
 
     def update(self) -> None:
         """
