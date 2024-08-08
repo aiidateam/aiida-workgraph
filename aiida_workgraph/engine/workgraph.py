@@ -638,10 +638,15 @@ class WorkGraphEngine(Process, metaclass=Protect):
             self.report(f"Task: {name} finished.")
         else:
             task["results"] = None
-        # update while task
-        while_task = task.get("while_parent", None)
-        if while_task:
-            self.update_while_task_state(while_task)
+
+        self.update_parent_task_state(name)
+
+    def update_parent_task_state(self, name: str) -> None:
+        """Update parent task state."""
+        parent_task = self.ctx.tasks[name].get("parent_task", None)
+        if parent_task:
+            if self.ctx.tasks[parent_task]["metadata"]["node_type"].upper() == "WHILE":
+                self.update_while_task_state(parent_task)
 
     def update_while_task_state(self, name: str) -> None:
         """Update while task state."""
@@ -1035,10 +1040,7 @@ class WorkGraphEngine(Process, metaclass=Protect):
                 self.set_task_state_info(name, "state", "FINISHED")
                 self.task_set_context(name)
                 self.report(f"Task: {name} finished.")
-                # update while task
-                while_task = task.get("while_parent", None)
-                if while_task:
-                    self.update_while_task_state(while_task)
+                self.update_parent_task_state(name)
                 if continue_workgraph:
                     self.continue_workgraph()
                 # print("result from node: ", task["results"])
@@ -1173,12 +1175,12 @@ class WorkGraphEngine(Process, metaclass=Protect):
         task = self.ctx.tasks[name]
         inputs = task.get("inputs", [])
         wait_tasks = self.ctx.tasks[name].get("wait", [])
-        while_parent = self.ctx.tasks[name].get("while_parent", None)
-        # wait, inputs, while_input, child_tasks, conditions
+        parent_task = self.ctx.tasks[name].get("parent_task", None)
+        # wait, inputs, parent_task, child_tasks, conditions
         parent_states = [True, True, True, True, True]
         # if the task belongs to a while zoone
-        if while_parent:
-            state = self.get_task_state_info(while_parent, "state")
+        if parent_task:
+            state = self.get_task_state_info(parent_task, "state")
             if state not in ["RUNNING"]:
                 parent_states[2] = False
         # if the task is a while task
@@ -1213,16 +1215,15 @@ class WorkGraphEngine(Process, metaclass=Protect):
                 ]:
                     parent_states[1] = False
                     break
-                # check if the input task is a while task, and the while task is ready
-                while_parent = self.ctx.tasks[link["from_node"]].get(
-                    "while_parent", None
-                )
+                # check if the input task belong to a while task, and the while task is ready
+                parent_task = self.ctx.tasks[link["from_node"]].get("parent_task", None)
+                # if the task itself does not belong to the while task
                 if (
-                    while_parent
+                    parent_task
                     and name
-                    not in self.ctx.tasks[while_parent]["properties"]["tasks"]["value"]
+                    not in self.ctx.tasks[parent_task]["properties"]["tasks"]["value"]
                 ):
-                    state = self.get_task_state_info(while_parent, "state")
+                    state = self.get_task_state_info(parent_task, "state")
                     if state not in [
                         "FINISHED",
                         "SKIPPED",

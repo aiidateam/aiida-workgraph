@@ -98,12 +98,12 @@ class WorkGraphSaver:
     def assign_while_zone(self) -> None:
         """Assign while zone for each task."""
         self.wgdata["connectivity"]["while"] = {}
-        # assign while_parent for each task
+        # assign parent_task for each task
         for name, task in self.wgdata["tasks"].items():
             if task["metadata"]["node_type"].upper() == "WHILE":
                 input_tasks = []
                 for name in task["properties"]["tasks"]["value"]:
-                    self.wgdata["tasks"][name]["while_parent"] = task["name"]
+                    self.wgdata["tasks"][name]["parent_task"] = task["name"]
                     # find all the input tasks which outside the while zone
                     for input in self.wgdata["tasks"][name]["inputs"]:
                         for link in input["links"]:
