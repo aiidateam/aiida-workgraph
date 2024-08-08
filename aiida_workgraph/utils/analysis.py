@@ -107,7 +107,6 @@ class WorkGraphSaver:
                     # find all the input tasks which outside the while zone
                     for input in self.wgdata["tasks"][name]["inputs"]:
                         for link in input["links"]:
-                            print("from_node: ", link["from_node"])
                             if (
                                 link["from_node"]
                                 not in task["properties"]["tasks"]["value"]
