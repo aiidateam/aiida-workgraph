@@ -79,6 +79,9 @@ workgraph = "aiida_workgraph.cli.cmd_workgraph:workgraph"
 [project.entry-points."aiida.parsers"]
 "workgraph.python" = "aiida_workgraph.calculations.python_parser:PythonParser"
 
+[project.entry-points.'aiida.workflows']
+"workgraph.engine" = "aiida_workgraph.engine.workgraph:WorkGraphEngine"
+
 [project.entry-points."aiida.data"]
 "workgraph.general" = "aiida_workgraph.orm.general_data:GeneralData"
 "workgraph.ase.atoms.Atoms" = "aiida_workgraph.orm.atoms:AtomsData"
