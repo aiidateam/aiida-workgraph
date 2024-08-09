@@ -83,7 +83,7 @@ function DataNode() {
               if (data.deleted_nodes.length > 0) {
                 // the node {item.pk} will be always in the list if the deletion is successfull
                 if (data.deleted_nodes.length > 1) {
-                  let formatted_pks = data.deleted_nodes.map((x) => ` PK<${x.toString()}>`);
+                  let formatted_pks = data.deleted_nodes.map((x) => ` ${x.toString()}`);
                   data.deleted_nodes.splice(data.deleted_nodes.indexOf(toDeleteItem.pk), 1)
                   setBodyTextConfirmDeleteModal(
                     <p>
