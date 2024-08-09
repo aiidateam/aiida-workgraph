@@ -33,6 +33,8 @@ To run the frontend tests in headed mode for you have to set an environment vari
 PYTEST_PLAYWRIGHT_HEADLESS=no pytest -m frontend
 ```
 
+For the frontend tests we start a web server at port `8000`, please free this address for before running the frontend tests.
+
 ### Development on the GUI
 
 For the development on the GUI we use the [REACT](https://react.dev) library

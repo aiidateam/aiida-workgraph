@@ -10,6 +10,8 @@ import contextlib
 import threading
 import time
 import os
+import socket
+import errno
 
 ################################
 # Utilities for frontend tests #
@@ -30,6 +32,7 @@ class UvicornTestServer(uvicorn.Server):
         thread = threading.Thread(target=self.run)
         thread.start()
         try:
+            print("wait for started")
             while not self.started:
                 time.sleep(1e-3)
             yield
@@ -46,6 +49,7 @@ def run_uvicorn_web_server(
     with uvicorn_web_server.run_in_thread():
         with web_server_started.get_lock():
             web_server_started.value = 1
+        print("wait for stop_web_server")
         while not stop_web_server.value:
             time.sleep(1e-3)
 
@@ -72,6 +76,22 @@ def web_server(set_backend_server_settings, uvicorn_configuration):
 
     web_server_started = Value(c_int8, 0)
     stop_web_server = Value(c_int8, 0)
+
+    test_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    port = uvicorn_configuration["port"]
+    try:
+        test_socket.bind(("localhost", port))
+    except socket.error as err:
+        if err.errno == errno.EADDRINUSE:
+            raise RuntimeError(
+                f"Port {port} is already in use. Please unbind the port, "
+                "so we can start a web server for the tests."
+            )
+        else:
+            raise err
+
+    test_socket.close()
+
     web_server_proc = Process(
         target=run_uvicorn_web_server,
         args=(web_server_started, stop_web_server),
@@ -80,6 +100,7 @@ def web_server(set_backend_server_settings, uvicorn_configuration):
 
     web_server_proc.start()
 
+    print("wait for sevrer started")
     while not web_server_started.value:
         time.sleep(1e-3)
 
