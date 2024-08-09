@@ -5,7 +5,7 @@ from aiida.orm import StructureData, UpfData
 
 @task(
     inputs=[
-        {"identifier": "String", "name": "pseudo_family"},
+        {"identifier": "workgraph.string", "name": "pseudo_family"},
         {"identifier": StructureData, "name": "structure"},
     ],
     outputs=[{"identifier": UpfData, "name": "Pseudo"}],

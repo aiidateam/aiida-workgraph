@@ -25,7 +25,8 @@ def test_socket(decorated_multiply) -> None:
     assert "is not" in str(excinfo.value) and int.__name__ in str(excinfo.value)
     # This should be successful
     add1.set({"x": 1, "y": 2.0})
-    wg.submit(wait=True)
+    # wg.submit(wait=True)
+    wg.run()
     assert wg.state.upper() == "FINISHED"
     assert multiply1.outputs["result"].value == 6.0
 

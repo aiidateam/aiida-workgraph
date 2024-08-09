@@ -28,7 +28,7 @@ dependencies = [
     "numpy~=1.21",
     "scipy",
     "ase",
-    "node-graph>=0.0.11",
+    "node-graph>=0.0.12",
     "aiida-core>=2.3",
     "cloudpickle",
     "aiida-shell",
@@ -94,7 +94,8 @@ workgraph = "aiida_workgraph.cli.cmd_workgraph:workgraph"
 "process.workflow.workgraph" = "aiida_workgraph.orm.workgraph:WorkGraphNode"
 
 [project.entry-points."aiida_workgraph.task"]
-"workgraph.while" = "aiida_workgraph.tasks.builtins:Gather"
+"workgraph.while" = "aiida_workgraph.tasks.builtins:While"
+"workgraph.gather" = "aiida_workgraph.tasks.builtins:Gather"
 "workgraph.to_ctx" = "aiida_workgraph.tasks.builtins:ToCtx"
 "workgraph.from_ctx" = "aiida_workgraph.tasks.builtins:FromCtx"
 "workgraph.aiida_int" = "aiida_workgraph.tasks.builtins:AiiDAInt"
@@ -110,7 +111,6 @@ workgraph = "aiida_workgraph.cli.cmd_workgraph:workgraph"
 "workgraph.test_arithmetic_multiply_add" = "aiida_workgraph.tasks.test:TestArithmeticMultiplyAdd"
 
 [project.entry-points."aiida_workgraph.property"]
-"node_graph.any" = "node_graph.properties.builtins:PropertyAny"
 "workgraph.any" = "aiida_workgraph.properties.builtins:PropertyAny"
 "workgraph.aiida_int" = "aiida_workgraph.properties.builtins:PropertyAiiDAInt"
 "workgraph.aiida_float" = "aiida_workgraph.properties.builtins:PropertyAiiDAFloat"
@@ -121,9 +121,12 @@ workgraph = "aiida_workgraph.cli.cmd_workgraph:workgraph"
 "workgraph.aiida_aiida_dict" = "aiida_workgraph.properties.builtins:PropertyAiiDADict"
 
 [project.entry-points."aiida_workgraph.socket"]
-"node_graph.any" = "node_graph.sockets.builtins:SocketAny"
 "workgraph.any" = "aiida_workgraph.sockets.builtins:SocketAny"
 "workgraph.namespace" = "aiida_workgraph.sockets.builtins:SocketNamespace"
+"workgraph.int" = "node_graph.sockets.builtins:SocketInt"
+"workgraph.float" = "node_graph.sockets.builtins:SocketFloat"
+"workgraph.string" = "node_graph.sockets.builtins:SocketString"
+"workgraph.bool" = "node_graph.sockets.builtins:SocketBool"
 "workgraph.aiida_int" = "aiida_workgraph.sockets.builtins:SocketAiiDAInt"
 "workgraph.aiida_float" = "aiida_workgraph.sockets.builtins:SocketAiiDAFloat"
 "workgraph.aiida_string" = "aiida_workgraph.sockets.builtins:SocketAiiDAString"

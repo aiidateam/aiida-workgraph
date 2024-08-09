@@ -279,10 +279,10 @@ def build_pythonjob_task(func: Callable) -> Task:
     inputs = tdata["inputs"]
     inputs.extend(
         [
-            {"identifier": "String", "name": "computer"},
-            {"identifier": "String", "name": "code_label"},
-            {"identifier": "String", "name": "code_path"},
-            {"identifier": "String", "name": "prepend_text"},
+            {"identifier": "workgraph.string", "name": "computer"},
+            {"identifier": "workgraph.string", "name": "code_label"},
+            {"identifier": "workgraph.string", "name": "code_path"},
+            {"identifier": "workgraph.string", "name": "prepend_text"},
         ]
     )
     outputs = tdata["outputs"]

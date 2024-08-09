@@ -87,12 +87,12 @@ def wg_workchain(add_code) -> WorkGraph:
     wg = WorkGraph(name="test_debug_math")
     int1 = wg.add_task("workgraph.aiida_node", "int1", pk=Int(2).store().pk)
     int2 = wg.add_task("workgraph.aiida_node", "int2", pk=Int(3).store().pk)
-    code1 = wg.add_task("AiiDACode", "code1", pk=add_code.pk)
+    code1 = wg.add_task("workgraph.aiida_code", "code1", pk=add_code.pk)
     multiply_add1 = wg.add_task(
-        "AiiDAArithmeticMultiplyAdd", "multiply_add1", x=Int(4).store()
+        "workgraph.test_arithmetic_multiply_add", "multiply_add1", x=Int(4).store()
     )
     multiply_add2 = wg.add_task(
-        "AiiDAArithmeticMultiplyAdd",
+        "workgraph.test_arithmetic_multiply_add",
         "multiply_add2",
         x=Int(2).store(),
         y=Int(3).store(),
