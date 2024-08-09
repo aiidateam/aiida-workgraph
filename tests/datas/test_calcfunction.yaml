@@ -1,15 +1,15 @@
 name: test_calcfunction
 description: 'This is a test to run workgraph using yaml file.'
 metadata:
-  version: scinode@0.1.0
-  platform: scinode
+  version: workgraph@0.1.0
+  platform: aiida-workgraph
   worker_name: localhost
 tasks:
-  - identifier: AiiDAFloat
+  - identifier: workgraph.aiida_float
     name: float1
     properties:
       value: 3.0
-  - identifier: AiiDASumDiff
+  - identifier: workgraph.test_sum_diff
     name: sumdiff1
     properties:
       x: 2.0
@@ -17,7 +17,7 @@ tasks:
     - to_socket: y
       from_node: float1
       from_socket: 0
-  - identifier: AiiDASumDiff
+  - identifier: workgraph.test_sum_diff
     name: sumdiff2
     properties:
       x: 4.0
