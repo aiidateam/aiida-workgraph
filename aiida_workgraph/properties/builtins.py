@@ -1,38 +1,14 @@
 from typing import Dict, List, Union, Callable
 from node_graph.property import NodeProperty
-from node_graph.serializer import SerializeJson, SerializePickle
-from node_graph.properties.builtin import (
-    VectorProperty,
-    BaseDictProperty,
-    BaseListProperty,
-    IntProperty,
-    BoolProperty,
-    FloatProperty,
-    StringProperty,
-)
+from node_graph.serializer import SerializeJson
+from node_graph.properties.builtins import PropertyVector, PropertyAny
 from aiida import orm
 
 
-class AnyProperty(NodeProperty, SerializePickle):
-    """A new class for Any type."""
-
-    identifier: str = "Any"
-    data_type = "Any"
-
-    def __init__(
-        self,
-        name: str,
-        description: str = "",
-        default: Union[int, str, None] = None,
-        update: Callable = None,
-    ) -> None:
-        super().__init__(name, description, default, update)
-
-
-class AiiDAIntProperty(NodeProperty, SerializeJson):
+class PropertyAiiDAInt(NodeProperty, SerializeJson):
     """A new class for integer type."""
 
-    identifier: str = "AiiDAInt"
+    identifier: str = "workgraph.aiida_int"
     data_type = "Int"
 
     def __init__(
@@ -68,10 +44,10 @@ class AiiDAIntProperty(NodeProperty, SerializeJson):
             raise Exception("{} is not a integer.".format(value))
 
 
-class AiiDAFloatProperty(NodeProperty, SerializeJson):
+class PropertyAiiDAFloat(NodeProperty, SerializeJson):
     """A new class for float type."""
 
-    identifier: str = "AiiDAFloat"
+    identifier: str = "workgraph.aiida_float"
     data_type = "Float"
 
     def __init__(
@@ -107,10 +83,10 @@ class AiiDAFloatProperty(NodeProperty, SerializeJson):
             raise Exception("{} is not a float.".format(value))
 
 
-class AiiDABoolProperty(NodeProperty, SerializeJson):
+class PropertyAiiDABool(NodeProperty, SerializeJson):
     """A new class for bool type."""
 
-    identifier: str = "AiiDABool"
+    identifier: str = "workgraph.aiida_bool"
     data_type = "Bool"
 
     def __init__(
@@ -146,10 +122,10 @@ class AiiDABoolProperty(NodeProperty, SerializeJson):
             raise Exception("{} is not a bool.".format(value))
 
 
-class AiiDAStringProperty(NodeProperty, SerializeJson):
+class PropertyAiiDAString(NodeProperty, SerializeJson):
     """A new class for string type."""
 
-    identifier: str = "AiiDAString"
+    identifier: str = "workgraph.aiida_string"
     data_type = "String"
 
     def __init__(
@@ -184,10 +160,10 @@ class AiiDAStringProperty(NodeProperty, SerializeJson):
             raise Exception("{} is not a string.".format(value))
 
 
-class AiiDADictProperty(NodeProperty, SerializeJson):
+class PropertyAiiDADict(NodeProperty, SerializeJson):
     """A new class for Dict type."""
 
-    identifier: str = "AiiDADict"
+    identifier: str = "workgraph.aiida_dict"
     data_type = "Dict"
 
     def __init__(
@@ -222,10 +198,10 @@ class AiiDADictProperty(NodeProperty, SerializeJson):
             raise Exception("{} is not a dict.".format(value))
 
 
-class AiiDAIntVectorProperty(VectorProperty):
+class PropertyAiiDAIntVector(PropertyVector):
     """A new class for integer vector type."""
 
-    identifier: str = "AiiDAIntVector"
+    identifier: str = "workgraph.aiida_int_vector"
     data_type = "AiiDAIntVector"
 
     def __init__(
@@ -260,10 +236,10 @@ class AiiDAIntVectorProperty(VectorProperty):
             )
 
 
-class AiiDAFloatVectorProperty(VectorProperty):
+class PropertyAiiDAFloatVector(PropertyVector):
     """A new class for float vector type."""
 
-    identifier: str = "AiiDAFloatVector"
+    identifier: str = "workgraph.aiida_float_vector"
     data_type = "AiiDAFloatVector"
 
     def __init__(
@@ -304,10 +280,10 @@ class AiiDAFloatVectorProperty(VectorProperty):
 # Vector
 
 
-class BoolVectorProperty(VectorProperty):
+class PropertyBoolVector(PropertyVector):
     """A new class for bool vector type."""
 
-    identifier: str = "BoolVector"
+    identifier: str = "workgraph.bool_vector"
     data_type = "BoolVector"
 
     def __init__(
@@ -340,19 +316,14 @@ class BoolVectorProperty(VectorProperty):
             )
 
 
-property_list = [
-    IntProperty,
-    FloatProperty,
-    BoolProperty,
-    StringProperty,
-    AnyProperty,
-    BaseDictProperty,
-    BaseListProperty,
-    AiiDAIntProperty,
-    AiiDAFloatProperty,
-    AiiDAStringProperty,
-    AiiDABoolProperty,
-    AiiDADictProperty,
-    AiiDAIntVectorProperty,
-    AiiDAFloatVectorProperty,
+__all__ = [
+    PropertyAny,
+    PropertyAiiDAInt,
+    PropertyAiiDAFloat,
+    PropertyAiiDABool,
+    PropertyAiiDAString,
+    PropertyAiiDADict,
+    PropertyAiiDAIntVector,
+    PropertyAiiDAFloatVector,
+    PropertyBoolVector,
 ]

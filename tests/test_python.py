@@ -9,8 +9,8 @@ def test_decorator(fixture_localhost):
 
     @task.pythonjob(
         outputs=[
-            {"identifier": "Any", "name": "sum"},
-            {"identifier": "Any", "name": "diff"},
+            {"identifier": "workgraph.any", "name": "sum"},
+            {"identifier": "workgraph.any", "name": "diff"},
         ]
     )
     def add(x, y):
@@ -97,8 +97,8 @@ def test_PythonJob_outputs(fixture_localhost):
 
     @task(
         outputs=[
-            {"identifier": "Any", "name": "sum"},
-            {"identifier": "Any", "name": "diff"},
+            {"identifier": "workgraph.any", "name": "sum"},
+            {"identifier": "workgraph.any", "name": "diff"},
         ]
     )
     def add(x, y):
@@ -120,6 +120,7 @@ def test_PythonJob_outputs(fixture_localhost):
     assert wg.tasks["add"].outputs["diff"].value.value == -1
 
 
+@pytest.mark.usefixtures("started_daemon_client")
 def test_PythonJob_namespace_output(fixture_localhost):
     """Test function with namespace output and input."""
 
@@ -128,11 +129,11 @@ def test_PythonJob_namespace_output(fixture_localhost):
         outputs=[
             {
                 "name": "add_multiply",
-                "identifier": "Namespace",
+                "identifier": "workgraph.namespace",
             },
             {
                 "name": "add_multiply.add",
-                "identifier": "Namespace",
+                "identifier": "workgraph.namespace",
             },
             {"name": "minus"},
         ]
@@ -167,7 +168,7 @@ def test_PythonJob_namespace_output_input(fixture_localhost):
     # output namespace
     @task(
         outputs=[
-            {"identifier": "Namespace", "name": "add_multiply"},
+            {"identifier": "workgraph.namespace", "name": "add_multiply"},
             {"name": "add_multiply.add"},
             {"name": "add_multiply.multiply"},
             {"name": "minus"},

@@ -1,19 +1,19 @@
 name: test_calcjob
 description: 'This is a test to run workgraph using yaml file.'
 metadata:
-  version: scinode@0.1.0
-  platform: scinode
+  version: workgraph@0.1.0
+  platform: aiida-workgraph
   worker_name: localhost
 tasks:
-  - identifier: AiiDAInt
+  - identifier: workgraph.aiida_int
     name: int1
     properties:
       value: 3
-  - identifier: AiiDACode
+  - identifier: workgraph.aiida_code
     name: code1
     properties:
       value: "add@localhost"
-  - identifier: AiiDAArithmeticAdd
+  - identifier: workgraph.test_arithmetic_add
     name: add1
     properties:
       x: 2
@@ -24,7 +24,7 @@ tasks:
     - to_socket: y
       from_node: int1
       from_socket: 0
-  - identifier: AiiDAArithmeticAdd
+  - identifier: workgraph.test_arithmetic_add
     name: add2
     properties:
       x: 4

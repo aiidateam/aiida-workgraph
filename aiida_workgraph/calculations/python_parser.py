@@ -11,7 +11,7 @@ class PythonParser(Parser):
 
         The outputs could be a namespce, e.g.,
         outputs=[
-            {"identifier": "Namespace", "name": "add_multiply"},
+            {"identifier": "workgraph.namespace", "name": "add_multiply"},
             {"name": "add_multiply.add"},
             {"name": "add_multiply.multiply"},
             {"name": "minus"},
@@ -100,7 +100,7 @@ class PythonParser(Parser):
         """Serialize outputs."""
 
         name = output["name"]
-        if output["identifier"].upper() == "NAMESPACE":
+        if output["identifier"].upper() == "WORKGRAPH.NAMESPACE":
             if isinstance(result, dict):
                 serialized_result = {}
                 for key, value in result.items():
@@ -108,7 +108,8 @@ class PythonParser(Parser):
                     full_name_output = self.find_output(full_name)
                     if (
                         full_name_output
-                        and full_name_output["identifier"].upper() == "NAMESPACE"
+                        and full_name_output["identifier"].upper()
+                        == "WORKGRAPH.NAMESPACE"
                     ):
                         serialized_result[key] = self.serialize_output(
                             value, full_name_output

@@ -1,38 +1,24 @@
 from typing import Optional, Any
 from aiida_workgraph.socket import TaskSocket
 from node_graph.serializer import SerializeJson, SerializePickle
-from node_graph.sockets.builtin import (
-    SocketInt,
-    SocketFloat,
-    SocketString,
-    SocketBool,
-    SocketBaseDict,
-    SocketBaseList,
-)
 
 
 class SocketAny(TaskSocket, SerializePickle):
-    """Socket for any time."""
+    """Any socket."""
 
-    identifier: str = "Any"
+    identifier: str = "workgraph.any"
 
     def __init__(
-        self,
-        name: str,
-        node: Optional[Any] = None,
-        type: str = "INPUT",
-        index: int = 0,
-        uuid: Optional[str] = None,
-        **kwargs: Any
+        self, name, node=None, type="INPUT", index=0, uuid=None, **kwargs
     ) -> None:
         super().__init__(name, node, type, index, uuid=uuid)
-        self.add_property("Any", name, **kwargs)
+        self.add_property("workgraph.any", name, **kwargs)
 
 
 class SocketNamespace(TaskSocket, SerializePickle):
     """Namespace socket."""
 
-    identifier: str = "Namespace"
+    identifier: str = "workgraph.namespace"
 
     def __init__(
         self,
@@ -44,13 +30,13 @@ class SocketNamespace(TaskSocket, SerializePickle):
         **kwargs: Any
     ) -> None:
         super().__init__(name, node, type, index, uuid=uuid)
-        self.add_property("Any", name, **kwargs)
+        self.add_property("workgraph.any", name, **kwargs)
 
 
 class SocketAiiDAFloat(TaskSocket, SerializeJson):
     """AiiDAFloat socket."""
 
-    identifier: str = "AiiDAFloat"
+    identifier: str = "workgraph.aiida_float"
 
     def __init__(
         self,
@@ -62,13 +48,13 @@ class SocketAiiDAFloat(TaskSocket, SerializeJson):
         **kwargs: Any
     ) -> None:
         super().__init__(name, node, type, index, uuid=uuid)
-        self.add_property("AiiDAFloat", name, **kwargs)
+        self.add_property("workgraph.aiida_float", name, **kwargs)
 
 
 class SocketAiiDAInt(TaskSocket, SerializeJson):
     """AiiDAInt socket."""
 
-    identifier: str = "AiiDAInt"
+    identifier: str = "workgraph.aiida_int"
 
     def __init__(
         self,
@@ -80,13 +66,13 @@ class SocketAiiDAInt(TaskSocket, SerializeJson):
         **kwargs: Any
     ) -> None:
         super().__init__(name, node, type, index, uuid=uuid)
-        self.add_property("AiiDAInt", name, **kwargs)
+        self.add_property("workgraph.aiida_int", name, **kwargs)
 
 
 class SocketAiiDAString(TaskSocket, SerializeJson):
     """AiiDAString socket."""
 
-    identifier: str = "AiiDAString"
+    identifier: str = "workgraph.aiida_string"
 
     def __init__(
         self,
@@ -104,7 +90,7 @@ class SocketAiiDAString(TaskSocket, SerializeJson):
 class SocketAiiDABool(TaskSocket, SerializeJson):
     """AiiDABool socket."""
 
-    identifier: str = "AiiDABool"
+    identifier: str = "workgraph.aiida_bool"
 
     def __init__(
         self,
@@ -122,7 +108,7 @@ class SocketAiiDABool(TaskSocket, SerializeJson):
 class SocketAiiDAIntVector(TaskSocket, SerializeJson):
     """Socket with a AiiDAIntVector property."""
 
-    identifier: str = "AiiDAIntVector"
+    identifier: str = "workgraph.aiida_int_vector"
 
     def __init__(
         self,
@@ -140,7 +126,7 @@ class SocketAiiDAIntVector(TaskSocket, SerializeJson):
 class SocketAiiDAFloatVector(TaskSocket, SerializeJson):
     """Socket with a FloatVector property."""
 
-    identifier: str = "FloatVector"
+    identifier: str = "workgraph.aiida_float_vector"
 
     def __init__(
         self,
@@ -153,21 +139,3 @@ class SocketAiiDAFloatVector(TaskSocket, SerializeJson):
     ) -> None:
         super().__init__(name, node, type, index, uuid=uuid)
         self.add_property("FloatVector", name, **kwargs)
-
-
-socket_list = [
-    SocketAny,
-    SocketNamespace,
-    SocketInt,
-    SocketFloat,
-    SocketString,
-    SocketBool,
-    SocketBaseDict,
-    SocketBaseList,
-    SocketAiiDAInt,
-    SocketAiiDAFloat,
-    SocketAiiDAString,
-    SocketAiiDABool,
-    SocketAiiDAIntVector,
-    SocketAiiDAFloatVector,
-]

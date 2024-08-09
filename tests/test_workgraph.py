@@ -78,7 +78,12 @@ def test_restart(wg_calcfunction):
     Load the workgraph, modify the task, and restart the workgraph.
     Only the modified node and its child tasks will be rerun."""
     wg = wg_calcfunction
-    wg.add_task("AiiDASumDiff", "sumdiff3", x=4, y=wg.tasks["sumdiff2"].outputs["sum"])
+    wg.add_task(
+        "workgraph.test_sum_diff",
+        "sumdiff3",
+        x=4,
+        y=wg.tasks["sumdiff2"].outputs["sum"],
+    )
     wg.name = "test_restart_0"
     wg.submit(wait=True)
     wg1 = WorkGraph.load(wg.process.pk)
@@ -97,7 +102,7 @@ def test_extend_workgraph(decorated_add_multiply_group):
     from aiida_workgraph import WorkGraph
 
     wg = WorkGraph("test_graph_build")
-    add1 = wg.add_task("AiiDAAdd", "add1", x=2, y=3)
+    add1 = wg.add_task("workgraph.test_add", "add1", x=2, y=3)
     add_multiply_wg = decorated_add_multiply_group(x=0, y=4, z=5)
     # extend workgraph
     wg.extend(add_multiply_wg, prefix="group_")
