@@ -184,9 +184,9 @@ def test_decorator_workfunction(decorated_add_multiply: Callable) -> None:
 def test_decorator_graph_builder(decorated_add_multiply_group: Callable) -> None:
     """Test graph build."""
     wg = WorkGraph("test_graph_builder")
-    add1 = wg.add_task("AiiDAAdd", "add1", x=2, y=3)
+    add1 = wg.add_task("workgraph.test_add", "add1", x=2, y=3)
     add_multiply1 = wg.add_task(decorated_add_multiply_group, "add_multiply1", y=3, z=4)
-    sum_diff1 = wg.add_task("AiiDASumDiff", "sum_diff1")
+    sum_diff1 = wg.add_task("workgraph.test_sum_diff", "sum_diff1")
     wg.add_link(add1.outputs[0], add_multiply1.inputs["x"])
     wg.add_link(add_multiply1.outputs["result"], sum_diff1.inputs["x"])
     wg.submit(wait=True)

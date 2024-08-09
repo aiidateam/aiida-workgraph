@@ -94,13 +94,43 @@ workgraph = "aiida_workgraph.cli.cmd_workgraph:workgraph"
 "process.workflow.workgraph" = "aiida_workgraph.orm.workgraph:WorkGraphNode"
 
 [project.entry-points."aiida_workgraph.task"]
-"aiida" = "aiida_workgraph.tasks:task_list"
+"workgraph.while" = "aiida_workgraph.tasks.builtins:Gather"
+"workgraph.to_ctx" = "aiida_workgraph.tasks.builtins:ToCtx"
+"workgraph.from_ctx" = "aiida_workgraph.tasks.builtins:FromCtx"
+"workgraph.aiida_int" = "aiida_workgraph.tasks.builtins:AiiDAInt"
+"workgraph.aiida_float" = "aiida_workgraph.tasks.builtins:AiiDAFloat"
+"workgraph.aiida_string" = "aiida_workgraph.tasks.builtins:AiiDAString"
+"workgraph.aiida_list" = "aiida_workgraph.tasks.builtins:AiiDAList"
+"workgraph.aiida_dict" = "aiida_workgraph.tasks.builtins:AiiDADict"
+"workgraph.aiida_node" = "aiida_workgraph.tasks.builtins:AiiDANode"
+"workgraph.aiida_code" = "aiida_workgraph.tasks.builtins:AiiDACode"
+"workgraph.test_add" = "aiida_workgraph.tasks.test:TestAdd"
+"workgraph.test_greater" = "aiida_workgraph.tasks.test:TestGreater"
+"workgraph.test_sum_diff" = "aiida_workgraph.tasks.test:TestSumDiff"
+"workgraph.test_arithmetic_multiply_add" = "aiida_workgraph.tasks.test:TestArithmeticMultiplyAdd"
 
 [project.entry-points."aiida_workgraph.property"]
-"aiida" = "aiida_workgraph.properties.built_in:property_list"
+"node_graph.any" = "node_graph.properties.builtins:PropertyAny"
+"workgraph.any" = "aiida_workgraph.properties.builtins:PropertyAny"
+"workgraph.aiida_int" = "aiida_workgraph.properties.builtins:PropertyAiiDAInt"
+"workgraph.aiida_float" = "aiida_workgraph.properties.builtins:PropertyAiiDAFloat"
+"workgraph.aiida_string" = "aiida_workgraph.properties.builtins:PropertyAiiDAString"
+"workgraph.aiida_bool" = "aiida_workgraph.properties.builtins:PropertyAiiDABool"
+"workgraph.aiida_int_vector" = "aiida_workgraph.properties.builtins:PropertyAiiDAIntVector"
+"workgraph.aiida_float_vector" = "aiida_workgraph.properties.builtins:PropertyAiiDAFloatVector"
+"workgraph.aiida_aiida_dict" = "aiida_workgraph.properties.builtins:PropertyAiiDADict"
 
 [project.entry-points."aiida_workgraph.socket"]
-"aiida" = "aiida_workgraph.sockets.built_in:socket_list"
+"node_graph.any" = "node_graph.sockets.builtins:SocketAny"
+"workgraph.any" = "aiida_workgraph.sockets.builtins:SocketAny"
+"workgraph.namespace" = "aiida_workgraph.sockets.builtins:SocketNamespace"
+"workgraph.aiida_int" = "aiida_workgraph.sockets.builtins:SocketAiiDAInt"
+"workgraph.aiida_float" = "aiida_workgraph.sockets.builtins:SocketAiiDAFloat"
+"workgraph.aiida_string" = "aiida_workgraph.sockets.builtins:SocketAiiDAString"
+"workgraph.aiida_bool" = "aiida_workgraph.sockets.builtins:SocketAiiDABool"
+"workgraph.aiida_int_vector" = "aiida_workgraph.sockets.builtins:SocketAiiDAIntVector"
+"workgraph.aiida_float_vector" = "aiida_workgraph.sockets.builtins:SocketAiiDAFloatVector"
+
 
 
 [tool.flit.sdist]

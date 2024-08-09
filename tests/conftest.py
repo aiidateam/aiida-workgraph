@@ -61,8 +61,8 @@ def wg_calcfunction() -> WorkGraph:
     """A workgraph with calcfunction."""
 
     wg = WorkGraph(name="test_debug_math")
-    sumdiff1 = wg.add_task("AiiDASumDiff", "sumdiff1", x=2, y=3)
-    sumdiff2 = wg.add_task("AiiDASumDiff", "sumdiff2", x=4)
+    sumdiff1 = wg.add_task("workgraph.test_sum_diff", "sumdiff1", x=2, y=3)
+    sumdiff2 = wg.add_task("workgraph.test_sum_diff", "sumdiff2", x=4)
     wg.add_link(sumdiff1.outputs[0], sumdiff2.inputs[1])
     return wg
 
@@ -85,8 +85,8 @@ def wg_workchain(add_code) -> WorkGraph:
     """A workgraph with workchain."""
 
     wg = WorkGraph(name="test_debug_math")
-    int1 = wg.add_task("AiiDANode", "int1", pk=Int(2).store().pk)
-    int2 = wg.add_task("AiiDANode", "int2", pk=Int(3).store().pk)
+    int1 = wg.add_task("workgraph.aiida_node", "int1", pk=Int(2).store().pk)
+    int2 = wg.add_task("workgraph.aiida_node", "int2", pk=Int(3).store().pk)
     code1 = wg.add_task("AiiDACode", "code1", pk=add_code.pk)
     multiply_add1 = wg.add_task(
         "AiiDAArithmeticMultiplyAdd", "multiply_add1", x=Int(4).store()
@@ -208,25 +208,6 @@ def structure_si() -> StructureData:
     si = bulk("Si")
     structure_si = StructureData(ase=si)
     return structure_si
-
-
-@pytest.fixture
-def wg_structure_si() -> WorkGraph:
-    wg = WorkGraph(name="test_structure")
-    structure1 = wg.add_task("AiiDAStructure", "structure1")
-    data = {
-        "cell": [[0.0, 2.715, 2.715], [2.715, 0.0, 2.715], [2.715, 2.715, 0.0]],
-        "kinds": [{"mass": 28.085, "name": "Si", "symbols": ["Si"], "weights": [1.0]}],
-        "pbc1": True,
-        "pbc2": True,
-        "pbc3": True,
-        "sites": [
-            {"kind_name": "Si", "position": [0.0, 0.0, 0.0]},
-            {"kind_name": "Si", "position": [1.3575, 1.3575, 1.3575]},
-        ],
-    }
-    structure1.set(data)
-    return wg
 
 
 @pytest.fixture

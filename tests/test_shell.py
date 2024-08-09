@@ -95,7 +95,7 @@ def test_shell_workflow():
         nodes={"expression": job1.outputs["stdout"]},
         parser=PickledData(parser),
         parser_outputs=[
-            {"identifier": "Any", "name": "result"}
+            {"identifier": "workgraph.any", "name": "result"}
         ],  # add a "result" output socket from the parser
     )
 
