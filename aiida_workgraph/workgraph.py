@@ -61,6 +61,7 @@ class WorkGraph(node_graph.NodeGraph):
         self.links.post_creation_hooks = [link_creation_hook]
         self.links.post_deletion_hooks = [link_deletion_hook]
         self.error_handlers = {}
+        self.while_zones = {}
         self._widget = NodeGraphWidget(parent=self) if USE_WIDGET else None
 
     @property
@@ -197,6 +198,9 @@ class WorkGraph(node_graph.NodeGraph):
             }
         )
         wgdata["error_handlers"] = pickle.dumps(self.error_handlers)
+        wgdata["while_zones"] = {
+            key: value.to_dict() for key, value in self.while_zones.items()
+        }
         wgdata["tasks"] = wgdata.pop("nodes")
         if store_nodes:
             for task in wgdata["tasks"].values():
@@ -206,28 +210,36 @@ class WorkGraph(node_graph.NodeGraph):
 
         return wgdata
 
-    def wait(self, timeout: int = 50) -> None:
+    def wait(self, timeout: int = 50, tasks: dict = None) -> None:
         """
         Periodically checks and waits for the AiiDA workgraph process to finish until a given timeout.
-
         Args:
             timeout (int): The maximum time in seconds to wait for the process to finish. Defaults to 50.
         """
-
-        start = time.time()
-        self.update()
-        while self.state not in (
+        terminating_states = (
             "KILLED",
             "PAUSED",
             "FINISHED",
             "FAILED",
             "CANCELLED",
             "EXCEPTED",
-        ):
-            time.sleep(0.5)
+        )
+        start = time.time()
+        self.update()
+        finished = False
+        while not finished:
             self.update()
+            if tasks is not None:
+                states = []
+                for name, value in tasks.items():
+                    flag = self.tasks[name].state in value
+                    states.append(flag)
+                finished = all(states)
+            else:
+                finished = self.state in terminating_states
+            time.sleep(0.5)
             if time.time() - start > timeout:
-                return
+                break
 
     def update(self) -> None:
         """
@@ -259,7 +271,7 @@ class WorkGraph(node_graph.NodeGraph):
                         i = 0
                         for socket in self.tasks[name].outputs:
                             socket.value = get_nested_dict(
-                                node.outputs, socket.name, allow_none=True
+                                node.outputs, socket.name, default=None
                             )
                             i += 1
                 # read results from the process outputs

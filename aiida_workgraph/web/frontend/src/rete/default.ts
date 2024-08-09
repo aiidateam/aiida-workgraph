@@ -5,6 +5,7 @@ import {
   Presets as ConnectionPresets
 } from "rete-connection-plugin";
 import { ReactPlugin, Presets, ReactArea2D } from "rete-react-plugin";
+import { ScopesPlugin, Presets as ScopesPresets } from "rete-scopes-plugin";
 import { MinimapExtra, MinimapPlugin } from "rete-minimap-plugin";
 import {
   ContextMenuPlugin,
@@ -47,10 +48,52 @@ interface NodeMap {
 }
 
 
+export async function loadJSON(editor: NodeEditor<any>, area: any, workgraphData: any) {
+
+  // Adding nodes based on workgraphData
+  const nodeMap: NodeMap = {}; // To keep track of created nodes for linking
+  for (const nodeId in workgraphData.nodes) {
+    const nodeData = workgraphData.nodes[nodeId];
+    const node = createDynamicNode(nodeData);
+    await editor.addNode(node);
+    nodeMap[nodeId] = node; // Storing reference to the node
+  }
+  // Adding connections based on workgraphData
+  workgraphData.links.forEach(async (link: LinkData) => { // Specify the type of link here
+    const fromNode = nodeMap[link.from_node];
+    const toNode = nodeMap[link.to_node];
+    if (fromNode && toNode) {
+        await editor.addConnection(new Connection(fromNode, link.from_socket, toNode, link.to_socket));
+    }
+  });
+
+  // Add while zones
+  console.log("Adding while zone: ");
+  for (const nodeId in workgraphData.nodes) {
+    const nodeData = workgraphData.nodes[nodeId];
+    // if node_type is "WHILE", find all
+    console.log("Node type: ", nodeData['node_type']);
+    if (nodeData['node_type'] === "WHILE") {
+      // find the node
+      const node = nodeMap[nodeData.label];
+      const tasks = nodeData['properties']['tasks']['value'];
+      // find the id of all nodes in the editor that has a label in while_zone
+      for (const nodeId in tasks) {
+        const node1 = nodeMap[tasks[nodeId]];
+        console.log("Setting parent of node", node1, "to", node);
+        node1.parent = node.id;
+        area.update('node', node1.id);
+      }
+      area.update('node', node.id);
+    }
+  }
+}
+
 
 class Node extends ClassicPreset.Node {
   width = 180;
   height = 100;
+  parent?: string;
 }
 class Connection<N extends Node> extends ClassicPreset.Connection<N, N> {}
 
@@ -90,6 +133,7 @@ export async function createEditor(container: HTMLElement, workgraphData: any) {
   const area = new AreaPlugin<Schemes, AreaExtra>(container);
   const connection = new ConnectionPlugin<Schemes, AreaExtra>();
   const render = new ReactPlugin<Schemes, AreaExtra>();
+  const scopes = new ScopesPlugin<Schemes>();
   const arrange = new AutoArrangePlugin<Schemes>();
   const contextMenu = new ContextMenuPlugin<Schemes>({
     items: ContextMenuPresets.classic.setup([
@@ -108,6 +152,7 @@ export async function createEditor(container: HTMLElement, workgraphData: any) {
   render.addPreset(Presets.minimap.setup({ size: 200 }));
 
   connection.addPreset(ConnectionPresets.classic.setup());
+  scopes.addPreset(ScopesPresets.classic.setup());
 
   const applier = new ArrangeAppliers.TransitionApplier<Schemes, never>({
     duration: 500,
@@ -122,28 +167,14 @@ export async function createEditor(container: HTMLElement, workgraphData: any) {
   editor.use(area);
   // area.use(connection);
   area.use(render);
+  area.use(scopes);
   area.use(arrange);
   area.use(contextMenu);
   area.use(minimap);
 
   AreaExtensions.simpleNodesOrder(area);
 
-  // Adding nodes based on workgraphData
-  const nodeMap: NodeMap = {}; // To keep track of created nodes for linking
-  for (const nodeId in workgraphData.nodes) {
-    const nodeData = workgraphData.nodes[nodeId];
-    const node = createDynamicNode(nodeData);
-    await editor.addNode(node);
-    nodeMap[nodeId] = node; // Storing reference to the node
-  }
-  // Adding connections based on workgraphData
-  workgraphData.links.forEach(async (link: LinkData) => { // Specify the type of link here
-    const fromNode = nodeMap[link.from_node];
-    const toNode = nodeMap[link.to_node];
-    if (fromNode && toNode) {
-        await editor.addConnection(new Connection(fromNode, link.from_socket, toNode, link.to_socket));
-    }
-  });
+  await loadJSON(editor, area, workgraphData);
 
   async function layout(animate: boolean) {
     await arrange.layout({ applier: animate ? applier : undefined });

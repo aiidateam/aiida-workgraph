@@ -2,6 +2,26 @@ from typing import Dict
 from aiida_workgraph.task import Task
 
 
+class While(Task):
+    """While"""
+
+    identifier = "While"
+    name = "While"
+    node_type = "WHILE"
+    catalog = "Control"
+    kwargs = ["max_iterations", "conditions", "tasks"]
+
+    def create_sockets(self) -> None:
+        self.inputs.clear()
+        self.outputs.clear()
+        inp = self.inputs.new("Any", "_wait")
+        inp.link_limit = 100000
+        self.inputs.new("Int", "max_iterations")
+        self.inputs.new("Any", "tasks")
+        self.inputs.new("Any", "conditions")
+        self.outputs.new("Any", "_wait")
+
+
 class AiiDAGather(Task):
     """AiiDAGather"""
 

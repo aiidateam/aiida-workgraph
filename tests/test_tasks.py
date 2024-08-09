@@ -10,8 +10,8 @@ def test_build_task_from_workgraph(wg_calcfunction, decorated_add):
     wg_task = wg.add_task(wg_calcfunction, name="wg_calcfunction")
     wg.add_task(decorated_add, name="add2", y=3)
     wg.add_link(add1_task.outputs["result"], wg_task.inputs["sumdiff1.x"])
-    wg.add_link(wg_task.outputs["sumdiff3.sum"], wg.tasks["add2"].inputs["x"])
-    assert len(wg_task.inputs) == 15
-    assert len(wg_task.outputs) == 13
+    wg.add_link(wg_task.outputs["sumdiff2.sum"], wg.tasks["add2"].inputs["x"])
+    assert len(wg_task.inputs) == 7
+    assert len(wg_task.outputs) == 8
     wg.submit(wait=True)
-    assert wg.tasks["add2"].outputs["result"].value.value == 20
+    assert wg.tasks["add2"].outputs["result"].value.value == 14
