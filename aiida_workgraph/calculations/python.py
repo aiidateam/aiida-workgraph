@@ -50,6 +50,9 @@ class PythonJob(CalcJob):
         spec.input(
             "function_name", valid_type=Str, serializer=to_aiida_type, required=False
         )
+        spec.input(
+            "process_label", valid_type=Str, serializer=to_aiida_type, required=False
+        )
         spec.input_namespace(
             "function_kwargs", valid_type=Data, required=False
         )  # , serializer=serialize_to_aiida_nodes)
@@ -137,7 +140,10 @@ class PythonJob(CalcJob):
 
         :returns: The process label to use for ``ProcessNode`` instances.
         """
-        return f"PythonJob<{self.inputs.function_name.value}>"
+        if self.inputs.process_label:
+            return self.inputs.process_label.value
+        else:
+            return f"PythonJob<{self.inputs.function_name.value}>"
 
     def prepare_for_submission(self, folder: Folder) -> CalcInfo:
         """Prepare the calculation for submission.

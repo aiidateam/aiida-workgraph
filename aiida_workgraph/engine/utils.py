@@ -95,6 +95,7 @@ def prepare_for_python_task(task: dict, kwargs: dict, var_kwargs: dict) -> dict:
     function_kwargs = serialize_to_aiida_nodes(function_kwargs)
     # transfer the args to kwargs
     inputs = {
+        "process_label": f"PythonJob<{task['name']}",
         "function_source_code": orm.Str(function_source_code),
         "function_name": orm.Str(function_name),
         "code": code,
