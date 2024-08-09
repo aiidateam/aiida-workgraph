@@ -263,9 +263,10 @@ Only AiiDA SinglefileData and FolderData are allowed."""
         dirpath = pathlib.Path(folder._abspath)
         with folder.open(filename, "wb") as handle:
             pickle.dump(input_values, handle)
-            # create a singlefiledata object for the pickled data
-            file_data = SinglefileData(file=f"{dirpath}/{filename}")
-            local_copy_list.append((file_data.uuid, file_data.filename, filename))
+        # create a singlefiledata object for the pickled data
+        file_data = SinglefileData(file=f"{dirpath}/{filename}")
+        file_data.store()
+        local_copy_list.append((file_data.uuid, file_data.filename, filename))
 
         codeinfo = CodeInfo()
         codeinfo.stdin_name = self.options.input_filename
