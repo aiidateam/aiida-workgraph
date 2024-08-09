@@ -120,6 +120,7 @@ def test_PythonJob_outputs(fixture_localhost):
     assert wg.tasks["add"].outputs["diff"].value.value == -1
 
 
+@pytest.mark.usefixtures("started_daemon_client")
 def test_PythonJob_namespace_output(fixture_localhost):
     """Test function with namespace output and input."""
 

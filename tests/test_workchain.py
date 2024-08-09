@@ -31,7 +31,7 @@ def test_build_workchain(add_code):
     from aiida_workgraph import WorkGraph
 
     wg = WorkGraph(name="test_debug_math")
-    code1 = wg.add_task("AiiDACode", "code1", pk=add_code.pk)
+    code1 = wg.add_task("workgraph.aiida_code", "code1", pk=add_code.pk)
     multiply_add1 = wg.add_task(
         MultiplyAddWorkChain,
         "multiply_add1",

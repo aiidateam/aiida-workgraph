@@ -16,7 +16,7 @@ class While(Task):
         self.outputs.clear()
         inp = self.inputs.new("workgraph.any", "_wait")
         inp.link_limit = 100000
-        self.inputs.new("Int", "max_iterations")
+        self.inputs.new("node_graph.int", "max_iterations")
         self.inputs.new("workgraph.any", "tasks")
         self.inputs.new("workgraph.any", "conditions")
         self.outputs.new("workgraph.any", "_wait")
