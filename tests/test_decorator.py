@@ -1,30 +1,154 @@
 import pytest
 from aiida_workgraph import WorkGraph
 from typing import Callable
+from aiida_workgraph import task
 
 
-def test_args() -> None:
-    from aiida_workgraph import task
+@pytest.fixture(params=["decorator_factory", "decorator"])
+def task_calcfunction(request):
+    if request.param == "decorator_factory":
 
-    @task.calcfunction()
-    def test(a, b=1, **c):
-        print(a, b, c)
+        @task.calcfunction()
+        def test(a, b=1, **c):
+            print(a, b, c)
 
+    elif request.param == "decorator":
+
+        @task.calcfunction
+        def test(a, b=1, **c):
+            print(a, b, c)
+
+    else:
+        raise ValueError(f"{request.param} not supported.")
+    return test
+
+
+def test_decorators_calcfunction_args(task_calcfunction) -> None:
     metadata_kwargs = set(
         [
             f"metadata.{key}"
-            for key in test.process_class.spec().inputs.ports["metadata"].ports.keys()
+            for key in task_calcfunction.process_class.spec()
+            .inputs.ports["metadata"]
+            .ports.keys()
         ]
     )
-    kwargs = set(test.process_class.spec().inputs.ports.keys()).union(metadata_kwargs)
+    kwargs = set(task_calcfunction.process_class.spec().inputs.ports.keys()).union(
+        metadata_kwargs
+    )
     kwargs.remove("a")
     #
-    n = test.task()
+    n = task_calcfunction.task()
     assert n.args == ["a"]
     assert set(n.kwargs) == set(kwargs)
     assert n.var_args is None
     assert n.var_kwargs == "c"
     assert n.outputs.keys() == ["result", "_outputs", "_wait"]
+
+
+@pytest.fixture(params=["decorator_factory", "decorator"])
+def task_function(request):
+    if request.param == "decorator_factory":
+
+        @task()
+        def test(a, b=1, **c):
+            print(a, b, c)
+
+    elif request.param == "decorator":
+
+        @task
+        def test(a, b=1, **c):
+            print(a, b, c)
+
+    else:
+        raise ValueError(f"{request.param} not supported.")
+    return test
+
+
+def test_decorators_task_args(task_function):
+
+    tdata = task_function.tdata
+    assert tdata["args"] == ["a"]
+    assert tdata["kwargs"] == ["b"]
+    assert tdata["var_args"] is None
+    assert tdata["var_kwargs"] == "c"
+    assert set([output["name"] for output in tdata["outputs"]]) == set(
+        ["result", "_outputs", "_wait"]
+    )
+
+
+@pytest.fixture(params=["decorator_factory", "decorator"])
+def task_workfunction(request):
+    if request.param == "decorator_factory":
+
+        @task.workfunction()
+        def test(a, b=1, **c):
+            print(a, b, c)
+
+    elif request.param == "decorator":
+
+        @task.workfunction
+        def test(a, b=1, **c):
+            print(a, b, c)
+
+    else:
+        raise ValueError(f"{request.param} not supported.")
+    return test
+
+
+def test_decorators_workfunction_args(task_workfunction) -> None:
+    metadata_kwargs = set(
+        [
+            f"metadata.{key}"
+            for key in task_workfunction.process_class.spec()
+            .inputs.ports["metadata"]
+            .ports.keys()
+        ]
+    )
+    kwargs = set(task_workfunction.process_class.spec().inputs.ports.keys()).union(
+        metadata_kwargs
+    )
+    kwargs.remove("a")
+    #
+    n = task_workfunction.task()
+    assert n.args == ["a"]
+    assert set(n.kwargs) == set(kwargs)
+    assert n.var_args is None
+    assert n.var_kwargs == "c"
+    assert n.outputs.keys() == ["result", "_outputs", "_wait"]
+
+
+@pytest.fixture(params=["decorator_factory", "decorator"])
+def task_graph_builder(request):
+    if request.param == "decorator_factory":
+
+        @task.graph_builder()
+        def add_multiply_group(a, b=1, **c):
+            wg = WorkGraph("add_multiply_group")
+            print(a, b, c)
+            return wg
+
+    elif request.param == "decorator":
+
+        @task.graph_builder
+        def add_multiply_group(a, b=1, **c):
+            wg = WorkGraph("add_multiply_group")
+            print(a, b, c)
+            return wg
+
+    else:
+        raise ValueError(f"{request.param} not supported.")
+
+    return add_multiply_group
+
+
+def test_decorators_graph_builder_args(task_graph_builder) -> None:
+    assert task_graph_builder.identifier == "add_multiply_group"
+    n = task_graph_builder.task()
+    assert n.args == ["a"]
+    assert n.kwargs == ["b"]
+    assert n.var_args is None
+    assert n.var_kwargs == "c"
+    assert set(n.outputs.keys()) == set(["_outputs", "_wait"])
 
 
 def test_inputs_outputs_workchain() -> None:

@@ -416,6 +416,38 @@ def build_task_from_workgraph(wg: any) -> Task:
     return task
 
 
+def nonfunctional_usage(callable: Callable):
+    """
+    This is a decorator for a decorator factory (a function that returns a decorator).
+    It allows the usage of the decorator factory in a nonfunctional way. So a decorator
+    factory that has been decorated by this decorator that could only be used befor like
+    this
+
+    .. code-block:: python
+
+        @decorator_factory()
+        def foo():
+            pass
+
+    can now be also used like this
+
+    .. code-block:: python
+
+        @decorator_factory
+        def foo():
+            pass
+
+    """
+
+    def decorator_task_wrapper(*args, **kwargs):
+        if len(args) == 1 and isinstance(args[0], Callable) and len(kwargs) == 0:
+            return callable()(args[0])
+        else:
+            return callable(*args, **kwargs)
+
+    return decorator_task_wrapper
+
+
 def generate_tdata(
     func: Callable,
     identifier: str,
@@ -462,6 +494,7 @@ class TaskDecoratorCollection:
 
     # decorator with arguments indentifier, args, kwargs, properties, inputs, outputs, executor
     @staticmethod
+    @nonfunctional_usage
     def decorator_task(
         identifier: Optional[str] = None,
         task_type: str = "Normal",
@@ -511,6 +544,7 @@ class TaskDecoratorCollection:
 
     # decorator with arguments indentifier, args, kwargs, properties, inputs, outputs, executor
     @staticmethod
+    @nonfunctional_usage
     def decorator_graph_builder(
         identifier: Optional[str] = None,
         properties: Optional[List[Tuple[str, str]]] = None,
@@ -561,6 +595,7 @@ class TaskDecoratorCollection:
         return decorator
 
     @staticmethod
+    @nonfunctional_usage
     def calcfunction(**kwargs: Any) -> Callable:
         def decorator(func):
             # First, apply the calcfunction decorator
@@ -579,6 +614,7 @@ class TaskDecoratorCollection:
         return decorator
 
     @staticmethod
+    @nonfunctional_usage
     def workfunction(**kwargs: Any) -> Callable:
         def decorator(func):
             # First, apply the workfunction decorator
@@ -597,6 +633,7 @@ class TaskDecoratorCollection:
         return decorator
 
     @staticmethod
+    @nonfunctional_usage
     def pythonjob(**kwargs: Any) -> Callable:
         def decorator(func):
             # first create a task from the function
@@ -622,7 +659,10 @@ class TaskDecoratorCollection:
 
     def __call__(self, *args, **kwargs):
         # This allows using '@task' to directly apply the decorator_task functionality
-        return self.decorator_task(*args, **kwargs)
+        if len(args) == 1 and isinstance(args[0], Callable) and len(kwargs) == 0:
+            return self.decorator_task()(args[0])
+        else:
+            return self.decorator_task(*args, **kwargs)
 
 
 task = TaskDecoratorCollection()
