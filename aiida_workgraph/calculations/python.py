@@ -145,6 +145,12 @@ class PythonJob(CalcJob):
         else:
             return f"PythonJob<{self.inputs.function_name.value}>"
 
+    def on_create(self) -> None:
+        """Called when a Process is created."""
+
+        super().on_create()
+        self.node.label = self.inputs.process_label.value
+
     def prepare_for_submission(self, folder: Folder) -> CalcInfo:
         """Prepare the calculation for submission.
 

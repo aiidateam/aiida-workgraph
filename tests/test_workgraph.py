@@ -39,6 +39,7 @@ def test_save_load(wg_calcfunction):
     wg.save()
     assert wg.process.process_state.value.upper() == "CREATED"
     assert wg.process.process_label == "WorkGraph<test_save_load>"
+    assert wg.process.label == "test_save_load"
     wg2 = WorkGraph.load(wg.process.pk)
     assert len(wg.tasks) == len(wg2.tasks)
 

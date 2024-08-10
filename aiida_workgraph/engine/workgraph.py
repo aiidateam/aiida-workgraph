@@ -416,6 +416,7 @@ class WorkGraphEngine(Process, metaclass=Protect):
         )
         saver = WorkGraphSaver(self.node, wgdata, restart_process=restart_process)
         saver.save()
+        self.node.label = wgdata["name"]
 
     def setup(self) -> None:
         # track if the awaitable callback is added to the runner
