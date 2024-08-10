@@ -5,6 +5,7 @@ import {
   Presets as ConnectionPresets
 } from "rete-connection-plugin";
 import { ReactPlugin, Presets, ReactArea2D } from "rete-react-plugin";
+import { ScopesPlugin, Presets as ScopesPresets } from "rete-scopes-plugin";
 import { MinimapExtra, MinimapPlugin } from "rete-minimap-plugin";
 import {
   ContextMenuPlugin,
@@ -90,6 +91,23 @@ export async function loadJSON(editor, area, layout, workgraphData) {
   workgraphData.links.forEach(async (link: LinkData) => { // Specify the type of link here
     await addLink(editor, area, layout, link);
   });
+
+  // Add while zones
+  console.log("Adding while zone: ");
+  for (const nodeId in workgraphData.nodes) {
+    const nodeData = workgraphData.nodes[nodeId];
+    // if node_type is "WHILE", find all
+    if (nodeData['node_type'] === "WHILE") {
+      // find the node
+      const node = editor.nodeMap[nodeData.label];
+      const tasks = nodeData['properties']['tasks']['value'];
+      // find the id of all nodes in the editor that has a label in while_zone
+      for (const nodeId in tasks) {
+        const node1 = editor.nodeMap[tasks[nodeId]];
+        node1.parent = node.id;
+      }
+    }
+  }
 }
 
 export async function addNode(editor, area, nodeData) {
@@ -161,6 +179,7 @@ export async function createEditor(container: HTMLElement, settings: any) {
   const area = new AreaPlugin<Schemes, AreaExtra>(container);
   const connection = new ConnectionPlugin<Schemes, AreaExtra>();
   const render = new ReactPlugin<Schemes, AreaExtra>();
+  const scopes = new ScopesPlugin<Schemes>();
   const arrange = new AutoArrangePlugin<Schemes>();
   const contextMenu = new ContextMenuPlugin<Schemes>({
     items: ContextMenuPresets.classic.setup([
@@ -170,15 +189,17 @@ export async function createEditor(container: HTMLElement, settings: any) {
     boundViewport: true
   });
 
-  AreaExtensions.selectableNodes(area, AreaExtensions.selector(), {
-    accumulating: AreaExtensions.accumulateOnCtrl()
-  });
+  const selector = AreaExtensions.selector();
+  const accumulating = AreaExtensions.accumulateOnCtrl();
+
+  AreaExtensions.selectableNodes(area, selector, { accumulating });
 
   render.addPreset(Presets.classic.setup());
   render.addPreset(Presets.contextMenu.setup());
   render.addPreset(Presets.minimap.setup({ size: 200 }));
 
   connection.addPreset(ConnectionPresets.classic.setup());
+  scopes.addPreset(ScopesPresets.classic.setup());
 
   const applier = new ArrangeAppliers.TransitionApplier<Schemes, never>({
     duration: 500,
@@ -193,6 +214,7 @@ export async function createEditor(container: HTMLElement, settings: any) {
   editor.use(area);
   // area.use(connection);
   area.use(render);
+  area.use(scopes);
   area.use(arrange);
   area.use(contextMenu);
   if (settings.minimap) {

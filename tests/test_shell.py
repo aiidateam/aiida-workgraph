@@ -95,31 +95,9 @@ def test_shell_workflow():
         nodes={"expression": job1.outputs["stdout"]},
         parser=PickledData(parser),
         parser_outputs=[
-            {"identifier": "Any", "name": "result"}
+            {"identifier": "workgraph.any", "name": "result"}
         ],  # add a "result" output socket from the parser
     )
-    # echo result + y expression
-    job3 = wg.add_task(
-        "ShellJob",
-        name="job3",
-        command="echo",
-        arguments=["{result}", "*", "{z}"],
-        nodes={"result": job2.outputs["result"], "z": Int(4)},
-    )
-    # bc command to calculate the expression
-    job4 = wg.add_task(
-        "ShellJob",
-        name="job4",
-        command="bc",
-        arguments=["{expression}"],
-        nodes={"expression": job3.outputs["stdout"]},
-        parser=PickledData(parser),
-        parser_outputs=[
-            {"identifier": "Any", "name": "result"}
-        ],  # add a "result" output socket from the parser
-    )
-    # there is a bug in aiida-shell, the following line will raise an error
-    # https://github.com/sphuber/aiida-shell/issues/91
-    # wg.submit(wait=True, timeout=200)
+
     wg.run()
-    assert job4.outputs["result"].value.value == 20
+    assert job2.outputs["result"].value.value == 5

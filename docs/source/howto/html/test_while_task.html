@@ -21,6 +21,7 @@
     <script src="https://cdn.jsdelivr.net/npm/rete-react-plugin@2.0.5/rete-react-plugin.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/rete-auto-arrange-plugin@2.0.1/rete-auto-arrange-plugin.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/rete-minimap-plugin@2.0.1/rete-minimap-plugin.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/rete-scopes-plugin@2.1.0/rete-scopes-plugin.min.js"></script>
 
     <style>
         .App {
@@ -52,6 +53,7 @@
         const { createRoot } = ReactDOM;
         const { NodeEditor, ClassicPreset } = Rete;
         const { AreaPlugin, AreaExtensions } = ReteAreaPlugin;
+        const { ScopesPlugin, Presets: ScopesPresets } = ReteScopesPlugin;
         const { ConnectionPlugin, Presets: ConnectionPresets } = ReteConnectionPlugin;
         const { ReactPlugin, Presets } = ReteReactPlugin;
         const { AutoArrangePlugin, Presets: ArrangePresets, ArrangeAppliers} = ReteAutoArrangePlugin;
@@ -59,7 +61,7 @@
         const { RenderUtils } = ReteRenderUtils;
         const styled = window.styled;
 
-        const workgraphData = {"name": "PythonJob_shell_command", "uuid": "cef07a14-28f2-11ef-9e7d-906584de3e5b", "state": "CREATED", "nodes": {"add": {"label": "add", "inputs": [{"name": "x", "identifier": "General", "uuid": "cef527e4-28f2-11ef-9e7d-906584de3e5b", "node_uuid": "cef525d2-28f2-11ef-9e7d-906584de3e5b", "type": "INPUT", "link_limit": 1, "links": [], "serialize": {"path": "node_graph.serializer", "name": "serialize_pickle"}, "deserialize": {"path": "node_graph.serializer", "name": "deserialize_pickle"}}, {"name": "y", "identifier": "General", "uuid": "cef52924-28f2-11ef-9e7d-906584de3e5b", "node_uuid": "cef525d2-28f2-11ef-9e7d-906584de3e5b", "type": "INPUT", "link_limit": 1, "links": [], "serialize": {"path": "node_graph.serializer", "name": "serialize_pickle"}, "deserialize": {"path": "node_graph.serializer", "name": "deserialize_pickle"}}], "outputs": [{"name": "result"}], "position": [30, 30]}, "multiply": {"label": "multiply", "inputs": [{"name": "x", "identifier": "General", "uuid": "cef8695e-28f2-11ef-9e7d-906584de3e5b", "node_uuid": "cef86756-28f2-11ef-9e7d-906584de3e5b", "type": "INPUT", "link_limit": 1, "links": [{"from_node": "add", "from_socket": "result", "from_socket_uuid": "cef559d0-28f2-11ef-9e7d-906584de3e5b"}], "serialize": {"path": "node_graph.serializer", "name": "serialize_pickle"}, "deserialize": {"path": "node_graph.serializer", "name": "deserialize_pickle"}}, {"name": "y", "identifier": "General", "uuid": "cef86a80-28f2-11ef-9e7d-906584de3e5b", "node_uuid": "cef86756-28f2-11ef-9e7d-906584de3e5b", "type": "INPUT", "link_limit": 1, "links": [], "serialize": {"path": "node_graph.serializer", "name": "serialize_pickle"}, "deserialize": {"path": "node_graph.serializer", "name": "deserialize_pickle"}}, {"name": "x"}], "outputs": [], "position": [60, 60]}}, "links": [{"from_socket": "result", "from_node": "add", "from_socket_uuid": "cef559d0-28f2-11ef-9e7d-906584de3e5b", "to_socket": "x", "to_node": "multiply", "state": false}]}
+        const workgraphData = {"name": "test_while_task", "uuid": "d77e251a-556a-11ef-bbde-906584de3e5b", "state": "CREATED", "nodes": {"add1": {"label": "add1", "node_type": "CALCFUNCTION", "inputs": [{"name": "x", "identifier": "Any", "uuid": "d78b154a-556a-11ef-bbde-906584de3e5b", "node_uuid": "d78b0fb4-556a-11ef-bbde-906584de3e5b", "type": "INPUT", "link_limit": 1, "links": [], "serialize": {"path": "node_graph.serializer", "name": "serialize_pickle"}, "deserialize": {"path": "node_graph.serializer", "name": "deserialize_pickle"}}, {"name": "y", "identifier": "Any", "uuid": "d78b159a-556a-11ef-bbde-906584de3e5b", "node_uuid": "d78b0fb4-556a-11ef-bbde-906584de3e5b", "type": "INPUT", "link_limit": 1, "links": [], "serialize": {"path": "node_graph.serializer", "name": "serialize_pickle"}, "deserialize": {"path": "node_graph.serializer", "name": "deserialize_pickle"}}], "outputs": [{"name": "_wait"}], "position": [30, 30]}, "add2": {"label": "add2", "node_type": "CALCFUNCTION", "inputs": [{"name": "x", "identifier": "Any", "uuid": "d7943116-556a-11ef-bbde-906584de3e5b", "node_uuid": "d7942b8a-556a-11ef-bbde-906584de3e5b", "type": "INPUT", "link_limit": 1, "links": [], "serialize": {"path": "node_graph.serializer", "name": "serialize_pickle"}, "deserialize": {"path": "node_graph.serializer", "name": "deserialize_pickle"}}, {"name": "y", "identifier": "Any", "uuid": "d7943170-556a-11ef-bbde-906584de3e5b", "node_uuid": "d7942b8a-556a-11ef-bbde-906584de3e5b", "type": "INPUT", "link_limit": 1, "links": [], "serialize": {"path": "node_graph.serializer", "name": "serialize_pickle"}, "deserialize": {"path": "node_graph.serializer", "name": "deserialize_pickle"}}, {"name": "_wait"}], "outputs": [{"name": "result"}], "position": [60, 60]}, "multiply1": {"label": "multiply1", "node_type": "CALCFUNCTION", "inputs": [{"name": "x", "identifier": "Any", "uuid": "d79d0d2c-556a-11ef-bbde-906584de3e5b", "node_uuid": "d79d07a0-556a-11ef-bbde-906584de3e5b", "type": "INPUT", "link_limit": 1, "links": [{"from_node": "add2", "from_socket": "result", "from_socket_uuid": "d7943238-556a-11ef-bbde-906584de3e5b"}], "serialize": {"path": "node_graph.serializer", "name": "serialize_pickle"}, "deserialize": {"path": "node_graph.serializer", "name": "deserialize_pickle"}}, {"name": "y", "identifier": "Any", "uuid": "d79d0d7c-556a-11ef-bbde-906584de3e5b", "node_uuid": "d79d07a0-556a-11ef-bbde-906584de3e5b", "type": "INPUT", "link_limit": 1, "links": [], "serialize": {"path": "node_graph.serializer", "name": "serialize_pickle"}, "deserialize": {"path": "node_graph.serializer", "name": "deserialize_pickle"}}, {"name": "x"}], "outputs": [{"name": "result"}, {"name": "result"}], "position": [90, 90]}, "compare1": {"label": "compare1", "node_type": "CALCFUNCTION", "inputs": [{"name": "x", "identifier": "Any", "uuid": "d7a583e4-556a-11ef-bbde-906584de3e5b", "node_uuid": "d7a57e4e-556a-11ef-bbde-906584de3e5b", "type": "INPUT", "link_limit": 1, "links": [{"from_node": "multiply1", "from_socket": "result", "from_socket_uuid": "d79d0e44-556a-11ef-bbde-906584de3e5b"}], "serialize": {"path": "node_graph.serializer", "name": "serialize_pickle"}, "deserialize": {"path": "node_graph.serializer", "name": "deserialize_pickle"}}, {"name": "y", "identifier": "Any", "uuid": "d7a5843e-556a-11ef-bbde-906584de3e5b", "node_uuid": "d7a57e4e-556a-11ef-bbde-906584de3e5b", "type": "INPUT", "link_limit": 1, "links": [], "serialize": {"path": "node_graph.serializer", "name": "serialize_pickle"}, "deserialize": {"path": "node_graph.serializer", "name": "deserialize_pickle"}}, {"name": "x"}], "outputs": [], "position": [120, 120]}, "While5": {"label": "While5", "node_type": "WHILE", "inputs": [], "outputs": [], "position": [150, 150], "properties": {"_wait": {"value": null, "name": "_wait", "identifier": "Any", "serialize": {"path": "node_graph.serializer", "name": "serialize_pickle"}, "deserialize": {"path": "node_graph.serializer", "name": "deserialize_pickle"}, "metadata": {"default": null}}, "max_iterations": {"value": 100, "name": "max_iterations", "identifier": "Int", "serialize": {"path": "node_graph.serializer", "name": "serialize_json"}, "deserialize": {"path": "node_graph.serializer", "name": "deserialize_json"}, "metadata": {"default": null}}, "tasks": {"value": ["add2", "multiply1", "compare1"], "name": "tasks", "identifier": "Any", "serialize": {"path": "node_graph.serializer", "name": "serialize_pickle"}, "deserialize": {"path": "node_graph.serializer", "name": "deserialize_pickle"}, "metadata": {"default": null}}, "conditions": {"value": ["should_run"], "name": "conditions", "identifier": "Any", "serialize": {"path": "node_graph.serializer", "name": "serialize_pickle"}, "deserialize": {"path": "node_graph.serializer", "name": "deserialize_pickle"}, "metadata": {"default": null}}}}, "add3": {"label": "add3", "node_type": "CALCFUNCTION", "inputs": [{"name": "x", "identifier": "Any", "uuid": "d7b8116c-556a-11ef-bbde-906584de3e5b", "node_uuid": "d7b80b5e-556a-11ef-bbde-906584de3e5b", "type": "INPUT", "link_limit": 1, "links": [{"from_node": "multiply1", "from_socket": "result", "from_socket_uuid": "d79d0e44-556a-11ef-bbde-906584de3e5b"}], "serialize": {"path": "node_graph.serializer", "name": "serialize_pickle"}, "deserialize": {"path": "node_graph.serializer", "name": "deserialize_pickle"}}, {"name": "y", "identifier": "Any", "uuid": "d7b811d0-556a-11ef-bbde-906584de3e5b", "node_uuid": "d7b80b5e-556a-11ef-bbde-906584de3e5b", "type": "INPUT", "link_limit": 1, "links": [], "serialize": {"path": "node_graph.serializer", "name": "serialize_pickle"}, "deserialize": {"path": "node_graph.serializer", "name": "deserialize_pickle"}}, {"name": "x"}], "outputs": [], "position": [180, 180]}}, "links": [{"from_socket": "result", "from_node": "add2", "from_socket_uuid": "d7943238-556a-11ef-bbde-906584de3e5b", "to_socket": "x", "to_node": "multiply1", "state": false}, {"from_socket": "result", "from_node": "multiply1", "from_socket_uuid": "d79d0e44-556a-11ef-bbde-906584de3e5b", "to_socket": "x", "to_node": "compare1", "state": false}, {"from_socket": "result", "from_node": "multiply1", "from_socket_uuid": "d79d0e44-556a-11ef-bbde-906584de3e5b", "to_socket": "x", "to_node": "add3", "state": false}, {"from_node": "add1", "from_socket": "_wait", "to_node": "add2", "to_socket": "_wait"}]}
 
         // Define Schemes to use in vanilla JS
         const Schemes = {
@@ -141,6 +143,23 @@
           workgraphData.links.forEach(async (link) => { // Specify the type of link here
             await addLink(editor, area, layout, link);
           });
+
+          // Add while zones
+          console.log("Adding while zone: ");
+          for (const nodeId in workgraphData.nodes) {
+            const nodeData = workgraphData.nodes[nodeId];
+            // if node_type is "WHILE", find all
+            if (nodeData['node_type'] === "WHILE") {
+              // find the node
+              const node = editor.nodeMap[nodeData.label];
+              const tasks = nodeData['properties']['tasks']['value'];
+              // find the id of all nodes in the editor that has a label in while_zone
+              for (const nodeId in tasks) {
+                const node1 = editor.nodeMap[tasks[nodeId]];
+                node1.parent = node.id;
+              }
+            }
+          }
         }
 
         async function createEditor(container) {
@@ -150,6 +169,7 @@
             const area = new AreaPlugin(container);
             const connection = new ConnectionPlugin();
             const render = new ReactPlugin({ createRoot });
+            const scopes = new ScopesPlugin();
             const arrange = new AutoArrangePlugin();
 
             const minimap = new MinimapPlugin({
@@ -164,6 +184,7 @@
             render.addPreset(Presets.minimap.setup({ size: 200 }));
 
             connection.addPreset(ConnectionPresets.classic.setup());
+            scopes.addPreset(ScopesPresets.classic.setup());
 
             const applier = new ArrangeAppliers.TransitionApplier({
               duration: 500,
@@ -179,6 +200,7 @@
             editor.use(area);
             // area.use(connection);
             area.use(render);
+            area.use(scopes);
             area.use(arrange);
             area.use(minimap);
 
@@ -223,6 +245,7 @@
                           // aplly layout twice to ensure all nodes are arranged
                           editor?.layout(false).then(() => editor?.layout(true));
                         });
+                        window.editor = editor;
                     });
                 }
                 if (document.getElementById('fullscreen-btn')) {

@@ -21,6 +21,7 @@
     <script src="https://cdn.jsdelivr.net/npm/rete-react-plugin@2.0.5/rete-react-plugin.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/rete-auto-arrange-plugin@2.0.1/rete-auto-arrange-plugin.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/rete-minimap-plugin@2.0.1/rete-minimap-plugin.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/rete-scopes-plugin@2.1.0/rete-scopes-plugin.min.js"></script>
 
     <style>
         .App {
@@ -52,6 +53,7 @@
         const { createRoot } = ReactDOM;
         const { NodeEditor, ClassicPreset } = Rete;
         const { AreaPlugin, AreaExtensions } = ReteAreaPlugin;
+        const { ScopesPlugin, Presets: ScopesPresets } = ReteScopesPlugin;
         const { ConnectionPlugin, Presets: ConnectionPresets } = ReteConnectionPlugin;
         const { ReactPlugin, Presets } = ReteReactPlugin;
         const { AutoArrangePlugin, Presets: ArrangePresets, ArrangeAppliers} = ReteAutoArrangePlugin;
@@ -59,7 +61,7 @@
         const { RenderUtils } = ReteRenderUtils;
         const styled = window.styled;
 
-        const workgraphData = {"name": "PythonJob_parent_folder", "uuid": "ab3e3688-28f2-11ef-9e7d-906584de3e5b", "state": "CREATED", "nodes": {"add": {"label": "add", "inputs": [{"name": "x", "identifier": "General", "uuid": "ab423454-28f2-11ef-9e7d-906584de3e5b", "node_uuid": "ab423080-28f2-11ef-9e7d-906584de3e5b", "type": "INPUT", "link_limit": 1, "links": [], "serialize": {"path": "node_graph.serializer", "name": "serialize_pickle"}, "deserialize": {"path": "node_graph.serializer", "name": "deserialize_pickle"}}, {"name": "y", "identifier": "General", "uuid": "ab4236c0-28f2-11ef-9e7d-906584de3e5b", "node_uuid": "ab423080-28f2-11ef-9e7d-906584de3e5b", "type": "INPUT", "link_limit": 1, "links": [], "serialize": {"path": "node_graph.serializer", "name": "serialize_pickle"}, "deserialize": {"path": "node_graph.serializer", "name": "deserialize_pickle"}}], "outputs": [{"name": "remote_folder"}], "position": [30, 30]}, "multiply": {"label": "multiply", "inputs": [{"name": "x", "identifier": "General", "uuid": "ab4687b6-28f2-11ef-9e7d-906584de3e5b", "node_uuid": "ab46854a-28f2-11ef-9e7d-906584de3e5b", "type": "INPUT", "link_limit": 1, "links": [], "serialize": {"path": "node_graph.serializer", "name": "serialize_pickle"}, "deserialize": {"path": "node_graph.serializer", "name": "deserialize_pickle"}}, {"name": "y", "identifier": "General", "uuid": "ab468914-28f2-11ef-9e7d-906584de3e5b", "node_uuid": "ab46854a-28f2-11ef-9e7d-906584de3e5b", "type": "INPUT", "link_limit": 1, "links": [], "serialize": {"path": "node_graph.serializer", "name": "serialize_pickle"}, "deserialize": {"path": "node_graph.serializer", "name": "deserialize_pickle"}}, {"name": "parent_folder"}], "outputs": [], "position": [60, 60]}}, "links": [{"from_socket": "remote_folder", "from_node": "add", "from_socket_uuid": "ab429746-28f2-11ef-9e7d-906584de3e5b", "to_socket": "parent_folder", "to_node": "multiply", "state": false}]}
+        const workgraphData = {"name": "test_while_workgraph", "uuid": "f92c7be4-556a-11ef-bbde-906584de3e5b", "state": "CREATED", "nodes": {"add1": {"label": "add1", "node_type": "CALCFUNCTION", "inputs": [{"name": "x", "identifier": "Any", "uuid": "f936ce1e-556a-11ef-bbde-906584de3e5b", "node_uuid": "f936c82e-556a-11ef-bbde-906584de3e5b", "type": "INPUT", "link_limit": 1, "links": [], "serialize": {"path": "node_graph.serializer", "name": "serialize_pickle"}, "deserialize": {"path": "node_graph.serializer", "name": "deserialize_pickle"}}, {"name": "y", "identifier": "Any", "uuid": "f936ce78-556a-11ef-bbde-906584de3e5b", "node_uuid": "f936c82e-556a-11ef-bbde-906584de3e5b", "type": "INPUT", "link_limit": 1, "links": [], "serialize": {"path": "node_graph.serializer", "name": "serialize_pickle"}, "deserialize": {"path": "node_graph.serializer", "name": "deserialize_pickle"}}], "outputs": [{"name": "result"}], "position": [30, 30]}, "add_multiply_while2": {"label": "add_multiply_while2", "node_type": "graph_builder", "inputs": [{"name": "n", "identifier": "Any", "uuid": "f93f2ffa-556a-11ef-bbde-906584de3e5b", "node_uuid": "f93f2d7a-556a-11ef-bbde-906584de3e5b", "type": "INPUT", "link_limit": 1, "links": [{"from_node": "add1", "from_socket": "result", "from_socket_uuid": "f936cf4a-556a-11ef-bbde-906584de3e5b"}], "serialize": {"path": "node_graph.serializer", "name": "serialize_pickle"}, "deserialize": {"path": "node_graph.serializer", "name": "deserialize_pickle"}}, {"name": "n"}], "outputs": [{"name": "result"}], "position": [60, 60]}, "add2": {"label": "add2", "node_type": "CALCFUNCTION", "inputs": [{"name": "x", "identifier": "Any", "uuid": "f9476472-556a-11ef-bbde-906584de3e5b", "node_uuid": "f9475ebe-556a-11ef-bbde-906584de3e5b", "type": "INPUT", "link_limit": 1, "links": [{"from_node": "add_multiply_while2", "from_socket": "result", "from_socket_uuid": "f93f31c6-556a-11ef-bbde-906584de3e5b"}], "serialize": {"path": "node_graph.serializer", "name": "serialize_pickle"}, "deserialize": {"path": "node_graph.serializer", "name": "deserialize_pickle"}}, {"name": "y", "identifier": "Any", "uuid": "f94764cc-556a-11ef-bbde-906584de3e5b", "node_uuid": "f9475ebe-556a-11ef-bbde-906584de3e5b", "type": "INPUT", "link_limit": 1, "links": [], "serialize": {"path": "node_graph.serializer", "name": "serialize_pickle"}, "deserialize": {"path": "node_graph.serializer", "name": "deserialize_pickle"}}, {"name": "x"}], "outputs": [], "position": [90, 90]}}, "links": [{"from_socket": "result", "from_node": "add1", "from_socket_uuid": "f936cf4a-556a-11ef-bbde-906584de3e5b", "to_socket": "n", "to_node": "add_multiply_while2", "state": false}, {"from_socket": "result", "from_node": "add_multiply_while2", "from_socket_uuid": "f93f31c6-556a-11ef-bbde-906584de3e5b", "to_socket": "x", "to_node": "add2", "state": false}]}
 
         // Define Schemes to use in vanilla JS
         const Schemes = {
@@ -141,6 +143,23 @@
           workgraphData.links.forEach(async (link) => { // Specify the type of link here
             await addLink(editor, area, layout, link);
           });
+
+          // Add while zones
+          console.log("Adding while zone: ");
+          for (const nodeId in workgraphData.nodes) {
+            const nodeData = workgraphData.nodes[nodeId];
+            // if node_type is "WHILE", find all
+            if (nodeData['node_type'] === "WHILE") {
+              // find the node
+              const node = editor.nodeMap[nodeData.label];
+              const tasks = nodeData['properties']['tasks']['value'];
+              // find the id of all nodes in the editor that has a label in while_zone
+              for (const nodeId in tasks) {
+                const node1 = editor.nodeMap[tasks[nodeId]];
+                node1.parent = node.id;
+              }
+            }
+          }
         }
 
         async function createEditor(container) {
@@ -150,6 +169,7 @@
             const area = new AreaPlugin(container);
             const connection = new ConnectionPlugin();
             const render = new ReactPlugin({ createRoot });
+            const scopes = new ScopesPlugin();
             const arrange = new AutoArrangePlugin();
 
             const minimap = new MinimapPlugin({
@@ -164,6 +184,7 @@
             render.addPreset(Presets.minimap.setup({ size: 200 }));
 
             connection.addPreset(ConnectionPresets.classic.setup());
+            scopes.addPreset(ScopesPresets.classic.setup());
 
             const applier = new ArrangeAppliers.TransitionApplier({
               duration: 500,
@@ -179,6 +200,7 @@
             editor.use(area);
             // area.use(connection);
             area.use(render);
+            area.use(scopes);
             area.use(arrange);
             area.use(minimap);
 
@@ -223,6 +245,7 @@
                           // aplly layout twice to ensure all nodes are arranged
                           editor?.layout(false).then(() => editor?.layout(true));
                         });
+                        window.editor = editor;
                     });
                 }
                 if (document.getElementById('fullscreen-btn')) {

@@ -50,6 +50,9 @@ class PythonJob(CalcJob):
         spec.input(
             "function_name", valid_type=Str, serializer=to_aiida_type, required=False
         )
+        spec.input(
+            "process_label", valid_type=Str, serializer=to_aiida_type, required=False
+        )
         spec.input_namespace(
             "function_kwargs", valid_type=Data, required=False
         )  # , serializer=serialize_to_aiida_nodes)
@@ -137,7 +140,16 @@ class PythonJob(CalcJob):
 
         :returns: The process label to use for ``ProcessNode`` instances.
         """
-        return f"PythonJob<{self.inputs.function_name.value}>"
+        if self.inputs.process_label:
+            return self.inputs.process_label.value
+        else:
+            return f"PythonJob<{self.inputs.function_name.value}>"
+
+    def on_create(self) -> None:
+        """Called when a Process is created."""
+
+        super().on_create()
+        self.node.label = self.inputs.process_label.value
 
     def prepare_for_submission(self, folder: Folder) -> CalcInfo:
         """Prepare the calculation for submission.
@@ -265,9 +277,10 @@ Only AiiDA SinglefileData and FolderData are allowed."""
         dirpath = pathlib.Path(folder._abspath)
         with folder.open(filename, "wb") as handle:
             pickle.dump(input_values, handle)
-            # create a singlefiledata object for the pickled data
-            file_data = SinglefileData(file=f"{dirpath}/{filename}")
-            local_copy_list.append((file_data.uuid, file_data.filename, filename))
+        # create a singlefiledata object for the pickled data
+        file_data = SinglefileData(file=f"{dirpath}/{filename}")
+        file_data.store()
+        local_copy_list.append((file_data.uuid, file_data.filename, filename))
 
         codeinfo = CodeInfo()
         codeinfo.stdin_name = self.options.input_filename

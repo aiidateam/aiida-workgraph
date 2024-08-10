@@ -29,7 +29,7 @@ class Task(GraphNode):
     def __init__(
         self,
         context_mapping: Optional[List[Any]] = None,
-        wait: List[Union[str, GraphNode]] = [],
+        wait: List[Union[str, GraphNode]] = None,
         process: Optional[aiida.orm.ProcessNode] = None,
         pk: Optional[int] = None,
         **kwargs: Any,

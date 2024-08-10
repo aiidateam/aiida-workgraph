@@ -38,6 +38,9 @@ class TaskCollection(NodeCollection):
             # make links between the tasks
             task.set(links)
             return task
+        if isinstance(identifier, str) and identifier.upper() == "WHILE":
+            task = super().new("workgraph.while", name, uuid, **kwargs)
+            return task
         if isinstance(identifier, WorkGraph):
             identifier = build_task_from_workgraph(identifier)
         return super().new(identifier, name, uuid, **kwargs)
@@ -86,6 +89,7 @@ class WorkGraphOutputSocketCollection(OutputSocketCollection):
 
         # build the socket on the fly if the identifier is a callable
         if callable(identifier):
+            print("identifier is callable", identifier)
             identifier = build_socket_from_AiiDA(identifier)
         # Call the original new method
         return super().new(identifier, name, **kwargs)
