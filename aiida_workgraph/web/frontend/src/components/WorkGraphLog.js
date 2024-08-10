@@ -3,7 +3,7 @@ import styled from "styled-components";
 import { useEffect, useState } from "react";
 
 
-export const WorktreeLogStyle = styled.div`
+export const WorkGraphLogStyle = styled.div`
   .log-section {
   border: 1px solid #ddd;
   padding: 1em;
@@ -51,7 +51,7 @@ function WorkGraphLog({ id }) {
   };
 
   return (
-    <WorktreeLogStyle>
+    <WorkGraphLogStyle>
       <div className="log-section">
         <h3>Log Information</h3>
         <div className="log-content">
@@ -60,7 +60,7 @@ function WorkGraphLog({ id }) {
           ))}
         </div>
       </div>
-    </WorktreeLogStyle>
+    </WorkGraphLogStyle>
   );
 }
 

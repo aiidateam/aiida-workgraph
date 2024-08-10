@@ -3,12 +3,12 @@ import { useParams } from 'react-router-dom';
 
 function WorkGraphDetail() {
     let { pk } = useParams();
-    const [workgraphData, setWorktreeData] = useState(null);
+    const [workgraphData, setWorkGraphData] = useState(null);
 
     useEffect(() => {
         fetch(`http://localhost:8000/workgraph/${pk}`)
             .then(response => response.json())
-            .then(data => setWorktreeData(data))
+            .then(data => setWorkGraphData(data))
             .catch(error => console.error('Error fetching data:', error));
     }, [pk]); // useEffect will re-run if pk changes
 
