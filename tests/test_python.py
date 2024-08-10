@@ -24,23 +24,26 @@ def test_decorator(fixture_localhost):
     wg = WorkGraph("test_PythonJob_outputs")
     wg.add_task(
         add,
-        name="add",
+        name="add1",
         x=1,
         y=2,
         computer="localhost",
     )
     wg.add_task(
         decorted_multiply,
-        name="multiply",
-        x=wg.tasks["add"].outputs["sum"],
+        name="multiply1",
+        x=wg.tasks["add1"].outputs["sum"],
         y=3,
         computer="localhost",
     )
     # wg.submit(wait=True)
     wg.run()
-    assert wg.tasks["add"].outputs["sum"].value.value == 3
-    assert wg.tasks["add"].outputs["diff"].value.value == -1
-    assert wg.tasks["multiply"].outputs["result"].value.value == 9
+    assert wg.tasks["add1"].outputs["sum"].value.value == 3
+    assert wg.tasks["add1"].outputs["diff"].value.value == -1
+    assert wg.tasks["multiply1"].outputs["result"].value.value == 9
+    # process_label and label
+    assert wg.tasks["add1"].node.process_label == "PythonJob<add1>"
+    assert wg.tasks["add1"].node.label == "add1"
 
 
 @pytest.mark.usefixtures("started_daemon_client")
