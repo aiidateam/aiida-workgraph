@@ -221,9 +221,6 @@ export async function createEditor(container: HTMLElement, settings: any) {
     area.use(minimap);
   }
 
-  AreaExtensions.simpleNodesOrder(area);
-
-
   async function layout(animate: boolean) {
     await arrange.layout({ applier: animate ? applier : undefined });
     AreaExtensions.zoomAt(area, editor.getNodes());
