@@ -67,7 +67,7 @@ export async function createEditor(container: HTMLElement) {
   area.use(connection);
   area.use(reactRender);
 
-  AreaExtensions.simpleNodesOrder(area);
+  // AreaExtensions.simpleNodesOrder(area);
 
   const aLabel = 'Override styles';
   const bLabel = 'Fully customized';

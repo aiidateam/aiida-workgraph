@@ -172,8 +172,6 @@ export async function createEditor(container: HTMLElement, workgraphData: any) {
   area.use(contextMenu);
   area.use(minimap);
 
-  AreaExtensions.simpleNodesOrder(area);
-
   await loadJSON(editor, area, workgraphData);
 
   async function layout(animate: boolean) {

@@ -204,9 +204,6 @@ html_template = """
             area.use(arrange);
             area.use(minimap);
 
-
-            AreaExtensions.simpleNodesOrder(area);
-
             async function layout(animate) {
               await arrange.layout({ applier: animate ? applier : undefined });
               AreaExtensions.zoomAt(area, editor.getNodes());

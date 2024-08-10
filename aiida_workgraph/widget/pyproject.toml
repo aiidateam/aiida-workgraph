@@ -9,7 +9,6 @@ description = "Widget for node-graph"
 authors = [{name = "Xing Wang", email = "xingwang1991@gmail.com"}]
 readme = "README.md"
 dependencies = ["anywidget"]
-readme = "README.md"
 
 [project.optional-dependencies]
 dev = ["watchfiles", "jupyterlab"]
