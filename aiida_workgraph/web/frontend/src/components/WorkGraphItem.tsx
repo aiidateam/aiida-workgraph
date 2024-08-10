@@ -5,7 +5,7 @@ import '../rete.css';
 import { createEditor } from '../rete/default';
 import { Button, Switch } from "antd";
 import WorkGraphIndicator from './WorkGraphIndicator'; // Import the WorkGraphIndicator component
-import WorktreeSummary from './WorkGraphSummary';
+import WorkGraphSummary from './WorkGraphSummary';
 import WorkGraphLog from './WorkGraphLog';
 import NodeDetails from './NodeDetails';
 import NodeDurationGraph from './WorkGraphDuration'
@@ -15,7 +15,7 @@ import {
   LayoutAction,
   TopMenu,
   EditorWrapper,
-} from './WorkGraphItemStyles'; // Import your styles
+} from './WorkGraphItemStyles';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
@@ -72,13 +72,13 @@ export function useRete<T extends { destroy(): void }>(
 
 
 
-function WorkGraphGraph() {
+function WorkGraph() {
   const { pk } = useParams();
-  const [workgraphData, setWorktreeData] = useState({ summary: {}, nodes: {}, links: [], pk: [] });
+  const [workgraphData, setWorkGraphData] = useState({ summary: {}, nodes: {}, links: [], pk: [] });
   const [ref, editor] = useRete(createEditor, workgraphData);
   const [selectedNode, setSelectedNode] = useState({ metadata: [], executor: '' });
   const [showNodeDetails, setShowNodeDetails] = useState(false);
-  const [workgraphHierarchy, setWorktreeHierarchy] = useState([]);
+  const [workgraphHierarchy, setWorkGraphHierarchy] = useState([]);
   const [selectedView, setSelectedView] = useState('Editor');
   const [realtimeSwitch, setRealtimeSwitch] = useState(false); // State to manage the realtime switch
 
@@ -157,9 +157,9 @@ function WorkGraphGraph() {
     fetch(`http://localhost:8000/api/workgraph/${pk}`)
       .then((response) => response.json())
       .then((data) => {
-        setWorktreeData(data);
+        setWorkGraphData(data);
         // Set the workgraph hierarchy here based on your data
-        setWorktreeHierarchy(data.parent_workgraphs);
+        setWorkGraphHierarchy(data.parent_workgraphs);
       })
       .catch((error) => console.error('Error fetching data:', error));
   }, [pk]); // Only re-run when `pk` changes
@@ -256,11 +256,11 @@ function WorkGraphGraph() {
           <Button onClick={() => setSelectedView('Log')}>Log</Button>
           <Button onClick={() => setSelectedView('Time')}>Time</Button>
         </TopMenu>
-          {selectedView === 'Summary' && <WorktreeSummary summary={workgraphData.summary} />}
+          {selectedView === 'Summary' && <WorkGraphSummary summary={workgraphData.summary} />}
           {selectedView === 'Log' && <WorkGraphLog id={pk} />}
           {selectedView === 'Time' && <NodeDurationGraph id={pk}/>}
           <EditorWrapper visible={selectedView === 'Editor'}>
-          <WorkGraphIndicator parentWorktrees={workgraphHierarchy} />
+          <WorkGraphIndicator parentWorkGraphs={workgraphHierarchy} />
             <EditorContainer>
               <LayoutAction>
               <div>
@@ -289,4 +289,4 @@ function WorkGraphGraph() {
   );
 }
 
-export default WorkGraphGraph;
+export default WorkGraph;

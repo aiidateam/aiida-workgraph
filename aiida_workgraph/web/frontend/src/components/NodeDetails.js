@@ -4,7 +4,7 @@ import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { dark } from 'react-syntax-highlighter/dist/esm/styles/prism'; // Correct import for 'dark' style
 import { useNavigate } from 'react-router-dom'; // Use the useNavigate hook
 
-const WorktreeButton = styled.button`
+const WorkGraphButton = styled.button`
   padding: 10px;
   background-color: #007bff;
   color: #fff;
@@ -121,8 +121,8 @@ function NodeDetails({ selectedNode, onClose, setShowNodeDetails }) {
     onClose();
   };
 
-  const handleWorktreeClick = () => {
-    if (selectedNode.node_type === 'graph_builder' && selectedNode.process.pk) {
+  const handleWorkGraphClick = () => {
+    if ((selectedNode.node_type.toUpperCase() === 'GRAPH_BUILDER' || selectedNode.node_type.toUpperCase() === 'WORKGRAPH') && selectedNode.process.pk) {
       navigate(`/workgraph/${selectedNode.process.pk}`);
     }
   };
@@ -163,10 +163,10 @@ function NodeDetails({ selectedNode, onClose, setShowNodeDetails }) {
     <NodeDetailsPanel>
       <CloseButton onClick={handleClose}>Close</CloseButton>
       <NodeDetailsTitle>Node Details</NodeDetailsTitle>
-      {selectedNode.node_type === 'graph_builder' && (
-      <WorktreeButton onClick={handleWorktreeClick} disabled={isButtonDisabled}>
-        Go to Worktree
-      </WorktreeButton>
+      {(selectedNode.node_type.toUpperCase() === 'GRAPH_BUILDER' || selectedNode.node_type.toUpperCase() === 'WORKGRAPH') && (
+      <WorkGraphButton onClick={handleWorkGraphClick} disabled={isButtonDisabled}>
+        Go to WorkGraph
+      </WorkGraphButton>
       )}
       {selectedNode && (
         <NodeDetailsTable>

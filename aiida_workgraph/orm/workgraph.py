@@ -11,12 +11,12 @@ __all__ = ("WorkGraphNode",)
 class WorkGraphNode(WorkChainNode):
     """ORM class for all nodes representing the execution of a WorkGraph."""
 
-    WORKTREE_STATE_INFO_KEY = "workgraph_state_info"
+    WORKGRAPH_STATE_INFO_KEY = "workgraph_state_info"
 
     @classproperty
     def _updatable_attributes(cls) -> Tuple[str, ...]:  # type: ignore
         # pylint: disable=no-self-argument
-        return super()._updatable_attributes + (cls.WORKTREE_STATE_INFO_KEY,)
+        return super()._updatable_attributes + (cls.WORKGRAPH_STATE_INFO_KEY,)
 
     @property
     def workgraph_state_info(self) -> Optional[str]:
@@ -25,7 +25,7 @@ class WorkGraphNode(WorkChainNode):
 
         :returns: string representation of the workgraph state info
         """
-        return self.base.attributes.get(self.WORKTREE_STATE_INFO_KEY, None)
+        return self.base.attributes.get(self.WORKGRAPH_STATE_INFO_KEY, None)
 
     def set_workgraph_state_info(self, workgraph_state_info: str) -> None:
         """
@@ -34,5 +34,5 @@ class WorkGraphNode(WorkChainNode):
         :param state: string representation of the workgraph state info
         """
         return self.base.attributes.set(
-            self.WORKTREE_STATE_INFO_KEY, workgraph_state_info
+            self.WORKGRAPH_STATE_INFO_KEY, workgraph_state_info
         )

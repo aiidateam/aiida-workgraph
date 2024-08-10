@@ -28,7 +28,7 @@ const Separator = styled.span`
   color: #ccc;
 `;
 
-function Breadcrumbs({ parentWorktrees }) {
+function Breadcrumbs({ parentWorkGraphs }) {
   // const separatorIcon = <FontAwesomeIcon icon={faChevronRight} />; // Change this icon as needed
   // const separatorIcon = <FontAwesomeIcon icon={faCircle} />; // Alternative smaller icon
   // const separatorIcon = '>'; // Text-based alternative
@@ -36,12 +36,12 @@ function Breadcrumbs({ parentWorktrees }) {
 
   return (
     <BreadcrumbContainer aria-label="breadcrumb">
-      {parentWorktrees.map(([workgraphName, workgraphId], index) => (
+      {parentWorkGraphs.map(([workgraphName, workgraphId], index) => (
         <React.Fragment key={workgraphId}>
           <BreadcrumbLink href={`/workgraph/${workgraphId}`}>
             {workgraphName}
           </BreadcrumbLink>
-          {index < parentWorktrees.length - 1 && <Separator>{separatorIcon}</Separator>}
+          {index < parentWorkGraphs.length - 1 && <Separator>{separatorIcon}</Separator>}
         </React.Fragment>
       ))}
     </BreadcrumbContainer>

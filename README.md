@@ -104,7 +104,7 @@ Start the web app, open a terminal and run:
 workgraph web start
 ```
 
-Then visit the page http://127.0.0.1:8000/workgraph, you should find a `first_workflow` Worktree, click the pk and view the WorkGraph.
+Then visit the page http://127.0.0.1:8000/workgraph, you should find a `first_workflow` WorkGraph, click the pk and view the WorkGraph.
 
 <img src="docs/source/_static/images/first-workflow.png" />
 

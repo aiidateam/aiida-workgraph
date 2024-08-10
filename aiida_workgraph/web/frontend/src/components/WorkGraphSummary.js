@@ -1,9 +1,9 @@
-// WorktreeSummary.js
+// WorkGraphSummary.js
 import styled from "styled-components";
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { dark } from 'react-syntax-highlighter/dist/esm/styles/prism'; // Correct import for 'dark' style
 
-export const WorktreeInfoStyle = styled.div`
+export const WorkGraphInfoStyle = styled.div`
   width: 50%;
   padding: 1em;
   overflow-y: auto;
@@ -62,7 +62,7 @@ export const WorktreeInfoStyle = styled.div`
   background-color: #f7f7f7; /* Light gray background for better readability */
 `;
 
-function WorktreeSummary({ summary }) {
+function WorkGraphSummary({ summary }) {
 
   const renderInputs = (inputs, depth = 0) => {
     return Object.entries(inputs).map(([key, value]) => {
@@ -93,7 +93,7 @@ function WorktreeSummary({ summary }) {
   };
 
   return (
-    <WorktreeInfoStyle>
+    <WorkGraphInfoStyle>
     <div>
       <h2>Summary</h2>
       <div className="info-table">
@@ -121,8 +121,8 @@ function WorktreeSummary({ summary }) {
         </ul>
       </NodeDetailsTable>
     </div>
-    </WorktreeInfoStyle>
+    </WorkGraphInfoStyle>
   );
 }
 
-export default WorktreeSummary;
+export default WorkGraphSummary;
