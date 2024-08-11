@@ -61,6 +61,7 @@ class WorkGraphSaver:
         self.build_task_link()
         self.build_connectivity()
         self.assign_while_zone()
+        self.assign_if_zone()
         if self.exist_in_db() or self.restart_process is not None:
             new_tasks, modified_tasks, update_metadata = self.check_diff(
                 self.restart_process
@@ -114,6 +115,32 @@ class WorkGraphSaver:
                                 input_tasks.append(link["from_node"])
                 task["execution_count"] = 0
                 self.wgdata["connectivity"]["while"][task["name"]] = {
+                    "input_tasks": input_tasks
+                }
+
+    def assign_if_zone(self) -> None:
+        """Assign if zone for each task."""
+        self.wgdata["connectivity"]["if"] = {}
+        # assign parent_task for each task
+        for name, task in self.wgdata["tasks"].items():
+            if task["metadata"]["node_type"].upper() == "IF":
+                input_tasks = {}
+                for prefix in ["true", "false"]:
+                    input_tasks[prefix] = []
+                    for name in task["properties"][f"{prefix}_tasks"]["value"]:
+                        self.wgdata["tasks"][name]["parent_task"] = task["name"]
+                        # find all the input tasks which outside the if zone
+                        for input in self.wgdata["tasks"][name]["inputs"]:
+                            for link in input["links"]:
+                                if (
+                                    link["from_node"]
+                                    not in task["properties"][f"{prefix}_tasks"][
+                                        "value"
+                                    ]
+                                ):
+                                    input_tasks[prefix].append(link["from_node"])
+                task["execution_count"] = 0
+                self.wgdata["connectivity"]["if"][task["name"]] = {
                     "input_tasks": input_tasks
                 }
 

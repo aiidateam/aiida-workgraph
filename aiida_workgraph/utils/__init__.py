@@ -642,6 +642,8 @@ def workgraph_to_short_json(
         # Add properties to nodes if it is a While task
         if task["metadata"]["node_type"].upper() == "WHILE":
             wgdata_short["nodes"][name]["properties"] = task["properties"]
+        elif task["metadata"]["node_type"].upper() == "IF":
+            wgdata_short["nodes"][name]["properties"] = task["properties"]
     # Add links to nodes
     for link in wgdata["links"]:
         wgdata_short["nodes"][link["to_node"]]["inputs"].append(

@@ -108,6 +108,36 @@ export async function loadJSON(editor, area, layout, workgraphData) {
       }
     }
   }
+  // Add if zones
+  console.log("Adding if zone: ");
+  for (const nodeId in workgraphData.nodes) {
+    const nodeData = workgraphData.nodes[nodeId];
+    // if node_type is "WHILE", find all
+    if (nodeData['node_type'] === "IF") {
+      // find the node
+      const node = editor.nodeMap[nodeData.label];
+      // True
+      const true_node = new Node("True");
+      editor.addNode(true_node);
+      true_node.parent = node.id;
+      let tasks = nodeData['properties']['true_tasks']['value'];
+      // find the id of all nodes in the editor that has a label in while_zone
+      for (const nodeId in tasks) {
+        const node1 = editor.nodeMap[tasks[nodeId]];
+        node1.parent = true_node.id;
+      }
+      // False
+      const false_node = new Node("False");
+      editor.addNode(false_node);
+      false_node.parent = node.id;
+      tasks = nodeData['properties']['false_tasks']['value'];
+      // find the id of all nodes in the editor that has a label in while_zone
+      for (const nodeId in tasks) {
+        const node1 = editor.nodeMap[tasks[nodeId]];
+        node1.parent = false_node.id;
+      }
+    }
+  }
 }
 
 export async function addNode(editor, area, nodeData) {

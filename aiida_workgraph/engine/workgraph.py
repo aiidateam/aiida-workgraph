@@ -648,6 +648,8 @@ class WorkGraphEngine(Process, metaclass=Protect):
         if parent_task:
             if self.ctx.tasks[parent_task]["metadata"]["node_type"].upper() == "WHILE":
                 self.update_while_task_state(parent_task)
+            elif self.ctx.tasks[parent_task]["metadata"]["node_type"].upper() == "IF":
+                self.update_if_task_state(parent_task)
 
     def update_while_task_state(self, name: str) -> None:
         """Update while task state."""
@@ -660,6 +662,13 @@ class WorkGraphEngine(Process, metaclass=Protect):
                 self.reset_task(name)
             else:
                 self.set_task_state_info(name, "state", "FINISHED")
+
+    def update_if_task_state(self, name: str) -> None:
+        """Update if task state."""
+        finished, _ = self.is_if_task_finished(name)
+
+        if finished:
+            self.set_task_state_info(name, "state", "FINISHED")
 
     def should_run_while_task(self, name: str) -> tuple[bool, t.Any]:
         """Check if the while task should run."""
@@ -688,6 +697,33 @@ class WorkGraphEngine(Process, metaclass=Protect):
                 finished = False
                 break
         return finished, None
+
+    def is_if_task_finished(self, name: str) -> tuple[bool, t.Any]:
+        """Check if the if task is finished."""
+        task = self.ctx.tasks[name]
+        finished = True
+        flag = self.check_if_task_conditions(name)
+        key = "true_tasks" if flag else "false_tasks"
+        for name in task["properties"][key]["value"]:
+            if self.get_task_state_info(name, "state") not in [
+                "FINISHED",
+                "SKIPPED",
+                "FAILED",
+            ]:
+                finished = False
+                break
+        return finished, None
+
+    def check_if_task_conditions(self, name: str) -> tuple[bool, t.Any]:
+        """Check if the if task should run."""
+        # check the conditions of the if task
+        task = self.ctx.tasks[name]
+        conditions = []
+        for condition in task["properties"]["conditions"]["value"]:
+            value = get_nested_dict(self.ctx, condition, default=False)
+            conditions.append(value)
+        print("if conditions: ", conditions)
+        return False not in conditions
 
     def run_error_handlers(self, task_name: str) -> None:
         """Run error handler."""
@@ -1013,6 +1049,15 @@ class WorkGraphEngine(Process, metaclass=Protect):
             elif task["metadata"]["node_type"].upper() in ["WHILE"]:
                 self.set_task_state_info(name, "state", "RUNNING")
                 self.continue_workgraph()
+            elif task["metadata"]["node_type"].upper() in ["IF"]:
+                self.set_task_state_info(name, "state", "RUNNING")
+                flag = self.check_if_task_conditions(name)
+                key = "false_tasks" if flag else "true_tasks"
+                print("Skip tasks: ", self.ctx.tasks[name]["properties"][key]["value"])
+                self.set_tasks_state(
+                    self.ctx.tasks[name]["properties"][key]["value"], "SKIPPED"
+                )
+                self.continue_workgraph()
             elif task["metadata"]["node_type"].upper() in ["NORMAL"]:
                 print("Task  type: Normal.")
                 # normal function does not have a process
@@ -1194,6 +1239,19 @@ class WorkGraphEngine(Process, metaclass=Protect):
                     break
             # check the conditions of the while task
             parent_states[4] = self.should_run_while_task(name)
+        # if the task is a if task
+        if task["metadata"]["node_type"].upper() == "IF":
+            # check the conditions of the while task
+            flag = self.check_if_task_conditions(name)
+            key = "true" if flag else "false"
+            # check if the all the child tasks are ready
+            for child_task_name in self.ctx.connectivity["if"][name]["input_tasks"][
+                key
+            ]:
+                ready, parent_states = self.is_task_ready_to_run(child_task_name)
+                if not ready:
+                    parent_states[3] = False
+                    break
         # check the wait task first
         for task_name in wait_tasks:
             # in case the task is removed

@@ -22,6 +22,26 @@ class While(Task):
         self.outputs.new("workgraph.any", "_wait")
 
 
+class If(Task):
+    """If"""
+
+    identifier = "workgraph.if"
+    name = "If"
+    node_type = "IF"
+    catalog = "Control"
+    kwargs = ["conditions", "true_tasks", "false_tasks"]
+
+    def create_sockets(self) -> None:
+        self.inputs.clear()
+        self.outputs.clear()
+        inp = self.inputs.new("workgraph.any", "_wait")
+        inp.link_limit = 100000
+        self.inputs.new("workgraph.any", "true_tasks")
+        self.inputs.new("workgraph.any", "false_tasks")
+        self.inputs.new("workgraph.any", "conditions")
+        self.outputs.new("workgraph.any", "_wait")
+
+
 class Gather(Task):
     """Gather"""
 
