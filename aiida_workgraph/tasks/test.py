@@ -47,7 +47,7 @@ class TestGreater(Task):
         self.outputs.clear()
         self.inputs.new("workgraph.aiida_float", "x")
         self.inputs.new("workgraph.aiida_float", "y")
-        self.outputs.new("AiiDABool", "result")
+        self.outputs.new("workgraph.aiida_bool", "result")
 
     def get_executor(self) -> Dict[str, str]:
         return {

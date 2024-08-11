@@ -84,7 +84,7 @@ class SocketAiiDAString(TaskSocket, SerializeJson):
         **kwargs: Any
     ) -> None:
         super().__init__(name, node, type, index, uuid=uuid)
-        self.add_property("AiiDAString", name, **kwargs)
+        self.add_property("workgraph.aiida_string", name, **kwargs)
 
 
 class SocketAiiDABool(TaskSocket, SerializeJson):
@@ -102,7 +102,7 @@ class SocketAiiDABool(TaskSocket, SerializeJson):
         **kwargs: Any
     ) -> None:
         super().__init__(name, node, type, index, uuid=uuid)
-        self.add_property("AiiDABool", name, **kwargs)
+        self.add_property("workgraph.aiida_bool", name, **kwargs)
 
 
 class SocketAiiDAIntVector(TaskSocket, SerializeJson):
@@ -120,7 +120,7 @@ class SocketAiiDAIntVector(TaskSocket, SerializeJson):
         **kwargs: Any
     ) -> None:
         super().__init__(name, node, type, index, uuid=uuid)
-        self.add_property("AiiDAIntVector", name, **kwargs)
+        self.add_property("workgraph.aiida_int_vector", name, **kwargs)
 
 
 class SocketAiiDAFloatVector(TaskSocket, SerializeJson):
@@ -138,4 +138,4 @@ class SocketAiiDAFloatVector(TaskSocket, SerializeJson):
         **kwargs: Any
     ) -> None:
         super().__init__(name, node, type, index, uuid=uuid)
-        self.add_property("FloatVector", name, **kwargs)
+        self.add_property("workgraph.aiida_float_vector", name, **kwargs)
