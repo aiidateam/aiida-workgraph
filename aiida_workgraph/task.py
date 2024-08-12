@@ -30,6 +30,7 @@ class Task(GraphNode):
         self,
         context_mapping: Optional[List[Any]] = None,
         wait: List[Union[str, GraphNode]] = None,
+        children: List[Union[str, GraphNode]] = None,
         process: Optional[aiida.orm.ProcessNode] = None,
         pk: Optional[int] = None,
         **kwargs: Any,
@@ -45,6 +46,7 @@ class Task(GraphNode):
         )
         self.context_mapping = {} if context_mapping is None else context_mapping
         self.wait = [] if wait is None else wait
+        self.children = [] if children is None else children
         self.process = process
         self.pk = pk
         if USE_WIDGET:
@@ -65,6 +67,10 @@ class Task(GraphNode):
         tdata["wait"] = [
             task if isinstance(task, str) else task.name for task in self.wait
         ]
+        tdata["children"] = [
+            task if isinstance(task, str) else task.name for task in self.children
+        ]
+        tdata["execution_count"] = 0
         tdata["parent_task"] = [None]
         tdata["process"] = serialize(self.process) if self.process else serialize(None)
         tdata["metadata"]["pk"] = self.process.pk if self.process else None

@@ -76,10 +76,10 @@ export async function loadJSON(editor: NodeEditor<any>, area: any, workgraphData
     if (nodeData['node_type'] === "WHILE") {
       // find the node
       const node = nodeMap[nodeData.label];
-      const tasks = nodeData['properties']['tasks']['value'];
+      const children = nodeData['children'];
       // find the id of all nodes in the editor that has a label in while_zone
-      for (const nodeId in tasks) {
-        const node1 = nodeMap[tasks[nodeId]];
+      for (const nodeId in children) {
+        const node1 = nodeMap[children[nodeId]];
         console.log("Setting parent of node", node1, "to", node);
         node1.parent = node.id;
         area.update('node', node1.id);
