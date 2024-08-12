@@ -1176,26 +1176,17 @@ class WorkGraphEngine(Process, metaclass=Protect):
 
     def is_task_ready_to_run(self, name: str) -> t.Tuple[bool, t.Optional[str]]:
         """Check if the task ready to run.
-        For normal node, we need to check its parent nodes:
-        - wait tasks
-        - input tasks
-        For task inside a while zone, we need to check if the while task is ready.
-        - while parent task
-        For while task, we need to check its child tasks, and the conditions.
-        - all input tasks of the while task are ready
-        - while conditions
+        For normal task and a zone task, we need to check its input tasks in the connectivity["zone"].
+        For task inside a zone, we need to check if the zone (parent task) is ready.
         """
-        task = self.ctx.tasks[name]
-        inputs = task.get("inputs", [])
-        wait_tasks = self.ctx.tasks[name].get("wait", [])
         parent_task = self.ctx.tasks[name]["parent_task"]
-        # wait, inputs, parent_task, input_tasks of child_tasks, conditions
-        parent_states = [True, True, True, True, True]
+        # input_tasks, parent_task
+        parent_states = [True, True]
         # if the task belongs to a parent zoone
         if parent_task[0]:
             state = self.get_task_state_info(parent_task[0], "state")
             if state not in ["RUNNING"]:
-                parent_states[2] = False
+                parent_states[1] = False
         # check the input tasks of the zone
         # check if the zone input tasks are ready
         for child_task_name in self.ctx.connectivity["zone"][name]["input_tasks"]:
@@ -1204,30 +1195,8 @@ class WorkGraphEngine(Process, metaclass=Protect):
                 "SKIPPED",
                 "FAILED",
             ]:
-                parent_states[3] = False
-                break
-        # check the wait task first
-        for task_name in wait_tasks:
-            # in case the task is removed
-            if task_name not in self.ctx.tasks:
-                continue
-            if self.get_task_state_info(task_name, "state") not in [
-                "FINISHED",
-                "SKIPPED",
-                "FAILED",
-            ]:
                 parent_states[0] = False
                 break
-        for input in inputs:
-            # print("    input, ", input["from_node"], self.ctx.tasks[input["from_node"]]["state"])
-            for link in input["links"]:
-                if self.get_task_state_info(link["from_node"], "state") not in [
-                    "FINISHED",
-                    "SKIPPED",
-                    "FAILED",
-                ]:
-                    parent_states[1] = False
-                    break
 
         return all(parent_states), parent_states
 

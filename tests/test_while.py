@@ -22,12 +22,13 @@ def test_while_task(decorated_add, decorated_multiply, decorated_compare):
         decorated_compare, name="compare1", x=multiply1.outputs["result"], y=30
     )
     compare1.set_context({"result": "should_run"})
-    wg.add_task(
+    while1 = wg.add_task(
         "While",
+        name="while1",
         max_iterations=100,
         conditions=["should_run"],
-        tasks=["add2", "multiply1", "compare1"],
     )
+    while1.children = ["add2", "multiply1", "compare1"]
     # the `result` of compare1 taskis used as condition
     # ---------------------------------------------------------------------
     add3 = wg.add_task(decorated_add, name="add3", x=1, y=1)

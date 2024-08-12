@@ -65,8 +65,8 @@ class WorkGraphSaver:
         self.build_task_link()
         self.build_connectivity()
         self.assign_zone()
-        self.find_all_zones_input_outputs()
         self.update_parent_task()
+        self.find_all_zones_input_outputs()
         if self.exist_in_db() or self.restart_process is not None:
             new_tasks, modified_tasks, update_metadata = self.check_diff(
                 self.restart_process
@@ -135,6 +135,9 @@ class WorkGraphSaver:
         """Find the input and outputs tasks for the zone."""
         task = self.wgdata["tasks"][name]
         input_tasks = []
+        for input in self.wgdata["tasks"][name]["inputs"]:
+            for link in input["links"]:
+                input_tasks.append(link["from_node"])
         # find all the input tasks
         for child_task in task["children"]:
             # if the child task is a zone
@@ -174,7 +177,12 @@ class WorkGraphSaver:
                 if parent_task in self.wgdata["tasks"][input_task]["parent_task"]:
                     break
             # add the input task to the parent task
-            index = self.wgdata["tasks"][input_task]["parent_task"].index(parent_task)
+            if parent_task in self.wgdata["tasks"][input_task]["parent_task"]:
+                index = self.wgdata["tasks"][input_task]["parent_task"].index(
+                    parent_task
+                )
+            else:
+                index = 0
             if index == 0:
                 final_input_tasks.append(input_task)
             else:
