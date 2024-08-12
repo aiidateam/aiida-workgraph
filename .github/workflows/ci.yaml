@@ -93,7 +93,6 @@ jobs:
             run: |
                 npm install
                 npm run build
-                workgraph web start
 
         -   name: Run pytest
             env:

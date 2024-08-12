@@ -1,6 +1,6 @@
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from aiida import load_profile
+from aiida.manage import manager
 from aiida_workgraph.web.backend.app.daemon import router as daemon_router
 from aiida_workgraph.web.backend.app.workgraph import router as workgraph_router
 from aiida_workgraph.web.backend.app.datanode import router as datanode_router
@@ -12,10 +12,23 @@ from fastapi.responses import FileResponse
 from fastapi.exception_handlers import http_exception_handler
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
+from pydantic_settings import BaseSettings
 
-load_profile()
+
+class BackendSettings(BaseSettings):
+    """
+    Settings can be set by setting the environment variables in upper case.
+    For example for setting `aiida_workgraph_gui_profile` one has to export
+    the evironment variable `AIIDA_WORKGRAPH_GUI_PROFILE`.
+    """
+
+    aiida_workgraph_gui_profile: str = ""  # if empty aiida uses default profile
+
+
+backend_settings = BackendSettings()
 
 app = FastAPI()
+manager.get_manager().load_profile(backend_settings.aiida_workgraph_gui_profile)
 
 app.add_middleware(
     CORSMiddleware,
@@ -34,6 +47,17 @@ async def read_root() -> dict:
 app.include_router(workgraph_router)
 app.include_router(datanode_router)
 app.include_router(daemon_router)
+
+
+@app.get("/debug")
+async def debug() -> dict:
+    return {"loaded_aiida_profile": manager.get_manager().get_profile()}
+
+
+@app.get("/backend-setting")
+async def backend_settings():
+    return backend_settings
+
 
 # Integrating React build into a FastAPI application and serving the build (HTML, CSS, JavaScript) as static files
 """
