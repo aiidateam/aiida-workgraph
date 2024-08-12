@@ -61,6 +61,8 @@ class WorkGraphSaver:
         self.build_task_link()
         self.build_connectivity()
         self.assign_while_zone()
+        self.find_while_input_tasks()
+        self.update_parent_task()
         if self.exist_in_db() or self.restart_process is not None:
             new_tasks, modified_tasks, update_metadata = self.check_diff(
                 self.restart_process
@@ -101,17 +103,48 @@ class WorkGraphSaver:
         # assign parent_task for each task
         for name, task in self.wgdata["tasks"].items():
             if task["metadata"]["node_type"].upper() == "WHILE":
+                for child_task in task["properties"]["tasks"]["value"]:
+                    self.wgdata["tasks"][child_task]["parent_task"][0] = name
+
+    def update_parent_task(self) -> None:
+        """Recursively update the list of parent tasks for each task in wgdata."""
+
+        def get_all_parents(task_name):
+            """Recursively collect all parent tasks for a given task."""
+            task = self.wgdata["tasks"][task_name]
+            parent_names = []
+            while task["parent_task"][0] is not None:
+                parent_task_name = task["parent_task"][0]
+                parent_names.append(parent_task_name)
+                task = self.wgdata["tasks"][parent_task_name]
+            parent_names.append(None)
+            return parent_names
+
+        # Loop through all tasks and update their parent task lists recursively
+        for name, task in self.wgdata["tasks"].items():
+            task["parent_task"] = get_all_parents(name)
+
+    def find_while_input_tasks(self) -> None:
+        # assign parent_task for each task
+        for name, task in self.wgdata["tasks"].items():
+            if task["metadata"]["node_type"].upper() == "WHILE":
                 input_tasks = []
-                for name in task["properties"]["tasks"]["value"]:
-                    self.wgdata["tasks"][name]["parent_task"] = task["name"]
+                for child_task in task["properties"]["tasks"]["value"]:
                     # find all the input tasks which outside the while zone
-                    for input in self.wgdata["tasks"][name]["inputs"]:
+                    for input in self.wgdata["tasks"][child_task]["inputs"]:
                         for link in input["links"]:
-                            if (
-                                link["from_node"]
-                                not in task["properties"]["tasks"]["value"]
-                            ):
-                                input_tasks.append(link["from_node"])
+                            from_node = link["from_node"]
+                            task_to_check = [from_node]
+                            task_to_check.extend(
+                                self.wgdata["tasks"][from_node]["parent_task"]
+                            )
+                            not_in_the_zone = True
+                            for task_name in task_to_check:
+                                if task_name in task["properties"]["tasks"]["value"]:
+                                    not_in_the_zone = False
+                                    break
+                            if not_in_the_zone:
+                                input_tasks.append(from_node)
                 task["execution_count"] = 0
                 self.wgdata["connectivity"]["while"][task["name"]] = {
                     "input_tasks": input_tasks

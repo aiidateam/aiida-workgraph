@@ -65,6 +65,7 @@ class Task(GraphNode):
         tdata["wait"] = [
             task if isinstance(task, str) else task.name for task in self.wait
         ]
+        tdata["parent_task"] = [None]
         tdata["process"] = serialize(self.process) if self.process else serialize(None)
         tdata["metadata"]["pk"] = self.process.pk if self.process else None
         tdata["metadata"]["is_aiida_component"] = self.is_aiida_component

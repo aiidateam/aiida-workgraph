@@ -553,13 +553,13 @@ class WorkGraphEngine(Process, metaclass=Protect):
         self.set_task_state_info(name, "state", "PLANNED")
         self.set_task_state_info(name, "process", None)
         self.remove_executed_task(name)
+        self.report(f"Task {name} action: RESET.")
+        # if the task is a while task, reset its child tasks
+        if self.ctx.tasks[name]["metadata"]["node_type"].upper() == "WHILE":
+            self.ctx.tasks[name]["execution_count"] = 0
+            for child_task in self.ctx.tasks[name]["properties"]["tasks"]["value"]:
+                self.reset_task(child_task, recursive=False)
         if recursive:
-            self.report(f"Task {name} action: RESET.")
-            # if the task is a while task, reset its child tasks
-            if self.ctx.tasks[name]["metadata"]["node_type"].upper() == "WHILE":
-                self.ctx.tasks[name]["execution_count"] = 0
-                for child_task in self.ctx.tasks[name]["properties"]["tasks"]["value"]:
-                    self.reset_task(child_task, recursive=False)
             # reset its child tasks
             names = self.ctx.connectivity["child_node"][name]
             for name in names:
@@ -644,10 +644,13 @@ class WorkGraphEngine(Process, metaclass=Protect):
 
     def update_parent_task_state(self, name: str) -> None:
         """Update parent task state."""
-        parent_task = self.ctx.tasks[name].get("parent_task", None)
-        if parent_task:
-            if self.ctx.tasks[parent_task]["metadata"]["node_type"].upper() == "WHILE":
-                self.update_while_task_state(parent_task)
+        parent_task = self.ctx.tasks[name]["parent_task"]
+        if parent_task[0]:
+            if (
+                self.ctx.tasks[parent_task[0]]["metadata"]["node_type"].upper()
+                == "WHILE"
+            ):
+                self.update_while_task_state(parent_task[0])
 
     def update_while_task_state(self, name: str) -> None:
         """Update while task state."""
@@ -660,6 +663,7 @@ class WorkGraphEngine(Process, metaclass=Protect):
                 self.reset_task(name)
             else:
                 self.set_task_state_info(name, "state", "FINISHED")
+        self.update_parent_task_state(name)
 
     def should_run_while_task(self, name: str) -> tuple[bool, t.Any]:
         """Check if the while task should run."""
@@ -1176,22 +1180,36 @@ class WorkGraphEngine(Process, metaclass=Protect):
         task = self.ctx.tasks[name]
         inputs = task.get("inputs", [])
         wait_tasks = self.ctx.tasks[name].get("wait", [])
-        parent_task = self.ctx.tasks[name].get("parent_task", None)
-        # wait, inputs, parent_task, child_tasks, conditions
+        parent_task = self.ctx.tasks[name]["parent_task"]
+        # wait, inputs, parent_task, input_tasks of child_tasks, conditions
         parent_states = [True, True, True, True, True]
-        # if the task belongs to a while zoone
-        if parent_task:
-            state = self.get_task_state_info(parent_task, "state")
+        # if the task belongs to a parent zoone
+        if parent_task[0]:
+            state = self.get_task_state_info(parent_task[0], "state")
             if state not in ["RUNNING"]:
                 parent_states[2] = False
         # if the task is a while task
         if task["metadata"]["node_type"].upper() == "WHILE":
-            # check if the all the child tasks are ready
+            # check if the zone input tasks are ready
             for child_task_name in self.ctx.connectivity["while"][name]["input_tasks"]:
-                ready, parent_states = self.is_task_ready_to_run(child_task_name)
-                if not ready:
+                if self.get_task_state_info(child_task_name, "state") not in [
+                    "FINISHED",
+                    "SKIPPED",
+                    "FAILED",
+                ]:
                     parent_states[3] = False
                     break
+                # check if should wait for the parent task of the input task
+                parent_task1 = self.ctx.tasks[child_task_name]["parent_task"]
+                if parent_task[0] in parent_task1[1:]:
+                    state = self.get_task_state_info(parent_task1[0], "state")
+                    if state not in [
+                        "FINISHED",
+                        "SKIPPED",
+                        "FAILED",
+                    ]:
+                        parent_states[3] = False
+                        break
             # check the conditions of the while task
             parent_states[4] = self.should_run_while_task(name)
         # check the wait task first
@@ -1216,15 +1234,11 @@ class WorkGraphEngine(Process, metaclass=Protect):
                 ]:
                     parent_states[1] = False
                     break
-                # check if the input task belong to a while task, and the while task is ready
-                parent_task = self.ctx.tasks[link["from_node"]].get("parent_task", None)
-                # if the task itself does not belong to the while task
-                if (
-                    parent_task
-                    and name
-                    not in self.ctx.tasks[parent_task]["properties"]["tasks"]["value"]
-                ):
-                    state = self.get_task_state_info(parent_task, "state")
+                # check if should wait for the parent task of the input task
+                parent_task1 = self.ctx.tasks[link["from_node"]]["parent_task"]
+                # if parent_task[0]
+                if parent_task[0] in parent_task1[1:]:
+                    state = self.get_task_state_info(parent_task1[0], "state")
                     if state not in [
                         "FINISHED",
                         "SKIPPED",
@@ -1232,7 +1246,7 @@ class WorkGraphEngine(Process, metaclass=Protect):
                     ]:
                         parent_states[1] = False
                         break
-        # print("is task ready to run: ", name, all(parent_states), parent_states)
+
         return all(parent_states), parent_states
 
     def reset(self) -> None:
