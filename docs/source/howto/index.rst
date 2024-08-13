@@ -13,7 +13,7 @@ This section contains a collection of HowTos for various topics.
    if
    while
    context
-   wait
+   waiting_on
    combine_workgraph
    restart
    error_resistant

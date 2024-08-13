@@ -11,7 +11,7 @@ from aiida_workgraph.collection import (
     WorkGraphOutputSocketCollection,
 )
 import aiida
-from typing import Any, Dict, Optional, Union, Callable, List
+from typing import Any, Dict, Optional, Union, Callable, List, Set, Iterable
 from aiida_workgraph.utils.message import WIDGET_INSTALLATION_MESSAGE
 
 
@@ -29,8 +29,6 @@ class Task(GraphNode):
     def __init__(
         self,
         context_mapping: Optional[List[Any]] = None,
-        wait: List[Union[str, GraphNode]] = None,
-        children: List[Union[str, GraphNode]] = None,
         process: Optional[aiida.orm.ProcessNode] = None,
         pk: Optional[int] = None,
         **kwargs: Any,
@@ -45,8 +43,8 @@ class Task(GraphNode):
             **kwargs,
         )
         self.context_mapping = {} if context_mapping is None else context_mapping
-        self.wait = [] if wait is None else wait
-        self.children = [] if children is None else children
+        self.waiting_on = TaskCollection(parent=self)
+        self.children = TaskCollection(parent=self)
         self.process = process
         self.pk = pk
         if USE_WIDGET:
@@ -64,12 +62,8 @@ class Task(GraphNode):
 
         tdata = super().to_dict()
         tdata["context_mapping"] = self.context_mapping
-        tdata["wait"] = [
-            task if isinstance(task, str) else task.name for task in self.wait
-        ]
-        tdata["children"] = [
-            task if isinstance(task, str) else task.name for task in self.children
-        ]
+        tdata["wait"] = self.waiting_on._items
+        tdata["children"] = self.children._items
         tdata["execution_count"] = 0
         tdata["parent_task"] = [None]
         tdata["process"] = serialize(self.process) if self.process else serialize(None)
@@ -122,7 +116,8 @@ class Task(GraphNode):
 
         task = super().from_dict(data, node_pool=task_pool)
         task.context_mapping = data.get("context_mapping", {})
-        task.wait = data.get("wait", [])
+        task.waiting_on.add(data.get("wait", []))
+        task.children.add(data.get("children", []))
         task.process = data.get("process", None)
 
         return task
@@ -150,3 +145,66 @@ class Task(GraphNode):
             return
         self._widget.from_node(self)
         return self._widget.to_html(output=output, **kwargs)
+
+
+class TaskCollection:
+    def __init__(self, parent: "Task"):
+        self._items: Set[str] = set()
+        self.parent = parent
+        self._top_parent = None
+
+    @property
+    def graph(self) -> "WorkGraph":
+        """Cache and return the top parent of the collection."""
+        if not self._top_parent:
+            parent = self.parent
+            while getattr(parent, "parent", None):
+                parent = parent.parent
+            self._top_parent = parent
+        return self._top_parent
+
+    @property
+    def items(self) -> Set[str]:
+        return self._items
+
+    def _normalize_tasks(
+        self, tasks: Union[List[Union[str, Task]], str, Task]
+    ) -> Iterable[str]:
+        """Normalize input to an iterable of task names."""
+        if isinstance(tasks, (str, Task)):
+            tasks = [tasks]
+        return (task.name if isinstance(task, Task) else task for task in tasks)
+
+    def add(self, tasks: Union[List[Union[str, Task]], str, Task]) -> None:
+        """Add tasks to the collection. Tasks can be a list or a single Task or task name."""
+        for task_name in self._normalize_tasks(tasks):
+            if task_name not in self.graph.tasks.keys():
+                raise ValueError(
+                    f"Task '{task_name}' is not in the graph. Available tasks: {self.graph.tasks.keys()}"
+                )
+            self._items.add(task_name)
+
+    def remove(self, tasks: Union[List[Union[str, Task]], str, Task]) -> None:
+        """Remove tasks from the collection. Tasks can be a list or a single Task or task name."""
+        for task_name in self._normalize_tasks(tasks):
+            if task_name not in self._items:
+                raise ValueError(f"Task '{task_name}' is not in the collection.")
+            self._items.remove(task_name)
+
+    def clear(self) -> None:
+        """Clear all items from the collection."""
+        self._items.clear()
+
+    def __contains__(self, item: str) -> bool:
+        """Check if a task name is in the collection."""
+        return item in self._items
+
+    def __iter__(self):
+        """Yield each task name in the collection for iteration."""
+        return iter(self._items)
+
+    def __len__(self) -> int:
+        return len(self._items)
+
+    def __repr__(self) -> str:
+        return f"{self._items}"
