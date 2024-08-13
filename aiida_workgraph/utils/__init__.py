@@ -556,9 +556,9 @@ def get_required_imports(func):
         else:
             return  # If no module or origin, we can't import it, e.g., for literals
 
-        if module_name not in imports:
-            imports[module_name] = set()
         if type_name is not None:
+            if module_name not in imports:
+                imports[module_name] = set()
             imports[module_name].add(type_name)
 
     for _, type_hint in type_hints.items():

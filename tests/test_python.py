@@ -86,6 +86,13 @@ def test_PythonJob_typing():
     ) -> list[Atoms]:
         pass
 
+    def generate_structures_2(
+        structure1: Atoms,
+        strain_lst1: list = None,
+        data1: str = "",
+    ) -> list[Atoms]:
+        pass
+
     modules = get_required_imports(generate_structures)
     assert modules == {
         "ase.atoms": {"Atoms"},
@@ -93,6 +100,8 @@ def test_PythonJob_typing():
         "builtins": {"list"},
         "numpy": {"array"},
     }
+    modules = get_required_imports(generate_structures_2)
+    assert modules == {"ase.atoms": {"Atoms"}, "builtins": {"list", "str"}}
 
 
 def test_PythonJob_outputs(fixture_localhost):
