@@ -654,15 +654,15 @@ class WorkGraphEngine(Process, metaclass=Protect):
         """Update parent task state."""
         parent_task = self.ctx.tasks[name]["parent_task"]
         if parent_task[0]:
-            if (
-                self.ctx.tasks[parent_task[0]]["metadata"]["node_type"].upper()
-                == "WHILE"
-            ):
+            task_type = self.ctx.tasks[parent_task[0]]["metadata"]["node_type"].upper()
+            if task_type == "WHILE":
                 self.update_while_task_state(parent_task[0])
+            elif task_type == "IF":
+                self.update_if_task_state(parent_task[0])
 
     def update_while_task_state(self, name: str) -> None:
         """Update while task state."""
-        finished, _ = self.is_while_task_finished(name)
+        finished, _ = self.are_childen_finished(name)
 
         if finished:
             should_run = self.should_run_while_task(name)
@@ -672,7 +672,14 @@ class WorkGraphEngine(Process, metaclass=Protect):
                 self.reset_task(name, reset_execution_count=False)
             else:
                 self.set_task_state_info(name, "state", "FINISHED")
-        self.update_parent_task_state(name)
+                self.update_parent_task_state(name)
+
+    def update_if_task_state(self, name: str) -> None:
+        """Update if task state."""
+        finished, _ = self.are_childen_finished(name)
+        if finished:
+            self.set_task_state_info(name, "state", "FINISHED")
+            self.update_parent_task_state(name)
 
     def should_run_while_task(self, name: str) -> tuple[bool, t.Any]:
         """Check if the while task should run."""
@@ -688,8 +695,16 @@ class WorkGraphEngine(Process, metaclass=Protect):
             conditions.append(value)
         return False not in conditions
 
-    def is_while_task_finished(self, name: str) -> tuple[bool, t.Any]:
-        """Check if the while task is finished."""
+    def should_run_if_task(self, name: str) -> tuple[bool, t.Any]:
+        """Check if the IF task should run."""
+        _, kwargs, _, _, _ = self.get_inputs(name)
+        flag = kwargs["conditions"]
+        if kwargs["invert_condition"]:
+            return not flag
+        return flag
+
+    def are_childen_finished(self, name: str) -> tuple[bool, t.Any]:
+        """Check if the child tasks are finished."""
         task = self.ctx.tasks[name]
         finished = True
         for name in task["children"]:
@@ -874,7 +889,7 @@ class WorkGraphEngine(Process, metaclass=Protect):
             # print("executor: ", task["executor"])
             executor, _ = get_executor(task["executor"])
             # print("executor: ", executor)
-            args, kwargs, var_args, var_kwargs, args_dict = self.get_inputs(task)
+            args, kwargs, var_args, var_kwargs, args_dict = self.get_inputs(name)
             for i, key in enumerate(self.ctx.tasks[name]["metadata"]["args"]):
                 kwargs[key] = args[i]
             # update the port namespace
@@ -1030,9 +1045,16 @@ class WorkGraphEngine(Process, metaclass=Protect):
                     task["execution_count"] += 1
                     self.set_task_state_info(name, "state", "RUNNING")
                 else:
-                    # if the first run is skipped, we set the child tasks to SKIPPED
                     self.set_tasks_state(task["children"], "FINISHED")
                     self.update_while_task_state(name)
+                self.continue_workgraph()
+            elif task["metadata"]["node_type"].upper() in ["IF"]:
+                should_run = self.should_run_if_task(name)
+                if should_run:
+                    self.set_task_state_info(name, "state", "RUNNING")
+                else:
+                    self.set_tasks_state(task["children"], "SKIPPED")
+                    self.update_if_task_state(name)
                 self.continue_workgraph()
             elif task["metadata"]["node_type"].upper() in ["NORMAL"]:
                 print("Task  type: Normal.")
@@ -1072,7 +1094,7 @@ class WorkGraphEngine(Process, metaclass=Protect):
                 return self.exit_codes.UNKNOWN_TASK_TYPE
 
     def get_inputs(
-        self, task: t.Dict[str, t.Any]
+        self, name: str
     ) -> t.Tuple[
         t.List[t.Any],
         t.Dict[str, t.Any],
@@ -1087,6 +1109,7 @@ class WorkGraphEngine(Process, metaclass=Protect):
         kwargs = {}
         var_args = None
         var_kwargs = None
+        task = self.ctx.tasks[name]
         properties = task.get("properties", {})
         # TODO: check if input is linked, otherwise use the property value
         inputs = {}

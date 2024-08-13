@@ -97,13 +97,13 @@ export async function loadJSON(editor, area, layout, workgraphData) {
   for (const nodeId in workgraphData.nodes) {
     const nodeData = workgraphData.nodes[nodeId];
     // if node_type is "WHILE", find all
-    if (nodeData['node_type'] === "WHILE") {
+    if (nodeData['node_type'] === "WHILE" || nodeData['node_type'] === "IF") {
       // find the node
       const node = editor.nodeMap[nodeData.label];
-      const tasks = nodeData['properties']['tasks']['value'];
+      const children = nodeData['children'];
       // find the id of all nodes in the editor that has a label in while_zone
-      for (const nodeId in tasks) {
-        const node1 = editor.nodeMap[tasks[nodeId]];
+      for (const nodeId in children) {
+        const node1 = editor.nodeMap[children[nodeId]];
         node1.parent = node.id;
       }
     }

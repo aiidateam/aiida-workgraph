@@ -1,4 +1,4 @@
-html_template = """
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -61,7 +61,7 @@ html_template = """
         const { RenderUtils } = ReteRenderUtils;
         const styled = window.styled;
 
-        const workgraphData = __WORKGRAPH_DATA__
+        const workgraphData = {"name": "while_graph_builder", "uuid": "5ed48c82-59a5-11ef-be18-906584de3e5b", "state": "CREATED", "nodes": {"add1": {"label": "add1", "node_type": "CALCFUNCTION", "inputs": [{"name": "x", "identifier": "workgraph.any", "uuid": "5edef820-59a5-11ef-be18-906584de3e5b", "node_uuid": "5edef1ea-59a5-11ef-be18-906584de3e5b", "type": "INPUT", "link_limit": 1, "links": [], "serialize": {"path": "node_graph.serializer", "name": "serialize_pickle"}, "deserialize": {"path": "node_graph.serializer", "name": "deserialize_pickle"}}, {"name": "y", "identifier": "workgraph.any", "uuid": "5edef884-59a5-11ef-be18-906584de3e5b", "node_uuid": "5edef1ea-59a5-11ef-be18-906584de3e5b", "type": "INPUT", "link_limit": 1, "links": [], "serialize": {"path": "node_graph.serializer", "name": "serialize_pickle"}, "deserialize": {"path": "node_graph.serializer", "name": "deserialize_pickle"}}], "outputs": [{"name": "result"}], "position": [30, 30], "children": []}, "add_multiply_while1": {"label": "add_multiply_while1", "node_type": "graph_builder", "inputs": [{"name": "n", "identifier": "node_graph.any", "uuid": "5ee7731a-59a5-11ef-be18-906584de3e5b", "node_uuid": "5ee770b8-59a5-11ef-be18-906584de3e5b", "type": "INPUT", "link_limit": 1, "links": [{"from_node": "add1", "from_socket": "result", "from_socket_uuid": "5edef974-59a5-11ef-be18-906584de3e5b"}], "serialize": {"path": "node_graph.serializer", "name": "serialize_pickle"}, "deserialize": {"path": "node_graph.serializer", "name": "deserialize_pickle"}}, {"name": "n"}], "outputs": [{"name": "result"}], "position": [60, 60], "children": []}, "add2": {"label": "add2", "node_type": "CALCFUNCTION", "inputs": [{"name": "x", "identifier": "workgraph.any", "uuid": "5eef9f40-59a5-11ef-be18-906584de3e5b", "node_uuid": "5eef990a-59a5-11ef-be18-906584de3e5b", "type": "INPUT", "link_limit": 1, "links": [{"from_node": "add_multiply_while1", "from_socket": "result", "from_socket_uuid": "5ee77504-59a5-11ef-be18-906584de3e5b"}], "serialize": {"path": "node_graph.serializer", "name": "serialize_pickle"}, "deserialize": {"path": "node_graph.serializer", "name": "deserialize_pickle"}}, {"name": "y", "identifier": "workgraph.any", "uuid": "5eef9fb8-59a5-11ef-be18-906584de3e5b", "node_uuid": "5eef990a-59a5-11ef-be18-906584de3e5b", "type": "INPUT", "link_limit": 1, "links": [], "serialize": {"path": "node_graph.serializer", "name": "serialize_pickle"}, "deserialize": {"path": "node_graph.serializer", "name": "deserialize_pickle"}}, {"name": "x"}], "outputs": [], "position": [90, 90], "children": []}}, "links": [{"from_socket": "result", "from_node": "add1", "from_socket_uuid": "5edef974-59a5-11ef-be18-906584de3e5b", "to_socket": "n", "to_node": "add_multiply_while1", "state": false}, {"from_socket": "result", "from_node": "add_multiply_while1", "from_socket_uuid": "5ee77504-59a5-11ef-be18-906584de3e5b", "to_socket": "x", "to_node": "add2", "state": false}]}
 
         // Define Schemes to use in vanilla JS
         const Schemes = {
@@ -276,4 +276,3 @@ html_template = """
     </script>
 </body>
 </html>
-"""
