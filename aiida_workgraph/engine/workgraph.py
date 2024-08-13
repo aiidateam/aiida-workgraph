@@ -546,20 +546,28 @@ class WorkGraphEngine(Process, metaclass=Protect):
         if action.upper() == "SKIP":
             pass
 
-    def reset_task(self, name: str, recursive: bool = True) -> None:
+    def reset_task(
+        self,
+        name: str,
+        reset_process: bool = True,
+        recursive: bool = True,
+        reset_execution_count: bool = True,
+    ) -> None:
         """Reset task state and remove it from the executed task.
         If recursive is True, reset its child tasks."""
 
         self.set_task_state_info(name, "state", "PLANNED")
-        self.set_task_state_info(name, "process", None)
+        if reset_process:
+            self.set_task_state_info(name, "process", None)
         self.remove_executed_task(name)
-        if recursive:
-            self.report(f"Task {name} action: RESET.")
-            # if the task is a while task, reset its child tasks
-            if self.ctx.tasks[name]["metadata"]["node_type"].upper() == "WHILE":
+        self.report(f"Task {name} action: RESET.")
+        # if the task is a while task, reset its child tasks
+        if self.ctx.tasks[name]["metadata"]["node_type"].upper() == "WHILE":
+            if reset_execution_count:
                 self.ctx.tasks[name]["execution_count"] = 0
-                for child_task in self.ctx.tasks[name]["properties"]["tasks"]["value"]:
-                    self.reset_task(child_task, recursive=False)
+            for child_task in self.ctx.tasks[name]["children"]:
+                self.reset_task(child_task, reset_process=False, recursive=False)
+        if recursive:
             # reset its child tasks
             names = self.ctx.connectivity["child_node"][name]
             for name in names:
@@ -644,10 +652,13 @@ class WorkGraphEngine(Process, metaclass=Protect):
 
     def update_parent_task_state(self, name: str) -> None:
         """Update parent task state."""
-        parent_task = self.ctx.tasks[name].get("parent_task", None)
-        if parent_task:
-            if self.ctx.tasks[parent_task]["metadata"]["node_type"].upper() == "WHILE":
-                self.update_while_task_state(parent_task)
+        parent_task = self.ctx.tasks[name]["parent_task"]
+        if parent_task[0]:
+            if (
+                self.ctx.tasks[parent_task[0]]["metadata"]["node_type"].upper()
+                == "WHILE"
+            ):
+                self.update_while_task_state(parent_task[0])
 
     def update_while_task_state(self, name: str) -> None:
         """Update while task state."""
@@ -656,10 +667,12 @@ class WorkGraphEngine(Process, metaclass=Protect):
         if finished:
             should_run = self.should_run_while_task(name)
             if should_run:
-                self.ctx.tasks[name]["execution_count"] += 1
-                self.reset_task(name)
+                # Run the next loop.
+                # Do not reset the execution count
+                self.reset_task(name, reset_execution_count=False)
             else:
                 self.set_task_state_info(name, "state", "FINISHED")
+        self.update_parent_task_state(name)
 
     def should_run_while_task(self, name: str) -> tuple[bool, t.Any]:
         """Check if the while task should run."""
@@ -679,7 +692,7 @@ class WorkGraphEngine(Process, metaclass=Protect):
         """Check if the while task is finished."""
         task = self.ctx.tasks[name]
         finished = True
-        for name in task["properties"]["tasks"]["value"]:
+        for name in task["children"]:
             if self.get_task_state_info(name, "state") not in [
                 "FINISHED",
                 "SKIPPED",
@@ -1011,7 +1024,15 @@ class WorkGraphEngine(Process, metaclass=Protect):
                 self.set_task_state_info(name, "process", process)
                 self.to_context(**{name: process})
             elif task["metadata"]["node_type"].upper() in ["WHILE"]:
-                self.set_task_state_info(name, "state", "RUNNING")
+                # check the conditions of the while task
+                should_run = self.should_run_while_task(name)
+                if should_run:
+                    task["execution_count"] += 1
+                    self.set_task_state_info(name, "state", "RUNNING")
+                else:
+                    # if the first run is skipped, we set the child tasks to SKIPPED
+                    self.set_tasks_state(task["children"], "FINISHED")
+                    self.update_while_task_state(name)
                 self.continue_workgraph()
             elif task["metadata"]["node_type"].upper() in ["NORMAL"]:
                 print("Task  type: Normal.")
@@ -1164,75 +1185,28 @@ class WorkGraphEngine(Process, metaclass=Protect):
 
     def is_task_ready_to_run(self, name: str) -> t.Tuple[bool, t.Optional[str]]:
         """Check if the task ready to run.
-        For normal node, we need to check its parent nodes:
-        - wait tasks
-        - input tasks
-        For task inside a while zone, we need to check if the while task is ready.
-        - while parent task
-        For while task, we need to check its child tasks, and the conditions.
-        - all input tasks of the while task are ready
-        - while conditions
+        For normal task and a zone task, we need to check its input tasks in the connectivity["zone"].
+        For task inside a zone, we need to check if the zone (parent task) is ready.
         """
-        task = self.ctx.tasks[name]
-        inputs = task.get("inputs", [])
-        wait_tasks = self.ctx.tasks[name].get("wait", [])
-        parent_task = self.ctx.tasks[name].get("parent_task", None)
-        # wait, inputs, parent_task, child_tasks, conditions
-        parent_states = [True, True, True, True, True]
-        # if the task belongs to a while zoone
-        if parent_task:
-            state = self.get_task_state_info(parent_task, "state")
+        parent_task = self.ctx.tasks[name]["parent_task"]
+        # input_tasks, parent_task
+        parent_states = [True, True]
+        # if the task belongs to a parent zone
+        if parent_task[0]:
+            state = self.get_task_state_info(parent_task[0], "state")
             if state not in ["RUNNING"]:
-                parent_states[2] = False
-        # if the task is a while task
-        if task["metadata"]["node_type"].upper() == "WHILE":
-            # check if the all the child tasks are ready
-            for child_task_name in self.ctx.connectivity["while"][name]["input_tasks"]:
-                ready, parent_states = self.is_task_ready_to_run(child_task_name)
-                if not ready:
-                    parent_states[3] = False
-                    break
-            # check the conditions of the while task
-            parent_states[4] = self.should_run_while_task(name)
-        # check the wait task first
-        for task_name in wait_tasks:
-            # in case the task is removed
-            if task_name not in self.ctx.tasks:
-                continue
-            if self.get_task_state_info(task_name, "state") not in [
+                parent_states[1] = False
+        # check the input tasks of the zone
+        # check if the zone input tasks are ready
+        for child_task_name in self.ctx.connectivity["zone"][name]["input_tasks"]:
+            if self.get_task_state_info(child_task_name, "state") not in [
                 "FINISHED",
                 "SKIPPED",
                 "FAILED",
             ]:
                 parent_states[0] = False
                 break
-        for input in inputs:
-            # print("    input, ", input["from_node"], self.ctx.tasks[input["from_node"]]["state"])
-            for link in input["links"]:
-                if self.get_task_state_info(link["from_node"], "state") not in [
-                    "FINISHED",
-                    "SKIPPED",
-                    "FAILED",
-                ]:
-                    parent_states[1] = False
-                    break
-                # check if the input task belong to a while task, and the while task is ready
-                parent_task = self.ctx.tasks[link["from_node"]].get("parent_task", None)
-                # if the task itself does not belong to the while task
-                if (
-                    parent_task
-                    and name
-                    not in self.ctx.tasks[parent_task]["properties"]["tasks"]["value"]
-                ):
-                    state = self.get_task_state_info(parent_task, "state")
-                    if state not in [
-                        "FINISHED",
-                        "SKIPPED",
-                        "FAILED",
-                    ]:
-                        parent_states[1] = False
-                        break
-        # print("is task ready to run: ", name, all(parent_states), parent_states)
+
         return all(parent_states), parent_states
 
     def reset(self) -> None:

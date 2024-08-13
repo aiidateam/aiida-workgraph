@@ -9,15 +9,15 @@ class While(Task):
     name = "While"
     node_type = "WHILE"
     catalog = "Control"
-    kwargs = ["max_iterations", "conditions", "tasks"]
+    kwargs = ["max_iterations", "conditions"]
 
     def create_sockets(self) -> None:
         self.inputs.clear()
         self.outputs.clear()
         inp = self.inputs.new("workgraph.any", "_wait")
         inp.link_limit = 100000
-        self.inputs.new("node_graph.int", "max_iterations")
-        self.inputs.new("workgraph.any", "tasks")
+        inp = self.inputs.new("node_graph.int", "max_iterations")
+        inp.add_property("node_graph.int", default=10000)
         self.inputs.new("workgraph.any", "conditions")
         self.outputs.new("workgraph.any", "_wait")
 

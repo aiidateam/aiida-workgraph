@@ -61,7 +61,6 @@ class WorkGraph(node_graph.NodeGraph):
         self.links.post_creation_hooks = [link_creation_hook]
         self.links.post_deletion_hooks = [link_deletion_hook]
         self.error_handlers = {}
-        self.while_zones = {}
         self._widget = NodeGraphWidget(parent=self) if USE_WIDGET else None
 
     @property
@@ -198,9 +197,6 @@ class WorkGraph(node_graph.NodeGraph):
             }
         )
         wgdata["error_handlers"] = pickle.dumps(self.error_handlers)
-        wgdata["while_zones"] = {
-            key: value.to_dict() for key, value in self.while_zones.items()
-        }
         wgdata["tasks"] = wgdata.pop("nodes")
         if store_nodes:
             for task in wgdata["tasks"].values():
