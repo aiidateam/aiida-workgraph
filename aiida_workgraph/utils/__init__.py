@@ -69,7 +69,9 @@ def get_nested_dict(d: Dict, name: str, **kwargs) -> Any:
             if "default" in kwargs:
                 return kwargs.get("default")
             else:
-                raise ValueError(f"{name} not exist in {d}")
+                raise ValueError(
+                    f"{name} not exist in the dictionary. Available keys: {current.keys()}"
+                )
         current = current[key]
     return current
 

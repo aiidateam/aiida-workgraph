@@ -546,19 +546,27 @@ class WorkGraphEngine(Process, metaclass=Protect):
         if action.upper() == "SKIP":
             pass
 
-    def reset_task(self, name: str, recursive: bool = True) -> None:
+    def reset_task(
+        self,
+        name: str,
+        reset_process: bool = True,
+        recursive: bool = True,
+        reset_execution_count: bool = True,
+    ) -> None:
         """Reset task state and remove it from the executed task.
         If recursive is True, reset its child tasks."""
 
         self.set_task_state_info(name, "state", "PLANNED")
-        self.set_task_state_info(name, "process", None)
+        if reset_process:
+            self.set_task_state_info(name, "process", None)
         self.remove_executed_task(name)
         self.report(f"Task {name} action: RESET.")
         # if the task is a while task, reset its child tasks
         if self.ctx.tasks[name]["metadata"]["node_type"].upper() == "WHILE":
-            self.ctx.tasks[name]["execution_count"] = 0
+            if reset_execution_count:
+                self.ctx.tasks[name]["execution_count"] = 0
             for child_task in self.ctx.tasks[name]["children"]:
-                self.reset_task(child_task, recursive=False)
+                self.reset_task(child_task, reset_process=False, recursive=False)
         if recursive:
             # reset its child tasks
             names = self.ctx.connectivity["child_node"][name]
@@ -659,8 +667,9 @@ class WorkGraphEngine(Process, metaclass=Protect):
         if finished:
             should_run = self.should_run_while_task(name)
             if should_run:
-                self.ctx.tasks[name]["execution_count"] += 1
-                self.reset_task(name)
+                # Run the next loop.
+                # Do not reset the execution count
+                self.reset_task(name, reset_execution_count=False)
             else:
                 self.set_task_state_info(name, "state", "FINISHED")
         self.update_parent_task_state(name)
@@ -1018,11 +1027,11 @@ class WorkGraphEngine(Process, metaclass=Protect):
                 # check the conditions of the while task
                 should_run = self.should_run_while_task(name)
                 if should_run:
+                    task["execution_count"] += 1
                     self.set_task_state_info(name, "state", "RUNNING")
                 else:
                     # if the first run is skipped, we set the child tasks to SKIPPED
-                    if task["execution_count"] == 0:
-                        self.set_tasks_state(task["children"], "SKIPPED")
+                    self.set_tasks_state(task["children"], "FINISHED")
                     self.update_while_task_state(name)
                 self.continue_workgraph()
             elif task["metadata"]["node_type"].upper() in ["NORMAL"]:
@@ -1182,7 +1191,7 @@ class WorkGraphEngine(Process, metaclass=Protect):
         parent_task = self.ctx.tasks[name]["parent_task"]
         # input_tasks, parent_task
         parent_states = [True, True]
-        # if the task belongs to a parent zoone
+        # if the task belongs to a parent zone
         if parent_task[0]:
             state = self.get_task_state_info(parent_task[0], "state")
             if state not in ["RUNNING"]:

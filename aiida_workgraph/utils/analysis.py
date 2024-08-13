@@ -66,7 +66,7 @@ class WorkGraphSaver:
         self.build_connectivity()
         self.assign_zone()
         self.update_parent_task()
-        self.find_all_zones_input_outputs()
+        self.find_all_zones_inputs()
         if self.exist_in_db() or self.restart_process is not None:
             new_tasks, modified_tasks, update_metadata = self.check_diff(
                 self.restart_process
@@ -127,11 +127,11 @@ class WorkGraphSaver:
         for name, task in self.wgdata["tasks"].items():
             task["parent_task"] = get_all_parents(name)
 
-    def find_all_zones_input_outputs(self) -> None:
+    def find_all_zones_inputs(self) -> None:
         for name in self.wgdata["tasks"]:
-            self.find_zone_input_outputs(name)
+            self.find_zone_inputs(name)
 
-    def find_zone_input_outputs(self, name: str) -> None:
+    def find_zone_inputs(self, name: str) -> None:
         """Find the input and outputs tasks for the zone."""
         task = self.wgdata["tasks"][name]
         input_tasks = []
@@ -143,7 +143,7 @@ class WorkGraphSaver:
             # if the child task is a zone
             if self.wgdata["tasks"][child_task]["children"]:
                 # find the input tasks of the child task zone
-                self.find_zone_input_outputs(child_task)
+                self.find_zone_inputs(child_task)
                 # find all the input tasks which outside the while zone
                 for child_task1 in self.wgdata["connectivity"]["zone"][child_task][
                     "input_tasks"
