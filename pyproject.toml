@@ -99,6 +99,7 @@ workgraph = "aiida_workgraph.cli.cmd_workgraph:workgraph"
 
 [project.entry-points."aiida_workgraph.task"]
 "workgraph.while" = "aiida_workgraph.tasks.builtins:While"
+"workgraph.if" = "aiida_workgraph.tasks.builtins:If"
 "workgraph.gather" = "aiida_workgraph.tasks.builtins:Gather"
 "workgraph.to_ctx" = "aiida_workgraph.tasks.builtins:ToCtx"
 "workgraph.from_ctx" = "aiida_workgraph.tasks.builtins:FromCtx"
