@@ -199,7 +199,6 @@ def test_workgraph_delete(web_server, page, ran_wg_calcfunction):
     expect(page.get_by_text("Confirm deletion")).to_be_visible()
     page.get_by_role("button", name="Confirm").click()
     expect(last_row).to_be_hidden()
-    breakpoint()
 
 
 @pytest.mark.frontend
