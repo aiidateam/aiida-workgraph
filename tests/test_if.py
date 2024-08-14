@@ -1,15 +1,8 @@
-from aiida_workgraph import task, WorkGraph
+from aiida_workgraph import WorkGraph
 
 
 def test_if_task(decorated_add, decorated_multiply, decorated_compare):
     """Test the If task."""
-
-    @task()
-    def select(condition, x, y):
-        """Output the result based on the condition."""
-        if condition:
-            return x
-        return y
 
     wg = WorkGraph("test_if")
     add1 = wg.add_task(decorated_add, name="add1", x=1, y=1)
@@ -29,10 +22,10 @@ def test_if_task(decorated_add, decorated_multiply, decorated_compare):
     if2.children.add("multiply1")
     # ---------------------------------------------------------------------
     select1 = wg.add_task(
-        select,
+        "workgraph.select",
         name="select1",
-        x=add2.outputs["result"],
-        y=multiply1.outputs["result"],
+        true=add2.outputs["result"],
+        false=multiply1.outputs["result"],
         condition=condition1.outputs["result"],
     )
     add3 = wg.add_task(decorated_add, name="add3", x=select1.outputs["result"], y=1)

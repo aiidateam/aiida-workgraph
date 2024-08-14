@@ -3,6 +3,13 @@ from aiida import orm
 from aiida.engine.processes.workchains.workchain import WorkChainSpec
 
 
+def select(condition, true, false):
+    """Select the data based on the condition."""
+    if condition:
+        return true
+    return false
+
+
 class GatherWorkChain(WorkChain):
     @classmethod
     def define(cls, spec: WorkChainSpec) -> None:
