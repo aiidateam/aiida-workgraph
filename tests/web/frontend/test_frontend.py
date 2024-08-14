@@ -212,6 +212,8 @@ def test_datanode_delete(web_server, page, ran_wg_calcfunction):
     page.click('a[href="/datanode"]')
 
     # Ensures that the last data row has appeared, the first row is header
+    last_row = page.locator(":nth-match(tr, 2)")
+    expect(last_row).to_be_visible()
     last_row = page.locator(":nth-match(tr, 11)")
     expect(last_row).to_be_visible()
     # verify that this is the last row
