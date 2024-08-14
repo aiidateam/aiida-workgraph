@@ -1,14 +1,20 @@
-from typing import Dict
-from aiida_workgraph.task import Task
+from typing import Any, Dict
+from aiida_workgraph.task import Task, TaskCollection
 
 
 class Zone(Task):
-    """Zone"""
+    """
+    Extend the Task class to include a 'children' attribute.
+    """
 
     identifier = "workgraph.zone"
     name = "Zone"
     node_type = "ZONE"
     catalog = "Control"
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.children = TaskCollection(parent=self)
 
     def create_sockets(self) -> None:
         self.inputs.clear()
@@ -17,8 +23,17 @@ class Zone(Task):
         inp.link_limit = 100000
         self.outputs.new("workgraph.any", "_wait")
 
+    def to_dict(self) -> Dict[str, Any]:
+        tdata = super().to_dict()
+        tdata["children"] = [task.name for task in self.children]
+        return tdata
 
-class While(Task):
+    def from_dict(self, data: Dict[str, Any]) -> None:
+        super().from_dict(data)
+        self.children.add(data.get("children", []))
+
+
+class While(Zone):
     """While"""
 
     identifier = "workgraph.while"
@@ -38,7 +53,7 @@ class While(Task):
         self.outputs.new("workgraph.any", "_wait")
 
 
-class If(Task):
+class If(Zone):
     """If task"""
 
     identifier = "workgraph.if"

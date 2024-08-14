@@ -56,27 +56,27 @@ def test_while_task(decorated_add, decorated_compare):
     add21 = wg.add_task(
         decorated_add, name="add21", x="{{n}}", y=add11.outputs["result"]
     )
-    add21.wait.append("add1")
+    add21.waiting_on.add("add1")
     add22 = wg.add_task(decorated_add, name="add22", x=add21.outputs["result"], y=1)
     add22.set_context({"result": "n"})
     compare2 = wg.add_task(
         decorated_compare, name="compare2", x=add22.outputs["result"], y=5
     )
     compare2.set_context({"result": "should_run2"})
-    while2.children = ["add21", "add22", "compare2"]
+    while2.children.add(["add21", "add22", "compare2"])
     # ---------------------------------------------------------------------
     while3 = wg.add_task(
         "While", name="while3", max_iterations=1, conditions=["should_run3"]
     )
     add31 = wg.add_task(decorated_add, name="add31", x="{{l}}", y=1)
-    add31.wait.append("add22")
+    add31.waiting_on.add("add22")
     add32 = wg.add_task(decorated_add, name="add32", x=add31.outputs["result"], y=1)
     add32.set_context({"result": "l"})
     compare3 = wg.add_task(
         decorated_compare, name="compare3", x=add32.outputs["result"], y=5
     )
     compare3.set_context({"result": "should_run3"})
-    while3.children = ["add31", "add32", "compare3"]
+    while3.children.add(["add31", "add32", "compare3"])
     # ---------------------------------------------------------------------
     add12 = wg.add_task(
         decorated_add, name="add12", x="{{m}}", y=add32.outputs["result"]
@@ -86,7 +86,7 @@ def test_while_task(decorated_add, decorated_compare):
         decorated_compare, name="compare1", x=add12.outputs["result"], y=10
     )
     compare1.set_context({"result": "should_run1"})
-    while1.children = ["add11", "while2", "while3", "add12", "compare1"]
+    while1.children.add(["add11", "while2", "while3", "add12", "compare1"])
     # the `result` of compare1 taskis used as condition
     # ---------------------------------------------------------------------
     add2 = wg.add_task(
