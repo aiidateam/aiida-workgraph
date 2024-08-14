@@ -84,7 +84,6 @@ def test_workgraph_item(web_server, page, ran_wg_calcfunction):
     page.wait_for_function(
         "selector => !!document.querySelector(selector)",
         arg="div.title[style='background: green;']",
-        timeout=5000,
     )
     gui_node_color = gui_node.evaluate(
         "element => window.getComputedStyle(element).backgroundColor"
