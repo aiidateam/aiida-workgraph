@@ -98,6 +98,7 @@ workgraph = "aiida_workgraph.cli.cmd_workgraph:workgraph"
 "process.workflow.workgraph" = "aiida_workgraph.orm.workgraph:WorkGraphNode"
 
 [project.entry-points."aiida_workgraph.task"]
+"workgraph.zone" = "aiida_workgraph.tasks.builtins:Zone"
 "workgraph.while" = "aiida_workgraph.tasks.builtins:While"
 "workgraph.if" = "aiida_workgraph.tasks.builtins:If"
 "workgraph.gather" = "aiida_workgraph.tasks.builtins:Gather"
