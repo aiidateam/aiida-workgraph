@@ -26,6 +26,17 @@ To not run these tests you can use the markers in the following way
 pytest -m "not backend and not frontend"
 ```
 
+#### Setting path for python executable for pythonjob tests
+
+By default the pythonjob will use the executable `python3` to execute the calcjobs in the tests.
+If you want to specify to use a different python path (e.g. from your environment manager).
+To change the default python path you can set the environment variable
+```console
+PYTEST_PYTHONJOB_PYTHON_EXEC_PATH=/home/user/pyvenv/workgraph-dev/bin/python pytest tests/test_python.py
+```
+
+#### Running frontend tests in headed mode
+
 To debug the frontend tests you often want to see what happens in the tests.
 By default they are run in headless mode, so no browser is shown.
 To run the frontend tests in headed mode for you have to set an environment variable like this
