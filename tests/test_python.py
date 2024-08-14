@@ -4,7 +4,7 @@ from typing import Any
 
 
 @pytest.mark.usefixtures("started_daemon_client")
-def test_decorator(fixture_localhost):
+def test_decorator(fixture_localhost, python_executable_path):
     """Test decorator."""
 
     @task.pythonjob(
@@ -28,6 +28,7 @@ def test_decorator(fixture_localhost):
         x=1,
         y=2,
         computer="localhost",
+        code_label=python_executable_path,
     )
     wg.add_task(
         decorted_multiply,
@@ -35,6 +36,7 @@ def test_decorator(fixture_localhost):
         x=wg.tasks["add1"].outputs["sum"],
         y=3,
         computer="localhost",
+        code_label=python_executable_path,
     )
     # wg.submit(wait=True)
     wg.run()
@@ -47,7 +49,7 @@ def test_decorator(fixture_localhost):
 
 
 @pytest.mark.usefixtures("started_daemon_client")
-def test_PythonJob_kwargs(fixture_localhost):
+def test_PythonJob_kwargs(fixture_localhost, python_executable_path):
     """Test function with kwargs."""
 
     def add(x, **kwargs):
@@ -63,6 +65,7 @@ def test_PythonJob_kwargs(fixture_localhost):
                 "x": 1,
                 "kwargs": {"y": 2, "z": 3},
                 "computer": "localhost",
+                "code_label": python_executable_path,
             },
         },
     )
@@ -95,7 +98,7 @@ def test_PythonJob_typing():
     }
 
 
-def test_PythonJob_outputs(fixture_localhost):
+def test_PythonJob_outputs(fixture_localhost, python_executable_path):
     """Test function with multiple outputs."""
 
     @task(
@@ -116,15 +119,15 @@ def test_PythonJob_outputs(fixture_localhost):
         y=2,
         #  code=code,
         computer="localhost",
+        code_label=python_executable_path,
     )
-    # wg.submit(wait=True)
     wg.run()
     assert wg.tasks["add"].outputs["sum"].value.value == 3
     assert wg.tasks["add"].outputs["diff"].value.value == -1
 
 
 @pytest.mark.usefixtures("started_daemon_client")
-def test_PythonJob_namespace_output(fixture_localhost):
+def test_PythonJob_namespace_output(fixture_localhost, python_executable_path):
     """Test function with namespace output and input."""
 
     # output namespace
@@ -150,6 +153,7 @@ def test_PythonJob_namespace_output(fixture_localhost):
 
     wg = WorkGraph("test_namespace_outputs")
     wg.add_task("PythonJob", function=myfunc, name="myfunc")
+
     wg.submit(
         wait=True,
         inputs={
@@ -157,6 +161,7 @@ def test_PythonJob_namespace_output(fixture_localhost):
                 "x": 1.0,
                 "y": 2.0,
                 "computer": "localhost",
+                "code_label": python_executable_path,
             }
         },
     )
@@ -165,7 +170,7 @@ def test_PythonJob_namespace_output(fixture_localhost):
     assert wg.tasks["myfunc"].outputs["add_multiply"].value.multiply.value == 2
 
 
-def test_PythonJob_namespace_output_input(fixture_localhost):
+def test_PythonJob_namespace_output_input(fixture_localhost, python_executable_path):
     """Test function with namespace output and input."""
 
     # output namespace
@@ -214,14 +219,17 @@ def test_PythonJob_namespace_output_input(fixture_localhost):
             "x": 1.0,
             "y": 2.0,
             "computer": "localhost",
+            "code_label": python_executable_path,
         },
         "myfunc2": {
             "y": 3.0,
             "computer": "localhost",
+            "code_label": python_executable_path,
         },
         "myfunc3": {
             "y": 4.0,
             "computer": "localhost",
+            "code_label": python_executable_path,
         },
     }
     wg.run(inputs=inputs)
@@ -231,7 +239,7 @@ def test_PythonJob_namespace_output_input(fixture_localhost):
     assert wg.tasks["myfunc3"].outputs["result"].value.value == 7
 
 
-def test_PythonJob_parent_folder(fixture_localhost):
+def test_PythonJob_parent_folder(fixture_localhost, python_executable_path):
     """Test function with parent folder."""
 
     def add(x, y):
@@ -261,11 +269,13 @@ def test_PythonJob_parent_folder(fixture_localhost):
                 "x": 2,
                 "y": 3,
                 "computer": "localhost",
+                "code_label": python_executable_path,
             },
             "multiply": {
                 "x": 3,
                 "y": 4,
                 "computer": "localhost",
+                "code_label": python_executable_path,
             },
         },
         wait=True,
@@ -273,7 +283,7 @@ def test_PythonJob_parent_folder(fixture_localhost):
     assert wg.tasks["multiply"].outputs["result"].value.value == 17
 
 
-def test_PythonJob_upload_files(fixture_localhost):
+def test_PythonJob_upload_files(fixture_localhost, python_executable_path):
     """Test function with upload files."""
 
     # create a temporary file "input.txt" in the current directory
@@ -307,6 +317,7 @@ def test_PythonJob_upload_files(fixture_localhost):
         inputs={
             "add": {
                 "computer": "localhost",
+                "code_label": python_executable_path,
                 "upload_files": {
                     "input.txt": input_file,
                     "inputs_folder": input_folder,
@@ -318,7 +329,7 @@ def test_PythonJob_upload_files(fixture_localhost):
     assert wg.tasks["add"].outputs["result"].value.value == 5
 
 
-def test_PythonJob_copy_files(fixture_localhost):
+def test_PythonJob_copy_files(fixture_localhost, python_executable_path):
     """Test function with copy files."""
 
     # define add task
@@ -361,16 +372,19 @@ def test_PythonJob_copy_files(fixture_localhost):
                 "x": 2,
                 "y": 3,
                 "computer": "localhost",
+                "code_label": python_executable_path,
             },
             "add2": {
                 "x": 2,
                 "y": 3,
                 "computer": "localhost",
+                "code_label": python_executable_path,
             },
             "multiply": {
                 "x_folder_name": "add1_remote_folder",
                 "y_folder_name": "add2_remote_folder",
                 "computer": "localhost",
+                "code_label": python_executable_path,
             },
         },
         wait=True,
@@ -378,7 +392,7 @@ def test_PythonJob_copy_files(fixture_localhost):
     assert wg.tasks["multiply"].outputs["result"].value.value == 25
 
 
-def test_PythonJob_retrieve_files(fixture_localhost):
+def test_PythonJob_retrieve_files(fixture_localhost, python_executable_path):
     """Test retrieve files."""
 
     def add(x, y):
@@ -396,6 +410,7 @@ def test_PythonJob_retrieve_files(fixture_localhost):
                 "x": 2,
                 "y": 3,
                 "computer": "localhost",
+                "code_label": python_executable_path,
                 "metadata": {
                     "options": {
                         "additional_retrieve_list": ["result.txt"],
@@ -410,7 +425,7 @@ def test_PythonJob_retrieve_files(fixture_localhost):
     )
 
 
-def test_data_serializer(fixture_localhost):
+def test_data_serializer(fixture_localhost, python_executable_path):
     from ase import Atoms
     from ase.build import bulk
 
@@ -423,7 +438,13 @@ def test_data_serializer(fixture_localhost):
 
     wg = WorkGraph("test_PythonJob_retrieve_files")
     wg.add_task(
-        "PythonJob", function=make_supercell, atoms=atoms, dim=2, name="make_supercell"
+        "PythonJob",
+        function=make_supercell,
+        atoms=atoms,
+        dim=2,
+        name="make_supercell",
+        computer="localhost",
+        code_label=python_executable_path,
     )
     # ------------------------- Submit the calculation -------------------
     wg.submit(wait=True)
@@ -433,7 +454,7 @@ def test_data_serializer(fixture_localhost):
     )
 
 
-def test_load_pythonjob(fixture_localhost):
+def test_load_pythonjob(fixture_localhost, python_executable_path):
     """Test function with typing."""
 
     @task.pythonjob()
@@ -449,6 +470,7 @@ def test_load_pythonjob(fixture_localhost):
                 "x": "Hello, ",
                 "y": "World!",
                 "computer": "localhost",
+                "code_label": python_executable_path,
             },
         },
         # wait=True,

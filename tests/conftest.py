@@ -5,6 +5,7 @@ from aiida.orm import Int, StructureData
 from aiida.calculations.arithmetic.add import ArithmeticAddCalculation
 from typing import Callable, Any, Union
 import time
+import os
 
 pytest_plugins = "aiida.tools.pytest_fixtures"
 
@@ -31,6 +32,11 @@ def add_code(fixture_localhost):
     code = InstalledCode(computer=fixture_localhost, filepath_executable="/bin/bash")
     code.store()
     return code
+
+
+@pytest.fixture(scope="session")
+def python_executable_path():
+    return os.environ.get("PYTEST_PYTHONJOB_PYTHON_EXEC_PATH", "python3")
 
 
 @pytest.fixture
