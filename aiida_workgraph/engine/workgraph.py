@@ -1053,6 +1053,19 @@ class WorkGraphEngine(Process, metaclass=Protect):
             elif task["metadata"]["node_type"].upper() in ["ZONE"]:
                 self.set_task_state_info(name, "state", "RUNNING")
                 self.continue_workgraph()
+            elif task["metadata"]["node_type"].upper() in ["FROM_CONTEXT"]:
+                # get the results from the context
+                results = {"result": getattr(self.ctx, kwargs["key"])}
+                task["results"] = results
+                self.set_task_state_info(name, "state", "FINISHED")
+                self.update_parent_task_state(name)
+                self.continue_workgraph()
+            elif task["metadata"]["node_type"].upper() in ["TO_CONTEXT"]:
+                # get the results from the context
+                setattr(self.ctx, kwargs["key"], kwargs["value"])
+                self.set_task_state_info(name, "state", "FINISHED")
+                self.update_parent_task_state(name)
+                self.continue_workgraph()
             elif task["metadata"]["node_type"].upper() in ["NORMAL"]:
                 # normal function does not have a process
                 if "context" in task["metadata"]["kwargs"]:
