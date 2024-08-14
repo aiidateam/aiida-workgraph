@@ -179,7 +179,8 @@ class WorkGraph(node_graph.NodeGraph):
         import cloudpickle as pickle
 
         wgdata = super().to_dict()
-        self.context["sequence"] = self.sequence
+        # save the sequence and context
+        self.context["_sequence"] = self.sequence
         # only alphanumeric and underscores are allowed
         wgdata["context"] = {
             key.replace(".", "__"): value for key, value in self.context.items()
