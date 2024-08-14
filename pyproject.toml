@@ -85,6 +85,7 @@ workgraph = "aiida_workgraph.cli.cmd_workgraph:workgraph"
 
 [project.entry-points."aiida.data"]
 "workgraph.general" = "aiida_workgraph.orm.general_data:GeneralData"
+"workgraph.pickled_function" = "aiida_workgraph.orm.function_data:PickledFunction"
 "workgraph.ase.atoms.Atoms" = "aiida_workgraph.orm.atoms:AtomsData"
 "workgraph.builtins.int" = "aiida.orm.nodes.data.int:Int"
 "workgraph.builtins.float" = "aiida.orm.nodes.data.float:Float"
