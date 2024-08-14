@@ -18,6 +18,7 @@ This section contains a collection of HowTos for various topics.
    restart
    error_resistant
    continue_finished_workgraph
+   zone
    protocol
    queue
    cli
