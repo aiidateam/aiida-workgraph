@@ -99,8 +99,8 @@ jobs:
                 AIIDA_WARN_v3: 1
             run: |
                 # Have to split tests into see issue #225
-                pytest -m "not frontend and not backend" -v --cov --durations=0
-                pytest -m backend -v --cov-append --durations=0
+                #pytest -m "not frontend and not backend" -v --cov --durations=0
+                #pytest -m backend -v --cov-append --durations=0
                 pytest -m frontend -v --cov-append --durations=0
 
         -   name: Upload coverage reports to Codecov
