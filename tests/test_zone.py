@@ -13,7 +13,7 @@ def test_zone_task(decorated_add):
     wg.add_task(decorated_add, name="add4", x=1, y=add3.outputs["result"])
     wg.add_task(decorated_add, name="add5", x=1, y=add3.outputs["result"])
     zone1 = wg.add_task("workgraph.zone", name="Zone1")
-    zone1.children = ["add2", "add3"]
+    zone1.children.add(["add2", "add3"])
     wg.run()
     report = get_workchain_report(wg.process, "REPORT")
     assert "tasks ready to run: add1" in report

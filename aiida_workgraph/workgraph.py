@@ -435,8 +435,6 @@ class WorkGraph(node_graph.NodeGraph):
         """
         for task in wg.tasks:
             task.name = prefix + task.name
-            task.waiting_on.add([prefix + w for w in task.waiting_on])
-            task.children.add([prefix + w for w in task.children])
             task.parent = self
             self.tasks.append(task)
         # self.sequence.extend([prefix + task for task in wg.sequence])

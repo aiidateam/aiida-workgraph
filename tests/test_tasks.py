@@ -17,10 +17,10 @@ def test_task_collection(decorated_add: Callable) -> None:
     task1.waiting_on.add("task2")
     task1.waiting_on.add(["task3", wg.tasks["task4"]])
     assert len(task1.waiting_on) == 3
-    assert "task4" in task1.waiting_on
+    assert wg.tasks["task4"] in task1.waiting_on
     # remove a task from waiting_on
     task1.waiting_on.remove("task2")
-    assert "task2" not in task1.waiting_on
+    assert wg.tasks["task2"] not in task1.waiting_on
     # clear waiting_on
     task1.waiting_on.clear()
     assert len(task1.waiting_on) == 0

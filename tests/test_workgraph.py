@@ -105,10 +105,15 @@ def test_extend_workgraph(decorated_add_multiply_group):
     wg = WorkGraph("test_graph_build")
     add1 = wg.add_task("workgraph.test_add", "add1", x=2, y=3)
     add_multiply_wg = decorated_add_multiply_group(x=0, y=4, z=5)
+    # test wait
+    add_multiply_wg.tasks["multiply1"].waiting_on.add("add1")
     # extend workgraph
     wg.extend(add_multiply_wg, prefix="group_")
+    assert "group_add1" in [
+        task.name for task in wg.tasks["group_multiply1"].waiting_on
+    ]
     wg.add_link(add1.outputs[0], wg.tasks["group_add1"].inputs["x"])
-    wg.submit(wait=True)
+    wg.run()
     assert wg.tasks["group_multiply1"].node.outputs.result == 45
 
 

@@ -44,7 +44,6 @@ class Task(GraphNode):
         )
         self.context_mapping = {} if context_mapping is None else context_mapping
         self.waiting_on = TaskCollection(parent=self)
-        self.children = TaskCollection(parent=self)
         self.process = process
         self.pk = pk
         if USE_WIDGET:
@@ -62,8 +61,8 @@ class Task(GraphNode):
 
         tdata = super().to_dict()
         tdata["context_mapping"] = self.context_mapping
-        tdata["wait"] = self.waiting_on._items
-        tdata["children"] = self.children._items
+        tdata["wait"] = [task.name for task in self.waiting_on]
+        tdata["children"] = []
         tdata["execution_count"] = 0
         tdata["parent_task"] = [None]
         tdata["process"] = serialize(self.process) if self.process else serialize(None)
@@ -117,7 +116,6 @@ class Task(GraphNode):
         task = super().from_dict(data, node_pool=task_pool)
         task.context_mapping = data.get("context_mapping", {})
         task.waiting_on.add(data.get("wait", []))
-        task.children.add(data.get("children", []))
         task.process = data.get("process", None)
 
         return task
@@ -173,23 +171,31 @@ class TaskCollection:
         """Normalize input to an iterable of task names."""
         if isinstance(tasks, (str, Task)):
             tasks = [tasks]
-        return (task.name if isinstance(task, Task) else task for task in tasks)
+        task_objects = []
+        for task in tasks:
+            if isinstance(task, str):
+                if task not in self.graph.tasks.keys():
+                    raise ValueError(
+                        f"Task '{task}' is not in the graph. Available tasks: {self.graph.tasks.keys()}"
+                    )
+                task_objects.append(self.graph.tasks[task])
+            elif isinstance(task, Task):
+                task_objects.append(task)
+            else:
+                raise ValueError(f"Invalid task type: {type(task)}")
+        return task_objects
 
     def add(self, tasks: Union[List[Union[str, Task]], str, Task]) -> None:
         """Add tasks to the collection. Tasks can be a list or a single Task or task name."""
-        for task_name in self._normalize_tasks(tasks):
-            if task_name not in self.graph.tasks.keys():
-                raise ValueError(
-                    f"Task '{task_name}' is not in the graph. Available tasks: {self.graph.tasks.keys()}"
-                )
-            self._items.add(task_name)
+        for task in self._normalize_tasks(tasks):
+            self._items.add(task)
 
     def remove(self, tasks: Union[List[Union[str, Task]], str, Task]) -> None:
         """Remove tasks from the collection. Tasks can be a list or a single Task or task name."""
-        for task_name in self._normalize_tasks(tasks):
-            if task_name not in self._items:
-                raise ValueError(f"Task '{task_name}' is not in the collection.")
-            self._items.remove(task_name)
+        for task in self._normalize_tasks(tasks):
+            if task not in self._items:
+                raise ValueError(f"Task '{task.name}' is not in the collection.")
+            self._items.remove(task)
 
     def clear(self) -> None:
         """Clear all items from the collection."""
