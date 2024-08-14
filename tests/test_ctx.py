@@ -1,23 +1,25 @@
-import pytest
 from aiida_workgraph import WorkGraph
 from typing import Callable
+from aiida.orm import Float
 
 
-@pytest.mark.usefixtures("started_daemon_client")
 def test_workgraph_ctx(decorated_add: Callable) -> None:
     """Set/get data to/from context."""
-    from aiida.orm import Float
 
     wg = WorkGraph(name="test_workgraph_ctx")
     wg.context = {"x": Float(2), "data.y": Float(3)}
-    add1 = wg.add_task(decorated_add, "add1", x="{{x}}", y="{{data.y}}")
-    wg.submit(wait=True)
-    assert add1.outputs["result"].value == 5
+    add1 = wg.add_task(decorated_add, "add1", x="{{ x }}", y="{{ data.y }}")
+    wg.add_task(
+        "workgraph.to_context", name="to_ctx1", key="x", value=add1.outputs["result"]
+    )
+    from_ctx1 = wg.add_task("workgraph.from_context", name="from_ctx1", key="x")
+    add2 = wg.add_task(decorated_add, "add2", x=from_ctx1.outputs["result"], y=1)
+    wg.run()
+    assert add2.outputs["result"].value == 6
 
 
 def test_node_to_ctx(decorated_add: Callable) -> None:
     """Set/get data to/from context."""
-    from aiida.orm import Float
 
     wg = WorkGraph(name="test_node_to_ctx")
     add1 = wg.add_task(decorated_add, "add1", x=Float(2).store(), y=Float(3).store())

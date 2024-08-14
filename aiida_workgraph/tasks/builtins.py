@@ -95,12 +95,12 @@ class Gather(Task):
         }
 
 
-class ToCtx(Task):
-    """ToCtx"""
+class ToContext(Task):
+    """ToContext"""
 
-    identifier = "workgraph.to_ctx"
-    name = "ToCtx"
-    node_type = "Control"
+    identifier = "workgraph.to_context"
+    name = "ToContext"
+    node_type = "TO_CONTEXT"
     catalog = "Control"
     args = ["key", "value"]
 
@@ -109,21 +109,14 @@ class ToCtx(Task):
         self.outputs.clear()
         self.inputs.new("workgraph.any", "key")
         self.inputs.new("workgraph.any", "value")
-        self.outputs.new("workgraph.any", "result")
-
-    def get_executor(self) -> Dict[str, str]:
-        return {
-            "path": "builtins",
-            "name": "setattr",
-        }
 
 
-class FromCtx(Task):
-    """FromCtx"""
+class FromContext(Task):
+    """FromContext"""
 
-    identifier = "workgraph.from_ctx"
-    name = "FromCtx"
-    node_type = "Control"
+    identifier = "workgraph.from_context"
+    name = "FromContext"
+    node_type = "FROM_CONTEXT"
     catalog = "Control"
     args = ["key"]
 
@@ -132,12 +125,6 @@ class FromCtx(Task):
         self.outputs.clear()
         self.inputs.new("workgraph.any", "key")
         self.outputs.new("workgraph.any", "result")
-
-    def get_executor(self) -> Dict[str, str]:
-        return {
-            "path": "builtins",
-            "name": "getattr",
-        }
 
 
 class AiiDAInt(Task):
