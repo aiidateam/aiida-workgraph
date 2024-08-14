@@ -2,6 +2,22 @@ from typing import Dict
 from aiida_workgraph.task import Task
 
 
+class Zone(Task):
+    """Zone"""
+
+    identifier = "workgraph.zone"
+    name = "Zone"
+    node_type = "ZONE"
+    catalog = "Control"
+
+    def create_sockets(self) -> None:
+        self.inputs.clear()
+        self.outputs.clear()
+        inp = self.inputs.new("workgraph.any", "_wait")
+        inp.link_limit = 100000
+        self.outputs.new("workgraph.any", "_wait")
+
+
 class While(Task):
     """While"""
 

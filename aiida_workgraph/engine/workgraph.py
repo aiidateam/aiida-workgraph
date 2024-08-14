@@ -658,7 +658,9 @@ class WorkGraphEngine(Process, metaclass=Protect):
             if task_type == "WHILE":
                 self.update_while_task_state(parent_task[0])
             elif task_type == "IF":
-                self.update_if_task_state(parent_task[0])
+                self.update_zone_task_state(parent_task[0])
+            elif task_type == "ZONE":
+                self.update_zone_task_state(parent_task[0])
 
     def update_while_task_state(self, name: str) -> None:
         """Update while task state."""
@@ -673,13 +675,15 @@ class WorkGraphEngine(Process, metaclass=Protect):
             else:
                 self.set_task_state_info(name, "state", "FINISHED")
                 self.update_parent_task_state(name)
+                self.report(f"Task: {name} finished.")
 
-    def update_if_task_state(self, name: str) -> None:
-        """Update if task state."""
+    def update_zone_task_state(self, name: str) -> None:
+        """Update zone task state."""
         finished, _ = self.are_childen_finished(name)
         if finished:
             self.set_task_state_info(name, "state", "FINISHED")
             self.update_parent_task_state(name)
+            self.report(f"Task: {name} finished.")
 
     def should_run_while_task(self, name: str) -> tuple[bool, t.Any]:
         """Check if the while task should run."""
@@ -1054,7 +1058,10 @@ class WorkGraphEngine(Process, metaclass=Protect):
                     self.set_task_state_info(name, "state", "RUNNING")
                 else:
                     self.set_tasks_state(task["children"], "SKIPPED")
-                    self.update_if_task_state(name)
+                    self.update_zone_task_state(name)
+                self.continue_workgraph()
+            elif task["metadata"]["node_type"].upper() in ["ZONE"]:
+                self.set_task_state_info(name, "state", "RUNNING")
                 self.continue_workgraph()
             elif task["metadata"]["node_type"].upper() in ["NORMAL"]:
                 print("Task  type: Normal.")

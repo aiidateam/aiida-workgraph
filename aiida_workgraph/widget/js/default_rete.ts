@@ -96,8 +96,8 @@ export async function loadJSON(editor, area, layout, workgraphData) {
   console.log("Adding while zone: ");
   for (const nodeId in workgraphData.nodes) {
     const nodeData = workgraphData.nodes[nodeId];
-    // if node_type is "WHILE", find all
-    if (nodeData['node_type'] === "WHILE" || nodeData['node_type'] === "IF") {
+    const node_type = nodeData['node_type'];
+    if (node_type === "WHILE" || node_type === "IF" || node_type === "ZONE") {
       // find the node
       const node = editor.nodeMap[nodeData.label];
       const children = nodeData['children'];

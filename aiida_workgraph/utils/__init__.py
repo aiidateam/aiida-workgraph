@@ -636,7 +636,7 @@ def workgraph_to_short_json(
         ]
         wgdata_short["nodes"][name] = {
             "label": task["name"],
-            "node_type": task["metadata"]["node_type"],
+            "node_type": task["metadata"]["node_type"].upper(),
             "inputs": inputs,
             "outputs": [],
             "position": task["position"],
