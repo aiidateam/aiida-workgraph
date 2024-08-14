@@ -63,9 +63,19 @@ npm --prefix aiida_workgraph/web/frontend start
 
 The frontend server will refresh
 
-### Troubleshooting
+#### Tools for writing frontend tests
 
-#### Tests are not updating after changes in code
+To determine the right commands for invoking DOM elements playwright offers a
+tool that outputs commands while navigating through the GUI. It requires a
+webserver to be running so it can be started with
+```console
+workgraph web start
+playwright codegen
+```
+
+#### Troubleshooting
+
+##### Tests are not updating after changes in code
 
 You might want to clean your cache
 
