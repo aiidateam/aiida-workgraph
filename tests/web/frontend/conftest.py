@@ -169,9 +169,9 @@ def browser():
 @pytest.fixture(scope="module")
 def page(browser):
     with browser.new_page() as page:
-        # 60 seconds
-        page.set_default_timeout(60_000)
-        page.set_default_navigation_timeout(60_000)
-        expect.set_options(timeout=60_000)
+        # 5 seconds
+        page.set_default_timeout(5_000)
+        page.set_default_navigation_timeout(5_000)
+        expect.set_options(timeout=5_000)
         yield page
         page.close()

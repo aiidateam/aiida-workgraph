@@ -209,16 +209,11 @@ def test_datanode_delete(web_server, page, ran_wg_calcfunction):
     # page.goto("http://localhost:8000/workgraph" but have to navigate to it
     page.click('a[href="/datanode"]')
 
-    # we iterate through each row because in CI each row appear very slowly row-by-row
-    # to not increase the timeout we just check each row individual to reset the timeout
-    # for each new row appearing
-    for i in range(1, 11):
-        expect(page.locator(f":nth-match(tr, {i})")).to_be_visible()
     # Ensures that the last data row has appeared
-    last_row = page.locator(":nth-match(tr, 11)")
+    last_row = page.locator(":nth-match(tr, 7)")
     expect(last_row).to_be_visible()
     # verify that this is the last row
-    expect(page.locator(":nth-match(tr, 12)")).to_be_hidden()
+    expect(page.locator(":nth-match(tr, 8)")).to_be_hidden()
 
     delete_button = last_row.locator(".delete-button")
 
