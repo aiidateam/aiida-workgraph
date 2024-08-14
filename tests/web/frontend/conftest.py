@@ -1,6 +1,10 @@
 import pytest
+from typing import Generator
 
 from playwright.sync_api import sync_playwright
+from playwright.sync_api import expect
+
+from aiida_workgraph import WorkGraph
 
 import uvicorn
 
@@ -12,6 +16,7 @@ import time
 import os
 import socket
 import errno
+
 
 ################################
 # Utilities for frontend tests #
@@ -49,7 +54,7 @@ def run_uvicorn_web_server(
     with uvicorn_web_server.run_in_thread():
         with web_server_started.get_lock():
             web_server_started.value = 1
-        print("wait for stop_web_server")
+        print("Wait for signal to stop web server.")
         while not stop_web_server.value:
             time.sleep(1e-3)
 
@@ -57,6 +62,32 @@ def run_uvicorn_web_server(
 ###############################
 # Fixtuers for frontend tests #
 ###############################
+
+
+@pytest.fixture(scope="module")
+def aiida_profile(aiida_config, aiida_profile_factory):
+    """Create and load a profile with RabbitMQ as broker for frontend tests."""
+    with aiida_profile_factory(aiida_config, broker_backend="core.rabbitmq") as profile:
+        yield profile
+
+
+@pytest.fixture(scope="module")
+def set_backend_server_settings(aiida_profile):
+    os.environ["AIIDA_WORKGRAPH_GUI_PROFILE"] = aiida_profile.name
+
+
+@pytest.fixture(scope="module")
+def ran_wg_calcfunction(
+    aiida_profile,
+) -> Generator[WorkGraph, None, None]:
+    """A workgraph with calcfunction."""
+
+    wg = WorkGraph(name="test_debug_math")
+    sumdiff1 = wg.add_task("workgraph.test_sum_diff", "sumdiff1", x=2, y=3)
+    sumdiff2 = wg.add_task("workgraph.test_sum_diff", "sumdiff2", x=4)
+    wg.add_link(sumdiff1.outputs[0], sumdiff2.inputs[1])
+    wg.run()
+    yield wg
 
 
 @pytest.fixture(scope="module")
@@ -100,10 +131,11 @@ def web_server(set_backend_server_settings, uvicorn_configuration):
 
     web_server_proc.start()
 
-    print("wait for sevrer started")
+    print("Wait for server being started.")
     while not web_server_started.value:
         time.sleep(1e-3)
 
+    print("Web server started.")
     yield web_server_proc
 
     with stop_web_server.get_lock():
@@ -137,80 +169,9 @@ def browser():
 @pytest.fixture(scope="module")
 def page(browser):
     with browser.new_page() as page:
+        # 5 seconds
+        page.set_default_timeout(5000)
+        page.set_default_navigation_timeout(5000)
+        expect.set_options(timeout=5_000)
         yield page
         page.close()
-
-
-##################
-# Frontend tests #
-##################
-
-
-@pytest.mark.frontend
-def test_homepage(web_server, page):
-    page.goto("http://localhost:8000")
-
-    assert page.title() == "AiiDA-WorkGraph App"
-
-    # Check for the existence of a specific element on the page
-    # Attempt to locate the element
-    element = page.locator("a[href='/workgraph']")
-
-    # Check if the element is found
-    if not element.is_visible():
-        pytest.fail("Element 'a[href='/wortre']' not found on the page")
-
-
-@pytest.mark.frontend
-def test_workgraph(web_server, page, aiida_profile, wg_calcfunction):
-    wg_calcfunction.run()
-
-    page.goto("http://localhost:8000")
-    # Since the routing is done by react-router-dom we cannot access it with a call like this
-    # page.goto("http://localhost:8000/workgraph" but have to navigate to it
-    page.click('a[href="/workgraph"]')
-
-    # Check for the existence of a specific element on the page
-
-    # Verify the presence of the WorkGraphTable heading
-    assert page.locator("h2").inner_text() == "WorkGraph"
-
-    # Verify the presence of the search input
-    assert page.locator(".search-input").is_visible()
-
-    # Verify the presence of the table header columns
-    # Verify the presence of the table header columns
-    assert page.locator("th:has-text('PK')").is_visible()
-    assert page.locator("th:has-text('Created')").is_visible()
-    assert page.locator("th:has-text('Process Label')").is_visible()
-    assert page.locator("th:has-text('State')").is_visible()
-    assert page.locator("th:has-text('Actions')").is_visible()
-
-    # Verify the presence of pagination controls
-    assert page.locator(".pagination").is_visible()
-
-    # Verify the presence of at least one row in the table
-    page.wait_for_timeout(8000)
-    assert page.locator("tr").count() >= 1  # Including header row
-
-
-@pytest.mark.frontend
-def test_workgraph_item(page, wg_calcfunction):
-    wg = wg_calcfunction
-    wg.run()
-    page.goto("http://localhost:8000/workgraph/{}".format(wg.pk))
-    page.wait_for_timeout(8000)
-
-    page.get_by_text("sumdiff3").is_visible()
-
-    # Simulate user interaction (e.g., clicking a button)
-    # Replace the selector with the actual selector of the button you want to click
-    # You should identify the button that triggers an action in your component
-    page.get_by_role("button", name="Arrange").click()
-    page.wait_for_timeout(8000)
-    # Capture a screenshot
-    screenshot = page.screenshot()
-
-    # Save the screenshot to a file
-    with open("screenshot.png", "wb") as f:
-        f.write(screenshot)

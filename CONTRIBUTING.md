@@ -26,6 +26,17 @@ To not run these tests you can use the markers in the following way
 pytest -m "not backend and not frontend"
 ```
 
+#### Setting path for python executable for pythonjob tests
+
+By default the pythonjob will use the executable `python3` to execute the calcjobs in the tests.
+If you want to specify to use a different python path (e.g. from your environment manager).
+To change the default python path you can set the environment variable
+```console
+PYTEST_PYTHONJOB_PYTHON_EXEC_PATH=/home/user/pyvenv/workgraph-dev/bin/python pytest tests/test_python.py
+```
+
+#### Running frontend tests in headed mode
+
 To debug the frontend tests you often want to see what happens in the tests.
 By default they are run in headless mode, so no browser is shown.
 To run the frontend tests in headed mode for you have to set an environment variable like this
@@ -52,9 +63,19 @@ npm --prefix aiida_workgraph/web/frontend start
 
 The frontend server will refresh
 
-### Troubleshooting
+#### Tools for writing frontend tests
 
-#### Tests are not updating after changes in code
+To determine the right commands for invoking DOM elements playwright offers a
+tool that outputs commands while navigating through the GUI. It requires a
+webserver to be running so it can be started with
+```console
+workgraph web start
+playwright codegen
+```
+
+#### Troubleshooting
+
+##### Tests are not updating after changes in code
 
 You might want to clean your cache
 
