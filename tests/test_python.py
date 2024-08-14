@@ -240,6 +240,42 @@ def test_PythonJob_namespace_output_input(fixture_localhost):
     assert wg.tasks["myfunc3"].outputs["result"].value.value == 7
 
 
+def test_PythonJob_namespace_list(fixture_localhost):
+    """Test function with namespace output and input."""
+
+    # output namespace list
+    @task.pythonjob(
+        outputs=[
+            {
+                "name": "result",
+                "identifier": "workgraph.namespace",
+            },
+        ]
+    )
+    def myfunc(x, y):
+        return [x + i for i in range(y)]
+
+    # task use list as input
+    @task.pythonjob()
+    def myfunc2(x):
+        return sum(x)
+
+    #
+    wg = WorkGraph("test_namespace_outputs")
+    wg.add_task(myfunc, name="myfunc")
+    wg.add_task(myfunc2, name="myfunc2", x=wg.tasks["myfunc"].outputs["result"])
+    wg.run(
+        inputs={
+            "myfunc": {
+                "x": 1,
+                "y": 4,
+                "computer": "localhost",
+            }
+        },
+    )
+    assert wg.tasks["myfunc2"].outputs["result"].value.value == 10
+
+
 def test_PythonJob_parent_folder(fixture_localhost):
     """Test function with parent folder."""
 
