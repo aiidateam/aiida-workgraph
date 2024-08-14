@@ -170,34 +170,48 @@ def test_settings(web_server, page, ran_wg_calcfunction):
 
 @pytest.mark.frontend
 def test_workgraph_delete(web_server, page, ran_wg_calcfunction):
-    """Tests that the first workgraph node in the table can be deleted successfully."""
+    """Tests that the last workgraph node in the table can be deleted successfully."""
     page.goto("http://localhost:8000")
     # Since the routing is done by react-router-dom we cannot access it with a call like this
     # page.goto("http://localhost:8000/workgraph" but have to navigate to it
     page.click('a[href="/workgraph"]')
 
-    # Ensures that the first data row has appeared, the first row is header
-    expect(page.locator(":nth-match(tr, 2)")).to_be_visible()
+    # Ensures that the last data row has appeared, the first row is header
+    last_row = page.locator(":nth-match(tr, 2)")
+    expect(last_row).to_be_visible()
+    # verify that this is the last row
+    expect(page.locator(":nth-match(tr, 3)")).to_be_hidden()
 
-    header_and_rows = page.get_by_role("row").all()
-    first_row = header_and_rows[1]
-    delete_button = first_row.locator(".delete-button")
+    delete_button = last_row.locator(".delete-button")
+
+    # Verify that cancel or closing the prompt does not delete the node
+    delete_button.click()
+    expect(page.get_by_text("Confirm deletion")).to_be_visible()
+    page.get_by_label("Close").click()
+    expect(last_row).to_be_visible()
+
+    delete_button.click()
+    expect(page.get_by_text("Confirm deletion")).to_be_visible()
+    page.get_by_role("button", name="Cancel").click()
+    expect(last_row).to_be_visible()
 
     # Verify that confirming the prompt does delete the node
     delete_button.click()
-    first_row.wait_for(state="hidden")
-    assert first_row.is_hidden()
+    expect(page.get_by_text("Confirm deletion")).to_be_visible()
+    page.get_by_role("button", name="Confirm").click()
+    expect(last_row).to_be_hidden()
+    breakpoint()
 
 
 @pytest.mark.frontend
 def test_datanode_delete(web_server, page, ran_wg_calcfunction):
-    """Tests that the first data node in the table can be deleted successfully."""
+    """Tests that the last data node in the table can be deleted successfully."""
     page.goto("http://localhost:8000")
     # Since the routing is done by react-router-dom we cannot access it with a call like this
     # page.goto("http://localhost:8000/workgraph" but have to navigate to it
     page.click('a[href="/datanode"]')
 
-    # Ensures that the first data row has appeared, the first row is header
+    # Ensures that the last data row has appeared, the first row is header
     last_row = page.locator(":nth-match(tr, 11)")
     expect(last_row).to_be_visible()
     # verify that this is the last row
