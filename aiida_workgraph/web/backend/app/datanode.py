@@ -1,4 +1,4 @@
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Union
 from fastapi import APIRouter, HTTPException, Query
 from aiida import orm
 
@@ -63,7 +63,7 @@ async def read_data_node_item(id: int) -> Dict[str, Any]:
 async def delete_data_node(
     id: int,
     dry_run: bool = False,
-) -> Dict[str, bool | str | List[int]]:
+) -> Dict[str, Union[bool, str, List[int]]]:
     from aiida.tools import delete_nodes
 
     try:
@@ -73,7 +73,7 @@ async def delete_data_node(
             return {
                 "deleted": True,
                 "message": f"Deleted data node {id}",
-                "deleted_nodes": deleted_nodes,
+                "deleted_nodes": list(deleted_nodes),
             }
         else:
             message = f"Did not delete data node {id}"
@@ -82,7 +82,7 @@ async def delete_data_node(
             return {
                 "deleted": False,
                 "message": message,
-                "deleted_nodes": deleted_nodes,
+                "deleted_nodes": list(deleted_nodes),
             }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
