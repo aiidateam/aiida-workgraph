@@ -3,6 +3,7 @@
 from aiida import orm
 import sys
 import cloudpickle
+from pickle import UnpicklingError
 
 
 class Dict(orm.Dict):
@@ -50,13 +51,23 @@ class GeneralData(orm.Data):
 
         :return: The unpickled value.
         """
-        self._check_pickle_protocol()
         return self._get_value_from_file()
 
     def _get_value_from_file(self):
         """Read the pickled value from file and return it."""
-        with self.base.repository.open(self.FILENAME, mode="rb") as f:
-            return cloudpickle.loads(f.read())  # Deserialize the value
+        try:
+            with self.base.repository.open(self.FILENAME, mode="rb") as f:
+                return cloudpickle.loads(f.read())  # Deserialize the value
+        except (UnpicklingError, ValueError) as e:
+            raise ImportError(
+                "Failed to load the pickled value. This may be due to an incompatible pickle protocol. "
+                "Please ensure that the correct environment and cloudpickle version are being used."
+            ) from e
+        except ModuleNotFoundError as e:
+            raise ImportError(
+                "Failed to load the pickled value. This may be due to a missing module. "
+                "Please ensure that the correct environment and cloudpickle version are being used."
+            ) from e
 
     def set_value(self, value):
         """Set the contents of this node by pickling the provided value.
@@ -73,17 +84,3 @@ class GeneralData(orm.Data):
         self.base.attributes.set("serializer_module", cloudpickle.__name__)
         self.base.attributes.set("serializer_version", cloudpickle.__version__)
         self.base.attributes.set("pickle_protocol", cloudpickle.DEFAULT_PROTOCOL)
-
-    def _check_pickle_protocol(self):
-        """Check if the stored pickle protocol matches the current environment.
-
-        Raises:
-            ImportError: If the pickle protocol does not match.
-        """
-        stored_pickle_protocol = self.base.attributes.get("pickle_protocol")
-
-        if stored_pickle_protocol != cloudpickle.DEFAULT_PROTOCOL:
-            raise ImportError(
-                f"Incompatible pickle protocol: expected {stored_pickle_protocol}, "
-                f"but found {cloudpickle.DEFAULT_PROTOCOL}. Please ensure the correct protocol is used."
-            )
