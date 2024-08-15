@@ -1,5 +1,5 @@
 from typing import Any, Callable, Dict, List, Optional, Union, Tuple
-from aiida_workgraph.utils import get_executor, serialize_function
+from aiida_workgraph.utils import get_executor
 from aiida.engine import calcfunction, workfunction, CalcJob, WorkChain
 from aiida import orm
 from aiida.orm.nodes.process.calculation.calcfunction import CalcFunctionNode
@@ -7,6 +7,7 @@ from aiida.orm.nodes.process.workflow.workfunction import WorkFunctionNode
 from aiida.engine.processes.ports import PortNamespace
 import cloudpickle as pickle
 from aiida_workgraph.task import Task
+from aiida_workgraph.orm.function_data import PickledFunction
 
 task_types = {
     CalcFunctionNode: "CALCFUNCTION",
@@ -242,7 +243,7 @@ def build_task_from_AiiDA(
             else outputs
         )
         # get the source code of the function
-        tdata["executor"] = serialize_function(executor)
+        tdata["executor"] = PickledFunction(executor).executor
         # tdata["executor"]["type"] = tdata["task_type"]
     # print("kwargs: ", kwargs)
     # add built-in sockets
@@ -491,7 +492,7 @@ def generate_tdata(
         "properties": properties,
         "inputs": _inputs,
         "outputs": task_outputs,
-        "executor": serialize_function(func),
+        "executor": PickledFunction(func).executor,
         "catalog": catalog,
     }
     if additional_data:

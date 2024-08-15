@@ -1,6 +1,9 @@
 """`Data` sub class to represent any data using pickle."""
 
 from aiida import orm
+import sys
+import cloudpickle
+from pickle import UnpicklingError
 
 
 class Dict(orm.Dict):
@@ -16,12 +19,14 @@ class List(orm.List):
 
 
 class GeneralData(orm.Data):
-    """`Data to represent a pickled value."""
+    """Data to represent a pickled value using cloudpickle."""
+
+    FILENAME = "value.pkl"  # Class attribute to store the filename
 
     def __init__(self, value=None, **kwargs):
-        """Initialise a ``General`` node instance.
+        """Initialize a `GeneralData` node instance.
 
-        :param value: list to initialise the ``List`` node from
+        :param value: raw Python value to initialize the `GeneralData` node from.
         """
         super().__init__(**kwargs)
         self.set_value(value)
@@ -33,53 +38,49 @@ class GeneralData(orm.Data):
     def value(self):
         """Return the contents of this node.
 
-        :return: a value
+        :return: The unpickled value.
         """
         return self.get_value()
 
     @value.setter
     def value(self, value):
-        return self.set_value(value)
+        self.set_value(value)
 
     def get_value(self):
-        """Return the contents of this node.
+        """Return the contents of this node, unpickling the stored value.
 
-        :return: a value
+        :return: The unpickled value.
         """
-        import cloudpickle as pickle
+        return self._get_value_from_file()
 
-        def get_value_from_file(self):
-            filename = "value.pkl"
-            # Open a handle in binary read mode as the arrays are written as binary files as well
-            with self.base.repository.open(filename, mode="rb") as f:
-                return pickle.loads(f.read())  # pylint: disable=unexpected-keyword-arg
-
-        # Return with proper caching if the node is stored, otherwise always re-read from disk
-        return get_value_from_file(self)
+    def _get_value_from_file(self):
+        """Read the pickled value from file and return it."""
+        try:
+            with self.base.repository.open(self.FILENAME, mode="rb") as f:
+                return cloudpickle.loads(f.read())  # Deserialize the value
+        except (UnpicklingError, ValueError) as e:
+            raise ImportError(
+                "Failed to load the pickled value. This may be due to an incompatible pickle protocol. "
+                "Please ensure that the correct environment and cloudpickle version are being used."
+            ) from e
+        except ModuleNotFoundError as e:
+            raise ImportError(
+                "Failed to load the pickled value. This may be due to a missing module. "
+                "Please ensure that the correct environment and cloudpickle version are being used."
+            ) from e
 
     def set_value(self, value):
-        """Set the contents of this node.
+        """Set the contents of this node by pickling the provided value.
 
-        :param value: the value to set
+        :param value: The Python value to pickle and store.
         """
-        import cloudpickle as pickle
-        import sys
+        # Serialize the value and store it
+        serialized_value = cloudpickle.dumps(value)
+        self.base.repository.put_object_from_bytes(serialized_value, self.FILENAME)
 
-        self.base.repository.put_object_from_bytes(pickle.dumps(value), "value.pkl")
+        # Store relevant metadata
         python_version = f"{sys.version_info.major}.{sys.version_info.minor}"
         self.base.attributes.set("python_version", python_version)
-
-    def _using_value_reference(self):
-        """This function tells the class if we are using a list reference.  This
-        means that calls to self.get_value return a reference rather than a copy
-        of the underlying list and therefore self.set_value need not be called.
-        This knwoledge is essential to make sure this class is performant.
-
-        Currently the implementation assumes that if the node needs to be
-        stored then it is using the attributes cache which is a reference.
-
-        :return: True if using self.get_value returns a reference to the
-            underlying sequence.  False otherwise.
-        :rtype: bool
-        """
-        return self.is_stored
+        self.base.attributes.set("serializer_module", cloudpickle.__name__)
+        self.base.attributes.set("serializer_version", cloudpickle.__version__)
+        self.base.attributes.set("pickle_protocol", cloudpickle.DEFAULT_PROTOCOL)

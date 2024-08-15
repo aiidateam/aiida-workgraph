@@ -76,7 +76,7 @@ def test_PythonJob_typing():
     """Test function with typing."""
     from numpy import array
     from ase import Atoms
-    from aiida_workgraph.utils import get_required_imports
+    from aiida_workgraph.orm.function_data import PickledFunction
     from typing import List
 
     def generate_structures(
@@ -96,14 +96,14 @@ def test_PythonJob_typing():
     ) -> list[Atoms]:
         pass
 
-    modules = get_required_imports(generate_structures)
+    modules = PickledFunction.get_required_imports(generate_structures)
     assert modules == {
         "ase.atoms": {"Atoms"},
         "typing": {"List"},
         "builtins": {"list"},
         "numpy": {"array"},
     }
-    modules = get_required_imports(generate_structures_2)
+    modules = PickledFunction.get_required_imports(generate_structures_2)
     assert modules == {"ase.atoms": {"Atoms"}, "builtins": {"list", "str"}}
 
 

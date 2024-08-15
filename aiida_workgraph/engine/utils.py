@@ -90,7 +90,7 @@ def prepare_for_python_task(task: dict, kwargs: dict, var_kwargs: dict) -> dict:
         + task["executor"]["function_source_code_without_decorator"]
     )
     # outputs
-    output_info = task["outputs"]
+    function_outputs = task["outputs"]
     # serialize the kwargs into AiiDA Data
     function_kwargs = serialize_to_aiida_nodes(function_kwargs)
     # transfer the args to kwargs
@@ -101,7 +101,7 @@ def prepare_for_python_task(task: dict, kwargs: dict, var_kwargs: dict) -> dict:
         "code": code,
         "function_kwargs": function_kwargs,
         "upload_files": new_upload_files,
-        "output_info": orm.List(output_info),
+        "function_outputs": orm.List(function_outputs),
         "metadata": metadata,
         **kwargs,
     }
