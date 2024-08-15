@@ -84,3 +84,35 @@ npm --prefix aiida_workgraph/web/frontend cache clean
 ```
 
 and also clear your browsers cache or try to start new private window.
+
+
+### Building the docs
+
+We use sphinx to build the docs. You need the requirements in the extra
+`.[docs]` dependency and the `docs/requirements.txt`. We have a `docs/Makefile`
+that runs sphinx-build to build the docs.
+
+```console
+pip install .[docs]
+pip install -r docs/requirements.txt
+make -C docs html
+<YOUR-BROWSER> docs/build/html/index.html
+```
+
+#### Creating a new sphinx source file with executable code
+
+We use sphinx-gallery to integrate executable code into the doc. For that we
+need create a sphinx-gallery script (an extended python file that can be parsed by
+sphinx-gallery to generate an `.rst` with more structure) instead of a `.rst`
+file. One can create a sphinx-gallery script from a jupyter notebook using the
+[script](https://gist.github.com/chsasank/7218ca16f8d022e02a9c0deb94a310fe).
+To execute the script you might need to install pandoc
+```console
+pip install pypandoc pypandoc_binary
+```
+We put the converted sphinx-gallery script file `<SCRIPT>.py` to the gallery
+source folder `docs/gallery/<FOLDER>/autogen`. where `<FOLDER>` is the folder
+you want to attach the generated file in the sphinx source ( `docs/source`).
+Then in the `docs/source/<FOLDER>/index.rst` add `autogen/<SCRIPT>` to the
+toctree. The sphinx-gallery script will be converted to a `.rst` file during
+building time.
