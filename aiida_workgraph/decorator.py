@@ -663,6 +663,23 @@ class TaskDecoratorCollection:
 
         return decorator
 
+    @staticmethod
+    @nonfunctional_usage
+    def awaitable(**kwargs: Any) -> Callable:
+        def decorator(func):
+            # Then, apply task decorator
+            task_decorated = build_task_from_callable(
+                func,
+                inputs=kwargs.get("inputs", []),
+                outputs=kwargs.get("outputs", []),
+            )
+            task_decorated.node_type = "awaitable"
+            func.identifier = "awaitable"
+            func.task = func.node = task_decorated
+            return func
+
+        return decorator
+
     # Making decorator_task accessible as 'task'
     task = decorator_task
 

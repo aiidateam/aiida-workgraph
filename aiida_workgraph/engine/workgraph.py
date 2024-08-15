@@ -1,6 +1,7 @@
 """AiiDA workflow components: WorkGraph."""
 from __future__ import annotations
 
+import asyncio
 import collections.abc
 import functools
 import logging
@@ -236,9 +237,15 @@ class WorkGraphEngine(Process, metaclass=Protect):
             raise AssertionError(f"Unsupported awaitable action: {awaitable.action}")
 
         awaitable.resolved = True
-        self._awaitables.remove(
-            awaitable
-        )  # remove only if everything went ok, otherwise we may lose track
+        # find awaitable in the self._awaitables with the same pk and remove it
+        for index, a in enumerate(self._awaitables):
+            if a.pk == awaitable.pk:
+                self._awaitables.pop(index)
+                break
+
+        # self._awaitables.remove(
+        # awaitable
+        # )  # remove only if everything went ok, otherwise we may lose track
 
         if not self.has_terminated():
             # the process may be terminated, for example, if the process was killed or excepted
@@ -336,6 +343,7 @@ class WorkGraphEngine(Process, metaclass=Protect):
         super().on_wait(awaitables)
         if self._awaitables:
             self._action_awaitables()
+            self.report("Process status: {}".format(self.node.process_status))
         else:
             self.call_soon(self.resume)
 
@@ -356,6 +364,9 @@ class WorkGraphEngine(Process, metaclass=Protect):
                 )
                 self.runner.call_on_process_finish(awaitable.pk, callback)
                 self.ctx._awaitable_actions.append(awaitable.pk)
+            elif awaitable.target == "asyncio.tasks.Task":
+                # this is a awaitable task, we need to run it again
+                self.ctx._awaitable_actions.append(awaitable.pk)
             else:
                 assert f"invalid awaitable target '{awaitable.target}'"
 
@@ -369,22 +380,34 @@ class WorkGraphEngine(Process, metaclass=Protect):
         """
         print("on awaitable finished: ", awaitable.key)
         self.logger.info(
-            "received callback that awaitable %d has terminated", awaitable.pk
+            "received callback that awaitable %d has terminated", awaitable.key
         )
 
-        try:
-            node = load_node(awaitable.pk)
-        except (exceptions.MultipleObjectsError, exceptions.NotExistent):
-            raise ValueError(
-                f"provided pk<{awaitable.pk}> could not be resolved to a valid Node instance"
-            )
+        if isinstance(awaitable.pk, int):
+            try:
+                node = load_node(awaitable.pk)
+            except (exceptions.MultipleObjectsError, exceptions.NotExistent):
+                raise ValueError(
+                    f"provided pk<{awaitable.pk}> could not be resolved to a valid Node instance"
+                )
 
-        if awaitable.outputs:
-            value = {
-                entry.link_label: entry.node for entry in node.base.links.get_outgoing()
-            }
+            if awaitable.outputs:
+                value = {
+                    entry.link_label: entry.node
+                    for entry in node.base.links.get_outgoing()
+                }
+            else:
+                value = node  # type: ignore
         else:
-            value = node  # type: ignore
+            try:
+                results = awaitable.result()
+                self.set_normal_task_results(awaitable.key, results)
+            except Exception as e:
+                self.logger.error(f"Error in awaitable {awaitable.key}: {e}")
+                self.set_task_state_info(awaitable.key, "state", "FAILED")
+                self.report(f"Task: {awaitable.key} failed.")
+                self.run_error_handlers(awaitable.key)
+            value = None
 
         self._resolve_awaitable(awaitable, value)
 
@@ -422,7 +445,6 @@ class WorkGraphEngine(Process, metaclass=Protect):
         # track if the awaitable callback is added to the runner
         self.ctx._awaitable_actions = []
         self.ctx._new_data = {}
-        self.ctx._input_tasks = {}
         self.ctx._executed_tasks = []
         # read the latest workgraph data
         wgdata = self.read_wgdata_from_base()
@@ -646,9 +668,27 @@ class WorkGraphEngine(Process, metaclass=Protect):
             self.task_set_context(name)
             self.report(f"Task: {name} finished.")
         else:
-            task["results"] = None
+            task.setdefault("results", None)
 
         self.update_parent_task_state(name)
+
+    def set_normal_task_results(self, name, results):
+        """Set the results of a normal task."""
+        task = self.ctx._tasks[name]
+        if isinstance(results, tuple):
+            if len(task["outputs"]) != len(results):
+                return self.exit_codes.OUTPUS_NOT_MATCH_RESULTS
+            for i in range(len(task["outputs"])):
+                task["results"][task["outputs"][i]["name"]] = results[i]
+        elif isinstance(results, dict):
+            task["results"] = results
+        else:
+            task["results"][task["outputs"][0]["name"]] = results
+        self.set_task_state_info(name, "state", "FINISHED")
+        self.task_set_context(name)
+        self.report(f"Task: {name} finished.")
+        self.update_parent_task_state(name)
+        print("set normal task results: ", name, "results: ", task["results"])
 
     def update_parent_task_state(self, name: str) -> None:
         """Update parent task state."""
@@ -896,8 +936,8 @@ class WorkGraphEngine(Process, metaclass=Protect):
                 kwargs[key] = args[i]
             # update the port namespace
             kwargs = update_nested_dict_with_special_keys(kwargs)
-            # print("args: ", args)
-            # print("kwargs: ", kwargs)
+            print("args: ", args)
+            print("kwargs: ", kwargs)
             # print("var_kwargs: ", var_kwargs)
             # kwargs["meta.label"] = name
             # output must be a Data type or a mapping of {string: Data}
@@ -936,8 +976,7 @@ class WorkGraphEngine(Process, metaclass=Protect):
                     self.set_task_state_info(name, "process", process)
                     self.update_task_state(name)
                 except Exception as e:
-                    print(e)
-                    self.report(e)
+                    self.logger.error(f"Error in task {name}: {e}")
                     self.set_task_state_info(name, "state", "FAILED")
                     # set child state to FAILED
                     self.set_tasks_state(
@@ -1066,6 +1105,27 @@ class WorkGraphEngine(Process, metaclass=Protect):
                 self.set_task_state_info(name, "state", "FINISHED")
                 self.update_parent_task_state(name)
                 self.continue_workgraph()
+            elif task["metadata"]["node_type"].upper() in ["AWAITABLE"]:
+                for key in self.ctx._tasks[name]["metadata"]["args"]:
+                    kwargs.pop(key, None)
+                awaitable_target = asyncio.ensure_future(
+                    self.run_executor(executor, args, kwargs, var_args, var_kwargs),
+                    loop=self.loop,
+                )
+                awaitable = Awaitable(
+                    **{
+                        "pk": name,
+                        "action": AwaitableAction.ASSIGN,
+                        "target": "asyncio.tasks.Task",
+                        "outputs": False,
+                    }
+                )
+                awaitable_target.key = name
+                awaitable_target.pk = name
+                awaitable_target.action = AwaitableAction.ASSIGN
+                awaitable_target.add_done_callback(self._on_awaitable_finished)
+                self.set_task_state_info(name, "state", "RUNNING")
+                self.to_context(**{name: awaitable})
             elif task["metadata"]["node_type"].upper() in ["NORMAL"]:
                 # normal function does not have a process
                 if "context" in task["metadata"]["kwargs"]:
@@ -1073,27 +1133,20 @@ class WorkGraphEngine(Process, metaclass=Protect):
                     kwargs.update({"context": self.ctx})
                 for key in self.ctx._tasks[name]["metadata"]["args"]:
                     kwargs.pop(key, None)
-                results = self.run_executor(
-                    executor, args, kwargs, var_args, var_kwargs
-                )
-                # self.set_task_state_info(task["name"], "process", results)
-                if isinstance(results, tuple):
-                    if len(task["outputs"]) != len(results):
-                        return self.exit_codes.OUTPUS_NOT_MATCH_RESULTS
-                    for i in range(len(task["outputs"])):
-                        task["results"][task["outputs"][i]["name"]] = results[i]
-                elif isinstance(results, dict):
-                    task["results"] = results
-                else:
-                    task["results"][task["outputs"][0]["name"]] = results
-                # save the results to the database (as a extra field of the task)
-                # this is disabled
-                # self.save_results_to_extras(name)
-                self.ctx._input_tasks[name] = results
-                self.set_task_state_info(name, "state", "FINISHED")
-                self.task_set_context(name)
-                self.report(f"Task: {name} finished.")
-                self.update_parent_task_state(name)
+                try:
+                    results = self.run_executor(
+                        executor, args, kwargs, var_args, var_kwargs
+                    )
+                    self.set_normal_task_results(name, results)
+                except Exception as e:
+                    self.logger.error(f"Error in task {name}: {e}")
+                    self.set_task_state_info(name, "state", "FAILED")
+                    # set child tasks state to SKIPPED
+                    self.set_tasks_state(
+                        self.ctx._connectivity["child_node"][name], "SKIPPED"
+                    )
+                    self.report(f"Task: {name} failed.")
+                    self.run_error_handlers(name)
                 if continue_workgraph:
                     self.continue_workgraph()
             else:
