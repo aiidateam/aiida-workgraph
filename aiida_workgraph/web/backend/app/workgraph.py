@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException, Query
 from aiida import orm
-from typing import List
+from typing import List, Dict, Union
 import time
 
 router = APIRouter()
@@ -159,17 +159,28 @@ async def play_workgraph(
 @router.delete("/api/workgraph/delete/{id}")
 async def delete_workgraph(
     id: int,
-):
+    dry_run: bool = False,
+) -> Dict[str, Union[bool, str, List[int]]]:
     from aiida.tools import delete_nodes
 
     try:
         # Perform the delete action here
-        _, was_deleted = delete_nodes([id], dry_run=False)
-
+        deleted_nodes, was_deleted = delete_nodes([id], dry_run=dry_run)
         if was_deleted:
-            return {"message": f"Deleted workgraph {id}"}
+            return {
+                "deleted": True,
+                "message": f"Deleted workgraph {id}",
+                "deleted_nodes": list(deleted_nodes),
+            }
         else:
-            return {"message": f"Failed to delete workgraph {id}"}
+            message = f"Did not delete workgraph {id}"
+            if dry_run:
+                message += " [dry-run]"
+            return {
+                "deleted": False,
+                "message": message,
+                "deleted_nodes": list(deleted_nodes),
+            }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

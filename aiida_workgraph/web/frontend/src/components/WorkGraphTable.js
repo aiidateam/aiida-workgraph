@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom';
 import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { FaPlay, FaPause, FaTrash } from 'react-icons/fa'; // Import icons from react-icons
+import WorkGraphConfirmModal from './WorkGraphModals';
 import './WorkGraphTable.css'; // Import a custom CSS file for styling
 
 
@@ -97,7 +98,7 @@ function WorkGraph() {
     };
 
     // Function to handle delete click
-    const handleDeleteClick = (item) => {
+      const handleDeleteNode = (item) => {
         // Make an API request to delete the workgraph item
         fetch(`http://localhost:8000/api/workgraph/delete/${item.pk}`, {
             method: 'DELETE',
@@ -105,7 +106,7 @@ function WorkGraph() {
         .then(response => response.json())
         .then(data => {
             // Show toast notification for success or error
-            if (data.message) {
+            if (data.deleted) {
                 toast.success(data.message);
                 // Refresh the table after delete (you may fetch the updated data here)
                 fetch(`http://localhost:8000/api/workgraph-data?search=${searchQuery}`)
@@ -118,6 +119,48 @@ function WorkGraph() {
         })
         .catch(error => console.error('Error deleting item: ', error));
     };
+
+    const [toDeleteItem, setToDeleteItem] = useState(null);
+    const [showConfirmDeleteModal, setShowConfirmDeleteModal] = useState(false);
+    const [bodyTextConfirmDeleteModal, setBodyTextConfirmDeleteModal] =  useState(<p></p>);
+    // useEffect to ensure this happens after the toDeletItem has been updated by the delete button click
+    useEffect(() => {
+        if (toDeleteItem != null) {
+          fetch(`http://localhost:8000/api/workgraph/delete/${toDeleteItem.pk}?dry_run=True`, {
+              method: 'DELETE',
+          })
+          .then(response => response.json())
+          .then(data => {
+              if (data.deleted_nodes.length > 0) {
+                // the node {item.pk} will be always in the list if the deletion is successfull
+                if (data.deleted_nodes.length > 1) {
+                  let formatted_pks = data.deleted_nodes.map((x) => ` ${x.toString()}`);
+                  data.deleted_nodes.splice(data.deleted_nodes.indexOf(toDeleteItem.pk), 1)
+                  setBodyTextConfirmDeleteModal(
+                    <p>
+                    Are you sure you want to delete node PK&lt;{toDeleteItem.pk}&gt; and {data.deleted_nodes.length} its dependent nodes?
+                    <b> A deletion is irreversible.</b>
+                    <br/><br/>
+                    List of PKs of nodes dependent on the node PK&lt;{toDeleteItem.pk}&gt; that also will be deleted:
+                    <br/> {formatted_pks.toString()}
+                    </p>
+                  );
+                } else {
+                  setBodyTextConfirmDeleteModal(
+                    <p>
+                    Are you sure you want to delete node {toDeleteItem.pk}?
+                    <b> A deletion is irreversible.</b>
+                    </p>
+                  );
+                }
+                setShowConfirmDeleteModal(true)
+              } else {
+                  toast.error('Error deleting item.');
+              }
+          })
+          .catch(error => console.error('Error deleting item: ', error));
+        };
+      }, [toDeleteItem]);
 
     return (
         <div>
@@ -153,7 +196,17 @@ function WorkGraph() {
                             <td>
                                 <button onClick={() => handlePauseClick(item)} className="action-button pause-button"><FaPause /></button>
                                 <button onClick={() => handlePlayClick(item)} className="action-button play-button"><FaPlay /></button>
-                                <button onClick={() => handleDeleteClick(item)} className="action-button delete-button"><FaTrash /></button>
+                                <button
+                                  onClick={
+                                    () =>
+                                    {
+                                      // we need to copy it to change the reference
+                                      // so useEffect hook gets activated
+                                      setToDeleteItem(structuredClone(item));
+                                    }
+                                  }
+                                  className="action-button delete-button"><FaTrash />
+                                </button>
                             </td>
                         </tr>
                     ))}
@@ -174,6 +227,13 @@ function WorkGraph() {
                 breakClassName={'pageBreak'}
             />
             <ToastContainer autoClose={3000} />
+            <WorkGraphConfirmModal
+                show={showConfirmDeleteModal}
+                setShow={setShowConfirmDeleteModal}
+                confirmAction={() => handleDeleteNode(toDeleteItem)}
+                cancelAction={() => {}}
+                bodyText={bodyTextConfirmDeleteModal}
+            />
         </div>
     );
 }

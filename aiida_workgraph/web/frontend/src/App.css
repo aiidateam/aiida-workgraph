@@ -1,3 +1,5 @@
+@import 'bootstrap/dist/css/bootstrap.min.css';
+
 .App {
   text-align: center;
   display: flex;
@@ -50,7 +52,7 @@
   box-shadow: 0 0 20px rgba(0, 0, 0, 0.15);
 }
 
-.table thead tr {
+.table thead th {
   background-color: #009879;
   color: #ffffff;
   text-align: left;

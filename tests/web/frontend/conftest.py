@@ -170,8 +170,8 @@ def browser():
 def page(browser):
     with browser.new_page() as page:
         # 5 seconds
-        page.set_default_timeout(5000)
-        page.set_default_navigation_timeout(5000)
+        page.set_default_timeout(5_000)
+        page.set_default_navigation_timeout(5_000)
         expect.set_options(timeout=5_000)
         yield page
         page.close()
