@@ -17,6 +17,7 @@ from aiida.orm import (
     RemoteData,
     to_aiida_type,
 )
+from aiida_workgraph.orm.function_data import PickledFunction, to_pickled_function
 
 
 __all__ = ("PythonJob",)
@@ -31,6 +32,7 @@ class PythonJob(CalcJob):
 
     _DEFAULT_INPUT_FILE = "script.py"
     _DEFAULT_OUTPUT_FILE = "aiida.out"
+    _DEFAULT_PARENT_FOLDER_NAME = "./parent_folder/"
 
     _default_parser = "workgraph.python"
 
@@ -41,6 +43,12 @@ class PythonJob(CalcJob):
         :param spec: the calculation job process spec to define.
         """
         super().define(spec)
+        spec.input(
+            "function",
+            valid_type=PickledFunction,
+            serializer=to_pickled_function,
+            required=False,
+        )
         spec.input(
             "function_source_code",
             valid_type=Str,
@@ -57,8 +65,9 @@ class PythonJob(CalcJob):
             "function_kwargs", valid_type=Data, required=False
         )  # , serializer=serialize_to_aiida_nodes)
         spec.input(
-            "output_info",
+            "function_outputs",
             valid_type=List,
+            default=lambda: List(),
             required=False,
             serializer=to_aiida_type,
             help="The information of the output ports",
@@ -72,7 +81,6 @@ class PythonJob(CalcJob):
         spec.input(
             "parent_folder_name",
             valid_type=Str,
-            default=lambda: Str("./parent_folder/"),
             required=False,
             serializer=to_aiida_type,
             help="""Default name of the subfolder that you want to create in the working directory,
@@ -140,16 +148,36 @@ class PythonJob(CalcJob):
 
         :returns: The process label to use for ``ProcessNode`` instances.
         """
-        if self.inputs.process_label:
+        if "process_label" in self.inputs:
             return self.inputs.process_label.value
         else:
-            return f"PythonJob<{self.inputs.function_name.value}>"
+            data = self.get_function_data()
+            return f"PythonJob<{data['function_name']}>"
 
     def on_create(self) -> None:
         """Called when a Process is created."""
 
         super().on_create()
-        self.node.label = self.inputs.process_label.value
+        self.node.label = self._build_process_label()
+
+    def get_function_data(self) -> dict[str, t.Any]:
+        """Get the function data.
+
+        :returns: The function data.
+        """
+        if "function" in self.inputs:
+            metadata = self.inputs.function.metadata
+            metadata["function_source_code"] = (
+                metadata["import_statements"]
+                + "\n"
+                + metadata["function_source_code_without_decorator"]
+            )
+            return metadata
+        else:
+            return {
+                "function_source_code": self.inputs.function_source_code.value,
+                "function_name": self.inputs.function_name.value,
+            }
 
     def prepare_for_submission(self, folder: Folder) -> CalcInfo:
         """Prepare the calculation for submission.
@@ -169,21 +197,24 @@ class PythonJob(CalcJob):
             inputs = dict(self.inputs.function_kwargs)
         else:
             inputs = {}
-        # get the value of pickled function
-        function_source_code = self.inputs.function_source_code.value
+        if "parent_folder_name" in self.inputs:
+            parent_folder_name = self.inputs.parent_folder_name.value
+        else:
+            parent_folder_name = self._DEFAULT_PARENT_FOLDER_NAME
+        function_data = self.get_function_data()
         # create python script to run the function
         script = f"""
 import pickle
 
 # define the function
-{function_source_code}
+{function_data["function_source_code"]}
 
 # load the inputs from the pickle file
 with open('inputs.pickle', 'rb') as handle:
     inputs = pickle.load(handle)
 
 # run the function
-result = {self.inputs.function_name.value}(**inputs)
+result = {function_data["function_name"]}(**inputs)
 # save the result as a pickle file
 with open('results.pickle', 'wb') as handle:
     pickle.dump(result, handle)
@@ -213,7 +244,7 @@ with open('results.pickle', 'wb') as handle:
                     (
                         source.computer.uuid,
                         str(dirpath),
-                        self.inputs.parent_folder_name.value,
+                        parent_folder_name,
                     )
                 )
             elif isinstance(source, FolderData):
@@ -222,12 +253,10 @@ with open('results.pickle', 'wb') as handle:
                     if self.inputs.parent_output_folder is not None
                     else ""
                 )
-                local_copy_list.append(
-                    (source.uuid, dirname, self.inputs.parent_folder_name.value)
-                )
+                local_copy_list.append((source.uuid, dirname, parent_folder_name))
             elif isinstance(source, SinglefileData):
                 local_copy_list.append((source.uuid, source.filename, source.filename))
-        if self.inputs.upload_files:
+        if "upload_files" in self.inputs:
             upload_files = self.inputs.upload_files
             for key, source in upload_files.items():
                 # replace "_dot_" with "." in the key

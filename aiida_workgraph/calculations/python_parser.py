@@ -9,8 +9,8 @@ class PythonParser(Parser):
     def parse(self, **kwargs):
         """Parse the contents of the output files stored in the `retrieved` output node.
 
-        The outputs could be a namespce, e.g.,
-        outputs=[
+        The function_outputs could be a namespce, e.g.,
+        function_outputs=[
             {"identifier": "workgraph.namespace", "name": "add_multiply"},
             {"name": "add_multiply.add"},
             {"name": "add_multiply.multiply"},
@@ -19,11 +19,11 @@ class PythonParser(Parser):
         """
         import pickle
 
-        output_info = self.node.inputs.output_info.get_list()
-        # output_info exclude ['_wait', '_outputs', 'remote_folder', 'remote_stash', 'retrieved']
+        function_outputs = self.node.inputs.function_outputs.get_list()
+        # function_outputs exclude ['_wait', '_outputs', 'remote_folder', 'remote_stash', 'retrieved']
         self.output_list = [
             data
-            for data in output_info
+            for data in function_outputs
             if data["name"]
             not in [
                 "_wait",
@@ -86,7 +86,8 @@ class PythonParser(Parser):
                     self.out(output["name"], output["value"])
         except OSError:
             return self.exit_codes.ERROR_READING_OUTPUT_FILE
-        except ValueError:
+        except ValueError as exception:
+            self.logger.error(exception)
             return self.exit_codes.ERROR_INVALID_OUTPUT
 
     def find_output(self, name):
@@ -100,7 +101,7 @@ class PythonParser(Parser):
         """Serialize outputs."""
 
         name = output["name"]
-        if output["identifier"].upper() == "WORKGRAPH.NAMESPACE":
+        if output.get("identifier", "Any").upper() == "WORKGRAPH.NAMESPACE":
             if isinstance(result, dict):
                 serialized_result = {}
                 for key, value in result.items():
@@ -108,7 +109,7 @@ class PythonParser(Parser):
                     full_name_output = self.find_output(full_name)
                     if (
                         full_name_output
-                        and full_name_output["identifier"].upper()
+                        and full_name_output.get("identifier", "Any").upper()
                         == "WORKGRAPH.NAMESPACE"
                     ):
                         serialized_result[key] = self.serialize_output(

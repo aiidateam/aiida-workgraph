@@ -148,3 +148,8 @@ class PickledFunction(GeneralData):
             add_imports(type_hint)
 
         return imports
+
+
+def to_pickled_function(value):
+    """Convert a Python function to a `PickledFunction` instance."""
+    return PickledFunction(value)
