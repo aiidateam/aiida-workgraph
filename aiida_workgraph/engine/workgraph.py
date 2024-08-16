@@ -936,8 +936,8 @@ class WorkGraphEngine(Process, metaclass=Protect):
                 kwargs[key] = args[i]
             # update the port namespace
             kwargs = update_nested_dict_with_special_keys(kwargs)
-            print("args: ", args)
-            print("kwargs: ", kwargs)
+            # print("args: ", args)
+            # print("kwargs: ", kwargs)
             # print("var_kwargs: ", var_kwargs)
             # kwargs["meta.label"] = name
             # output must be a Data type or a mapping of {string: Data}
@@ -1110,6 +1110,31 @@ class WorkGraphEngine(Process, metaclass=Protect):
                     kwargs.pop(key, None)
                 awaitable_target = asyncio.ensure_future(
                     self.run_executor(executor, args, kwargs, var_args, var_kwargs),
+                    loop=self.loop,
+                )
+                awaitable = Awaitable(
+                    **{
+                        "pk": name,
+                        "action": AwaitableAction.ASSIGN,
+                        "target": "asyncio.tasks.Task",
+                        "outputs": False,
+                    }
+                )
+                awaitable_target.key = name
+                awaitable_target.pk = name
+                awaitable_target.action = AwaitableAction.ASSIGN
+                awaitable_target.add_done_callback(self._on_awaitable_finished)
+                self.set_task_state_info(name, "state", "RUNNING")
+                self.to_context(**{name: awaitable})
+            elif task["metadata"]["node_type"].upper() in ["MONITOR"]:
+                from aiida_workgraph.executors.builtins import monitor
+
+                for key in self.ctx._tasks[name]["metadata"]["args"]:
+                    kwargs.pop(key, None)
+                # add function and interval to the args
+                args = [executor, kwargs.pop("interval", 1), *args]
+                awaitable_target = asyncio.ensure_future(
+                    self.run_executor(monitor, args, kwargs, var_args, var_kwargs),
                     loop=self.loop,
                 )
                 awaitable = Awaitable(

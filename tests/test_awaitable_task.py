@@ -1,6 +1,8 @@
 from aiida_workgraph import WorkGraph, task
 import asyncio
 from aiida.cmdline.utils.common import get_workchain_report
+import datetime
+import os
 
 
 def test_awaitable_task(decorated_add):
@@ -19,3 +21,47 @@ def test_awaitable_task(decorated_add):
     report = get_workchain_report(wg.process, "REPORT")
     assert "Waiting for child processes: awaitable_func1" in report
     assert add1.outputs["result"].value == 4
+
+
+def test_time_monitor(decorated_add):
+    """Test the time monitor task."""
+    wg = WorkGraph(name="test_time_monitor")
+    monitor1 = wg.add_task(
+        "workgraph.time_monitor",
+        "monitor1",
+        datetime=datetime.datetime.now() + datetime.timedelta(seconds=10),
+    )
+    add1 = wg.add_task(decorated_add, "add1", x=1, y=2)
+    add1.waiting_on.add(monitor1)
+    wg.run()
+    report = get_workchain_report(wg.process, "REPORT")
+    assert "Waiting for child processes: monitor1" in report
+    assert add1.outputs["result"].value == 3
+
+
+def test_file_monitor(decorated_add):
+    """Test the file monitor task."""
+
+    @task.awaitable()
+    async def create_test_file(filepath="/tmp/test_file_monitor.txt", t=2):
+        await asyncio.sleep(t)
+        with open(filepath, "w") as f:
+            f.write("test")
+
+    # remove the test file if it exists
+    try:
+        os.remove("/tmp/test_file_monitor.txt")
+    except FileNotFoundError:
+        pass
+
+    wg = WorkGraph(name="test_file_monitor")
+    monitor1 = wg.add_task(
+        "workgraph.file_monitor", name="monitor1", filepath="/tmp/test_file_monitor.txt"
+    )
+    wg.add_task(create_test_file, "create_test_file1")
+    add1 = wg.add_task(decorated_add, "add1", x=1, y=2)
+    add1.waiting_on.add(monitor1)
+    wg.run()
+    report = get_workchain_report(wg.process, "REPORT")
+    assert "Waiting for child processes: monitor1" in report
+    assert add1.outputs["result"].value == 3
