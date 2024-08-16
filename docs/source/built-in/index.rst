@@ -10,3 +10,4 @@ This section contains a collection of built-in tasks that are used in the AiiDA 
 
    pythonjob
    shelljob
+   monitor
