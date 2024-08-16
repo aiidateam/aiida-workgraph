@@ -34,6 +34,7 @@ from aiida.engine import run_get_node
 from aiida_workgraph.utils import create_and_pause_process
 from aiida_workgraph.task import Task
 from aiida_workgraph.utils import get_nested_dict, update_nested_dict
+from aiida_workgraph.executors.monitors import monitor
 
 if t.TYPE_CHECKING:
     from aiida.engine.runners import Runner  # pylint: disable=unused-import
@@ -1127,7 +1128,6 @@ class WorkGraphEngine(Process, metaclass=Protect):
                 self.set_task_state_info(name, "state", "RUNNING")
                 self.to_context(**{name: awaitable})
             elif task["metadata"]["node_type"].upper() in ["MONITOR"]:
-                from aiida_workgraph.executors.builtins import monitor
 
                 for key in self.ctx._tasks[name]["metadata"]["args"]:
                     kwargs.pop(key, None)

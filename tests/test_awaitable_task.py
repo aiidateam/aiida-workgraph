@@ -3,6 +3,7 @@ import asyncio
 from aiida.cmdline.utils.common import get_workchain_report
 import datetime
 import os
+import pytest
 
 
 def test_awaitable_task(decorated_add):
@@ -65,3 +66,24 @@ def test_file_monitor(decorated_add):
     report = get_workchain_report(wg.process, "REPORT")
     assert "Waiting for child processes: monitor1" in report
     assert add1.outputs["result"].value == 3
+
+
+@pytest.mark.usefixtures("started_daemon_client")
+def test_task_monitor(decorated_add):
+    """Test the file monitor task."""
+    wg2 = WorkGraph(name="test_task_monitor2")
+    monitor1 = wg2.add_task(
+        "workgraph.task_monitor",
+        name="monitor1",
+        workgraph_name="test_task_monitor1",
+        task_name="add1",
+    )
+    add1 = wg2.add_task(decorated_add, "add1", x=1, y=2, t=0)
+    add1.waiting_on.add(monitor1)
+    wg2.submit()
+    #
+    wg1 = WorkGraph(name="test_task_monitor1")
+    add1 = wg1.add_task(decorated_add, "add1", x=1, y=2, t=5)
+    wg1.submit(wait=True)
+    wg2.wait()
+    assert wg2.tasks["add1"].node.ctime > wg1.tasks["add1"].node.ctime

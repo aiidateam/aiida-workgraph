@@ -10,30 +10,6 @@ def select(condition, true, false):
     return false
 
 
-async def monitor(function, interval, *args, **kwargs):
-    import asyncio
-
-    while True:
-        result = function(*args, **kwargs)
-        if result:
-            break
-        await asyncio.sleep(interval)
-
-
-def file_monitor(filename):
-    """Check if the file exists."""
-    import os
-
-    return os.path.exists(filename)
-
-
-def time_monitor(time):
-    """Return True if the current time is greater than the given time."""
-    import datetime
-
-    return datetime.datetime.now() > time
-
-
 class GatherWorkChain(WorkChain):
     @classmethod
     def define(cls, spec: WorkChainSpec) -> None:
