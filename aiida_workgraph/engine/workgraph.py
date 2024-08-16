@@ -366,7 +366,7 @@ class WorkGraphEngine(Process, metaclass=Protect):
                 self.runner.call_on_process_finish(awaitable.pk, callback)
                 self.ctx._awaitable_actions.append(awaitable.pk)
             elif awaitable.target == "asyncio.tasks.Task":
-                # this is a awaitable task, we need to run it again
+                # this is a awaitable task, the callback function is already set
                 self.ctx._awaitable_actions.append(awaitable.pk)
             else:
                 assert f"invalid awaitable target '{awaitable.target}'"
@@ -1113,18 +1113,7 @@ class WorkGraphEngine(Process, metaclass=Protect):
                     self.run_executor(executor, args, kwargs, var_args, var_kwargs),
                     loop=self.loop,
                 )
-                awaitable = Awaitable(
-                    **{
-                        "pk": name,
-                        "action": AwaitableAction.ASSIGN,
-                        "target": "asyncio.tasks.Task",
-                        "outputs": False,
-                    }
-                )
-                awaitable_target.key = name
-                awaitable_target.pk = name
-                awaitable_target.action = AwaitableAction.ASSIGN
-                awaitable_target.add_done_callback(self._on_awaitable_finished)
+                awaitable = self.construct_awaitable_function(name, awaitable_target)
                 self.set_task_state_info(name, "state", "RUNNING")
                 self.to_context(**{name: awaitable})
             elif task["metadata"]["node_type"].upper() in ["MONITOR"]:
@@ -1137,18 +1126,7 @@ class WorkGraphEngine(Process, metaclass=Protect):
                     self.run_executor(monitor, args, kwargs, var_args, var_kwargs),
                     loop=self.loop,
                 )
-                awaitable = Awaitable(
-                    **{
-                        "pk": name,
-                        "action": AwaitableAction.ASSIGN,
-                        "target": "asyncio.tasks.Task",
-                        "outputs": False,
-                    }
-                )
-                awaitable_target.key = name
-                awaitable_target.pk = name
-                awaitable_target.action = AwaitableAction.ASSIGN
-                awaitable_target.add_done_callback(self._on_awaitable_finished)
+                awaitable = self.construct_awaitable_function(name, awaitable_target)
                 self.set_task_state_info(name, "state", "RUNNING")
                 self.to_context(**{name: awaitable})
             elif task["metadata"]["node_type"].upper() in ["NORMAL"]:
@@ -1177,6 +1155,24 @@ class WorkGraphEngine(Process, metaclass=Protect):
             else:
                 # self.report("Unknow task type {}".format(task["metadata"]["node_type"]))
                 return self.exit_codes.UNKNOWN_TASK_TYPE
+
+    def construct_awaitable_function(
+        self, name: str, awaitable_target: Awaitable
+    ) -> None:
+        """Construct the awaitable function."""
+        awaitable = Awaitable(
+            **{
+                "pk": name,
+                "action": AwaitableAction.ASSIGN,
+                "target": "asyncio.tasks.Task",
+                "outputs": False,
+            }
+        )
+        awaitable_target.key = name
+        awaitable_target.pk = name
+        awaitable_target.action = AwaitableAction.ASSIGN
+        awaitable_target.add_done_callback(self._on_awaitable_finished)
+        return awaitable
 
     def get_inputs(
         self, name: str
