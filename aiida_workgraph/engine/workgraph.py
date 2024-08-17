@@ -148,7 +148,20 @@ class WorkGraphEngine(Process, metaclass=Protect):
         self.set_logger(self.node.logger)
 
         if self._awaitables:
-            # this is a new runner, so we need to re-register the callbacks
+            # this is a new Process instance
+            # For the "ascyncio.tasks.Task" awaitable, because there are only in-memory,
+            # we need to re-run the task
+            should_resume = False
+            for awaitable in self._awaitables:
+                if awaitable.target == "asyncio.tasks.Task":
+                    self._resolve_awaitable(awaitable, None)
+                    self.report(f"reset awatiable task: {awaitable.key}")
+                    self.reset_task(awaitable.key)
+                    should_resume = True
+            if should_resume:
+                self._update_process_status()
+                self.resume()
+            # For other awatiable, because they exist in the db, we only need to re-register the callbacks
             self.ctx._awaitable_actions = []
             self._action_awaitables()
 
