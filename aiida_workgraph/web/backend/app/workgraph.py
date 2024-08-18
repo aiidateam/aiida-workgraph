@@ -100,11 +100,11 @@ async def read_workgraph(id: int):
 
 
 @router.get("/api/workgraph-state/{id}")
-async def read_workgraph_tasks_state(id: int):
+async def read_workgraph_tasks_state(id: int, item_type: str = "task"):
     from aiida_workgraph.utils import get_processes_latest
 
     try:
-        processes_info = get_processes_latest(id)
+        processes_info = get_processes_latest(id, item_type=item_type)
         return processes_info
     except KeyError:
         raise HTTPException(status_code=404, detail=f"Workgraph {id} not found")
