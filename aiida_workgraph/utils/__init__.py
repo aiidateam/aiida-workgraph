@@ -261,7 +261,7 @@ def get_parent_workgraphs(pk: int) -> list:
 
 
 def get_processes_latest(
-    pk: int, node_name: str = None
+    pk: int, node_name: str = None, item_type: str = "task"
 ) -> Dict[str, Dict[str, Union[int, str]]]:
     """Get the latest info of all tasks from the process."""
     import aiida
@@ -270,39 +270,53 @@ def get_processes_latest(
     from aiida_workgraph.engine.workgraph import WorkGraphEngine
 
     tasks = {}
-    node_names = [node_name] if node_name else []
-    if node_name:
-        projections = [
-            f"extras._task_state_{node_name}",
-            f"extras._task_process_{node_name}",
-        ]
-    else:
-        projections = []
-        process = aiida.orm.load_node(pk)
-        node_names = [
-            key[12:]
-            for key in process.base.extras.keys()
-            if key.startswith("_task_state")
-        ]
-        projections = [f"extras._task_state_{name}" for name in node_names]
-        projections.extend([f"extras._task_process_{name}" for name in node_names])
-    qb = QueryBuilder()
-    qb.append(WorkGraphEngine, filters={"id": pk}, project=projections)
-    # print("projections: ", projections)
-    results = qb.all()
-    # change results to dict
-    results = dict(zip(projections, results[0]))
-    # print("results: ", results)
-    for name in node_names:
-        state = results[f"extras._task_state_{name}"]
-        task_process = deserialize_unsafe(results[f"extras._task_process_{name}"])
-        tasks[name] = {
-            "pk": task_process.pk if task_process else None,
-            "process_type": task_process.process_type if task_process else "",
-            "state": state,
-            "ctime": task_process.ctime if task_process else None,
-            "mtime": task_process.mtime if task_process else None,
-        }
+    if item_type == "called_process":
+        # fetch the process that called by the workgraph
+        node = aiida.orm.load_node(pk)
+        for link in node.base.links.get_outgoing().all():
+            if isinstance(link.node, aiida.orm.ProcessNode):
+                tasks[f"{link.node.process_label}_{link.node.pk}"] = {
+                    "pk": link.node.pk,
+                    "process_type": link.node.process_type,
+                    "state": link.node.process_state.value,
+                    "ctime": link.node.ctime,
+                    "mtime": link.node.mtime,
+                }
+    elif item_type == "task":
+        node_names = [node_name] if node_name else []
+        if node_name:
+            projections = [
+                f"extras._task_state_{node_name}",
+                f"extras._task_process_{node_name}",
+            ]
+        else:
+            projections = []
+            process = aiida.orm.load_node(pk)
+            node_names = [
+                key[12:]
+                for key in process.base.extras.keys()
+                if key.startswith("_task_state")
+            ]
+            projections = [f"extras._task_state_{name}" for name in node_names]
+            projections.extend([f"extras._task_process_{name}" for name in node_names])
+        qb = QueryBuilder()
+        qb.append(WorkGraphEngine, filters={"id": pk}, project=projections)
+        # print("projections: ", projections)
+        results = qb.all()
+        # change results to dict
+        results = dict(zip(projections, results[0]))
+        # print("results: ", results)
+        for name in node_names:
+            state = results[f"extras._task_state_{name}"]
+            task_process = deserialize_unsafe(results[f"extras._task_process_{name}"])
+            tasks[name] = {
+                "pk": task_process.pk if task_process else None,
+                "process_type": task_process.process_type if task_process else "",
+                "state": state,
+                "ctime": task_process.ctime if task_process else None,
+                "mtime": task_process.mtime if task_process else None,
+            }
+
     return tasks
 
 
