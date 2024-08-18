@@ -1,6 +1,19 @@
+from __future__ import annotations
 from aiida_workgraph.orm.serializer import serialize_to_aiida_nodes
 from aiida import orm
 from aiida.common.extendeddicts import AttributeDict
+from aiida.engine.utils import instantiate_process, prepare_inputs
+from aiida.manage import manager
+from aiida.engine import run_get_node
+from aiida.common import InvalidOperation
+from aiida.common.log import AIIDA_LOGGER
+from aiida.engine.processes import Process, ProcessBuilder
+from aiida.orm import ProcessNode
+import typing as t
+import time
+
+TYPE_SUBMIT_PROCESS = t.Union[Process, t.Type[Process], ProcessBuilder]
+LOGGER = AIIDA_LOGGER.getChild("engine.launch")
 
 
 def prepare_for_workgraph_task(task: dict, kwargs: dict) -> tuple:
@@ -142,3 +155,66 @@ def prepare_for_shell_task(task: dict, kwargs: dict) -> dict:
         "metadata": metadata or {},
     }
     return inputs
+
+
+# modified from aiida.engine.submit
+# do not check the scope of the process
+def submit(
+    process: TYPE_SUBMIT_PROCESS,
+    inputs: dict[str, t.Any] | None = None,
+    *,
+    wait: bool = False,
+    wait_interval: int = 5,
+    **kwargs: t.Any,
+) -> ProcessNode:
+    """Submit the process with the supplied inputs to the daemon immediately returning control to the interpreter.
+
+    .. warning: this should not be used within another process. Instead, there one should use the ``submit`` method of
+        the wrapping process itself, i.e. use ``self.submit``.
+
+    .. warning: submission of processes requires ``store_provenance=True``.
+
+    :param process: the process class, instance or builder to submit
+    :param inputs: the input dictionary to be passed to the process
+    :param wait: when set to ``True``, the submission will be blocking and wait for the process to complete at which
+        point the function returns the calculation node.
+    :param wait_interval: the number of seconds to wait between checking the state of the process when ``wait=True``.
+    :param kwargs: inputs to be passed to the process. This is an alternative to the positional ``inputs`` argument.
+    :return: the calculation node of the process
+    """
+    inputs = prepare_inputs(inputs, **kwargs)
+
+    runner = manager.get_manager().get_runner()
+    assert runner.persister is not None, "runner does not have a persister"
+    assert runner.controller is not None, "runner does not have a controller"
+
+    process_inited = instantiate_process(runner, process, **inputs)
+
+    # If a dry run is requested, simply forward to `run`, because it is not compatible with `submit`. We choose for this
+    # instead of raising, because in this way the user does not have to change the launcher when testing. The same goes
+    # for if `remote_folder` is present in the inputs, which means we are importing an already completed calculation.
+    if process_inited.metadata.get("dry_run", False) or "remote_folder" in inputs:
+        _, node = run_get_node(process_inited)
+        return node
+
+    if not process_inited.metadata.store_provenance:
+        raise InvalidOperation("cannot submit a process with `store_provenance=False`")
+
+    runner.persister.save_checkpoint(process_inited)
+    process_inited.close()
+
+    # Do not wait for the future's result, because in the case of a single worker this would cock-block itself
+    runner.controller.continue_process(process_inited.pid, nowait=False, no_reply=True)
+    node = process_inited.node
+
+    if not wait:
+        return node
+
+    while not node.is_terminated:
+        LOGGER.report(
+            f"Process<{node.pk}> has not yet terminated, current state is `{node.process_state}`. "
+            f"Waiting for {wait_interval} seconds."
+        )
+        time.sleep(wait_interval)
+
+    return node
