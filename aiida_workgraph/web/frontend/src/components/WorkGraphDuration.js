@@ -89,7 +89,7 @@ const NodeDurationGraph = ({ id }) => {
             </div>
             <div style={{ margin: '10px' }}>
     <label>
-        Tasks:
+        Task:
         <input
             type="radio"
             value="task"

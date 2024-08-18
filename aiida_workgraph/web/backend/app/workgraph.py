@@ -100,7 +100,7 @@ async def read_workgraph(id: int):
 
 
 @router.get("/api/workgraph-state/{id}")
-async def read_workgraph_tasks_state(id: int, item_type: str = "tasks"):
+async def read_workgraph_tasks_state(id: int, item_type: str = "task"):
     from aiida_workgraph.utils import get_processes_latest
 
     try:
