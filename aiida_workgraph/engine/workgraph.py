@@ -1079,10 +1079,13 @@ class WorkGraphEngine(Process, metaclass=Protect):
                     executor, args, kwargs, var_args, var_kwargs
                 )
                 if not isinstance(results, dict):
-                    self.report("The results of the awaitable builder must be a dict.")
+
+                    self.logger.error(
+                        "The results of the awaitable builder must be a dict."
+                    )
                     for key, value in results.items():
                         if not isinstance(value, ProcessNode):
-                            self.report(
+                            self.logger.error(
                                 f"The value of key {key} is not an instance of ProcessNode."
                             )
                             self.set_task_state_info(name, "state", "Failed")
