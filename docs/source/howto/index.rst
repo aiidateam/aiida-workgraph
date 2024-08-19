@@ -19,6 +19,7 @@ This section contains a collection of HowTos for various topics.
    error_resistant
    continue_finished_workgraph
    zone
+   monitor
    protocol
    queue
    cli
