@@ -148,20 +148,19 @@ class WorkGraphEngine(Process, metaclass=Protect):
         self.set_logger(self.node.logger)
 
         if self._awaitables:
-            # this is a new Process instance
             # For the "ascyncio.tasks.Task" awaitable, because there are only in-memory,
-            # we need to re-run the task
+            # we need to reset the tasks and so that they can be re-run again.
             should_resume = False
             for awaitable in self._awaitables:
                 if awaitable.target == "asyncio.tasks.Task":
                     self._resolve_awaitable(awaitable, None)
-                    self.report(f"reset awatiable task: {awaitable.key}")
+                    self.report(f"reset awaitable task: {awaitable.key}")
                     self.reset_task(awaitable.key)
                     should_resume = True
             if should_resume:
                 self._update_process_status()
                 self.resume()
-            # For other awatiable, because they exist in the db, we only need to re-register the callbacks
+            # For other awaitables, because they exist in the db, we only need to re-register the callbacks
             self.ctx._awaitable_actions = []
             self._action_awaitables()
 
@@ -228,6 +227,7 @@ class WorkGraphEngine(Process, metaclass=Protect):
         Precondition: must be an awaitable that was previously inserted.
 
         :param awaitable: the awaitable to resolve
+        :param value: the value to assign to the awaitable
         """
         ctx, key = self._resolve_nested_context(awaitable.key)
 
@@ -256,10 +256,6 @@ class WorkGraphEngine(Process, metaclass=Protect):
             if a.pk == awaitable.pk:
                 self._awaitables.pop(index)
                 break
-
-        # self._awaitables.remove(
-        # awaitable
-        # )  # remove only if everything went ok, otherwise we may lose track
 
         if not self.has_terminated():
             # the process may be terminated, for example, if the process was killed or excepted
@@ -393,11 +389,13 @@ class WorkGraphEngine(Process, metaclass=Protect):
         :param awaitable: an Awaitable instance
         """
         print("on awaitable finished: ", awaitable.key)
-        self.logger.info(
-            "received callback that awaitable %d has terminated", awaitable.key
-        )
 
         if isinstance(awaitable.pk, int):
+            self.logger.info(
+                "received callback that awaitable with key {} and pk {} has terminated".format(
+                    awaitable.key, awaitable.pk
+                )
+            )
             try:
                 node = load_node(awaitable.pk)
             except (exceptions.MultipleObjectsError, exceptions.NotExistent):
@@ -413,6 +411,12 @@ class WorkGraphEngine(Process, metaclass=Protect):
             else:
                 value = node  # type: ignore
         else:
+            # In this case, the pk and key are the same.
+            self.logger.info(
+                "received callback that awaitable {} has terminated".format(
+                    awaitable.key
+                )
+            )
             try:
                 results = awaitable.result()
                 self.set_normal_task_results(awaitable.key, results)
@@ -687,7 +691,9 @@ class WorkGraphEngine(Process, metaclass=Protect):
         self.update_parent_task_state(name)
 
     def set_normal_task_results(self, name, results):
-        """Set the results of a normal task."""
+        """Set the results of a normal task.
+        A normal task is created by decorating a function with @task().
+        """
         task = self.ctx._tasks[name]
         if isinstance(results, tuple):
             if len(task["outputs"]) != len(results):
@@ -698,11 +704,10 @@ class WorkGraphEngine(Process, metaclass=Protect):
             task["results"] = results
         else:
             task["results"][task["outputs"][0]["name"]] = results
-        self.set_task_state_info(name, "state", "FINISHED")
         self.task_set_context(name)
+        self.set_task_state_info(name, "state", "FINISHED")
         self.report(f"Task: {name} finished.")
         self.update_parent_task_state(name)
-        print("set normal task results: ", name, "results: ", task["results"])
 
     def update_parent_task_state(self, name: str) -> None:
         """Update parent task state."""
@@ -902,7 +907,10 @@ class WorkGraphEngine(Process, metaclass=Protect):
         ]
 
     def run_tasks(self, names: t.List[str], continue_workgraph: bool = True) -> None:
-        """Run task
+        """Run tasks.
+        Task type includes: Node, Data, CalcFunction, WorkFunction, CalcJob, WorkChain, GraphBuilder,
+        WorkGraph, PythonJob, ShellJob, While, If, Zone, FromContext, ToContext, Normal.
+
         Here we use ToContext to pass the results of the run to the next step.
         This will force the engine to wait for all the submitted processes to
         finish before continuing to the next step.
@@ -1143,7 +1151,7 @@ class WorkGraphEngine(Process, metaclass=Protect):
                 self.set_task_state_info(name, "state", "RUNNING")
                 self.to_context(**{name: awaitable})
             elif task["metadata"]["node_type"].upper() in ["NORMAL"]:
-                # normal function does not have a process
+                # Normal task is created by decoratoring a function with @task()
                 if "context" in task["metadata"]["kwargs"]:
                     self.ctx.task_name = name
                     kwargs.update({"context": self.ctx})
