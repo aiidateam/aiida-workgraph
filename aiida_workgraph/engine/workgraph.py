@@ -1,6 +1,7 @@
 """AiiDA workflow components: WorkGraph."""
 from __future__ import annotations
 
+import asyncio
 import collections.abc
 import functools
 import logging
@@ -33,6 +34,7 @@ from aiida.engine import run_get_node
 from aiida_workgraph.utils import create_and_pause_process
 from aiida_workgraph.task import Task
 from aiida_workgraph.utils import get_nested_dict, update_nested_dict
+from aiida_workgraph.executors.monitors import monitor
 
 if t.TYPE_CHECKING:
     from aiida.engine.runners import Runner  # pylint: disable=unused-import
@@ -147,7 +149,19 @@ class WorkGraphEngine(Process, metaclass=Protect):
         self.set_logger(self.node.logger)
 
         if self._awaitables:
-            # this is a new runner, so we need to re-register the callbacks
+            # For the "ascyncio.tasks.Task" awaitable, because there are only in-memory,
+            # we need to reset the tasks and so that they can be re-run again.
+            should_resume = False
+            for awaitable in self._awaitables:
+                if awaitable.target == "asyncio.tasks.Task":
+                    self._resolve_awaitable(awaitable, None)
+                    self.report(f"reset awaitable task: {awaitable.key}")
+                    self.reset_task(awaitable.key)
+                    should_resume = True
+            if should_resume:
+                self._update_process_status()
+                self.resume()
+            # For other awaitables, because they exist in the db, we only need to re-register the callbacks
             self.ctx._awaitable_actions = []
             self._action_awaitables()
 
@@ -214,6 +228,7 @@ class WorkGraphEngine(Process, metaclass=Protect):
         Precondition: must be an awaitable that was previously inserted.
 
         :param awaitable: the awaitable to resolve
+        :param value: the value to assign to the awaitable
         """
         ctx, key = self._resolve_nested_context(awaitable.key)
 
@@ -237,9 +252,11 @@ class WorkGraphEngine(Process, metaclass=Protect):
             raise AssertionError(f"Unsupported awaitable action: {awaitable.action}")
 
         awaitable.resolved = True
-        self._awaitables.remove(
-            awaitable
-        )  # remove only if everything went ok, otherwise we may lose track
+        # find awaitable in the self._awaitables with the same pk and remove it
+        for index, a in enumerate(self._awaitables):
+            if a.pk == awaitable.pk:
+                self._awaitables.pop(index)
+                break
 
         if not self.has_terminated():
             # the process may be terminated, for example, if the process was killed or excepted
@@ -337,6 +354,7 @@ class WorkGraphEngine(Process, metaclass=Protect):
         super().on_wait(awaitables)
         if self._awaitables:
             self._action_awaitables()
+            self.report("Process status: {}".format(self.node.process_status))
         else:
             self.call_soon(self.resume)
 
@@ -357,6 +375,9 @@ class WorkGraphEngine(Process, metaclass=Protect):
                 )
                 self.runner.call_on_process_finish(awaitable.pk, callback)
                 self.ctx._awaitable_actions.append(awaitable.pk)
+            elif awaitable.target == "asyncio.tasks.Task":
+                # this is a awaitable task, the callback function is already set
+                self.ctx._awaitable_actions.append(awaitable.pk)
             else:
                 assert f"invalid awaitable target '{awaitable.target}'"
 
@@ -369,23 +390,43 @@ class WorkGraphEngine(Process, metaclass=Protect):
         :param awaitable: an Awaitable instance
         """
         print("on awaitable finished: ", awaitable.key)
-        self.logger.info(
-            "received callback that awaitable %d has terminated", awaitable.pk
-        )
 
-        try:
-            node = load_node(awaitable.pk)
-        except (exceptions.MultipleObjectsError, exceptions.NotExistent):
-            raise ValueError(
-                f"provided pk<{awaitable.pk}> could not be resolved to a valid Node instance"
+        if isinstance(awaitable.pk, int):
+            self.logger.info(
+                "received callback that awaitable with key {} and pk {} has terminated".format(
+                    awaitable.key, awaitable.pk
+                )
             )
+            try:
+                node = load_node(awaitable.pk)
+            except (exceptions.MultipleObjectsError, exceptions.NotExistent):
+                raise ValueError(
+                    f"provided pk<{awaitable.pk}> could not be resolved to a valid Node instance"
+                )
 
-        if awaitable.outputs:
-            value = {
-                entry.link_label: entry.node for entry in node.base.links.get_outgoing()
-            }
+            if awaitable.outputs:
+                value = {
+                    entry.link_label: entry.node
+                    for entry in node.base.links.get_outgoing()
+                }
+            else:
+                value = node  # type: ignore
         else:
-            value = node  # type: ignore
+            # In this case, the pk and key are the same.
+            self.logger.info(
+                "received callback that awaitable {} has terminated".format(
+                    awaitable.key
+                )
+            )
+            try:
+                results = awaitable.result()
+                self.set_normal_task_results(awaitable.key, results)
+            except Exception as e:
+                self.logger.error(f"Error in awaitable {awaitable.key}: {e}")
+                self.set_task_state_info(awaitable.key, "state", "FAILED")
+                self.report(f"Task: {awaitable.key} failed.")
+                self.run_error_handlers(awaitable.key)
+            value = None
 
         self._resolve_awaitable(awaitable, value)
 
@@ -426,7 +467,6 @@ class WorkGraphEngine(Process, metaclass=Protect):
         # track if the awaitable callback is added to the runner
         self.ctx._awaitable_actions = []
         self.ctx._new_data = {}
-        self.ctx._input_tasks = {}
         self.ctx._executed_tasks = []
         # read the latest workgraph data
         wgdata = self.read_wgdata_from_base()
@@ -650,8 +690,27 @@ class WorkGraphEngine(Process, metaclass=Protect):
             self.task_set_context(name)
             self.report(f"Task: {name} finished.")
         else:
-            task["results"] = None
+            task.setdefault("results", None)
 
+        self.update_parent_task_state(name)
+
+    def set_normal_task_results(self, name, results):
+        """Set the results of a normal task.
+        A normal task is created by decorating a function with @task().
+        """
+        task = self.ctx._tasks[name]
+        if isinstance(results, tuple):
+            if len(task["outputs"]) != len(results):
+                return self.exit_codes.OUTPUS_NOT_MATCH_RESULTS
+            for i in range(len(task["outputs"])):
+                task["results"][task["outputs"][i]["name"]] = results[i]
+        elif isinstance(results, dict):
+            task["results"] = results
+        else:
+            task["results"][task["outputs"][0]["name"]] = results
+        self.task_set_context(name)
+        self.set_task_state_info(name, "state", "FINISHED")
+        self.report(f"Task: {name} finished.")
         self.update_parent_task_state(name)
 
     def update_parent_task_state(self, name: str) -> None:
@@ -860,7 +919,10 @@ class WorkGraphEngine(Process, metaclass=Protect):
         ]
 
     def run_tasks(self, names: t.List[str], continue_workgraph: bool = True) -> None:
-        """Run task
+        """Run tasks.
+        Task type includes: Node, Data, CalcFunction, WorkFunction, CalcJob, WorkChain, GraphBuilder,
+        WorkGraph, PythonJob, ShellJob, While, If, Zone, FromContext, ToContext, Normal.
+
         Here we use ToContext to pass the results of the run to the next step.
         This will force the engine to wait for all the submitted processes to
         finish before continuing to the next step.
@@ -949,8 +1011,7 @@ class WorkGraphEngine(Process, metaclass=Protect):
                     self.set_task_state_info(name, "process", process)
                     self.update_task_state(name)
                 except Exception as e:
-                    print(e)
-                    self.report(e)
+                    self.logger.error(f"Error in task {name}: {e}")
                     self.set_task_state_info(name, "state", "FAILED")
                     # set child state to FAILED
                     self.set_tasks_state(
@@ -1109,39 +1170,73 @@ class WorkGraphEngine(Process, metaclass=Protect):
                     self.report(f"Task: {name} finished.")
                 self.update_parent_task_state(name)
                 self.continue_workgraph()
+            elif task["metadata"]["node_type"].upper() in ["AWAITABLE"]:
+                for key in self.ctx._tasks[name]["metadata"]["args"]:
+                    kwargs.pop(key, None)
+                awaitable_target = asyncio.ensure_future(
+                    self.run_executor(executor, args, kwargs, var_args, var_kwargs),
+                    loop=self.loop,
+                )
+                awaitable = self.construct_awaitable_function(name, awaitable_target)
+                self.set_task_state_info(name, "state", "RUNNING")
+                self.to_context(**{name: awaitable})
+            elif task["metadata"]["node_type"].upper() in ["MONITOR"]:
+
+                for key in self.ctx._tasks[name]["metadata"]["args"]:
+                    kwargs.pop(key, None)
+                # add function and interval to the args
+                args = [executor, kwargs.pop("interval", 1), *args]
+                awaitable_target = asyncio.ensure_future(
+                    self.run_executor(monitor, args, kwargs, var_args, var_kwargs),
+                    loop=self.loop,
+                )
+                awaitable = self.construct_awaitable_function(name, awaitable_target)
+                self.set_task_state_info(name, "state", "RUNNING")
+                self.to_context(**{name: awaitable})
             elif task["metadata"]["node_type"].upper() in ["NORMAL"]:
-                # normal function does not have a process
+                # Normal task is created by decoratoring a function with @task()
                 if "context" in task["metadata"]["kwargs"]:
                     self.ctx.task_name = name
                     kwargs.update({"context": self.ctx})
                 for key in self.ctx._tasks[name]["metadata"]["args"]:
                     kwargs.pop(key, None)
-                results = self.run_executor(
-                    executor, args, kwargs, var_args, var_kwargs
-                )
-                # self.set_task_state_info(task["name"], "process", results)
-                if isinstance(results, tuple):
-                    if len(task["outputs"]) != len(results):
-                        return self.exit_codes.OUTPUS_NOT_MATCH_RESULTS
-                    for i in range(len(task["outputs"])):
-                        task["results"][task["outputs"][i]["name"]] = results[i]
-                elif isinstance(results, dict):
-                    task["results"] = results
-                else:
-                    task["results"][task["outputs"][0]["name"]] = results
-                # save the results to the database (as a extra field of the task)
-                # this is disabled
-                # self.save_results_to_extras(name)
-                self.ctx._input_tasks[name] = results
-                self.set_task_state_info(name, "state", "FINISHED")
-                self.task_set_context(name)
-                self.report(f"Task: {name} finished.")
-                self.update_parent_task_state(name)
+                try:
+                    results = self.run_executor(
+                        executor, args, kwargs, var_args, var_kwargs
+                    )
+                    self.set_normal_task_results(name, results)
+                except Exception as e:
+                    self.logger.error(f"Error in task {name}: {e}")
+                    self.set_task_state_info(name, "state", "FAILED")
+                    # set child tasks state to SKIPPED
+                    self.set_tasks_state(
+                        self.ctx._connectivity["child_node"][name], "SKIPPED"
+                    )
+                    self.report(f"Task: {name} failed.")
+                    self.run_error_handlers(name)
                 if continue_workgraph:
                     self.continue_workgraph()
             else:
                 # self.report("Unknow task type {}".format(task["metadata"]["node_type"]))
                 return self.exit_codes.UNKNOWN_TASK_TYPE
+
+    def construct_awaitable_function(
+        self, name: str, awaitable_target: Awaitable
+    ) -> None:
+        """Construct the awaitable function."""
+        awaitable = Awaitable(
+            **{
+                "pk": name,
+                "action": AwaitableAction.ASSIGN,
+                "target": "asyncio.tasks.Task",
+                "outputs": False,
+            }
+        )
+        awaitable_target.key = name
+        awaitable_target.pk = name
+        awaitable_target.action = AwaitableAction.ASSIGN
+        awaitable_target.add_done_callback(self._on_awaitable_finished)
+        return awaitable
 
     def get_inputs(
         self, name: str
