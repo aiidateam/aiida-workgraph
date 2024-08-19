@@ -564,7 +564,7 @@ class WorkGraphEngine(Process, metaclass=Protect):
         if reset_process:
             self.set_task_state_info(name, "process", None)
         self.remove_executed_task(name)
-        # self.report(f"Task {name} action: RESET.")
+        # self.logger.debug(f"Task {name} action: RESET.")
         # if the task is a while task, reset its child tasks
         if self.ctx._tasks[name]["metadata"]["node_type"].upper() == "WHILE":
             if reset_execution_count:
@@ -1057,6 +1057,7 @@ class WorkGraphEngine(Process, metaclass=Protect):
                 # check the conditions of the while task
                 task["execution_count"] += 1
                 self.set_task_state_info(name, "state", "RUNNING")
+                self.continue_workgraph()
             elif task["metadata"]["node_type"].upper() in ["IF"]:
                 should_run = self.should_run_if_task(name)
                 if should_run:
