@@ -3,7 +3,6 @@ from aiida_workgraph import task, WorkGraph
 from aiida import orm
 
 
-@pytest.mark.usefixtures("started_daemon_client")
 def test_while_task(decorated_add, decorated_compare):
     """Test nested while task.
     Also test the max_iteration parameter."""
@@ -40,63 +39,56 @@ def test_while_task(decorated_add, decorated_compare):
     wg = WorkGraph("test_while_task")
     # set a context variable before running.
     wg.context = {
-        "should_run1": True,
-        "should_run2": True,
-        "should_run3": True,
         "m": 1,
         "l": 1,
     }
     add1 = wg.add_task(decorated_add, name="add1", x=1, y=1)
     add1.set_context({"result": "n"})
     # ---------------------------------------------------------------------
-    while1 = wg.add_task("While", name="while1", conditions=["should_run1"])
+    # the `result` of compare1 taskis used as condition
+    compare1 = wg.add_task(decorated_compare, name="compare1", x="{{m}}", y=10)
+    while1 = wg.add_task("While", name="while1", conditions=compare1.outputs["result"])
     add11 = wg.add_task(decorated_add, name="add11", x=1, y=1)
     # ---------------------------------------------------------------------
-    while2 = wg.add_task("While", name="while2", conditions=["should_run2"])
+    compare2 = wg.add_task(decorated_compare, name="compare2", x="{{n}}", y=5)
+    while2 = wg.add_task("While", name="while2", conditions=compare2.outputs["result"])
     add21 = wg.add_task(
         decorated_add, name="add21", x="{{n}}", y=add11.outputs["result"]
     )
     add21.waiting_on.add("add1")
     add22 = wg.add_task(decorated_add, name="add22", x=add21.outputs["result"], y=1)
     add22.set_context({"result": "n"})
-    compare2 = wg.add_task(
-        decorated_compare, name="compare2", x=add22.outputs["result"], y=5
-    )
-    compare2.set_context({"result": "should_run2"})
-    while2.children.add(["add21", "add22", "compare2"])
+    while2.children.add(["add21", "add22"])
     # ---------------------------------------------------------------------
+    compare3 = wg.add_task(decorated_compare, name="compare3", x="{{l}}", y=5)
     while3 = wg.add_task(
-        "While", name="while3", max_iterations=1, conditions=["should_run3"]
+        "While", name="while3", max_iterations=1, conditions=compare3.outputs["result"]
     )
     add31 = wg.add_task(decorated_add, name="add31", x="{{l}}", y=1)
     add31.waiting_on.add("add22")
     add32 = wg.add_task(decorated_add, name="add32", x=add31.outputs["result"], y=1)
     add32.set_context({"result": "l"})
-    compare3 = wg.add_task(
-        decorated_compare, name="compare3", x=add32.outputs["result"], y=5
-    )
-    compare3.set_context({"result": "should_run3"})
-    while3.children.add(["add31", "add32", "compare3"])
+    while3.children.add(["add31", "add32"])
     # ---------------------------------------------------------------------
     add12 = wg.add_task(
         decorated_add, name="add12", x="{{m}}", y=add32.outputs["result"]
     )
     add12.set_context({"result": "m"})
-    compare1 = wg.add_task(
-        decorated_compare, name="compare1", x=add12.outputs["result"], y=10
-    )
-    compare1.set_context({"result": "should_run1"})
-    while1.children.add(["add11", "while2", "while3", "add12", "compare1"])
-    # the `result` of compare1 taskis used as condition
+    while1.children.add(["add11", "while2", "while3", "add12", "compare2", "compare3"])
     # ---------------------------------------------------------------------
     add2 = wg.add_task(
         decorated_add, name="add2", x=add12.outputs["result"], y=add31.outputs["result"]
     )
     # wg.submit(wait=True, timeout=100)
     wg.run()
-    assert add2.outputs["result"].value == raw_python_code()
+    # print out the node labels and the results for debugging
+    for link in wg.process.base.links.get_outgoing().all():
+        if isinstance(link.node, orm.ProcessNode):
+            print(link.node.label, link.node.outputs.result)
+    assert add2.outputs["result"].value.value == raw_python_code().value
 
 
+@pytest.mark.usefixtures("started_daemon_client")
 def test_while_workgraph(decorated_add, decorated_multiply, decorated_compare):
     # Create a WorkGraph will repeat itself based on the conditions
     wg = WorkGraph("while_workgraph")

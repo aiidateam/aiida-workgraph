@@ -49,7 +49,8 @@ class While(Zone):
         inp.link_limit = 100000
         inp = self.inputs.new("node_graph.int", "max_iterations")
         inp.add_property("node_graph.int", default=10000)
-        self.inputs.new("workgraph.any", "conditions")
+        inp = self.inputs.new("workgraph.any", "conditions")
+        inp.link_limit = 100000
         self.outputs.new("workgraph.any", "_wait")
 
 
