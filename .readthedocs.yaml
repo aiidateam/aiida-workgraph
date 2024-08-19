@@ -15,6 +15,13 @@ build:
     - npm --prefix aiida_workgraph/widget run build
     - cat docs/source/conf.py
     - verdi presto # create aiida profile
+    - verdi code create core.code.installed -L add --computer=localhost -P core.arithmetic.add -X /bin/bash -n # create add@localhost code, needed for some examples
+    - verdi daemon start
+    - rabbitmq server-detached
+    - verdi status
+    - export PYTHONJOB_PYTHON_EXEC_PATH=$(which python) # use python instead of python3 for pythonjob
+    - which python
+    - which python3
     - python -m sphinx -T -b html -d _build/doctrees -D language=en docs/source $READTHEDOCS_OUTPUT/html
 
 # Build from the docs/ directory with Sphinx
