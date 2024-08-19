@@ -63,8 +63,8 @@ class WorkGraphSaver:
         - If in database, analyze the difference, save accordingly.
         """
         self.build_task_link()
-        self.build_connectivity()
         self.assign_zone()
+        self.build_connectivity()
         self.update_parent_task()
         self.find_all_zones_inputs()
         if self.exist_in_db() or self.restart_process is not None:
@@ -103,7 +103,6 @@ class WorkGraphSaver:
 
     def assign_zone(self) -> None:
         """Assign zone for each task."""
-        self.wgdata["connectivity"]["zone"] = {}
         # assign parent_task for each task
         for name, task in self.wgdata["tasks"].items():
             for child_task in task["children"]:
@@ -314,3 +313,4 @@ class WorkGraphSaver:
         self.wgdata["nodes"] = self.wgdata["tasks"]
         nc = ConnectivityAnalysis(self.wgdata)
         self.wgdata["connectivity"] = nc.build_connectivity()
+        self.wgdata["connectivity"]["zone"] = {}
