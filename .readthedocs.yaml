@@ -25,14 +25,13 @@ build:
     - which python3
     - python -m sphinx -T -b html -d _build/doctrees -D language=en docs/source $READTHEDOCS_OUTPUT/html
 
+conda:
+  environment: aiida-core.services.yml.yml
+
 # Build from the docs/ directory with Sphinx
 sphinx:
   configuration: docs/source/conf.py
 
-channels:
-  - conda-forge
-dependencies:
-  - aiida-core.services
 # Explicitly set the version of Python and its requirements
 python:
   install:
