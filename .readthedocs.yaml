@@ -28,6 +28,10 @@ build:
 sphinx:
   configuration: docs/source/conf.py
 
+channels:
+  - conda-forge
+dependencies:
+  - aiida-core.services
 # Explicitly set the version of Python and its requirements
 python:
   install:
