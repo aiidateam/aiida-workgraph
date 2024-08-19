@@ -705,14 +705,6 @@ class WorkGraphEngine(Process, metaclass=Protect):
                 conditions.append(value)
         else:
             conditions.append(kwargs["conditions"])
-        should_run = False not in conditions
-        if not should_run:
-            self.set_task_state_info(name, "state", "FINISHED")
-            self.set_tasks_state(self.ctx._tasks[name]["children"], "SKIPPED")
-            self.update_parent_task_state(name)
-            self.report(
-                f"While Task {name}: Condition not fullilled, task finished. Skip all its children."
-            )
         return False not in conditions
 
     def should_run_if_task(self, name: str) -> tuple[bool, t.Any]:
@@ -1050,9 +1042,18 @@ class WorkGraphEngine(Process, metaclass=Protect):
                 self.to_context(**{name: process})
             elif task["metadata"]["node_type"].upper() in ["WHILE"]:
                 # check the conditions of the while task
-                task["execution_count"] += 1
-                self.set_task_state_info(name, "state", "RUNNING")
-                self.continue_workgraph()
+                should_run = self.should_run_while_task(name)
+                if not should_run:
+                    self.set_task_state_info(name, "state", "FINISHED")
+                    self.set_tasks_state(self.ctx._tasks[name]["children"], "SKIPPED")
+                    self.update_parent_task_state(name)
+                    self.report(
+                        f"While Task {name}: Condition not fullilled, task finished. Skip all its children."
+                    )
+                else:
+                    task["execution_count"] += 1
+                    self.set_task_state_info(name, "state", "RUNNING")
+                    self.continue_workgraph()
             elif task["metadata"]["node_type"].upper() in ["IF"]:
                 should_run = self.should_run_if_task(name)
                 if should_run:
@@ -1230,7 +1231,7 @@ class WorkGraphEngine(Process, metaclass=Protect):
         """
         parent_task = self.ctx._tasks[name]["parent_task"]
         # input_tasks, parent_task, conditions
-        parent_states = [True, True, True]
+        parent_states = [True, True]
         # if the task belongs to a parent zone
         if parent_task[0]:
             state = self.get_task_state_info(parent_task[0], "state")
@@ -1246,15 +1247,6 @@ class WorkGraphEngine(Process, metaclass=Protect):
             ]:
                 parent_states[0] = False
                 break
-        # check the conditions of the while zone
-        if self.ctx._tasks[name]["metadata"]["node_type"].upper() == "WHILE":
-            # only if the parent task is ready, we check the conditions
-            if parent_states[0] and parent_states[1]:
-                should_run = self.should_run_while_task(name)
-                if not should_run:
-                    parent_states[2] = False
-            else:
-                parent_states[2] = False
 
         return all(parent_states), parent_states
 
