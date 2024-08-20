@@ -53,7 +53,7 @@ def pause_tasks(pk: int, tasks: list, timeout: int = 5, wait: bool = False):
     ]:
         for name in tasks:
             if get_task_state_info(node, name, "state") == "PLANNED":
-                set_task_state_info(node, name, "action", "pause")
+                create_task_action(pk, tasks, action="pause")
             elif get_task_state_info(node, name, "state") == "RUNNING":
                 try:
                     control.pause_processes(
@@ -81,7 +81,7 @@ def play_tasks(pk: int, tasks: list, timeout: int = 5, wait: bool = False):
     ]:
         for name in tasks:
             if get_task_state_info(node, name, "state") == "PLANNED":
-                set_task_state_info(node, name, "action", None)
+                create_task_action(pk, tasks, action="play")
             elif get_task_state_info(node, name, "state") in ["CREATED", "PAUSED"]:
                 try:
                     control.play_processes(
@@ -111,7 +111,7 @@ def kill_tasks(pk: int, tasks: list, timeout: int = 5, wait: bool = False):
     ]:
         for name in tasks:
             if get_task_state_info(node, name, "state") == "PLANNED":
-                set_task_state_info(node, name, "action", "skip")
+                create_task_action(pk, tasks, action="skip")
             elif get_task_state_info(node, name, "state") in [
                 "CREATED",
                 "RUNNING",

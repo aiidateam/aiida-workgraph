@@ -584,7 +584,8 @@ class WorkGraphEngine(Process, metaclass=Protect):
             for name in tasks:
                 self.play_task(name)
         if action.upper() == "SKIP":
-            pass
+            for name in tasks:
+                self.skip_task(name)
 
     def reset_task(
         self,
@@ -615,11 +616,18 @@ class WorkGraphEngine(Process, metaclass=Protect):
 
     def pause_task(self, name: str) -> None:
         """Pause task."""
+        self.set_task_state_info(name, "action", "PAUSE")
         self.report(f"Task {name} action: PAUSE.")
 
     def play_task(self, name: str) -> None:
         """Play task."""
+        self.set_task_state_info(name, "action", "")
         self.report(f"Task {name} action: PLAY.")
+
+    def skip_task(self, name: str) -> None:
+        """Skip task."""
+        self.set_task_state_info(name, "state", "SKIPPED")
+        self.report(f"Task {name} action: SKIP.")
 
     def continue_workgraph(self) -> None:
         print("Continue workgraph.")
