@@ -5,6 +5,12 @@ build:
   tools:
     python: "miniconda3-3.12-24.1" # note that libmamba-solver is available since 22.1
     nodejs: "20" # maybe need to be also miniconda
+  jobs:
+    post_create_environment:
+      - which python
+      - which conda
+      - echo $CONDA_PREFIX
+      - rabbitmq-server -detached
 
 conda:
   environment: docs/environment.yml
