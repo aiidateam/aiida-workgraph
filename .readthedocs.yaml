@@ -11,6 +11,8 @@ build:
     - python --version
     - which conda 
     - conda --version
+    - ls
+    - ls docs
     - conda env update --file docs/environment.yml
     - python -m pip install --upgrade --no-cache-dir pip setuptools
     - python -m pip install --upgrade --no-cache-dir sphinx readthedocs-sphinx-ext

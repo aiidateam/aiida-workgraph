@@ -1,0 +1,7 @@
+name: euroscipy-aiida-demo
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - aiida-core
+  - aiida-core.services
