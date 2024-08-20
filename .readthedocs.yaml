@@ -6,19 +6,20 @@ build:
     python: "miniconda3-3.12-24.1" # note that libmamba-solver is available since 22.1
     nodejs:   "20"
   commands:
+    - which python
     - conda init
-    - source ~/.bashrc
+    - . /home/docs/.bashrc
     - conda env list
     - echo $CONDA_PREFIX
     - conda activate
     - echo $CONDA_PREFIX
+    - conda env update --file docs/environment.yml
+    - which python
     - rabbitmq server-detached
     - echo $READTHEDOCS_OUTPUT
-    - which python
     - python --version
     - which conda 
     - conda --version
-    - conda env update --file docs/environment.yml
     - python -m pip install --upgrade --no-cache-dir pip setuptools
     - python -m pip install --upgrade --no-cache-dir sphinx readthedocs-sphinx-ext
     - python -m pip install --no-cache-dir .
