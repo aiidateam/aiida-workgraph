@@ -6,6 +6,7 @@ build:
     python: "3.11"
     nodejs: "20"
   commands:
+    - echo $READTHEDOCS_VIRTUALENV_PATH
     - python -m virtualenv $READTHEDOCS_VIRTUALENV_PATH
     - python -m pip install --upgrade --no-cache-dir pip setuptools
     - python -m pip install --upgrade --no-cache-dir sphinx readthedocs-sphinx-ext
@@ -20,7 +21,6 @@ build:
     - verdi profile configure-rabbitmq # create aiida profile
     - verdi code create core.code.installed -L add --computer=localhost -P core.arithmetic.add -X /bin/bash -n # create add@localhost code, needed for some examples
     - verdi status
-    - export PYTHONJOB_PYTHON_EXEC_PATH=$(which python) # use python instead of python3 for pythonjob
     - which python
     - which python3
     - python -m sphinx -T -b html -d _build/doctrees -D language=en docs/source $READTHEDOCS_OUTPUT/html
