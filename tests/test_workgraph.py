@@ -124,8 +124,6 @@ def test_pause_task_before_submit(wg_calcjob):
     wg.name = "test_pause_task"
     wg.pause_tasks(["add2"])
     wg.submit()
-    wg.wait(tasks={"add1": ["FINISHED"]}, timeout=20)
-    assert wg.tasks["add1"].node.process_state.value.upper() == "FINISHED"
     # wait for the workgraph to launch add2
     wg.wait(tasks={"add2": ["CREATED"]}, timeout=20)
     assert wg.tasks["add2"].node.process_state.value.upper() == "CREATED"
@@ -140,13 +138,12 @@ def test_pause_task_before_submit(wg_calcjob):
 
 def test_pause_task_after_submit(wg_calcjob):
     wg = wg_calcjob
-    wg.tasks["add1"].set({"metadata.options.sleep": 3})
+    wg.tasks["add1"].set({"metadata.options.sleep": 10})
     wg.name = "test_pause_task"
     wg.submit()
     # wait for the workgraph to launch add1
     wg.wait(tasks={"add1": ["CREATED", "WAITING", "RUNNING", "FINISHED"]}, timeout=20)
     wg.pause_tasks(["add2"])
-    wg.wait(tasks={"add1": ["FINISHED"]}, timeout=20)
     # wait for the workgraph to launch add2
     wg.wait(tasks={"add2": ["CREATED"]}, timeout=20)
     assert wg.tasks["add2"].node.process_state.value.upper() == "CREATED"

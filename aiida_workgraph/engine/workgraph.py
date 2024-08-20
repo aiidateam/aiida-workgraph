@@ -523,19 +523,23 @@ class WorkGraphEngine(Process, metaclass=Protect):
         self.reset_task(task.name)
 
     def get_task_state_info(self, name: str, key: str) -> str:
-        """Get task state info from base.extras."""
+        """Get task state info from ctx."""
 
-        return self.ctx._tasks[name].get(key, None)
+        value = self.ctx._tasks[name].get(key, None)
+        if key == "process" and value is not None:
+            value = deserialize_unsafe(value)
+        return value
 
     def set_task_state_info(self, name: str, key: str, value: any) -> None:
-        """Set task state info to base.extras."""
+        """Set task state info to ctx and base.extras.
+        We task state to the base.extras, so that we can access outside the engine"""
 
-        self.ctx._tasks[name][key] = value
-        # Also set the task state to the base.extras, so that we can access outside the engine
         if key == "process":
-            self.node.base.extras.set(f"_task_{key}_{name}", serialize(value))
+            value = serialize(value)
+            self.node.base.extras.set(f"_task_{key}_{name}", value)
         else:
             self.node.base.extras.set(f"_task_{key}_{name}", value)
+        self.ctx._tasks[name][key] = value
 
     def init_ctx(self, wgdata: t.Dict[str, t.Any]) -> None:
         """Init the context from the workgraph data."""
