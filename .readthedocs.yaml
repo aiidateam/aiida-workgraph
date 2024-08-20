@@ -9,6 +9,9 @@ build:
     - which python
     - conda init
     - echo $SHELL
+    - python --version
+    - which conda 
+    - conda --version
     - cat /home/docs/.bashrc
     - . /home/docs/.bashrc
     - eval "$(${CONDA_DIR}/bin/conda shell.bash hook 2> /dev/null)"
@@ -20,9 +23,6 @@ build:
     - which python
     - rabbitmq server-detached
     - echo $READTHEDOCS_OUTPUT
-    - python --version
-    - which conda 
-    - conda --version
     - python -m pip install --upgrade --no-cache-dir pip setuptools
     - python -m pip install --upgrade --no-cache-dir sphinx readthedocs-sphinx-ext
     - python -m pip install --no-cache-dir .
