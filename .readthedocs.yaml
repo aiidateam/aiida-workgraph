@@ -5,37 +5,9 @@ build:
   tools:
     python: "miniconda3-3.12-24.1" # note that libmamba-solver is available since 22.1
     nodejs: "20" # maybe need to be also miniconda
-  commands:
-    - which python
-    - conda init
-    - echo $SHELL
-    - python --version
-    - which conda 
-    - conda --version
-    - cat /home/docs/.bashrc
-    - . /home/docs/.bashrc
-    - eval "$(${CONDA_DIR}/bin/conda shell.bash hook 2> /dev/null)"
-    - conda env list
-    - echo $CONDA_PREFIX
-    - echo $CONDA_PREFIX
-    - conda env update --file docs/environment.yml
-    - conda run -n base rabbitmq server-detached
-    - which python
-    - python -m pip install --upgrade --no-cache-dir pip setuptools
-    - python -m pip install --upgrade --no-cache-dir sphinx readthedocs-sphinx-ext
-    - python -m pip install --no-cache-dir .
-    - python -m pip install --exists-action=w --no-cache-dir -r docs/requirements.txt
-    - npm --prefix aiida_workgraph/widget install
-    - npm --prefix aiida_workgraph/widget run build
-    - cat docs/source/conf.py
-    - verdi presto # create aiida profile
-    - verdi profile configure-rabbitmq
-    - verdi daemon start
-    - verdi code create core.code.installed -L add --computer=localhost -P core.arithmetic.add -X /bin/bash -n # create add@localhost code, needed for some examples
-    - verdi status
-    - which python
-    - which python3
-    - python -m sphinx -T -b html -d _build/doctrees -D language=en docs/source $READTHEDOCS_OUTPUT/html
+
+conda:
+  environment: docs/environment.yml
 
 # Build from the docs/ directory with Sphinx
 sphinx:
