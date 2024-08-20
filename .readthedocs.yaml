@@ -6,13 +6,12 @@ build:
     python: "miniconda3-3.12-24.1" # note that libmamba-solver is available since 22.1
     nodejs:   "20"
   commands:
+    - rabbitmq server-detached
     - echo $READTHEDOCS_OUTPUT
     - which python
     - python --version
     - which conda 
     - conda --version
-    - ls
-    - ls docs
     - conda env update --file docs/environment.yml
     - python -m pip install --upgrade --no-cache-dir pip setuptools
     - python -m pip install --upgrade --no-cache-dir sphinx readthedocs-sphinx-ext
@@ -30,6 +29,9 @@ build:
     - which python
     - which python3
     - python -m sphinx -T -b html -d _build/doctrees -D language=en docs/source $READTHEDOCS_OUTPUT/html
+
+conda:
+  environment: docs/environment.yml
 
 # Build from the docs/ directory with Sphinx
 sphinx:

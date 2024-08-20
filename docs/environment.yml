@@ -1,4 +1,4 @@
-name: euroscipy-aiida-demo
+name: aiida-dev
 channels:
   - conda-forge
   - defaults
