@@ -3,11 +3,10 @@ version: 2
 build:
   os: "ubuntu-22.04"
   tools:
-    python: "miniconda3-4.7"
+    python: "3.11"
     nodejs: "20"
   commands:
-    - echo $READTHEDOCS_VIRTUALENV_PATH
-    - python -m virtualenv $READTHEDOCS_VIRTUALENV_PATH
+    - echo $READTHEDOCS_OUTPUT
     - python -m pip install --upgrade --no-cache-dir pip setuptools
     - python -m pip install --upgrade --no-cache-dir sphinx readthedocs-sphinx-ext
     - python -m pip install --no-cache-dir .
@@ -26,7 +25,7 @@ build:
     - python -m sphinx -T -b html -d _build/doctrees -D language=en docs/source $READTHEDOCS_OUTPUT/html
 
 conda:
-  environment: aiida-core.services.yml.yml
+  environment: environment.yml
 
 # Build from the docs/ directory with Sphinx
 sphinx:
