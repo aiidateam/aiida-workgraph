@@ -14,10 +14,10 @@ build:
     - npm --prefix aiida_workgraph/widget install
     - npm --prefix aiida_workgraph/widget run build
     - cat docs/source/conf.py
-    - verdi daemon start
-    - rabbitmq server-detached
     - verdi presto # create aiida profile
-    - verdi profile configure-rabbitmq # create aiida profile
+    - rabbitmq server-detached
+    - verdi profile configure-rabbitmq
+    - verdi daemon start
     - verdi code create core.code.installed -L add --computer=localhost -P core.arithmetic.add -X /bin/bash -n # create add@localhost code, needed for some examples
     - verdi status
     - which python
