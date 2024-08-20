@@ -4,11 +4,14 @@ build:
   os: "ubuntu-22.04"
   tools:
     python: "miniconda3-3.12-24.1" # note that libmamba-solver is available since 22.1
-    nodejs:   "20"
+    nodejs: "20" # maybe need to be also miniconda
   commands:
     - which python
     - conda init
+    - echo $SHELL
+    - cat /home/docs/.bashrc
     - . /home/docs/.bashrc
+    - eval "$(${CONDA_DIR}/bin/conda shell.bash hook 2> /dev/null)"
     - conda env list
     - echo $CONDA_PREFIX
     - conda activate
