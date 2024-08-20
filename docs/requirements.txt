@@ -1,7 +1,9 @@
 sphinx_rtd_theme==1.2.2
+sphinx-gallery
 nbsphinx==0.9.2
 ipython
 aiida-core
 node-graph
 anywidget
 furo
+matplotlib # for sphinx-gallery
