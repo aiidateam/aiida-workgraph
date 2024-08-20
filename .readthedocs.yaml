@@ -6,6 +6,10 @@ build:
     python: "miniconda3-3.12-24.1" # note that libmamba-solver is available since 22.1
     nodejs:   "20"
   commands:
+    - conda env list
+    - echo $CONDA_PREFIX
+    - conda activate
+    - echo $CONDA_PREFIX
     - rabbitmq server-detached
     - echo $READTHEDOCS_OUTPUT
     - which python
