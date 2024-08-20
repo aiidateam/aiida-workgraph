@@ -525,17 +525,13 @@ class WorkGraphEngine(Process, metaclass=Protect):
     def get_task_state_info(self, name: str, key: str) -> str:
         """Get task state info from base.extras."""
 
-        if key == "process":
-            value = deserialize_unsafe(
-                self.node.base.extras.get(f"_task_{key}_{name}", "")
-            )
-        else:
-            value = self.node.base.extras.get(f"_task_{key}_{name}", "")
-        return value
+        return self.ctx._tasks[name].get(key, None)
 
     def set_task_state_info(self, name: str, key: str, value: any) -> None:
         """Set task state info to base.extras."""
 
+        self.ctx._tasks[name][key] = value
+        # Also set the task state to the base.extras, so that we can access outside the engine
         if key == "process":
             self.node.base.extras.set(f"_task_{key}_{name}", serialize(value))
         else:
