@@ -17,12 +17,10 @@ build:
     - eval "$(${CONDA_DIR}/bin/conda shell.bash hook 2> /dev/null)"
     - conda env list
     - echo $CONDA_PREFIX
-    - conda activate
     - echo $CONDA_PREFIX
     - conda env update --file docs/environment.yml
+    - conda run -n base rabbitmq server-detached
     - which python
-    - rabbitmq server-detached
-    - echo $READTHEDOCS_OUTPUT
     - python -m pip install --upgrade --no-cache-dir pip setuptools
     - python -m pip install --upgrade --no-cache-dir sphinx readthedocs-sphinx-ext
     - python -m pip install --no-cache-dir .
@@ -31,7 +29,6 @@ build:
     - npm --prefix aiida_workgraph/widget run build
     - cat docs/source/conf.py
     - verdi presto # create aiida profile
-    - rabbitmq server-detached
     - verdi profile configure-rabbitmq
     - verdi daemon start
     - verdi code create core.code.installed -L add --computer=localhost -P core.arithmetic.add -X /bin/bash -n # create add@localhost code, needed for some examples
