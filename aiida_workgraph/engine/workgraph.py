@@ -523,23 +523,23 @@ class WorkGraphEngine(Process, metaclass=Protect):
         self.reset_task(task.name)
 
     def get_task_state_info(self, name: str, key: str) -> str:
-        """Get task state info from base.extras."""
+        """Get task state info from ctx."""
 
-        if key == "process":
-            value = deserialize_unsafe(
-                self.node.base.extras.get(f"_task_{key}_{name}", "")
-            )
-        else:
-            value = self.node.base.extras.get(f"_task_{key}_{name}", "")
+        value = self.ctx._tasks[name].get(key, None)
+        if key == "process" and value is not None:
+            value = deserialize_unsafe(value)
         return value
 
     def set_task_state_info(self, name: str, key: str, value: any) -> None:
-        """Set task state info to base.extras."""
+        """Set task state info to ctx and base.extras.
+        We task state to the base.extras, so that we can access outside the engine"""
 
         if key == "process":
-            self.node.base.extras.set(f"_task_{key}_{name}", serialize(value))
+            value = serialize(value)
+            self.node.base.extras.set(f"_task_{key}_{name}", value)
         else:
             self.node.base.extras.set(f"_task_{key}_{name}", value)
+        self.ctx._tasks[name][key] = value
 
     def init_ctx(self, wgdata: t.Dict[str, t.Any]) -> None:
         """Init the context from the workgraph data."""
@@ -584,7 +584,8 @@ class WorkGraphEngine(Process, metaclass=Protect):
             for name in tasks:
                 self.play_task(name)
         if action.upper() == "SKIP":
-            pass
+            for name in tasks:
+                self.skip_task(name)
 
     def reset_task(
         self,
@@ -615,11 +616,18 @@ class WorkGraphEngine(Process, metaclass=Protect):
 
     def pause_task(self, name: str) -> None:
         """Pause task."""
+        self.set_task_state_info(name, "action", "PAUSE")
         self.report(f"Task {name} action: PAUSE.")
 
     def play_task(self, name: str) -> None:
         """Play task."""
+        self.set_task_state_info(name, "action", "")
         self.report(f"Task {name} action: PLAY.")
+
+    def skip_task(self, name: str) -> None:
+        """Skip task."""
+        self.set_task_state_info(name, "state", "SKIPPED")
+        self.report(f"Task {name} action: SKIP.")
 
     def continue_workgraph(self) -> None:
         print("Continue workgraph.")
