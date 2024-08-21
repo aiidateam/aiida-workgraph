@@ -423,6 +423,10 @@ class WorkGraphEngine(Process, metaclass=Protect):
             except Exception as e:
                 self.logger.error(f"Error in awaitable {awaitable.key}: {e}")
                 self.set_task_state_info(awaitable.key, "state", "FAILED")
+                # set child tasks state to SKIPPED
+                self.set_tasks_state(
+                    self.ctx._connectivity["child_node"][awaitable.key], "SKIPPED"
+                )
                 self.report(f"Task: {awaitable.key} failed.")
                 self.run_error_handlers(awaitable.key)
             value = None
@@ -1162,7 +1166,7 @@ class WorkGraphEngine(Process, metaclass=Protect):
                 for key in self.ctx._tasks[name]["metadata"]["args"]:
                     kwargs.pop(key, None)
                 # add function and interval to the args
-                args = [executor, kwargs.pop("interval", 1), *args]
+                args = [executor, kwargs.pop("interval"), kwargs.pop("timeout"), *args]
                 awaitable_target = asyncio.ensure_future(
                     self.run_executor(monitor, args, kwargs, var_args, var_kwargs),
                     loop=self.loop,

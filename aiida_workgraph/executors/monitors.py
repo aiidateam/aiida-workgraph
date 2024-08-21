@@ -1,10 +1,15 @@
-async def monitor(function, interval, *args, **kwargs):
+async def monitor(function, interval, timeout, *args, **kwargs):
+    """Monitor the function until it returns True or the timeout is reached."""
     import asyncio
+    import time
 
+    start_time = time.time()
     while True:
         result = function(*args, **kwargs)
         if result:
             break
+        if time.time() - start_time > timeout:
+            raise TimeoutError(f"Timeout reached for monitor function {function}")
         await asyncio.sleep(interval)
 
 
