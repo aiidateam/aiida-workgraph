@@ -10,7 +10,6 @@ build:
       - which python
       - which conda
       - echo $CONDA_PREFIX
-      - python -c "import aiida_workgraph; print(aiida_workgraph.__file__)"
       - which pip
       - python -m pip install .
       - python -m pip install .[docs]
