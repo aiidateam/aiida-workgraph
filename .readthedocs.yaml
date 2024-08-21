@@ -9,7 +9,8 @@ build:
     post_create_environment:
       - which python
       - which rabbitmq-server
-      - rabbitmq-server -detached
+      - nohup rabbitmq-server > rabbitmq_log.txt 2>&1 &
+      - sleep 5
       - rabbitmq-diagnostics status
 
 
