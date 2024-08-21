@@ -14,7 +14,8 @@ build:
       - python -m pip install .
       - python -m pip install .[docs]
       - python -m pip install -r docs/requirements.txt
-      - rabbitmq-server start
+      - rabbitmq-server -detached
+      - rabbitmq-diagnostics status
       - verdi presto
       - verdi profile configure-rabbitmq
       - verdi daemon start
