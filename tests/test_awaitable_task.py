@@ -82,3 +82,22 @@ def test_task_monitor(decorated_add):
     wg1.submit(wait=True)
     wg2.wait()
     assert wg2.tasks["add1"].node.ctime > wg1.tasks["add1"].node.ctime
+
+
+@pytest.mark.usefixtures("started_daemon_client")
+def test_task_monitor_timeout(decorated_add):
+    """Test the monitor task with a timeout."""
+    wg = WorkGraph(name="test_monitor_timeout")
+    monitor1 = wg.add_task(
+        "workgraph.file_monitor",
+        name="monitor1",
+        timeout=2,
+        filepath="/tmp/test_file_monitor.txt",
+    )
+    add1 = wg.add_task(decorated_add, "add1", x=1, y=2)
+    add1.waiting_on.add(monitor1)
+    wg.run()
+    report = get_workchain_report(wg.process, "REPORT")
+    assert "Timeout reached for monitor function" in report
+    assert monitor1.state == "FAILED"
+    assert add1.state == "SKIPPED"
