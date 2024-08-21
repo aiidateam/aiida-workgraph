@@ -8,17 +8,10 @@ build:
   jobs:
     post_create_environment:
       - which python
-      - which conda
-      - echo $CONDA_PREFIX
-      - which pip
-      - python -m pip install .
-      - python -m pip install .[docs]
-      - python -m pip install -r docs/requirements.txt
+      - which rabbitmq-server
       - rabbitmq-server -detached
       - rabbitmq-diagnostics status
-      - verdi presto
-      - verdi profile configure-rabbitmq
-      - verdi daemon start
+
 
 conda:
   environment: docs/environment.yml
