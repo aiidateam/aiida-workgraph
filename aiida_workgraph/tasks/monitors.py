@@ -10,7 +10,7 @@ class TimeMonitor(Task):
     node_type = "MONITOR"
     catalog = "Monitor"
     args = ["datetime"]
-    kwargs = ["interval"]
+    kwargs = ["interval", "timeout"]
 
     def create_sockets(self) -> None:
         self.inputs.clear()
@@ -18,6 +18,8 @@ class TimeMonitor(Task):
         self.inputs.new("workgraph.any", "datetime")
         inp = self.inputs.new("workgraph.any", "interval")
         inp.add_property("workgraph.any", default=1.0)
+        inp = self.inputs.new("workgraph.any", "timeout")
+        inp.add_property("workgraph.any", default=86400.0)
         inp = self.inputs.new("workgraph.any", "_wait")
         inp.link_limit = 100000
         self.outputs.new("workgraph.any", "_wait")
@@ -37,7 +39,7 @@ class FileMonitor(Task):
     node_type = "MONITOR"
     catalog = "Monitor"
     args = ["filepath"]
-    kwargs = ["interval"]
+    kwargs = ["interval", "timeout"]
 
     def create_sockets(self) -> None:
         self.inputs.clear()
@@ -45,6 +47,8 @@ class FileMonitor(Task):
         self.inputs.new("workgraph.any", "filepath")
         inp = self.inputs.new("workgraph.any", "interval")
         inp.add_property("workgraph.any", default=1.0)
+        inp = self.inputs.new("workgraph.any", "timeout")
+        inp.add_property("workgraph.any", default=86400.0)
         inp = self.inputs.new("workgraph.any", "_wait")
         inp.link_limit = 100000
         self.outputs.new("workgraph.any", "_wait")
@@ -64,7 +68,7 @@ class TaskMonitor(Task):
     node_type = "MONITOR"
     catalog = "Monitor"
     args = ["task_name"]
-    kwargs = ["workgraph_pk", "workgraph_name", "interval"]
+    kwargs = ["interval", "timeout", "workgraph_pk", "workgraph_name"]
 
     def create_sockets(self) -> None:
         self.inputs.clear()
@@ -74,6 +78,8 @@ class TaskMonitor(Task):
         self.inputs.new("workgraph.any", "task_name")
         inp = self.inputs.new("workgraph.any", "interval")
         inp.add_property("workgraph.any", default=1.0)
+        inp = self.inputs.new("workgraph.any", "timeout")
+        inp.add_property("workgraph.any", default=86400.0)
         inp = self.inputs.new("workgraph.any", "_wait")
         inp.link_limit = 100000
         self.outputs.new("workgraph.any", "_wait")

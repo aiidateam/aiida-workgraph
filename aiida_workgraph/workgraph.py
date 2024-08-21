@@ -395,6 +395,18 @@ class WorkGraph(node_graph.NodeGraph):
             _, msg = play_tasks(self.process.pk, tasks)
         return "Send message to play tasks."
 
+    def kill_tasks(self, tasks: List[str]) -> None:
+        """Kill the given tasks"""
+
+        from aiida_workgraph.utils.control import kill_tasks
+
+        if self.process is None:
+            for name in tasks:
+                self.tasks[name].action = "KILL"
+        else:
+            _, msg = kill_tasks(self.process.pk, tasks)
+        return "Send message to kill tasks."
+
     def continue_process(self):
         """Continue a saved process by sending the task to RabbitMA.
         Use with caution, this may launch duplicate processes."""
