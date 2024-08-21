@@ -10,7 +10,13 @@ build:
       - which python
       - which conda
       - echo $CONDA_PREFIX
+      - python -c "import aiida_workgraph; print(aiida_workgraph.__file__)"
+      - pip install .[docs]
+      - pip install -r docs/requirements.txt
       - rabbitmq-server -detached
+      - verdi presto
+      - verdi profile configure-rabbitmq
+      - verdi daemon start
 
 conda:
   environment: docs/environment.yml
