@@ -11,9 +11,10 @@ build:
       - which conda
       - echo $CONDA_PREFIX
       - which pip
-      - python -m pip install .
       - python -m pip install .[docs]
       - python -m pip install -r docs/requirements.txt
+      - npm --prefix aiida_workgraph/widget install
+      - npm --prefix aiida_workgraph/widget run build
       - nohup rabbitmq-server > rabbitmq_log.txt 2>&1 &
       - sleep 5
       - rabbitmq-diagnostics status
