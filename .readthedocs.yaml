@@ -8,10 +8,18 @@ build:
   jobs:
     post_create_environment:
       - which python
-      - which rabbitmq-server
+      - which conda
+      - echo $CONDA_PREFIX
+      - which pip
+      - python -m pip install .
+      - python -m pip install .[docs]
+      - python -m pip install -r docs/requirements.txt
       - nohup rabbitmq-server > rabbitmq_log.txt 2>&1 &
       - sleep 5
       - rabbitmq-diagnostics status
+      - verdi presto
+      - verdi daemon start
+      - verdi status
 
 
 conda:
