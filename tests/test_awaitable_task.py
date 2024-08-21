@@ -3,6 +3,7 @@ import asyncio
 from aiida.cmdline.utils.common import get_workchain_report
 import datetime
 import pytest
+import time
 
 
 def test_awaitable_task(decorated_add):
@@ -100,4 +101,27 @@ def test_task_monitor_timeout(decorated_add):
     report = get_workchain_report(wg.process, "REPORT")
     assert "Timeout reached for monitor function" in report
     assert monitor1.state == "FAILED"
+    assert add1.state == "SKIPPED"
+
+
+@pytest.mark.usefixtures("started_daemon_client")
+def test_task_monitor_kill(decorated_add):
+    """Test killing a monitor task."""
+    wg = WorkGraph(name="test_monitor_kill")
+    monitor1 = wg.add_task(
+        "workgraph.file_monitor",
+        name="monitor1",
+        timeout=30,
+        filepath="/tmp/test_file_monitor.txt",
+    )
+    add1 = wg.add_task(decorated_add, "add1", x=1, y=2)
+    add1.waiting_on.add(monitor1)
+    wg.submit()
+    time.sleep(5)
+    wg.wait(tasks={"monitor1": ["RUNNING"]})
+    wg.kill_tasks(["monitor1"])
+    wg.wait()
+    report = get_workchain_report(wg.process, "REPORT")
+    assert "Task monitor1 action: KILLED." in report
+    assert monitor1.state == "KILLED"
     assert add1.state == "SKIPPED"
