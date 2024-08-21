@@ -71,11 +71,29 @@ def task_play(process, tasks, timeout, wait):
 def task_skip(process, tasks, timeout, wait):
     """Skip task."""
     from aiida.engine.processes import control
-    from aiida_workgraph.utils.control import skip_task
+    from aiida_workgraph.utils.control import skip_tasks
 
     for task in tasks:
         try:
-            skip_task(process, task, timeout, wait)
+            skip_tasks(process.pk, task, timeout, wait)
 
         except control.ProcessTimeoutException as exception:
             echo.echo_critical(f"{exception}\n{REPAIR_INSTRUCTIONS}")
+
+
+@workgraph_task.command("kill")
+@arguments.PROCESS()
+@click.argument("tasks", nargs=-1)
+@options.TIMEOUT()
+@options.WAIT()
+@decorators.with_dbenv()
+def task_kill(process, tasks, timeout, wait):
+    """Kill task."""
+    from aiida.engine.processes import control
+    from aiida_workgraph.utils.control import kill_tasks
+
+    print("tasks", tasks)
+    try:
+        kill_tasks(process.pk, tasks, timeout, wait)
+    except control.ProcessTimeoutException as exception:
+        echo.echo_critical(f"{exception}\n{REPAIR_INSTRUCTIONS}")
