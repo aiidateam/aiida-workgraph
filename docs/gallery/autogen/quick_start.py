@@ -163,7 +163,8 @@ print("Result of multiply : {}".format(wg.tasks["multiply1"].outputs[0].value))
 
 from aiida_workgraph.utils import generate_node_graph
 
-generate_node_graph(wg.pk)
+g = generate_node_graph(wg.pk)
+g._repr_svg_()
 
 
 ######################################################################
