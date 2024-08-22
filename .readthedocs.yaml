@@ -11,9 +11,9 @@ build:
       - which conda
       - echo $CONDA_PREFIX
       - which pip
-      - python -m pip install --no-cache-dir .
-      - python -m pip install --no-cache-dir .[docs]
-      - python -m pip install --exists-action=w --no-cache-dir -r docs/requirements.txt
+      - pip install --no-cache-dir .
+      - pip install --no-cache-dir .[docs]
+      - pip install --exists-action=w --no-cache-dir -r docs/requirements.txt
       - which npm
       - npm --prefix aiida_workgraph/widget install
       - npm --prefix aiida_workgraph/widget run build
@@ -25,7 +25,7 @@ build:
       - verdi daemon start
       - verdi status
       - pwd
-      - python -m pip list | grep aiida
+      - pip list | grep aiida
 
 conda:
   environment: docs/environment.yml
