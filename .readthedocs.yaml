@@ -7,22 +7,16 @@ build:
     nodejs: "20" # maybe need to be also miniconda
   jobs:
     post_create_environment:
-      - which python
-      - which conda
-      - echo $CONDA_PREFIX
-      - which pip
-      - python -m pip install --no-cache-dir .
-      - python -m pip install --no-cache-dir .[docs]
-      - python -m pip install --exists-action=w --no-cache-dir -r docs/requirements.txt
-      - which npm
       - npm --prefix aiida_workgraph/widget install
       - npm --prefix aiida_workgraph/widget run build
+      - python -m pip install --no-cache-dir .[docs]
+      - python -m pip install --exists-action=w --no-cache-dir -r docs/requirements.txt
       - rabbitmq-server -detached
       - sleep 10
       - rabbitmq-diagnostics status
       - verdi presto
-      - verdi profile configure-rabbitmq
       - verdi daemon start
+      - verdi status
 
 conda:
   environment: docs/environment.yml
