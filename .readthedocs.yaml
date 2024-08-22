@@ -11,9 +11,11 @@ build:
       - which conda
       - echo $CONDA_PREFIX
       - which pip
-      - pip install  .
-      - pip install  .[docs]
-      - pip install --exists-action=w  -r docs/requirements.txt
+      - pip list | grep aiida
+      - pip uninstall aiida-workgraph
+      - pip install --no-cache-dir .[docs]
+      - pip install --exists-action=w --no-cache-dir -r docs/requirements.txt
+      - pip list | grep aiida
       - which npm
       - npm --prefix aiida_workgraph/widget install
       - npm --prefix aiida_workgraph/widget run build
