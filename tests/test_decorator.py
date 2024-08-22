@@ -189,7 +189,8 @@ def test_decorator_graph_builder(decorated_add_multiply_group: Callable) -> None
     sum_diff1 = wg.add_task("workgraph.test_sum_diff", "sum_diff1")
     wg.add_link(add1.outputs[0], add_multiply1.inputs["x"])
     wg.add_link(add_multiply1.outputs["result"], sum_diff1.inputs["x"])
-    wg.submit(wait=True)
+    # use run to check if graph builder workgraph can be submit inside the engine
+    wg.run()
     assert wg.tasks["add_multiply1"].process.outputs.result.value == 32
     assert wg.tasks["add_multiply1"].outputs["result"].value == 32
     assert wg.tasks["sum_diff1"].outputs["sum"].value == 32
