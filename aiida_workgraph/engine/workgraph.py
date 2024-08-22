@@ -1065,8 +1065,8 @@ class WorkGraphEngine(Process, metaclass=Protect):
                 wg.name = name
                 wg.group_outputs = self.ctx._tasks[name]["metadata"]["group_outputs"]
                 wg.parent_uuid = self.node.uuid
-                wg.save(metadata={"call_link_label": name})
-                process = self.submit(wg.process_inited)
+                inputs = wg.prepare_inputs(metadata={"call_link_label": name})
+                process = self.submit(WorkGraphEngine, inputs=inputs)
                 self.set_task_state_info(name, "process", process)
                 self.set_task_state_info(name, "state", "RUNNING")
                 self.to_context(**{name: process})
