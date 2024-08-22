@@ -1,0 +1,7 @@
+name: base
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - aiida-core
+  - aiida-core.services
