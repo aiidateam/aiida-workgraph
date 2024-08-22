@@ -167,6 +167,7 @@ def multiply(x, y):
     return x*y
 
 wg = WorkGraph("second_workflow")
+# You might need to adapt the code_label to python3 if you use this as your default python
 wg.add_task("PythonJob", function=add, name="add", code_label="python")
 wg.add_task("PythonJob", function=multiply, name="multiply", x=wg.tasks["add"].outputs[0], code_label="python")
 
@@ -181,7 +182,7 @@ wg.to_html()
 # ~~~~~~~~~~~~~~~~~~~~
 # 
 # **Code**: We can set the ``computer`` to the remote computer where we
-# want to run the job. This will create a code ``python3@computer`` if not
+# want to run the job. This will create a code ``python@computer`` if not
 # exists. Of course, you can also set the ``code`` directly if you have
 # already created the code.
 # 
@@ -261,6 +262,7 @@ def multiply(x, y):
     return x*y + z
 
 wg = WorkGraph("third_workflow")
+# You might need to adapt the code_label to python3 if you use this as your default python
 wg.add_task("PythonJob", function=add, name="add", code_label="python")
 wg.add_task("PythonJob", function=multiply, name="multiply",
              parent_folder=wg.tasks["add"].outputs["remote_folder"],
