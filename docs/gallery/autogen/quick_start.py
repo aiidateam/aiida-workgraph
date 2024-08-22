@@ -146,6 +146,9 @@ wg.submit(
     inputs={"add1": {"x": Int(2), "y": Int(3)}, "multiply1": {"y": Int(4)}}, wait=True
 )
 from aiida.cmdline.utils.common import get_workchain_report
+import aiida_workgraph
+
+print("path: ", aiida_workgraph.__path__)
 
 report = get_workchain_report(wg.process, "REPORT")
 print("report: ", report)

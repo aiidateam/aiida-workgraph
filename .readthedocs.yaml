@@ -24,6 +24,8 @@ build:
       - verdi profile configure-rabbitmq
       - verdi daemon start
       - verdi status
+      - pwd
+      - python -m pip list | grep aiida
 
 conda:
   environment: docs/environment.yml
