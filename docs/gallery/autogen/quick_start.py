@@ -301,16 +301,20 @@ print("\nResult of multiply is {} \n\n".format(wg.tasks["multiply"].outputs['res
 
 from aiida_workgraph import WorkGraph
 from aiida.calculations.arithmetic.add import ArithmeticAddCalculation
-from aiida.orm import Int, InstalledCode, load_computer
+from aiida.orm import Int, InstalledCode, load_computer, load_code
+from aiida.common.exceptions import NotExistent
 
 
 
-code = InstalledCode(
-    computer=load_computer('localhost'),
-    filepath_executable='/bin/bash',
-    label='add',
-    default_calc_job_plugin='core.arithmetic.add',
-).store()
+try:
+    query_code = load_code('add@localhost')  # The computer label can also be omitted here
+except NotExistent:
+    code = InstalledCode(
+        computer=load_computer('localhost'),
+        filepath_executable='/bin/bash',
+        label='add',
+        default_calc_job_plugin='core.arithmetic.add',
+    ).store()
 
 wg = WorkGraph("test_add_multiply")
 add1 = wg.add_task(ArithmeticAddCalculation, name="add1", x=Int(2), y=Int(3), code=code)
