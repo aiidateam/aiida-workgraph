@@ -134,6 +134,27 @@ print("Result of multiply : {}".format(wg.tasks["multiply1"].outputs[0].value))
 
 
 ######################################################################
+# Try submit
+#
+
+
+wg = WorkGraph("add_multiply_workflow")
+add_task = wg.add_task(add, name="add1")
+# link the output of the `add` task to one of the `x` input of the `multiply` task.
+wg.add_task(multiply, name="multiply1", x=add_task.outputs["result"])
+wg.submit(
+    inputs={"add1": {"x": Int(2), "y": Int(3)}, "multiply1": {"y": Int(4)}}, wait=True
+)
+from aiida.cmdline.utils.common import get_workchain_report
+
+report = get_workchain_report(wg.process, "REPORT")
+print("report: ", report)
+print("State of WorkGraph:   {}".format(wg.state))
+print("Result of add      : {}".format(wg.tasks["add1"].outputs[0].value))
+print("Result of multiply : {}".format(wg.tasks["multiply1"].outputs[0].value))
+
+
+######################################################################
 # One can also generate the node graph from the AiiDA process:
 #
 
@@ -233,10 +254,7 @@ wg.submit(
     wait=True,
 )
 
-from aiida.cmdline.utils.common import get_workchain_report
 
-report = get_workchain_report(wg.process, "REPORT")
-print("report: ", report)
 # ------------------------- Print the output -------------------------
 print(
     "\nResult of multiply is {} \n\n".format(

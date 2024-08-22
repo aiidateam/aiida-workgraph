@@ -23,6 +23,7 @@ build:
       - verdi presto
       - verdi profile configure-rabbitmq
       - verdi daemon start
+      - verdi status
 
 conda:
   environment: docs/environment.yml
