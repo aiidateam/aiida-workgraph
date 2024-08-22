@@ -296,23 +296,21 @@ print("\nResult of multiply is {} \n\n".format(wg.tasks["multiply"].outputs['res
 # component.
 # 
 # Here is an example of using the ``ArithmeticAddCalculation`` Calcjob
-# inside the workgraph. Please create an AiiDA code terminal before running the
-# code below
+# inside the workgraph.
 #
-#     .. code:: console
-#
-#        verdi code create core.code.installed \
-#                --label add \
-#                --computer=localhost \
-#                --default-calc-job-plugin core.arithmetic.add \
-#                --filepath-executable /bin/bash \
-#                --non-interactive
 
 from aiida_workgraph import WorkGraph
 from aiida.calculations.arithmetic.add import ArithmeticAddCalculation
-from aiida.orm import Int, load_code
+from aiida.orm import Int, InstalledCode, load_computer
 
-code = load_code("add@localhost")
+
+
+code = InstalledCode(
+    computer=load_computer('localhost'),
+    filepath_executable='/bin/bash',
+    label='add',
+    default_calc_job_plugin='core.arithmetic.add',
+).store()
 
 wg = WorkGraph("test_add_multiply")
 add1 = wg.add_task(ArithmeticAddCalculation, name="add1", x=Int(2), y=Int(3), code=code)
