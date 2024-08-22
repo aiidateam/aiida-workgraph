@@ -4,16 +4,19 @@ build:
   os: "ubuntu-22.04"
   tools:
     python: "miniconda3-3.12-24.1" # note that libmamba-solver is available since 22.1
-    nodejs: "20" # maybe need to be also miniconda
+    nodejs: "miniconda3-3.12-24.1" # maybe need to be also miniconda
   jobs:
     post_create_environment:
       - which python
       - which conda
       - echo $CONDA_PREFIX
       - which pip
-      - python -m pip install .
-      - python -m pip install .[docs]
-      - python -m pip install -r docs/requirements.txt
+      - python -m pip install --no-cache-dir .
+      - python -m pip install --no-cache-dir .[docs]
+      - python -m pip install --exists-action=w --no-cache-dir -r docs/requirements.txt
+      - which npm
+      - npm --prefix aiida_workgraph/widget install
+      - npm --prefix aiida_workgraph/widget run build
       - rabbitmq-server -detached
       - sleep 5
       - rabbitmq-diagnostics status
