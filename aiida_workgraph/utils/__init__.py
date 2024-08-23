@@ -146,39 +146,13 @@ def generate_node_graph(pk: int) -> Any:
     return graph.graphviz
 
 
-def svg_to_html(svg_xml: str, width: str = "100%", height: str = "100vh") -> str:
-    """
-    Converts an SVG XML string into an HTML string with embedded SVG,
-    scaled to the specified width and height using CSS.
-    """
-    html_template = f"""
-    <!DOCTYPE html>
-    <html lang="en">
-    <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Node Graph</title>
-        <style>
-            svg {{
-                width: {width};
-                height: {height};
-            }}
-        </style>
-    </head>
-    <body>
-        {svg_xml}
-    </body>
-    </html>
-    """
-    return html_template
-
-
 def generate_node_graph_html(
     pk: int, output: str = None, width: str = "100%", height: str = "600px"
 ) -> Any:
     """Generate the node graph and convert it to HTML."""
     from IPython.display import IFrame
     import pathlib
+    from .svg_to_html import svg_to_html
 
     g = generate_node_graph(pk)
     html_content = svg_to_html(g._repr_image_svg_xml(), width, height)

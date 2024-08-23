@@ -455,13 +455,18 @@ generate_node_graph_html(wg.pk)
 # What’s Next
 # -----------
 #
-# +------------------------------------+------------------------------------------------------+
-# | `Concepts <concept/index.rst>`__   | A brief introduction of WorkGraph’s main concepts.   |
-# +------------------------------------+------------------------------------------------------+
-# | `Tutorials <tutorial/index.rst>`__ | Real-world examples in computational                 |
-# |                                    | materials science and more.                          |
-# +---------------------------+---------------------------------------------------------------+
-# | `HowTo <howto/index.rst>`__        | Advanced topics and tips, e.g., flow control using   |
-# |                                    | ``if``, ``for``, ``while``, and ``context``.         |
-# +------------------------------------+------------------------------------------------------+
+# +-----------------------------------------+------------------------------------------------------+
+# | `Concepts <../concept/index.rst>`__     | A brief introduction of WorkGraph’s main concepts.   |
+# |                                         |                                                      |
+# |                                         |                                                      |
+# +-----------------------------------------+------------------------------------------------------+
+# | `Tutorials <../tutorial/index.rst>`__   | Real-world examples in computational materials       |
+# |                                         | science and more.                                    |
+# |                                         |                                                      |
+# +-----------------------------------------+------------------------------------------------------+
+# | `HowTo <../howto/index.rst>`__          | Advanced topics and tips, e.g flow control using     |
+# |                                         | ``if``, ``for``, ``while`` and ``context``.          |
+# |                                         |                                                      |
+# +-----------------------------------------+------------------------------------------------------+
+#
 #
