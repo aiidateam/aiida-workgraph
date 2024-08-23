@@ -221,13 +221,15 @@ def build_task_from_AiiDA(
                 or executor.process_class._var_positional
             )
         tdata["var_kwargs"] = name
-        inputs.append(
-            {
-                "identifier": "workgraph.any",
-                "name": name,
-                "property": {"identifier": "workgraph.any", "default": {}},
-            }
-        )
+        # if user already defined the var_args in the inputs, skip it
+        if name not in [input["name"] for input in inputs]:
+            inputs.append(
+                {
+                    "identifier": "workgraph.any",
+                    "name": name,
+                    "property": {"identifier": "workgraph.any", "default": {}},
+                }
+            )
     # TODO In order to reload the WorkGraph from process, "is_pickle" should be True
     # so I pickled the function here, but this is not necessary
     # we need to update the node_graph to support the path and name of the function
