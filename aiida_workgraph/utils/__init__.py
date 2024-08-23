@@ -348,28 +348,39 @@ def get_or_create_code(
         return code
 
 
-def serialize_pythonjob_properties(wgdata):
-    """Serialize the PythonJob properties."""
+def serialize_properties(wgdata):
+    """Serialize the properties.
+    Because we use yaml (aiida's serialize) to serialize the data and
+    save it to the node.base.extras. yaml can not handle the function
+    defined in a scope, e.g., local function in another function.
+    So, if a function is used as input, we needt to serialize the function.
+
+    For PythonJob, serialize the function inputs."""
     from aiida_workgraph.orm.serializer import general_serializer
+    from aiida_workgraph.orm.function_data import PickledLocalFunction
+    import inspect
 
     for _, task in wgdata["tasks"].items():
-        if not task["metadata"]["node_type"].upper() == "PYTHONJOB":
-            continue
-        # get the names kwargs for the PythonJob, which are the inputs before _wait
-        input_kwargs = []
-        for input in task["inputs"]:
-            if input["name"] == "_wait":
-                break
-            input_kwargs.append(input["name"])
-        for name in input_kwargs:
-            prop = task["properties"][name]
-            # if value is not None, not {}
-            if not (
-                prop["value"] is None
-                or isinstance(prop["value"], dict)
-                and prop["value"] == {}
-            ):
-                prop["value"] = general_serializer(prop["value"])
+        if task["metadata"]["node_type"].upper() == "PYTHONJOB":
+            # get the names kwargs for the PythonJob, which are the inputs before _wait
+            input_kwargs = []
+            for input in task["inputs"]:
+                if input["name"] == "_wait":
+                    break
+                input_kwargs.append(input["name"])
+            for name in input_kwargs:
+                prop = task["properties"][name]
+                # if value is not None, not {}
+                if not (
+                    prop["value"] is None
+                    or isinstance(prop["value"], dict)
+                    and prop["value"] == {}
+                ):
+                    prop["value"] = general_serializer(prop["value"])
+        else:
+            for _, prop in task["properties"].items():
+                if inspect.isfunction(prop["value"]):
+                    prop["value"] = PickledLocalFunction(prop["value"]).store()
 
 
 def generate_bash_to_create_python_env(
