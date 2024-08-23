@@ -1,7 +1,6 @@
 import pytest
-from aiida_workgraph import WorkGraph
+from aiida_workgraph import WorkGraph, task
 from typing import Callable
-from aiida_workgraph import task
 
 
 @pytest.fixture(params=["decorator_factory", "decorator"])
@@ -115,6 +114,22 @@ def test_decorators_workfunction_args(task_workfunction) -> None:
     assert n.var_args is None
     assert n.var_kwargs == "c"
     assert n.outputs.keys() == ["result", "_outputs", "_wait"]
+
+
+def test_decorators_parameters() -> None:
+    """Test passing parameters to decorators."""
+
+    @task.calcfunction(
+        inputs=[{"name": "c", "link_limit": 1000}],
+        outputs=[{"name": "sum"}, {"name": "product"}],
+    )
+    def test(a, b=1, **c):
+        return {"sum": a + b, "product": a * b}
+
+    test1 = test.task()
+    assert test1.inputs["c"].link_limit == 1000
+    assert "sum" in test1.outputs.keys()
+    assert "product" in test1.outputs.keys()
 
 
 @pytest.fixture(params=["decorator_factory", "decorator"])
