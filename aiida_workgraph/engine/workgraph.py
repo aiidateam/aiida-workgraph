@@ -144,6 +144,7 @@ class WorkGraphEngine(Process, metaclass=Protect):
         super().load_instance_state(saved_state, load_context)
         # Load the context
         self._context = saved_state[self._CONTEXT]
+        self._temp = {"awaitables": {}}
 
         self.set_logger(self.node.logger)
 
@@ -251,11 +252,8 @@ class WorkGraphEngine(Process, metaclass=Protect):
             raise AssertionError(f"Unsupported awaitable action: {awaitable.action}")
 
         awaitable.resolved = True
-        # find awaitable in the self._awaitables with the same pk and remove it
-        for index, a in enumerate(self._awaitables):
-            if a.pk == awaitable.pk:
-                self._awaitables.pop(index)
-                break
+        # remove awaitabble from the list
+        self._awaitables = [a for a in self._awaitables if a.pk != awaitable.pk]
 
         if not self.has_terminated():
             # the process may be terminated, for example, if the process was killed or excepted
@@ -388,7 +386,7 @@ class WorkGraphEngine(Process, metaclass=Protect):
 
         :param awaitable: an Awaitable instance
         """
-        print("on awaitable finished: ", awaitable.key)
+        self.logger.debug(f"Awaitable {awaitable.key} finished.")
 
         if isinstance(awaitable.pk, int):
             self.logger.info(
@@ -418,11 +416,24 @@ class WorkGraphEngine(Process, metaclass=Protect):
                 )
             )
             try:
-                results = awaitable.result()
-                self.set_normal_task_results(awaitable.key, results)
+                # if awaitable is cancelled, the result is None
+                if awaitable.cancelled():
+                    self.set_task_state_info(awaitable.key, "state", "KILLED")
+                    # set child tasks state to SKIPPED
+                    self.set_tasks_state(
+                        self.ctx._connectivity["child_node"][awaitable.key], "SKIPPED"
+                    )
+                    self.report(f"Task: {awaitable.key} cancelled.")
+                else:
+                    results = awaitable.result()
+                    self.set_normal_task_results(awaitable.key, results)
             except Exception as e:
                 self.logger.error(f"Error in awaitable {awaitable.key}: {e}")
                 self.set_task_state_info(awaitable.key, "state", "FAILED")
+                # set child tasks state to SKIPPED
+                self.set_tasks_state(
+                    self.ctx._connectivity["child_node"][awaitable.key], "SKIPPED"
+                )
                 self.report(f"Task: {awaitable.key} failed.")
                 self.run_error_handlers(awaitable.key)
             value = None
@@ -460,6 +471,7 @@ class WorkGraphEngine(Process, metaclass=Protect):
         self.node.label = wgdata["name"]
 
     def setup(self) -> None:
+        """Setup the variables in the context."""
         # track if the awaitable callback is added to the runner
         self.ctx._awaitable_actions = []
         self.ctx._new_data = {}
@@ -472,6 +484,8 @@ class WorkGraphEngine(Process, metaclass=Protect):
         self.ctx._execution_count = 0
         # init task results
         self.set_task_results()
+        # data not to be persisted, because they are not serializable
+        self._temp = {"awaitables": {}}
         # while workgraph
         if self.ctx._workgraph["workgraph_type"].upper() == "WHILE":
             self.ctx._max_iteration = self.ctx._workgraph.get("max_iteration", 1000)
@@ -523,23 +537,23 @@ class WorkGraphEngine(Process, metaclass=Protect):
         self.reset_task(task.name)
 
     def get_task_state_info(self, name: str, key: str) -> str:
-        """Get task state info from base.extras."""
+        """Get task state info from ctx."""
 
-        if key == "process":
-            value = deserialize_unsafe(
-                self.node.base.extras.get(f"_task_{key}_{name}", "")
-            )
-        else:
-            value = self.node.base.extras.get(f"_task_{key}_{name}", "")
+        value = self.ctx._tasks[name].get(key, None)
+        if key == "process" and value is not None:
+            value = deserialize_unsafe(value)
         return value
 
     def set_task_state_info(self, name: str, key: str, value: any) -> None:
-        """Set task state info to base.extras."""
+        """Set task state info to ctx and base.extras.
+        We task state to the base.extras, so that we can access outside the engine"""
 
         if key == "process":
-            self.node.base.extras.set(f"_task_{key}_{name}", serialize(value))
+            value = serialize(value)
+            self.node.base.extras.set(f"_task_{key}_{name}", value)
         else:
             self.node.base.extras.set(f"_task_{key}_{name}", value)
+        self.ctx._tasks[name][key] = value
 
     def init_ctx(self, wgdata: t.Dict[str, t.Any]) -> None:
         """Init the context from the workgraph data."""
@@ -577,14 +591,18 @@ class WorkGraphEngine(Process, metaclass=Protect):
         if action.upper() == "RESET":
             for name in tasks:
                 self.reset_task(name)
-        if action.upper() == "PAUSE":
+        elif action.upper() == "PAUSE":
             for name in tasks:
                 self.pause_task(name)
-        if action.upper() == "PLAY":
+        elif action.upper() == "PLAY":
             for name in tasks:
                 self.play_task(name)
-        if action.upper() == "SKIP":
-            pass
+        elif action.upper() == "SKIP":
+            for name in tasks:
+                self.skip_task(name)
+        elif action.upper() == "KILL":
+            for name in tasks:
+                self.kill_task(name)
 
     def reset_task(
         self,
@@ -615,11 +633,34 @@ class WorkGraphEngine(Process, metaclass=Protect):
 
     def pause_task(self, name: str) -> None:
         """Pause task."""
+        self.set_task_state_info(name, "action", "PAUSE")
         self.report(f"Task {name} action: PAUSE.")
 
     def play_task(self, name: str) -> None:
         """Play task."""
+        self.set_task_state_info(name, "action", "")
         self.report(f"Task {name} action: PLAY.")
+
+    def skip_task(self, name: str) -> None:
+        """Skip task."""
+        self.set_task_state_info(name, "state", "SKIPPED")
+        self.report(f"Task {name} action: SKIP.")
+
+    def kill_task(self, name: str) -> None:
+        """Kill task.
+        This is used to kill the awaitable and monitor task.
+        """
+        if self.get_task_state_info(name, "state") in ["RUNNING"]:
+            if self.ctx._tasks[name]["metadata"]["node_type"].upper() in [
+                "AWAITABLE",
+                "MONITOR",
+            ]:
+                try:
+                    self._temp["awaitables"][name].cancel()
+                    self.set_task_state_info(name, "state", "KILLED")
+                    self.report(f"Task {name} action: KILLED.")
+                except Exception as e:
+                    self.logger.error(f"Error in killing task {name}: {e}")
 
     def continue_workgraph(self) -> None:
         print("Continue workgraph.")
@@ -628,16 +669,20 @@ class WorkGraphEngine(Process, metaclass=Protect):
         task_to_run = []
         for name, task in self.ctx._tasks.items():
             # update task state
-            if self.get_task_state_info(task["name"], "state") in [
-                "CREATED",
-                "RUNNING",
-                "FINISHED",
-                "FAILED",
-                "SKIPPED",
-            ]:
+            if (
+                self.get_task_state_info(task["name"], "state")
+                in [
+                    "CREATED",
+                    "RUNNING",
+                    "FINISHED",
+                    "FAILED",
+                    "SKIPPED",
+                ]
+                or name in self.ctx._executed_tasks
+            ):
                 continue
             ready, _ = self.is_task_ready_to_run(name)
-            if ready and self.task_should_run(name):
+            if ready:
                 task_to_run.append(name)
         #
         self.report("tasks ready to run: {}".format(",".join(task_to_run)))
@@ -890,24 +935,6 @@ class WorkGraphEngine(Process, metaclass=Protect):
         self.ctx._count += 1
         return should_run
 
-    def task_should_run(self, name: str, uuid: str = None) -> bool:
-        """Check if the task should not run.
-        If name not in executed tasks, return True.
-        If uuid is not None, check if the task with the same name and uuid is the first one.
-        In a extreme case, the engine try to run the same task multiple times at the same time.
-        We only allow the first one to run.
-        """
-        name_and_uuids = [
-            label.split(".")
-            for label in self.ctx._executed_tasks
-            if label.split(".")[0] == name
-        ]
-        if len(name_and_uuids) == 0:
-            return True
-        # find the index of current uuid
-        index = [i for i, item in enumerate(name_and_uuids) if item[1] == uuid][0]
-        return index == 0
-
     def remove_executed_task(self, name: str) -> None:
         """Remove labels with name from executed tasks."""
         self.ctx._executed_tasks = [
@@ -928,7 +955,6 @@ class WorkGraphEngine(Process, metaclass=Protect):
             create_data_node,
             update_nested_dict_with_special_keys,
         )
-        from uuid import uuid4
 
         for name in names:
             # skip if the max number of awaitables is reached
@@ -951,11 +977,7 @@ class WorkGraphEngine(Process, metaclass=Protect):
             # skip if the task is already executed
             if name in self.ctx._executed_tasks:
                 continue
-            else:
-                uuid = str(uuid4())
-                self.ctx._executed_tasks.append(f"{name}.{uuid}")
-                if not self.task_should_run(name, uuid):
-                    continue
+            self.ctx._executed_tasks.append(name)
             print("-" * 60)
 
             self.report(f"Run task: {name}, type: {task['metadata']['node_type']}")
@@ -1043,8 +1065,8 @@ class WorkGraphEngine(Process, metaclass=Protect):
                 wg.name = name
                 wg.group_outputs = self.ctx._tasks[name]["metadata"]["group_outputs"]
                 wg.parent_uuid = self.node.uuid
-                wg.save(metadata={"call_link_label": name})
-                process = self.submit(wg.process_inited)
+                inputs = wg.prepare_inputs(metadata={"call_link_label": name})
+                process = self.submit(WorkGraphEngine, inputs=inputs)
                 self.set_task_state_info(name, "process", process)
                 self.set_task_state_info(name, "state", "RUNNING")
                 self.to_context(**{name: process})
@@ -1154,13 +1176,15 @@ class WorkGraphEngine(Process, metaclass=Protect):
                 for key in self.ctx._tasks[name]["metadata"]["args"]:
                     kwargs.pop(key, None)
                 # add function and interval to the args
-                args = [executor, kwargs.pop("interval", 1), *args]
+                args = [executor, kwargs.pop("interval"), kwargs.pop("timeout"), *args]
                 awaitable_target = asyncio.ensure_future(
                     self.run_executor(monitor, args, kwargs, var_args, var_kwargs),
                     loop=self.loop,
                 )
                 awaitable = self.construct_awaitable_function(name, awaitable_target)
                 self.set_task_state_info(name, "state", "RUNNING")
+                # save the awaitable to the temp, so that we can kill it if needed
+                self._temp["awaitables"][name] = awaitable_target
                 self.to_context(**{name: awaitable})
             elif task["metadata"]["node_type"].upper() in ["NORMAL"]:
                 # Normal task is created by decoratoring a function with @task()
