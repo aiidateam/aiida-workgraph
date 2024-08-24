@@ -136,9 +136,9 @@ print("Result of multiply : {}".format(wg.tasks["multiply1"].outputs[0].value))
 # One can also generate the node graph from the AiiDA process:
 #
 
-from aiida_workgraph.utils import generate_node_graph_html
+from aiida_workgraph.utils import generate_node_graph
 
-generate_node_graph_html(wg.pk)
+generate_node_graph(wg.pk)
 
 
 ######################################################################
@@ -213,7 +213,7 @@ wg.to_html()
 #    }
 #
 
-from aiida_workgraph.utils import generate_node_graph_html
+from aiida_workgraph.utils import generate_node_graph
 
 # ------------------------- Submit the calculation -------------------
 # For real applications, one can pass metadata to the scheduler to activate the conda environment
@@ -238,7 +238,7 @@ print(
     )
 )
 # ------------------------- Generate node graph -------------------
-generate_node_graph_html(wg.pk)
+generate_node_graph(wg.pk)
 
 
 ######################################################################
@@ -354,9 +354,9 @@ wg.to_html()
 wg.submit(wait=True)
 print("Result of task add1: {}".format(wg.tasks["add2"].outputs["sum"].value))
 
-from aiida_workgraph.utils import generate_node_graph_html
+from aiida_workgraph.utils import generate_node_graph
 
-generate_node_graph_html(wg.pk)
+generate_node_graph(wg.pk)
 
 
 ######################################################################
@@ -430,7 +430,7 @@ print(
     "Result of task add_multiply1: {}".format(add_multiply1.outputs["multiply"].value)
 )
 
-generate_node_graph_html(wg.pk)
+generate_node_graph(wg.pk)
 
 
 ######################################################################

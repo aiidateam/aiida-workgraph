@@ -135,33 +135,43 @@ def merge_properties(wgdata: Dict[str, Any]) -> None:
                 prop["value"] = None
 
 
-def generate_node_graph(pk: int) -> Any:
+def generate_node_graph(
+    pk: int, output: str = None, width: str = "100%", height: str = "600px"
+) -> Any:
+    """Generate the node graph for the given node pk.
+    If in Jupyter, return the graphviz object.
+    Otherwise, save the graph to an HTML file.
+    """
+
     from aiida.tools.visualization import Graph
     from aiida import orm
+    from IPython.display import IFrame
+    import pathlib
+    from .svg_to_html import svg_to_html
+
+    in_jupyter = False
+    try:
+        from IPython import get_ipython
+
+        if get_ipython() is not None:
+            in_jupyter = True
+    except NameError:
+        pass
 
     graph = Graph()
     calc_node = orm.load_node(pk)
     graph.recurse_ancestors(calc_node, annotate_links="both")
     graph.recurse_descendants(calc_node, annotate_links="both")
-    return graph.graphviz
-
-
-def generate_node_graph_html(
-    pk: int, output: str = None, width: str = "100%", height: str = "600px"
-) -> Any:
-    """Generate the node graph and convert it to HTML."""
-    from IPython.display import IFrame
-    import pathlib
-    from .svg_to_html import svg_to_html
-
-    g = generate_node_graph(pk)
-    html_content = svg_to_html(g._repr_image_svg_xml(), width, height)
-    if output is None:
-        pathlib.Path("html").mkdir(exist_ok=True)
-        output = f"html/node_graph_{pk}.html"
-    with open(output, "w") as f:
-        f.write(html_content)
-    return IFrame(output, width=width, height=height)
+    g = graph.graphviz
+    if not in_jupyter:
+        html_content = svg_to_html(g._repr_image_svg_xml(), width, height)
+        if output is None:
+            pathlib.Path("html").mkdir(exist_ok=True)
+            output = f"html/node_graph_{pk}.html"
+        with open(output, "w") as f:
+            f.write(html_content)
+        return IFrame(output, width=width, height=height)
+    return g
 
 
 def build_task_link(wgdata: Dict[str, Any]) -> None:
