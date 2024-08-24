@@ -8,7 +8,6 @@ def prepare_for_workgraph_task(task: dict, kwargs: dict) -> tuple:
     from aiida_workgraph.utils import merge_properties
     from aiida.orm.utils.serialize import deserialize_unsafe
 
-    print("Task type: workgraph.")
     wgdata = deserialize_unsafe(task["executor"]["wgdata"])
     wgdata["name"] = task["name"]
     wgdata["metadata"]["group_outputs"] = task["metadata"]["group_outputs"]
@@ -30,7 +29,6 @@ def prepare_for_python_task(task: dict, kwargs: dict, var_kwargs: dict) -> dict:
     from aiida_workgraph.utils import get_or_create_code
     import os
 
-    print("Task  type: Python.")
     # get the names kwargs for the PythonJob, which are the inputs before _wait
     function_kwargs = {}
     for input in task["inputs"]:
@@ -114,7 +112,6 @@ def prepare_for_shell_task(task: dict, kwargs: dict) -> dict:
     from aiida.common import lang
     from aiida.orm import AbstractCode
 
-    print("Task  type: ShellJob.")
     command = kwargs.pop("command", None)
     resolve_command = kwargs.pop("resolve_command", False)
     metadata = kwargs.pop("metadata", {})

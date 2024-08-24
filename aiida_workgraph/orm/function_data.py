@@ -153,3 +153,7 @@ class PickledFunction(GeneralData):
 def to_pickled_function(value):
     """Convert a Python function to a `PickledFunction` instance."""
     return PickledFunction(value)
+
+
+class PickledLocalFunction(PickledFunction):
+    """PickledFunction subclass for local functions."""
