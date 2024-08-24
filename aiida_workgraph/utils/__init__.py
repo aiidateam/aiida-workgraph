@@ -62,6 +62,8 @@ def get_nested_dict(d: Dict, name: str, **kwargs) -> Any:
     d = {"base": {"pw": {"parameters": 2}}}
     name = "base.pw.parameters"
     """
+    from aiida.orm.utils.managers import NodeLinksManager
+
     keys = name.split(".")
     current = d
     for key in keys:
@@ -69,9 +71,13 @@ def get_nested_dict(d: Dict, name: str, **kwargs) -> Any:
             if "default" in kwargs:
                 return kwargs.get("default")
             else:
-                raise ValueError(
-                    f"{name} not exist in the dictionary. Available keys: {current.keys()}"
-                )
+                if isinstance(current, dict):
+                    avaiable_keys = current.keys()
+                elif isinstance(current, NodeLinksManager):
+                    avaiable_keys = list(current._get_keys())
+                else:
+                    avaiable_keys = []
+                raise ValueError(f"{name} not exist. Available keys: {avaiable_keys}")
         current = current[key]
     return current
 
