@@ -53,7 +53,7 @@ templates_path = ["_templates"]
 gallery_src_relative_dir = (
     "../gallery"  # relative path of the gallery src wrt. sphinx src
 )
-sphinx_src_autogen_dirs = ["autogen", "concept/autogen"]
+sphinx_src_autogen_dirs = ["autogen", "concept/autogen", "tutorial/autogen"]
 # we mimik the structure in the sphinx src directory in the gallery src directory
 
 # path of python scripts that should be executed
