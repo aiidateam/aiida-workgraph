@@ -329,9 +329,7 @@ from aiida.common.exceptions import NotExistent
 
 
 try:
-    query_code = load_code(
-        "add@localhost"
-    )  # The computer label can also be omitted here
+    code = load_code("add@localhost")  # The computer label can also be omitted here
 except NotExistent:
     code = InstalledCode(
         computer=load_computer("localhost"),

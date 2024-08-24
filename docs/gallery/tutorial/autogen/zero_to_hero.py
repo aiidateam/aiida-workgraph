@@ -1,27 +1,15 @@
 """
-===========================
-Zero to Hero Tutorial
-===========================
+======================================
+AiiDA-WorkGraph: From Zero To Hero
+======================================
 
-This tutorial demonstrates the steps to go from zero to hero in a given topic.
 """
 
 # %%
-# Introduction
-# ------------
-#
-# This section is the introduction to the tutorial. Replace this text with the
-# actual content from the introduction markdown cell in the notebook.
-
-#!/usr/bin/env python
-# coding: utf-8
-#
-# # AiiDA-WorkGraph: From Zero To Hero
-#
-# ## Introduction
 # In this tutorial, you will learn `AiiDA-WorkGraph` to build your workflow to carry out DFT calculation. It's recommended to run this tutorial inside a Jupyter notebook.
 #
-# ## Requirements
+# Requirements
+# ===============
 # To run this tutorial, you need to install `aiida-workgraph`, `aiida-quantumespresso`. Open a terminal and run:
 #
 # ```console
@@ -36,20 +24,19 @@ This tutorial demonstrates the steps to go from zero to hero in a given topic.
 #
 # Load the AiiDA profile.
 #
-# %%1]:
-#
+
 
 from aiida import load_profile
 
 load_profile()
 #
 
-# ## First workflow
+# %%
+# First workflow
+# ===============
 # Suppose we want to calculate ```(x + y) * z ``` in two steps. First, add `x` and `y`, then multiply the result with `z`.
 #
 # In AiiDA, we can define two `calcfunction` to do the `add` and `mutiply`:
-#
-# %%2]:
 #
 
 from aiida.engine import calcfunction
@@ -66,9 +53,9 @@ def multiply(x, y):
     return x * y
 
 
-#
-
-# ### Create the workflow
+# %%
+# Create the workflow
+# --------------------
 # Three steps:
 #
 # - create a empty `WorkGraph`
@@ -77,8 +64,6 @@ def multiply(x, y):
 #
 #
 # In a jupyter notebook, you can visualize the workgraph directly.
-#
-# %%3]:
 #
 
 from aiida_workgraph import WorkGraph
@@ -93,44 +78,11 @@ wg.to_html()
 # wg
 #
 
-# One can compare it with the `WorkChain` version by expanding the following details:
+# %%
+# Submit the workgraph
+# -------------------------
 #
-# <details>
-# <summary>Compare to the `WorkChain` Version</summary>
-#
-#
-# ```python
-# from aiida.engine import WorkChain
-#
-# class AddMultiplyWorkChain(WorkChain):
-#
-#     @classmethod
-#     def define(cls, spec):
-#         super().define(spec)
-#         spec.input('x')
-#         spec.input('y')
-#         spec.input('z')
-#         spec.outline(
-#             cls.add,
-#             cls.multiply,
-#             cls.results,
-#         )
-#
-#      def add(self):
-#         self.ctx.sum = add(self.inputs.x, self.inputs.y)
-#
-#     def multiply(self):
-#         self.ctx.product = multiply(self.ctx.sum, self.inputs.z)
-#
-#     def results(self):
-#         self.out('result', self.ctx.product)
-# ```
-# </details>
-#
-# ### Submit the workgraph
-#
-# %%4]:
-#
+
 
 from aiida_workgraph.utils import generate_node_graph
 from aiida.orm import Int
@@ -151,13 +103,14 @@ print(
 generate_node_graph(wg.pk)
 #
 
-# ## CalcJob and WorkChain
+# %%
+# CalcJob and WorkChain
+# =======================
 # AiiDA uses `CalcJob` to run a calculation on a remote computer. AiiDA community also provides a lot of well-written `calcfunction` and `WorkChain`. One can use these AiiDA component direclty in the WorkGraph. The inputs and outputs of the task is automatically generated based on the input and output port of the AiiDA component.
 #
 # Here is an example of using the `ArithmeticAddCalculation` Calcjob inside the workgraph. Suppose we want to calculate ```(x + y) + z ``` in two steps.
 #
-# %%5]:
-#
+
 
 from aiida_workgraph import WorkGraph
 from aiida.calculations.arithmetic.add import ArithmeticAddCalculation
@@ -170,21 +123,24 @@ wg.add_task(ArithmeticAddCalculation, name="add2", x=wg.tasks["add1"].outputs["s
 wg.to_html()
 #
 
-# #### Inspect the node
+# %%
+# Inspect the node
+# ----------------
 # How do I know which input and output to connect?
 #
 # The inputs and outputs of a task are generated automatically based on the inputs/outputs of the AiiDA component. WorkGraph also has some built-in ports, like `_wait` and `_outputs`.  One can inpsect a task's inputs and outputs.
 #
 # Note: special case for `calcfunction`, the default name of its output is `result`.
 #
-# %%6]:
-#
+
 
 # visualize the task
 wg.tasks["add1"].to_html()
 #
 
-# ## First Real-world Workflow: atomization energy of molecule
+# %%
+# First Real-world Workflow: atomization energy of molecule
+# ==========================================================
 #
 # The atomization energy, $\Delta E$, of a molecule can be expressed as:
 #
@@ -193,6 +149,7 @@ wg.tasks["add1"].to_html()
 # $$
 #
 # Where:
+#
 # - $\Delta E$ is the atomization energy of the molecule.
 # - $n_{\text{atom}}$ is the number of atoms.
 # - $E_{\text{atom}}$ is the energy of an isolated atom.
@@ -200,11 +157,11 @@ wg.tasks["add1"].to_html()
 #
 #
 #
-# ### Define a workgraph
+# Define a workgraph
+# -------------------
 # aiida-quantumespresso provides `PwCalculation` CalcJob and `PwBaseWorkChain` to run a PW calculation. we can use it directly in the WorkGraph. Here we use the `PwCalculation` CalcJob.
 #
-# %%7]:
-#
+
 
 from aiida_workgraph import WorkGraph
 from aiida.engine import calcfunction
@@ -238,21 +195,42 @@ wg.to_html()
 # wg
 #
 
-# ### Prepare the inputs and submit the workflow
+# %%
+# Prepare the inputs and submit the workflow
+# -------------------------------------------
 # You need to set up the code, computer, and pseudo potential for the calculation. Please refer to the this [documentation](https://aiida-quantumespresso.readthedocs.io/en/latest/installation/index.html) for more details.
 #
 # You can also stip this step.
 #
-# %%8]:
-#
 
 from aiida import load_profile
-from aiida.orm import Dict, KpointsData, StructureData, load_code, load_group
+from aiida.common.exceptions import NotExistent
+from aiida.orm import (
+    Dict,
+    KpointsData,
+    StructureData,
+    load_code,
+    load_group,
+    InstalledCode,
+    load_computer,
+)
 from ase.build import molecule
 from ase import Atoms
 
 #
 load_profile()
+# create pw code
+try:
+    pw_code = load_code(
+        "qe-7.2-pw@localhost"
+    )  # The computer label can also be omitted here
+except NotExistent:
+    pw_code = InstalledCode(
+        computer=load_computer("localhost"),
+        filepath_executable="pw.x",
+        label="qe-7.2-pw",
+        default_calc_job_plugin="quantumespresso.pw",
+    ).store()
 # create structure
 n_atom = Atoms("N")
 n_atom.center(vacuum=1.5)
@@ -260,7 +238,6 @@ n_atom.pbc = True
 structure_n = StructureData(ase=n_atom)
 structure_n2 = StructureData(ase=molecule("N2", vacuum=1.5, pbc=True))
 # create the PW task
-code = load_code("qe-7.2-pw@localhost")
 paras = Dict(
     {
         "CONTROL": {
@@ -293,7 +270,7 @@ metadata = {
 # ------------------------- Set the inputs -------------------------
 wg.tasks["pw_atom"].set(
     {
-        "code": code,
+        "code": pw_code,
         "structure": structure_n,
         "parameters": paras,
         "kpoints": kpoints,
@@ -303,7 +280,7 @@ wg.tasks["pw_atom"].set(
 )
 wg.tasks["pw_mol"].set(
     {
-        "code": code,
+        "code": pw_code,
         "structure": structure_n2,
         "parameters": paras,
         "kpoints": kpoints,
@@ -331,22 +308,26 @@ print(
 )
 #
 
+# %%
 # Generate node graph from the AiiDA process:
 #
-# %%9]:
-#
+
 
 from aiida_workgraph.utils import generate_node_graph
 
 generate_node_graph(wg.pk)
 #
 
-# ## Advanced Topic: Dynamic Workgraph
+# %%
+# Advanced Topic: Dynamic Workgraph
+# ==================================
 #
-# ### Graph builder
+# Graph builder
+# --------------
 # If we want to generate the workgraph on-the-fly, for example, if you want to use `if` to create the tasks, or repeat a calculation until it converges, you can use Graph Builder.
 #
 # Suppose we want to calculate:
+#
 # ```python
 # # step 1
 # result = add(x, y)
@@ -359,9 +340,7 @@ generate_node_graph(wg.pk)
 # result = add(result, y)
 # ```
 #
-#
-# %%10]:
-#
+
 
 # Create a WorkGraph which is dynamically generated based on the input
 # then we output the result of from the context
@@ -394,8 +373,9 @@ wg.add_task(add, name="add2", x=wg.tasks["add_multiply_if1"].outputs["result"])
 wg.to_html()
 #
 
-# %%11]:
-#
+# %%
+# Submit the WorkGraph
+
 
 wg.submit(
     inputs={
@@ -409,14 +389,13 @@ wg.submit(
 assert wg.tasks["add2"].outputs["result"].value == 7
 print("\nResult of add2 is {} \n\n".format(wg.tasks["add2"].outputs["result"].value))
 #
-
+# %%
 # Note: one can not see the detail of the `add_multiply_if1` before you running it.
 #
-# ## Second Real-world Workflow: Equation of state (EOS) WorkGraph
+# Second Real-world Workflow: Equation of state (EOS) WorkGraph
+# =============================================================
 #
 # First, create the calcfunction for the job.
-#
-# %%12]:
 #
 
 from aiida import orm
@@ -477,12 +456,11 @@ def eos(**datas):
     return eos
 
 
+# %%
+# Define the WorkGraph
+# ----------------------
 #
 
-# ### Define the WorkGraph:
-#
-# %%13]:
-#
 
 from aiida_workgraph import WorkGraph
 
@@ -496,10 +474,11 @@ eos1 = wg.add_task(eos, name="eos1", datas=all_scf1.outputs["result"])
 wg.to_html()
 #
 
-# ### Combine with a relax task
+# %%
+# Combine with a relax task
+# --------------------------
 #
-# %%14]:
-#
+
 
 from aiida_workgraph import WorkGraph, task
 from aiida_quantumespresso.calculations.pw import PwCalculation
@@ -527,23 +506,23 @@ eos_wg_task = wg.add_task(
     eos_workgraph, name="eos1", structure=relax_task.outputs["output_structure"]
 )
 wg.to_html()
-#
 
-# ### Useful tool: Web GUI
+
+# %%
+# Useful tool: Web GUI
+# =====================
 # Open a terminal, and run:
 # ```
 # workgraph web start
 # ```
 # Then visit the page http://127.0.0.1:8000/workgraph, you can view all the workgraphs here.
 #
-# ## What's Next
+# What's Next
+# =====================
 #
 # |        |                                         |
 # |---------------|----------------------------------------------------|
 # | [Concepts](https://aiida-workgraph.readthedocs.io/en/latest/concept/index.html)                          | A brief introduction of WorkGraph’s main concepts.  |
 # | [Tutorials](https://aiida-workgraph.readthedocs.io/en/latest/tutorial/index.html)                        | Real-world examples in computational materials science and more.                     |
 # | [HowTo](https://aiida-workgraph.readthedocs.io/en/latest/howto/index.html)                              | Advanced topics and tips, e.g flow control using `if`, `for`, `while` and `context`.    |
-#
-#
-#
 #

@@ -9,5 +9,5 @@ In this tutorials, you will see severl examples in real applications.
    :caption: Contents:
 
    autogen/zero_to_hero
-   qe
-   eos
+   autogen/qe
+   autogen/eos
