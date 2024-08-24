@@ -31,7 +31,7 @@ Sections
 
       .. container:: descr
 
-         :doc:`/quick_start`
+         :doc:`/autogen/quick_start`
             A quick start guide to get you up and running with AiiDA WorkGraph.
 
       .. container:: descr
@@ -93,7 +93,7 @@ Sections
    :caption: Contents:
    :hidden:
 
-   quick_start
+   autogen/quick_start
    installation
    tutorial/index
    built-in/index
