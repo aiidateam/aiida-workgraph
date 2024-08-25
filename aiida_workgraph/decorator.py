@@ -245,8 +245,8 @@ def build_task_from_AiiDA(
             if not outputs
             else outputs
         )
-        # get the source code of the function
-        tdata["executor"] = PickledFunction(executor).executor
+        # build executor from the function
+        tdata["executor"] = PickledFunction.build_executor(executor)
         # tdata["executor"]["type"] = tdata["task_type"]
     # print("kwargs: ", kwargs)
     # add built-in sockets
@@ -495,9 +495,9 @@ def generate_tdata(
         "properties": properties,
         "inputs": _inputs,
         "outputs": task_outputs,
-        "executor": PickledFunction(func).executor,
         "catalog": catalog,
     }
+    tdata["executor"] = PickledFunction.build_executor(func)
     if additional_data:
         tdata.update(additional_data)
     return tdata
