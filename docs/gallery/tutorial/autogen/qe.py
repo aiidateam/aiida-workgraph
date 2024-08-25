@@ -14,26 +14,31 @@ Computational materials science
 # ------------
 # To run this tutorial, you need to install `aiida-workgraph`, `aiida-quantumespresso` and `aiida-pseudo`. Open a terminal and run:
 #
-# ```console
-# pip install aiida-workgraph aiida-quantumespresso aiida-pseudo
-# aiida-pseudo install sssp -x PBEsol
-# ```
+# .. code-block:: console
+#
+#    pip install aiida-workgraph aiida-quantumespresso aiida-pseudo
+#    aiida-pseudo install sssp -x PBEsol
 #
 # Start the AiiDA daemon if needed:
-# ```console
-# verdi daemon start
-# ```
+#
+# .. code-block:: console
+#
+#    verdi daemon start
 #
 # Start the web server
 # --------------------
+#
 # Open a terminal, and run:
-# ```
-# workgraph web start
-# ```
-# Then visit the page http://127.0.0.1:8000/workgraph, you can view the workgraph later from here.
+#
+# .. code-block:: console
+#
+#    workgraph web start
+#
+# Then visit the page `http://127.0.0.1:8000/workgraph`, where you can view the workgraph later.
 #
 # Load the AiiDA profile.
 #
+
 
 from aiida import load_profile
 
@@ -160,11 +165,12 @@ generate_node_graph(wg.pk)
 # Second workflow: atomization energy of N2 molecule
 # ==================================================
 #
-# The atomization energy of $N_2$ is defined as the energy difference between the $N_2$ molecule and two isolated N atoms.
-# ```python
-# e_atomization = 2 * e_atom - e_molecule
-# ````
+# The atomization energy of :math:`N_2` is defined as the energy difference between the :math:`N_2` molecule and two isolated N atoms.
 #
+# .. code-block:: python
+#
+#    e_atomization = 2 * e_atom - e_molecule
+
 # Define a calcfunction to calculate the atomization energy
 # ---------------------------------------------------------
 #

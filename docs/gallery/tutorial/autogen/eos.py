@@ -7,10 +7,16 @@ Equation of state (EOS) WorkGraph
 
 # %%
 # To run this tutorial, you need to install aiida-workgraph and restart the daemon. Open a terminal and run:
-# ```console
-# pip install aiida-workgraph
-# verdi daemon restart
-# ```
+#
+# .. code-block:: console
+#
+#    pip install aiida-workgraph[widget] aiida-quantumespresso
+#
+# Restart (or start) the AiiDA daemon if needed:
+#
+# .. code-block:: console
+#
+#    verdi daemon restart
 #
 # Create the calcfunction task
 # ============================

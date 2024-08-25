@@ -12,15 +12,15 @@ AiiDA-WorkGraph: From Zero To Hero
 # ===============
 # To run this tutorial, you need to install `aiida-workgraph`, `aiida-quantumespresso`. Open a terminal and run:
 #
-# ```console
-# pip install aiida-workgraph[widiget] aiida-quantumespresso
-# ```
+# .. code-block:: console
+#
+#    pip install aiida-workgraph[widget] aiida-quantumespresso
 #
 # Restart (or start) the AiiDA daemon if needed:
 #
-# ```console
-# verdi daemon restart
-# ```
+# .. code-block:: console
+#
+#    verdi daemon restart
 #
 # Load the AiiDA profile.
 #
@@ -144,18 +144,16 @@ wg.tasks["add1"].to_html()
 #
 # The atomization energy, $\Delta E$, of a molecule can be expressed as:
 #
-# $$
-# \Delta E = n_{\text{atom}} \times E_{\text{atom}} - E_{\text{molecule}}
-# $$
+# .. math::
+#
+#    \Delta E = n_{\text{atom}} \times E_{\text{atom}} - E_{\text{molecule}}
 #
 # Where:
 #
-# - $\Delta E$ is the atomization energy of the molecule.
-# - $n_{\text{atom}}$ is the number of atoms.
-# - $E_{\text{atom}}$ is the energy of an isolated atom.
-# - $E_{\text{molecule}}$ is the energy of the molecule.
-#
-#
+# - :math:`\Delta E` is the atomization energy of the molecule.
+# - :math:`n_{\text{atom}}` is the number of atoms.
+# - :math:`E_{\text{atom}}` is the energy of an isolated atom.
+# - :math:`E_{\text{molecule}}` is the energy of the molecule.
 #
 # Define a workgraph
 # -------------------
@@ -328,17 +326,17 @@ generate_node_graph(wg.pk)
 #
 # Suppose we want to calculate:
 #
-# ```python
-# # step 1
-# result = add(x, y)
-# # step 2
-# if result > 0:
-#     result = add(result, y)
-# else:
-#     result = multiply(result, y)
-# # step 3
-# result = add(result, y)
-# ```
+# .. code-block:: python
+#
+#    # step 1
+#    result = add(x, y)
+#    # step 2
+#    if result > 0:
+#        result = add(result, y)
+#    else:
+#        result = multiply(result, y)
+#    # step 3
+#    result = add(result, y)
 #
 
 
@@ -512,17 +510,20 @@ wg.to_html()
 # Useful tool: Web GUI
 # =====================
 # Open a terminal, and run:
-# ```
-# workgraph web start
-# ```
-# Then visit the page http://127.0.0.1:8000/workgraph, you can view all the workgraphs here.
+#
+# .. code-block:: console
+#
+#    workgraph web start
+#
+# Then visit the page `http://127.0.0.1:8000/workgraph`, where you can view all the workgraphs.
 #
 # What's Next
-# =====================
+# ===========
 #
-# |        |                                         |
-# |---------------|----------------------------------------------------|
-# | [Concepts](https://aiida-workgraph.readthedocs.io/en/latest/concept/index.html)                          | A brief introduction of WorkGraph’s main concepts.  |
-# | [Tutorials](https://aiida-workgraph.readthedocs.io/en/latest/tutorial/index.html)                        | Real-world examples in computational materials science and more.                     |
-# | [HowTo](https://aiida-workgraph.readthedocs.io/en/latest/howto/index.html)                              | Advanced topics and tips, e.g flow control using `if`, `for`, `while` and `context`.    |
-#
+# +----------------------------------------------------------------------------------------------------+-----------------------------------------------------------------------------+
+# |                                                                                                    |                                                                             |
+# +----------------------------------------------------------------------------------------------------+-----------------------------------------------------------------------------+
+# | `Concepts <https://aiida-workgraph.readthedocs.io/en/latest/concept/index.html>`_                  | A brief introduction of WorkGraph’s main concepts.                          |
+# | `Tutorials <https://aiida-workgraph.readthedocs.io/en/latest/tutorial/index.html>`_                | Real-world examples in computational materials science and more.            |
+# | `HowTo <https://aiida-workgraph.readthedocs.io/en/latest/howto/index.html>`_                       | Advanced topics, e.g., flow control using `if`, `while`, and `context`.     |
+# +----------------------------------------------------------------------------------------------------+-----------------------------------------------------------------------------+
