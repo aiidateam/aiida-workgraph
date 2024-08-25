@@ -8,6 +8,7 @@ from aiida.engine.processes.ports import PortNamespace
 import cloudpickle as pickle
 from aiida_workgraph.task import Task
 from aiida_workgraph.orm.function_data import PickledFunction
+import inspect
 
 task_types = {
     CalcFunctionNode: "CALCFUNCTION",
@@ -19,7 +20,7 @@ task_types = {
 aiida_socket_mapping = {
     orm.Int: "workgraph.aiida_int",
     orm.Float: "workgraph.aiida_float",
-    orm.Str: "workgraph.aiida_str",
+    orm.Str: "workgraph.aiida_string",
     orm.Bool: "workgraph.aiida_bool",
 }
 
@@ -145,7 +146,6 @@ def build_task_from_callable(
     If it is a function, build task from function.
     If it is a class, it only supports CalcJob and WorkChain.
     """
-    import inspect
     from aiida_workgraph.task import Task
 
     # if it is already a task, return it
@@ -211,7 +211,8 @@ def build_task_from_AiiDA(
         add_input_recursive(inputs, port, args, kwargs, required=port.required)
     for _key, port in spec.outputs.ports.items():
         add_output_recursive(outputs, port, required=port.required)
-    if spec.inputs.dynamic:
+    # Only check this for calcfunction and workfunction
+    if inspect.isfunction(executor) and spec.inputs.dynamic:
         if hasattr(executor.process_class, "_varargs"):
             name = executor.process_class._varargs
         else:
@@ -220,13 +221,15 @@ def build_task_from_AiiDA(
                 or executor.process_class._var_positional
             )
         tdata["var_kwargs"] = name
-        inputs.append(
-            {
-                "identifier": "workgraph.any",
-                "name": name,
-                "property": {"identifier": "workgraph.any", "default": {}},
-            }
-        )
+        # if user already defined the var_args in the inputs, skip it
+        if name not in [input["name"] for input in inputs]:
+            inputs.append(
+                {
+                    "identifier": "workgraph.any",
+                    "name": name,
+                    "property": {"identifier": "workgraph.any", "default": {}},
+                }
+            )
     # TODO In order to reload the WorkGraph from process, "is_pickle" should be True
     # so I pickled the function here, but this is not necessary
     # we need to update the node_graph to support the path and name of the function
@@ -242,8 +245,8 @@ def build_task_from_AiiDA(
             if not outputs
             else outputs
         )
-        # get the source code of the function
-        tdata["executor"] = PickledFunction(executor).executor
+        # build executor from the function
+        tdata["executor"] = PickledFunction.build_executor(executor)
         # tdata["executor"]["type"] = tdata["task_type"]
     # print("kwargs: ", kwargs)
     # add built-in sockets
@@ -492,9 +495,9 @@ def generate_tdata(
         "properties": properties,
         "inputs": _inputs,
         "outputs": task_outputs,
-        "executor": PickledFunction(func).executor,
         "catalog": catalog,
     }
+    tdata["executor"] = PickledFunction.build_executor(func)
     if additional_data:
         tdata.update(additional_data)
     return tdata

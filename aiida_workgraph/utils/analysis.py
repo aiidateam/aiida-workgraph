@@ -199,6 +199,8 @@ class WorkGraphSaver:
         - all tasks
         """
         from aiida_workgraph.utils import workgraph_to_short_json
+        import inspect
+        from aiida_workgraph.orm.function_data import PickledLocalFunction
 
         # pprint(self.wgdata)
         # self.wgdata["created"] = datetime.datetime.utcnow()
@@ -207,6 +209,9 @@ class WorkGraphSaver:
         self.process.base.extras.set("_workgraph_short", short_wgdata)
         self.save_task_states()
         for name, task in self.wgdata["tasks"].items():
+            for _, prop in task["properties"].items():
+                if inspect.isfunction(prop["value"]):
+                    prop["value"] = PickledLocalFunction(prop["value"]).store()
             self.wgdata["tasks"][name] = serialize(task)
         # nodes is a copy of tasks, so we need to pop it out
         self.wgdata.pop("nodes")

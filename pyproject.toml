@@ -28,7 +28,7 @@ dependencies = [
     "numpy~=1.21",
     "scipy",
     "ase",
-    "node-graph>=0.0.13",
+    "node-graph>=0.0.14",
     "aiida-core>=2.3",
     "cloudpickle",
     "aiida-shell",
@@ -87,6 +87,7 @@ workgraph = "aiida_workgraph.cli.cmd_workgraph:workgraph"
 [project.entry-points."aiida.data"]
 "workgraph.general" = "aiida_workgraph.orm.general_data:GeneralData"
 "workgraph.pickled_function" = "aiida_workgraph.orm.function_data:PickledFunction"
+"workgraph.pickled_local_function" = "aiida_workgraph.orm.function_data:PickledLocalFunction"
 "workgraph.ase.atoms.Atoms" = "aiida_workgraph.orm.atoms:AtomsData"
 "workgraph.builtins.int" = "aiida.orm.nodes.data.int:Int"
 "workgraph.builtins.float" = "aiida.orm.nodes.data.float:Float"

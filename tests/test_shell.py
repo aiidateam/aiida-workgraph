@@ -1,5 +1,5 @@
 import pytest
-from aiida_workgraph import WorkGraph
+from aiida_workgraph import WorkGraph, task
 from aiida_shell.launch import prepare_code
 from aiida.orm import SinglefileData
 
@@ -63,41 +63,48 @@ def test_shell_set():
     assert cat_task.outputs["stdout"].value.get_content() == "1 5 1"
 
 
-def test_shell_workflow():
-    from aiida_workgraph import WorkGraph
+@pytest.mark.usefixtures("started_daemon_client")
+def test_shell_graph_builder():
+    """Test the ShellJob inside a graph builder.
+    And the parser is also defined in the graph builder."""
     from aiida.orm import Int
-    from aiida_shell.data import PickledData
 
-    def parser(self, dirpath):
-        from aiida.orm import Int
+    @task.graph_builder(outputs=[{"name": "result", "from": "job2.result"}])
+    def add_multiply(x, y):
+        """Add two numbers and multiply the result by 2."""
+        # define the parser function
+        def parser(self, dirpath):
+            from aiida.orm import Int
 
-        return {"result": Int((dirpath / "stdout").read_text().strip())}
+            return {"result": Int((dirpath / "stdout").read_text().strip())}
 
-    # Create a workgraph
-    wg = WorkGraph(name="shell_add_mutiply_workflow")
-    # echo x + y expression
-    job1 = wg.add_task(
-        "ShellJob",
-        name="job1",
-        command="echo",
-        arguments=["{x}", "+", "{y}"],
-        nodes={
-            "x": Int(2),
-            "y": Int(3),
-        },
-    )
-    # bc command to calculate the expression
-    job2 = wg.add_task(
-        "ShellJob",
-        name="job2",
-        command="bc",
-        arguments=["{expression}"],
-        nodes={"expression": job1.outputs["stdout"]},
-        parser=PickledData(parser),
-        parser_outputs=[
-            {"identifier": "workgraph.any", "name": "result"}
-        ],  # add a "result" output socket from the parser
-    )
+        wg = WorkGraph()
+        # echo x + y expression
+        job1 = wg.add_task(
+            "ShellJob",
+            name="job1",
+            command="echo",
+            arguments=["{x}", "+", "{y}"],
+            nodes={
+                "x": x,
+                "y": y,
+            },
+        )
+        # bc command to calculate the expression
+        wg.add_task(
+            "ShellJob",
+            name="job2",
+            command="bc",
+            arguments=["{expression}"],
+            nodes={"expression": job1.outputs["stdout"]},
+            parser=(parser),
+            parser_outputs=[
+                {"identifier": "workgraph.any", "name": "result"}
+            ],  # add a "result" output socket from the parser
+        )
+        return wg
 
-    wg.run()
-    assert job2.outputs["result"].value.value == 5
+    wg = WorkGraph(name="test_shell_graph_builder")
+    add_multiply1 = wg.add_task(add_multiply, x=Int(2), y=Int(3))
+    wg.submit(wait=True)
+    assert add_multiply1.outputs["result"].value.value == 5

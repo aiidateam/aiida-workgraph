@@ -515,10 +515,14 @@ class WorkGraphEngine(Process, metaclass=Protect):
 
     def read_wgdata_from_base(self) -> t.Dict[str, t.Any]:
         """Read workgraph data from base.extras."""
+        from aiida_workgraph.orm.function_data import PickledLocalFunction
 
         wgdata = self.node.base.extras.get("_workgraph")
         for name, task in wgdata["tasks"].items():
             wgdata["tasks"][name] = deserialize_unsafe(task)
+            for _, prop in wgdata["tasks"][name]["properties"].items():
+                if isinstance(prop["value"], PickledLocalFunction):
+                    prop["value"] = prop["value"].value
         wgdata["error_handlers"] = deserialize_unsafe(wgdata["error_handlers"])
         return wgdata
 
@@ -694,7 +698,6 @@ class WorkGraphEngine(Process, metaclass=Protect):
 
     def update_task_state(self, name: str) -> None:
         """Update task state when the task is finished."""
-        print("update task state: ", name)
         task = self.ctx._tasks[name]
         # print(f"set task result: {name}")
         node = self.get_task_state_info(name, "process")
@@ -860,7 +863,6 @@ class WorkGraphEngine(Process, metaclass=Protect):
         failed_tasks = []
         for name, task in self.ctx._tasks.items():
             # self.update_task_state(name)
-            print("task: ", name, self.get_task_state_info(task["name"], "state"))
             if self.get_task_state_info(task["name"], "state") in [
                 "RUNNING",
                 "CREATED",
@@ -877,7 +879,6 @@ class WorkGraphEngine(Process, metaclass=Protect):
             if self.ctx._workgraph["workgraph_type"].upper() == "FOR":
                 should_run = self.check_for_conditions()
                 is_finished = not should_run
-        print("is workgraph finished: ", is_finished)
         if is_finished and len(failed_tasks) > 0:
             message = f"WorkGraph finished, but tasks: {failed_tasks} failed. Thus all their child tasks are skipped."
             self.report(message)
@@ -890,16 +891,8 @@ class WorkGraphEngine(Process, metaclass=Protect):
         """Check while conditions.
         Run all condition tasks and check if all the conditions are True.
         """
-        print("Is a while workgraph")
-        print(
-            "execution count: ",
-            self.ctx._execution_count,
-            "max iteration: ",
-            self.ctx._max_iteration,
-        )
         self.report("Check while conditions.")
         if self.ctx._execution_count >= self.ctx._max_iteration:
-            print("Max iteration reached.")
             self.report("Max iteration reached.")
             return False
         condition_tasks = []
@@ -915,7 +908,6 @@ class WorkGraphEngine(Process, metaclass=Protect):
                 conditions.append(self.ctx[socket_name])
             else:
                 conditions.append(self.ctx._tasks[task_name]["results"][socket_name])
-        print("conditions: ", conditions)
         should_run = False not in conditions
         if should_run:
             self.reset()
@@ -923,14 +915,12 @@ class WorkGraphEngine(Process, metaclass=Protect):
         return should_run
 
     def check_for_conditions(self) -> bool:
-        print("Is a for workgraph")
         condition_tasks = [c[0] for c in self.ctx._workgraph["conditions"]]
         self.run_tasks(condition_tasks)
         conditions = [self.ctx._count < len(self.ctx._sequence)] + [
             self.ctx._tasks[c[0]]["results"][c[1]]
             for c in self.ctx._workgraph["conditions"]
         ]
-        print("conditions: ", conditions)
         should_run = False not in conditions
         if should_run:
             self.reset()
@@ -1070,8 +1060,8 @@ class WorkGraphEngine(Process, metaclass=Protect):
                 wg.name = name
                 wg.group_outputs = self.ctx._tasks[name]["metadata"]["group_outputs"]
                 wg.parent_uuid = self.node.uuid
-                wg.save(metadata={"call_link_label": name})
-                process = self.submit(wg.process_inited)
+                inputs = wg.prepare_inputs(metadata={"call_link_label": name})
+                process = self.submit(WorkGraphEngine, inputs=inputs)
                 self.set_task_state_info(name, "process", process)
                 self.set_task_state_info(name, "state", "RUNNING")
                 self.to_context(**{name: process})
@@ -1401,7 +1391,6 @@ class WorkGraphEngine(Process, metaclass=Protect):
         return all(parent_states), parent_states
 
     def reset(self) -> None:
-        print("Reset")
         self.ctx._execution_count += 1
         self.set_tasks_state(self.ctx._tasks.keys(), "PLANNED")
         self.ctx._executed_tasks = []
@@ -1426,7 +1415,6 @@ class WorkGraphEngine(Process, metaclass=Protect):
         if var_kwargs is None:
             return executor(*args, **kwargs)
         else:
-            print("var_kwargs: ", var_kwargs)
             return executor(*args, **kwargs, **var_kwargs)
 
     def save_results_to_extras(self, name: str) -> None:
@@ -1498,9 +1486,7 @@ class WorkGraphEngine(Process, metaclass=Protect):
         """"""
         # expose outputs of the workgraph
         group_outputs = {}
-        print("workgraph outputs: ", self.ctx._workgraph["metadata"]["group_outputs"])
         for output in self.ctx._workgraph["metadata"]["group_outputs"]:
-            print("output: ", output)
             names = output["from"].split(".", 1)
             if names[0] == "context":
                 if len(names) == 1:
@@ -1531,9 +1517,7 @@ class WorkGraphEngine(Process, metaclass=Protect):
         # output the new data
         self.out("new_data", self.ctx._new_data)
         self.out("execution_count", orm.Int(self.ctx._execution_count).store())
-        self.report("Finalize")
-        for name, task in self.ctx._tasks.items():
+        self.report("Finalize workgraph.")
+        for _, task in self.ctx._tasks.items():
             if self.get_task_state_info(task["name"], "state") == "FAILED":
-                print(f"    Task {name} failed.")
                 return self.exit_codes.TASK_FAILED
-        print(f"Finalize workgraph {self.ctx._workgraph['name']}\n")

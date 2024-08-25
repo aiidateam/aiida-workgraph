@@ -37,14 +37,18 @@ class PickledFunction(GeneralData):
             "is_pickle": True,
         }
 
-    @property
-    def executor(self):
+    @classmethod
+    def build_executor(cls, func):
         """Return the executor for this node."""
-        data = self.metadata
-        with self.base.repository.open(self.FILENAME, mode="rb") as f:
-            executor = f.read()
-            data["executor"] = executor
-            return data
+        import cloudpickle as pickle
+
+        executor = {
+            "executor": pickle.dumps(func),
+            "type": "function",
+            "is_pickle": True,
+        }
+        executor.update(cls.inspect_function(func))
+        return executor
 
     def set_attribute(self, value):
         """Set the contents of this node by pickling the provided function.
@@ -52,7 +56,7 @@ class PickledFunction(GeneralData):
         :param value: The Python function to pickle and store.
         """
         # Serialize the function and extract metadata
-        serialized_data = self.serialize_function(value)
+        serialized_data = self.inspect_function(value)
 
         # Store relevant metadata
         self.base.attributes.set("function_name", serialized_data["function_name"])
@@ -68,7 +72,7 @@ class PickledFunction(GeneralData):
         )
 
     @classmethod
-    def serialize_function(cls, func: Callable) -> Dict[str, Any]:
+    def inspect_function(cls, func: Callable) -> Dict[str, Any]:
         """Serialize a function for storage or transmission."""
         try:
             # we need save the source code explicitly, because in the case of jupyter notebook,
@@ -99,7 +103,7 @@ class PickledFunction(GeneralData):
                 for module, types in required_imports.items()
             )
         except Exception as e:
-            print(f"Failed to serialize function {func.__name__}: {e}")
+            print(f"Failed to inspect function {func.__name__}: {e}")
             function_source_code = ""
             function_source_code_without_decorator = ""
             import_statements = ""
@@ -153,3 +157,7 @@ class PickledFunction(GeneralData):
 def to_pickled_function(value):
     """Convert a Python function to a `PickledFunction` instance."""
     return PickledFunction(value)
+
+
+class PickledLocalFunction(PickledFunction):
+    """PickledFunction subclass for local functions."""

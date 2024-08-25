@@ -169,7 +169,7 @@ class MyAdd(Task):
 
     def get_executor(self):
         return {
-            "path": "aiida_workgraph.test",
+            "path": "aiida_workgraph.executors.test",
             "name": "add",
         }
 

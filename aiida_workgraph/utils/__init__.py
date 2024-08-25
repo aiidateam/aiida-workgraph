@@ -62,6 +62,8 @@ def get_nested_dict(d: Dict, name: str, **kwargs) -> Any:
     d = {"base": {"pw": {"parameters": 2}}}
     name = "base.pw.parameters"
     """
+    from aiida.orm.utils.managers import NodeLinksManager
+
     keys = name.split(".")
     current = d
     for key in keys:
@@ -69,9 +71,13 @@ def get_nested_dict(d: Dict, name: str, **kwargs) -> Any:
             if "default" in kwargs:
                 return kwargs.get("default")
             else:
-                raise ValueError(
-                    f"{name} not exist in the dictionary. Available keys: {current.keys()}"
-                )
+                if isinstance(current, dict):
+                    avaiable_keys = current.keys()
+                elif isinstance(current, NodeLinksManager):
+                    avaiable_keys = list(current._get_keys())
+                else:
+                    avaiable_keys = []
+                raise ValueError(f"{name} not exist. Available keys: {avaiable_keys}")
         current = current[key]
     return current
 
@@ -135,15 +141,43 @@ def merge_properties(wgdata: Dict[str, Any]) -> None:
                 prop["value"] = None
 
 
-def generate_node_graph(pk: int) -> Any:
+def generate_node_graph(
+    pk: int, output: str = None, width: str = "100%", height: str = "600px"
+) -> Any:
+    """Generate the node graph for the given node pk.
+    If in Jupyter, return the graphviz object.
+    Otherwise, save the graph to an HTML file.
+    """
+
     from aiida.tools.visualization import Graph
     from aiida import orm
+    from IPython.display import IFrame
+    import pathlib
+    from .svg_to_html import svg_to_html
+
+    in_jupyter = False
+    try:
+        from IPython import get_ipython
+
+        if get_ipython() is not None:
+            in_jupyter = True
+    except NameError:
+        pass
 
     graph = Graph()
     calc_node = orm.load_node(pk)
     graph.recurse_ancestors(calc_node, annotate_links="both")
     graph.recurse_descendants(calc_node, annotate_links="both")
-    return graph.graphviz
+    g = graph.graphviz
+    if not in_jupyter:
+        html_content = svg_to_html(g._repr_image_svg_xml(), width, height)
+        if output is None:
+            pathlib.Path("html").mkdir(exist_ok=True)
+            output = f"html/node_graph_{pk}.html"
+        with open(output, "w") as f:
+            f.write(html_content)
+        return IFrame(output, width=width, height=height)
+    return g
 
 
 def build_task_link(wgdata: Dict[str, Any]) -> None:
@@ -348,28 +382,39 @@ def get_or_create_code(
         return code
 
 
-def serialize_pythonjob_properties(wgdata):
-    """Serialize the PythonJob properties."""
+def serialize_properties(wgdata):
+    """Serialize the properties.
+    Because we use yaml (aiida's serialize) to serialize the data and
+    save it to the node.base.extras. yaml can not handle the function
+    defined in a scope, e.g., local function in another function.
+    So, if a function is used as input, we needt to serialize the function.
+
+    For PythonJob, serialize the function inputs."""
     from aiida_workgraph.orm.serializer import general_serializer
+    from aiida_workgraph.orm.function_data import PickledLocalFunction
+    import inspect
 
     for _, task in wgdata["tasks"].items():
-        if not task["metadata"]["node_type"].upper() == "PYTHONJOB":
-            continue
-        # get the names kwargs for the PythonJob, which are the inputs before _wait
-        input_kwargs = []
-        for input in task["inputs"]:
-            if input["name"] == "_wait":
-                break
-            input_kwargs.append(input["name"])
-        for name in input_kwargs:
-            prop = task["properties"][name]
-            # if value is not None, not {}
-            if not (
-                prop["value"] is None
-                or isinstance(prop["value"], dict)
-                and prop["value"] == {}
-            ):
-                prop["value"] = general_serializer(prop["value"])
+        if task["metadata"]["node_type"].upper() == "PYTHONJOB":
+            # get the names kwargs for the PythonJob, which are the inputs before _wait
+            input_kwargs = []
+            for input in task["inputs"]:
+                if input["name"] == "_wait":
+                    break
+                input_kwargs.append(input["name"])
+            for name in input_kwargs:
+                prop = task["properties"][name]
+                # if value is not None, not {}
+                if not (
+                    prop["value"] is None
+                    or isinstance(prop["value"], dict)
+                    and prop["value"] == {}
+                ):
+                    prop["value"] = general_serializer(prop["value"])
+        else:
+            for _, prop in task["properties"].items():
+                if inspect.isfunction(prop["value"]):
+                    prop["value"] = PickledLocalFunction(prop["value"]).store()
 
 
 def generate_bash_to_create_python_env(
