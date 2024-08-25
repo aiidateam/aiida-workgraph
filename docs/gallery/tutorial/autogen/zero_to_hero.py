@@ -39,16 +39,15 @@ load_profile()
 # In AiiDA, we can define two `calcfunction` to do the `add` and `mutiply`:
 #
 
-from aiida.engine import calcfunction
+from aiida_workgraph import task
 
-#
-@calcfunction
+
+@task.calcfunction()
 def add(x, y):
     return x + y
 
 
-#
-@calcfunction
+@task.calcfunction()
 def multiply(x, y):
     return x * y
 
@@ -58,7 +57,7 @@ def multiply(x, y):
 # --------------------
 # Three steps:
 #
-# - create a empty `WorkGraph`
+# - create a empty WorkGraph
 # - add tasks: `add` and `multiply`.
 # - link the output of the `add` task to the `x` input of the `multiply` task.
 #
@@ -520,10 +519,9 @@ wg.to_html()
 # What's Next
 # ===========
 #
-# +----------------------------------------------------------------------------------------------------+-----------------------------------------------------------------------------+
-# |                                                                                                    |                                                                             |
-# +----------------------------------------------------------------------------------------------------+-----------------------------------------------------------------------------+
-# | `Concepts <https://aiida-workgraph.readthedocs.io/en/latest/concept/index.html>`_                  | A brief introduction of WorkGraph’s main concepts.                          |
-# | `Tutorials <https://aiida-workgraph.readthedocs.io/en/latest/tutorial/index.html>`_                | Real-world examples in computational materials science and more.            |
-# | `HowTo <https://aiida-workgraph.readthedocs.io/en/latest/howto/index.html>`_                       | Advanced topics, e.g., flow control using `if`, `while`, and `context`.     |
-# +----------------------------------------------------------------------------------------------------+-----------------------------------------------------------------------------+
+# +-----------------------------------------------------+-----------------------------------------------------------------------------+
+# | `Concepts <../../concept/index.html>`_              | A brief introduction of WorkGraph’s main concepts.                          |
+# +-----------------------------------------------------+-----------------------------------------------------------------------------+
+# | `HowTo <../../howto/index.html>`_                   | Advanced topics, e.g., flow control using `if`, `while`, and `context`.     |
+# +-----------------------------------------------------+-----------------------------------------------------------------------------+
+#
