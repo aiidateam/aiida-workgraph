@@ -17,6 +17,9 @@ build:
       - verdi presto
       - verdi daemon start
       - verdi status
+      - aiida-pseudo install sssp -x PBEsol
+      - verdi group list
+      - cat /proc/cpuinfo | grep processor | wc -l
 
 conda:
   environment: docs/environment.yml

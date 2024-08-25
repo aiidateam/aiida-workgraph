@@ -5,3 +5,4 @@ channels:
 dependencies:
   - aiida-core
   - aiida-core.services
+  - qe

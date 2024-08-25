@@ -9,7 +9,7 @@ Concepts
 
 
    autogen/task
-   workgraph
+   autogen/workgraph
    autogen/socket
 
 ..
