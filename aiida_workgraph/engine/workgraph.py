@@ -87,7 +87,6 @@ class WorkGraphEngine(Process, metaclass=Protect):
 
         spec.outputs.dynamic = True
 
-        spec.output_namespace("new_data", dynamic=True)
         spec.output(
             "execution_count",
             valid_type=orm.Int,
@@ -481,7 +480,7 @@ class WorkGraphEngine(Process, metaclass=Protect):
         self.init_ctx(wgdata)
         #
         self.ctx._msgs = []
-        self.ctx._execution_count = 0
+        self.ctx._execution_count = 1
         # init task results
         self.set_task_results()
         # data not to be persisted, because they are not serializable
@@ -1499,7 +1498,8 @@ class WorkGraphEngine(Process, metaclass=Protect):
                         )
         self.out_many(group_outputs)
         # output the new data
-        self.out("new_data", self.ctx._new_data)
+        if self.ctx._new_data:
+            self.out("new_data", self.ctx._new_data)
         self.out("execution_count", orm.Int(self.ctx._execution_count).store())
         self.report("Finalize workgraph.")
         for _, task in self.ctx._tasks.items():

@@ -104,7 +104,7 @@ def test_while_workgraph(decorated_add, decorated_multiply, decorated_compare):
     add1.set_context({"result": "n"})
     wg.add_link(multiply1.outputs["result"], add1.inputs["x"])
     wg.submit(wait=True, timeout=100)
-    assert wg.execution_count == 3
+    assert wg.execution_count == 4
     assert wg.tasks["add1"].outputs["result"].value == 29
 
 
