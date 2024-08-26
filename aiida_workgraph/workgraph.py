@@ -134,7 +134,7 @@ class WorkGraph(node_graph.NodeGraph):
         self.save(metadata=metadata)
         if self.process.process_state.value.upper() not in ["CREATED"]:
             raise ValueError(f"Process {self.process.pk} has already been submitted.")
-        self.continue_process()
+        self.continue_process_in_scheduler()
         # as long as we submit the process, it is a new submission, we should set restart_process to None
         self.restart_process = None
         if wait:
@@ -414,6 +414,12 @@ class WorkGraph(node_graph.NodeGraph):
 
         process_controller = get_manager().get_process_controller()
         process_controller.continue_process(self.pk)
+
+    def continue_process_in_scheduler(self, scheduler_pk: int = 122006):
+        """Ask the scheduler to pick up the process from the database and run it."""
+        from aiida_workgraph.utils.control import create_task_action
+
+        create_task_action(scheduler_pk, [self.pk], action="launch_workgraph")
 
     def play(self):
         import os

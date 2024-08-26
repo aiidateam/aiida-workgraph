@@ -83,6 +83,7 @@ workgraph = "aiida_workgraph.cli.cmd_workgraph:workgraph"
 
 [project.entry-points.'aiida.workflows']
 "workgraph.engine" = "aiida_workgraph.engine.workgraph:WorkGraphEngine"
+"workgraph.scheduler" = "aiida_workgraph.engine.workgraph:WorkGraphScheduler"
 
 [project.entry-points."aiida.data"]
 "workgraph.general" = "aiida_workgraph.orm.general_data:GeneralData"
