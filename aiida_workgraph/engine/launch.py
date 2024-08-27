@@ -70,7 +70,10 @@ def run_get_node(
         raise ValueError(
             f"{function.__name__} does not support these kwargs: {kwargs.keys()}"
         )
-    process = process_class(inputs=inputs, runner=runner, parent_pid=parent_pid)
+    if parent_pid:
+        process = process_class(inputs=inputs, runner=runner, parent_pid=parent_pid)
+    else:
+        process = process_class(inputs=inputs, runner=runner)
     # Only add handlers for interrupt signal to kill the process if we are in a local and not a daemon runner.
     # Without this check, running process functions in a daemon worker would be killed if the daemon is shutdown
     current_runner = manager.get_runner()
@@ -109,7 +112,7 @@ def run_get_node(
 def instantiate_process(
     runner: "Runner",
     process: Union["Process", Type["Process"], "ProcessBuilder"],
-    _parent_pid,
+    _parent_pid=None,
     **inputs,
 ) -> "Process":
     """Return an instance of the process with the given inputs. The function can deal with various types
@@ -143,7 +146,10 @@ def instantiate_process(
             f"invalid process {type(process)}, needs to be Process or ProcessBuilder"
         )
 
-    process = process_class(runner=runner, inputs=inputs, parent_pid=_parent_pid)
+    if _parent_pid:
+        process = process_class(runner=runner, inputs=inputs, parent_pid=_parent_pid)
+    else:
+        process = process_class(runner=runner, inputs=inputs)
 
     return process
 
@@ -172,6 +178,7 @@ def submit(
     :return: the calculation node of the process
     """
     _parent_pid = kwargs.pop("_parent_pid", None)
+    runner = kwargs.pop("runner", None)
     inputs = prepare_inputs(inputs, **kwargs)
 
     # Submitting from within another process requires ``self.submit``` unless it is a work function, in which case the
@@ -179,7 +186,8 @@ def submit(
     # if is_process_scoped() and not isinstance(Process.current(), FunctionProcess):
     # raise InvalidOperation('Cannot use top-level `submit` from within another process, use `self.submit` instead')
 
-    runner = manager.get_manager().get_runner()
+    if not runner:
+        runner = manager.get_manager().get_runner()
     assert runner.persister is not None, "runner does not have a persister"
     assert runner.controller is not None, "runner does not have a controller"
 
@@ -215,3 +223,59 @@ def submit(
         time.sleep(wait_interval)
 
     return node
+
+
+def start_scheduler_worker(foreground: bool = False) -> None:
+    """Start a scheduler worker for the currently configured profile.
+
+    :param foreground: If true, the logging will be configured to write to stdout, otherwise it will be configured to
+        write to the scheduler log file.
+    """
+    import asyncio
+    import signal
+    import sys
+
+    from aiida.common.log import configure_logging
+    from aiida.engine.daemon.client import get_daemon_client
+    from aiida.manage import get_config_option, get_manager
+    from aiida_workgraph.engine.scheduler import WorkGraphScheduler
+
+    daemon_client = get_daemon_client()
+    configure_logging(
+        daemon=not foreground, daemon_log_file=daemon_client.daemon_log_file
+    )
+
+    LOGGER.debug(f"sys.executable: {sys.executable}")
+    LOGGER.debug(f"sys.path: {sys.path}")
+
+    try:
+        manager = get_manager()
+        # runner = manager.create_daemon_runner()
+        runner = manager.create_runner(broker_submit=True)
+        manager.set_runner(runner)
+    except Exception:
+        LOGGER.exception("daemon worker failed to start")
+        raise
+
+    if isinstance(rlimit := get_config_option("daemon.recursion_limit"), int):
+        LOGGER.info("Setting maximum recursion limit of daemon worker to %s", rlimit)
+        sys.setrecursionlimit(rlimit)
+
+    signals = (signal.SIGTERM, signal.SIGINT)
+    for s in signals:
+        # https://github.com/python/mypy/issues/12557
+        runner.loop.add_signal_handler(s, lambda s=s: asyncio.create_task(shutdown_worker(runner)))  # type: ignore[misc]
+
+    print("runner", runner)
+    process_inited = instantiate_process(runner, WorkGraphScheduler)
+    runner.loop.create_task(process_inited.step_until_terminated())
+    print("node", process_inited.node)
+
+    try:
+        LOGGER.info("Starting a daemon worker")
+        runner.start()
+    except SystemError as exception:
+        LOGGER.info("Received a SystemError: %s", exception)
+        runner.close()
+
+    LOGGER.info("Daemon worker started")

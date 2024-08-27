@@ -454,9 +454,10 @@ class WorkGraphScheduler(Process, metaclass=Protect):
         # try to resume the workgraph, if the workgraph is already resumed
         # by other awaitable, this will not work
         try:
+            print("Resume scheduler.")
             self.resume()
         except Exception as e:
-            print(e)
+            print("Error in resume: ", e)
 
     def _build_process_label(self) -> str:
         """Use the workgraph name as the process label."""

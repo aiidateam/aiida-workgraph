@@ -30,6 +30,16 @@ def scheduler():
 
 
 @scheduler.command()
+def start_worker():
+    """Start the scheduler application."""
+    from aiida_workgraph.engine.launch import start_scheduler_worker
+
+    click.echo("Starting the scheduler worker...")
+
+    start_scheduler_worker()
+
+
+@scheduler.command()
 def start():
     """Start the scheduler application."""
     from aiida_workgraph.engine.scheduler import WorkGraphScheduler
