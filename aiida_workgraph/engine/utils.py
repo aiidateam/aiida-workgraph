@@ -139,3 +139,23 @@ def prepare_for_shell_task(task: dict, kwargs: dict) -> dict:
         "metadata": metadata or {},
     }
     return inputs
+
+
+def get_scheduler():
+    from aiida.orm import QueryBuilder
+    from aiida_workgraph.engine.scheduler import WorkGraphScheduler
+
+    qb = QueryBuilder()
+    projections = ["id"]
+    filters = {
+        "or": [
+            {"attributes.sealed": False},
+            {"attributes": {"!has_key": "sealed"}},
+        ]
+    }
+    qb.append(WorkGraphScheduler, filters=filters, project=projections, tag="process")
+    results = qb.all()
+    if len(results) == 0:
+        raise ValueError("No scheduler found. Please start the scheduler first.")
+    scheduler_id = results[0][0]
+    return scheduler_id

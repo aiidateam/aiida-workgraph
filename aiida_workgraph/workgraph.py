@@ -115,6 +115,7 @@ class WorkGraph(node_graph.NodeGraph):
         wait: bool = False,
         timeout: int = 60,
         metadata: Optional[Dict[str, Any]] = None,
+        to_scheduler: bool = False,
     ) -> aiida.orm.ProcessNode:
         """Submit the AiiDA workgraph process and optionally wait for it to finish.
         Args:
@@ -123,6 +124,8 @@ class WorkGraph(node_graph.NodeGraph):
             restart (bool): Restart the process, and reset the modified tasks, then only re-run the modified tasks.
             new (bool): Submit a new process.
         """
+        from aiida_workgraph.engine.utils import get_scheduler
+
         # set task inputs
         if inputs is not None:
             for name, input in inputs.items():
@@ -134,7 +137,11 @@ class WorkGraph(node_graph.NodeGraph):
         self.save(metadata=metadata)
         if self.process.process_state.value.upper() not in ["CREATED"]:
             raise ValueError(f"Process {self.process.pk} has already been submitted.")
-        self.continue_process()
+        if to_scheduler:
+            scheduler_pk = get_scheduler()
+            self.continue_process_in_scheduler(scheduler_pk)
+        else:
+            self.continue_process()
         # as long as we submit the process, it is a new submission, we should set restart_process to None
         self.restart_process = None
         if wait:
