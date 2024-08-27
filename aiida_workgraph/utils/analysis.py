@@ -216,6 +216,7 @@ class WorkGraphSaver:
         # nodes is a copy of tasks, so we need to pop it out
         self.wgdata.pop("nodes")
         self.wgdata["error_handlers"] = serialize(self.wgdata["error_handlers"])
+        self.wgdata["context"] = serialize(self.wgdata["context"])
         self.process.base.extras.set("_workgraph", self.wgdata)
 
     def save_task_states(self) -> Dict:
