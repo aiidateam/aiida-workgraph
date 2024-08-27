@@ -92,7 +92,6 @@ class WorkGraphOutputSocketCollection(OutputSocketCollection):
 
         # build the socket on the fly if the identifier is a callable
         if callable(identifier):
-            print("identifier is callable", identifier)
             identifier = build_socket_from_AiiDA(identifier)
         # Call the original new method
         return super().new(identifier, name, **kwargs)

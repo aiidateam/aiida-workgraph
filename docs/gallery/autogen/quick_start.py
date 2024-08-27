@@ -112,7 +112,7 @@ wg.add_task(multiply, name="multiply1", x=add_task.outputs["result"])
 # export the workgraph to html file so that it can be visualized in a browser
 wg.to_html()
 # comment out the following line to visualize the workgraph in jupyter-notebook
-wg
+# wg
 
 
 ######################################################################

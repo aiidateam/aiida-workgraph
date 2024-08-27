@@ -87,7 +87,6 @@ class WorkGraphEngine(Process, metaclass=Protect):
 
         spec.outputs.dynamic = True
 
-        spec.output_namespace("new_data", dynamic=True)
         spec.output(
             "execution_count",
             valid_type=orm.Int,
@@ -481,7 +480,7 @@ class WorkGraphEngine(Process, metaclass=Protect):
         self.init_ctx(wgdata)
         #
         self.ctx._msgs = []
-        self.ctx._execution_count = 0
+        self.ctx._execution_count = 1
         # init task results
         self.set_task_results()
         # data not to be persisted, because they are not serializable
@@ -667,7 +666,6 @@ class WorkGraphEngine(Process, metaclass=Protect):
                     self.logger.error(f"Error in killing task {name}: {e}")
 
     def continue_workgraph(self) -> None:
-        print("Continue workgraph.")
         self.report("Continue workgraph.")
         # self.update_workgraph_from_base()
         task_to_run = []
@@ -1114,29 +1112,44 @@ class WorkGraphEngine(Process, metaclass=Protect):
                 self.set_task_state_info(name, "process", process)
                 self.to_context(**{name: process})
             elif task["metadata"]["node_type"].upper() in ["WHILE"]:
-                # check the conditions of the while task
-                should_run = self.should_run_while_task(name)
-                if not should_run:
-                    self.set_task_state_info(name, "state", "FINISHED")
-                    self.set_tasks_state(self.ctx._tasks[name]["children"], "SKIPPED")
-                    self.update_parent_task_state(name)
-                    self.report(
-                        f"While Task {name}: Condition not fullilled, task finished. Skip all its children."
-                    )
+                # TODO refactor this for while, if and zone
+                # in case of an empty zone, it will finish immediately
+                if self.are_childen_finished(name)[0]:
+                    self.update_while_task_state(name)
                 else:
-                    task["execution_count"] += 1
-                    self.set_task_state_info(name, "state", "RUNNING")
-                    self.continue_workgraph()
+                    # check the conditions of the while task
+                    should_run = self.should_run_while_task(name)
+                    if not should_run:
+                        self.set_task_state_info(name, "state", "FINISHED")
+                        self.set_tasks_state(
+                            self.ctx._tasks[name]["children"], "SKIPPED"
+                        )
+                        self.update_parent_task_state(name)
+                        self.report(
+                            f"While Task {name}: Condition not fullilled, task finished. Skip all its children."
+                        )
+                    else:
+                        task["execution_count"] += 1
+                        self.set_task_state_info(name, "state", "RUNNING")
+                self.continue_workgraph()
             elif task["metadata"]["node_type"].upper() in ["IF"]:
-                should_run = self.should_run_if_task(name)
-                if should_run:
-                    self.set_task_state_info(name, "state", "RUNNING")
-                else:
-                    self.set_tasks_state(task["children"], "SKIPPED")
+                # in case of an empty zone, it will finish immediately
+                if self.are_childen_finished(name)[0]:
                     self.update_zone_task_state(name)
+                else:
+                    should_run = self.should_run_if_task(name)
+                    if should_run:
+                        self.set_task_state_info(name, "state", "RUNNING")
+                    else:
+                        self.set_tasks_state(task["children"], "SKIPPED")
+                        self.update_zone_task_state(name)
                 self.continue_workgraph()
             elif task["metadata"]["node_type"].upper() in ["ZONE"]:
-                self.set_task_state_info(name, "state", "RUNNING")
+                # in case of an empty zone, it will finish immediately
+                if self.are_childen_finished(name)[0]:
+                    self.update_zone_task_state(name)
+                else:
+                    self.set_task_state_info(name, "state", "RUNNING")
                 self.continue_workgraph()
             elif task["metadata"]["node_type"].upper() in ["FROM_CONTEXT"]:
                 # get the results from the context
@@ -1484,7 +1497,8 @@ class WorkGraphEngine(Process, metaclass=Protect):
                         )
         self.out_many(group_outputs)
         # output the new data
-        self.out("new_data", self.ctx._new_data)
+        if self.ctx._new_data:
+            self.out("new_data", self.ctx._new_data)
         self.out("execution_count", orm.Int(self.ctx._execution_count).store())
         self.report("Finalize workgraph.")
         for _, task in self.ctx._tasks.items():
