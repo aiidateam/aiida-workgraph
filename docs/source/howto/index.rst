@@ -8,10 +8,8 @@ This section contains a collection of HowTos for various topics.
    :maxdepth: 1
    :caption: Contents:
 
-   autogen/graph_builder
+   nested_workflows/index
    autogen/parallel
-   if
-   while
    context
    waiting_on
    combine_workgraph
