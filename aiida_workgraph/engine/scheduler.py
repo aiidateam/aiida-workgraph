@@ -378,12 +378,19 @@ class WorkGraphScheduler(Process, metaclass=Protect):
 
         :param awaitable: an Awaitable instance
         """
+        import time
+
         print(f"Awaitable {awaitable.key} finished.")
         self.logger.debug(f"Awaitable {awaitable.key} finished.")
         pk = awaitable.workgraph_pk
         node = load_node(awaitable.pk)
-        print("node: ", node)
-        print("state: ", node.process_state)
+        # there is a bug in aiida.engine.process, it send the msg before setting the process state and outputs
+        # so we need to wait for a while
+        # TODO make a PR to fix the aiida-core, the `super().on_entered()` should be
+        # called after setting the process state
+        tstart = time.time()
+        while not node.is_finished and time.time() - tstart < 5:
+            time.sleep(0.1)
 
         if isinstance(awaitable.pk, int):
             self.logger.info(
@@ -453,11 +460,10 @@ class WorkGraphScheduler(Process, metaclass=Protect):
         self.update_task_state(awaitable.workgraph_pk, awaitable.key)
         # try to resume the workgraph, if the workgraph is already resumed
         # by other awaitable, this will not work
-        try:
-            print("Resume scheduler.")
-            self.resume()
-        except Exception as e:
-            print("Error in resume: ", e)
+        # try:
+        #     self.resume()
+        # except Exception as e:
+        #     print(e)
 
     def _build_process_label(self) -> str:
         """Use the workgraph name as the process label."""
