@@ -1,5 +1,5 @@
-Nested Workflows
-================
+Dynamic Workflows
+=================
 
 This section contains ways of creating nested workflows.
 
@@ -7,6 +7,5 @@ This section contains ways of creating nested workflows.
    :maxdepth: 1
    :caption: Contents:
 
-   autogen/graph_builder
    if
    while

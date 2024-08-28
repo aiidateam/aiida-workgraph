@@ -8,7 +8,8 @@ This section contains a collection of HowTos for various topics.
    :maxdepth: 1
    :caption: Contents:
 
-   nested_workflows/index
+   autogen/graph_builder
+   dynamic_workflows/index
    autogen/parallel
    context
    waiting_on
