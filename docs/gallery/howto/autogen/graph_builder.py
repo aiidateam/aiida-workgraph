@@ -1,14 +1,14 @@
 """
-================================================
-Use Graph Builder to create a dynamic workflow
-================================================
+==============================================
+Use Graph Builder to create a nested workflows
+==============================================
 
 """
 
 # %%
 # Introduction
 # ============
-# The `Graph Builder` allow user to create a dynamic workflow based on the input value, as well as nested workflows.
+# The `Graph Builder` allow user to create nested workflows from an input.
 #
 # Load the AiiDA profile.
 
@@ -20,9 +20,58 @@ load_profile()
 
 # %%
 # Example
-# =========
+# =======
 # Suppose we want to WorkGraph which include another WorkGraph`(x+y)*z` inside it.
-#
+# We can actually add a WorkGraph to another WorkGraph
+
+from aiida_workgraph import task, WorkGraph
+from aiida.orm import Int
+
+# define add task
+@task.calcfunction()
+def add(x, y):
+    return x + y
+
+
+# define multiply task
+@task.calcfunction()
+def multiply(x, y):
+    return x * y
+
+
+def add_multiply(x, y, z):
+    wg = WorkGraph()
+    wg.add_task(add, name="add", x=x, y=y)
+    wg.add_task(multiply, name="multiply", x=z)
+    wg.add_link(wg.tasks["add"].outputs[0], wg.tasks["multiply"].inputs["y"])
+    return wg
+
+
+wg = WorkGraph("nested_workgraph")
+add_multiply1 = wg.add_task(add_multiply(x=Int(2), y=Int(3), z=Int(4)))
+wg.to_html()
+
+# %%
+# Run the workgraph
+
+wg.run()
+
+# %%
+# However linking the two WorkGraphs will not work
+
+wg = WorkGraph("nested_workgraph")
+add_multiply1 = wg.add_task(add_multiply(x=Int(2), y=Int(3), z=Int(4)))
+
+try:
+    wg.add_task(
+        add_multiply(x=add_multiply1.outputs["multiply.result"], y=Int(3), z=Int(4))
+    )
+except Exception as err:
+    print(err)
+
+# %%
+# For that use case we need to use the graph builder
+
 # Create graph builder
 # ---------------------
 # We add `task.graph_builder` decorator to a function to define a graph builder task. The function create a WorkGraph based on the inputs, and returns the WorkGraph at the end.
@@ -39,20 +88,6 @@ load_profile()
 # This will expose the `result` output of the `multiply` task as the `multiply` output of the WorkGraph.
 #
 #
-
-
-from aiida_workgraph import task, WorkGraph
-
-# define add task
-@task.calcfunction()
-def add(x, y):
-    return x + y
-
-
-# define multiply task
-@task.calcfunction()
-def multiply(x, y):
-    return x * y
 
 
 # use task.graph_builder decorator, expose the output of "multiply" task
@@ -73,9 +108,6 @@ def add_multiply(x, y, z):
 # -------------------------
 # We can use the graph builder task inside another WorkGraph to create nested workflow. Here is an example:
 
-
-from aiida_workgraph import WorkGraph
-from aiida.orm import Int
 
 wg = WorkGraph("test_graph_build")
 # create a task using the graph builder
