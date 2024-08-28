@@ -160,7 +160,6 @@ class WorkGraphScheduler(Process, metaclass=Protect):
                 self._update_process_status()
                 self.resume()
             # For other awaitables, because they exist in the db, we only need to re-register the callbacks
-            self.ctx._workgraph[pk]["_awaitable_actions"] = []
             self._action_awaitables()
 
     def _resolve_nested_context(self, key: str) -> tuple[AttributeDict, str]:

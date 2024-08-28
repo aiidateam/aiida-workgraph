@@ -28,14 +28,14 @@ def scheduler():
     """Commands to manage the scheduler process."""
 
 
-# @scheduler.command()
-# def worker():
-#     """Start the scheduler application."""
-#     from aiida_workgraph.engine.launch import start_scheduler_worker
+@scheduler.command()
+def worker():
+    """Start the scheduler application."""
+    from aiida_workgraph.engine.launch import start_scheduler_worker
 
-#     click.echo("Starting the scheduler worker...")
+    click.echo("Starting the scheduler worker...")
 
-#     start_scheduler_worker()
+    start_scheduler_worker()
 
 
 @scheduler.command()
@@ -49,11 +49,8 @@ def start(foreground, timeout):
 
     click.echo("Starting the scheduler process...")
 
-    try:
-        client = get_scheduler_client()
-        client.start_daemon(foreground=foreground)
-    except Exception as exception:
-        echo.echo(f"Failed to start the scheduler process: {exception}")
+    client = get_scheduler_client()
+    client.start_daemon(foreground=foreground)
 
 
 @scheduler.command()

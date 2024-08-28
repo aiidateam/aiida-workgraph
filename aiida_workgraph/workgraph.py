@@ -124,7 +124,14 @@ class WorkGraph(node_graph.NodeGraph):
             restart (bool): Restart the process, and reset the modified tasks, then only re-run the modified tasks.
             new (bool): Submit a new process.
         """
-        from aiida_workgraph.engine.utils import get_scheduler
+        from aiida_workgraph.engine.scheduler.client import get_scheduler
+
+        if to_scheduler:
+            try:
+                get_scheduler()
+            except ValueError as e:
+                print(e)
+                return
 
         # set task inputs
         if inputs is not None:
@@ -138,8 +145,7 @@ class WorkGraph(node_graph.NodeGraph):
         if self.process.process_state.value.upper() not in ["CREATED"]:
             raise ValueError(f"Process {self.process.pk} has already been submitted.")
         if to_scheduler:
-            scheduler_pk = get_scheduler()
-            self.continue_process_in_scheduler(scheduler_pk)
+            self.continue_process_in_scheduler()
         else:
             self.continue_process()
         # as long as we submit the process, it is a new submission, we should set restart_process to None
@@ -422,11 +428,27 @@ class WorkGraph(node_graph.NodeGraph):
         process_controller = get_manager().get_process_controller()
         process_controller.continue_process(self.pk)
 
-    def continue_process_in_scheduler(self, scheduler_pk: int = 122744):
+    def continue_process_in_scheduler(self):
         """Ask the scheduler to pick up the process from the database and run it."""
         from aiida_workgraph.utils.control import create_task_action
+        from aiida_workgraph.engine.scheduler.client import get_scheduler
+        import kiwipy
 
-        create_task_action(scheduler_pk, [self.pk], action="launch_workgraph")
+        try:
+            scheduler_pk = get_scheduler()
+            create_task_action(scheduler_pk, [self.pk], action="launch_workgraph")
+        except ValueError:
+            print(
+                """Scheduler is not running.
+Please start the scheduler first with `aiida-workgraph scheduler start`"""
+            )
+        except kiwipy.exceptions.UnroutableError:
+            print(
+                """Scheduler exists, but the daemon is not running.
+Please start the scheduler first with `aiida-workgraph scheduler start`"""
+            )
+        except Exception as e:
+            print("""An unexpected error occurred:""", e)
 
     def play(self):
         import os

@@ -236,11 +236,17 @@ def start_scheduler_worker(foreground: bool = False) -> None:
     import sys
 
     from aiida.common.log import configure_logging
-    from aiida.engine.daemon.client import get_daemon_client
     from aiida.manage import get_config_option, get_manager
     from aiida_workgraph.engine.scheduler import WorkGraphScheduler
+    from aiida_workgraph.engine.scheduler.client import (
+        get_scheduler_client,
+        get_scheduler,
+    )
+    from aiida.engine.processes.launcher import ProcessLauncher
+    from aiida.engine import persistence
+    from plumpy.persistence import LoadSaveContext
 
-    daemon_client = get_daemon_client()
+    daemon_client = get_scheduler_client()
     configure_logging(
         daemon=not foreground, daemon_log_file=daemon_client.daemon_log_file
     )
@@ -266,10 +272,23 @@ def start_scheduler_worker(foreground: bool = False) -> None:
         # https://github.com/python/mypy/issues/12557
         runner.loop.add_signal_handler(s, lambda s=s: asyncio.create_task(shutdown_worker(runner)))  # type: ignore[misc]
 
-    print("runner", runner)
-    process_inited = instantiate_process(runner, WorkGraphScheduler)
-    runner.loop.create_task(process_inited.step_until_terminated())
-    print("node", process_inited.node)
+    try:
+        running_scheduler = get_scheduler()
+        runner_loop = runner.loop
+        task_receiver = ProcessLauncher(
+            loop=runner_loop,
+            persister=manager.get_persister(),
+            load_context=LoadSaveContext(runner=runner),
+            loader=persistence.get_object_loader(),
+        )
+        asyncio.run(
+            task_receiver._continue(
+                communicator=None, pid=running_scheduler, nowait=True
+            )
+        )
+    except ValueError:
+        process_inited = instantiate_process(runner, WorkGraphScheduler)
+        runner.loop.create_task(process_inited.step_until_terminated())
 
     try:
         LOGGER.info("Starting a daemon worker")

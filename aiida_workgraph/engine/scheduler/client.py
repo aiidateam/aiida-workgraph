@@ -207,3 +207,23 @@ def get_scheduler_client(profile_name: str | None = None) -> "SchedulerClient":
     """
     profile = get_manager().load_profile(profile_name)
     return SchedulerClient(profile)
+
+
+def get_scheduler():
+    from aiida.orm import QueryBuilder
+    from aiida_workgraph.engine.scheduler import WorkGraphScheduler
+
+    qb = QueryBuilder()
+    projections = ["id"]
+    filters = {
+        "or": [
+            {"attributes.sealed": False},
+            {"attributes": {"!has_key": "sealed"}},
+        ]
+    }
+    qb.append(WorkGraphScheduler, filters=filters, project=projections, tag="process")
+    results = qb.all()
+    if len(results) == 0:
+        raise ValueError("No scheduler found. Please start the scheduler first.")
+    scheduler_id = results[0][0]
+    return scheduler_id
