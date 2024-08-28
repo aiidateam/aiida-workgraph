@@ -161,6 +161,18 @@ class WorkGraphScheduler(Process, metaclass=Protect):
                 self.resume()
             # For other awaitables, because they exist in the db, we only need to re-register the callbacks
             self._action_awaitables()
+        # load checkpoint
+        launched_workgraphs = self.node.base.extras.get("_launched_workgraphs", [])
+        for pk in launched_workgraphs:
+            print("load workgraph: ", pk)
+            node = load_node(pk)
+            wgdata = node.base.extras.get("_workgraph", None)
+            if wgdata is None:
+                self.launch_workgraph(pk)
+            else:
+                self.ctx._workgraph[pk] = deserialize_unsafe(wgdata)
+                print("continue workgraph: ", pk)
+                self.continue_workgraph(pk)
 
     def _resolve_nested_context(self, key: str) -> tuple[AttributeDict, str]:
         """
@@ -478,6 +490,7 @@ class WorkGraphScheduler(Process, metaclass=Protect):
         """Setup the variables in the context."""
         # track if the awaitable callback is added to the runner
 
+        self.ctx.launched_workgraphs = []
         self.ctx._workgraph = {}
         self.ctx._max_number_awaitables = 10000
         awaitable = Awaitable(
@@ -501,6 +514,9 @@ class WorkGraphScheduler(Process, metaclass=Protect):
         """Launch the workgraph."""
         # create the workgraph process
         self.report(f"Launch workgraph: {pk}")
+        # append the pk to the self.node.base.extras
+        self.ctx.launched_workgraphs.append(pk)
+        self.node.base.extras.set("_launched_workgraphs", self.ctx.launched_workgraphs)
         self.init_ctx_workgraph(pk)
         self.ctx._workgraph[pk]["_node"].set_process_state(Running.LABEL)
         self.init_task_results(pk)
@@ -795,6 +811,7 @@ class WorkGraphScheduler(Process, metaclass=Protect):
             task.setdefault("results", None)
 
         self.update_parent_task_state(pk, name)
+        self.save_workgraph_checkpoint(pk)
         if continue_workgraph:
             self.continue_workgraph(pk)
 
@@ -816,6 +833,12 @@ class WorkGraphScheduler(Process, metaclass=Protect):
         self.set_task_state_info(pk, name, "state", "FINISHED")
         self.report(f"Workgraph: {pk}, Task: {name} finished.")
         self.update_parent_task_state(pk, name)
+
+    def save_workgraph_checkpoint(self, pk: int):
+        """Save the workgraph checkpoint."""
+        self.ctx._workgraph[pk]["_node"].set_extra(
+            "_checkpoint", serialize(self.ctx._workgraph[pk])
+        )
 
     def update_parent_task_state(self, pk, name: str) -> None:
         """Update parent task state."""

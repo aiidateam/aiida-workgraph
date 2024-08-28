@@ -3,6 +3,7 @@ import shutil
 from aiida.manage.manager import get_manager
 from aiida.common.exceptions import ConfigurationError
 import os
+from typing import Optional
 
 WORKGRAPH_BIN = shutil.which("workgraph")
 
@@ -54,8 +55,8 @@ class SchedulerClient(DaemonClient):
                 },
             },
             "daemon": {
-                "log": str(DAEMON_LOG_DIR / f"aiida-{self.profile.name}.log"),
-                "pid": str(DAEMON_DIR / f"aiida-{self.profile.name}.pid"),
+                "log": str(DAEMON_LOG_DIR / f"aiida-scheduler-{self.profile.name}.log"),
+                "pid": str(DAEMON_DIR / f"aiida-scheduler-{self.profile.name}.pid"),
             },
         }
 
@@ -196,7 +197,7 @@ class SchedulerClient(DaemonClient):
                     pidfile.unlink()
 
 
-def get_scheduler_client(profile_name: str | None = None) -> "SchedulerClient":
+def get_scheduler_client(profile_name: Optional[str] = None) -> "SchedulerClient":
     """Return the daemon client for the given profile or the current profile if not specified.
 
     :param profile_name: Optional profile name to load.
