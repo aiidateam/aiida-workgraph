@@ -22,6 +22,7 @@ from aiida.orm.utils.serialize import deserialize_unsafe, serialize
 
 from aiida.engine.processes.exit_code import ExitCode
 from aiida.engine.processes.process import Process
+from aiida.engine import calcfunction
 
 from aiida.engine.processes.workchains.awaitable import (
     Awaitable,
@@ -30,7 +31,7 @@ from aiida.engine.processes.workchains.awaitable import (
     construct_awaitable,
 )
 from aiida.engine.processes.workchains.workchain import Protect, WorkChainSpec
-from aiida.engine import run_get_node
+from aiida.engine import calcfunction, run_get_node
 from aiida_workgraph.utils import create_and_pause_process
 from aiida_workgraph.task import Task
 from aiida_workgraph.utils import get_nested_dict, update_nested_dict
@@ -920,7 +921,18 @@ class WorkGraphEngine(Process, metaclass=Protect):
         if should_run:
             self.reset()
             self.set_tasks_state(condition_tasks, "SKIPPED")
-            self.ctx["i"] = self.ctx._sequence[self.ctx._count]
+
+            @calcfunction
+            def getitem(sequence, count):
+                value = sequence.get_list()[count.value]
+                # TODO can we make this more generic?
+                if isinstance(value, int):
+                    return orm.Int(value)
+                else:
+                    raise TypeError("`sequence` only supports sequence of integers")
+
+
+            self.ctx["i"] = getitem(self.ctx._sequence, self.ctx._count)
         self.ctx._count += 1
         return should_run
 
