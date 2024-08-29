@@ -7,5 +7,6 @@ This section contains ways of creating nested workflows.
    :maxdepth: 1
    :caption: Contents:
 
+   autogen/dynamic_graph_builder
    if
    while

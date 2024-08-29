@@ -58,6 +58,7 @@ sphinx_src_autogen_dirs = [
     "concept/autogen",
     "tutorial/autogen",
     "howto/autogen",
+    "howto/dynamic_workflows/autogen",
     "built-in/autogen",
 ]
 # we mimik the structure in the sphinx src directory in the gallery src directory
