@@ -1172,25 +1172,36 @@ class WorkGraphScheduler(Process, metaclass=Protect):
                 kwargs.setdefault("metadata", {})
                 kwargs["metadata"].update({"call_link_label": name})
                 kwargs["parent_pid"] = pk
-                # transfer the args to kwargs
-                if self.get_task_state_info(pk, name, "action").upper() == "PAUSE":
-                    self.set_task_state_info(pk, name, "action", "")
-                    self.report(f"Task {name} is created and paused.", pk)
-                    process = create_and_pause_process(
-                        self.runner,
-                        executor,
-                        kwargs,
-                        state_msg="Paused through WorkGraph",
+                try:
+                    # transfer the args to kwargs
+                    if self.get_task_state_info(pk, name, "action").upper() == "PAUSE":
+                        self.set_task_state_info(pk, name, "action", "")
+                        self.report(f"Task {name} is created and paused.", pk)
+                        process = create_and_pause_process(
+                            self.runner,
+                            executor,
+                            kwargs,
+                            state_msg="Paused through WorkGraph",
+                        )
+                        self.set_task_state_info(pk, name, "state", "CREATED")
+                        process = process.node
+                    else:
+                        process = launch.submit(executor, **kwargs)
+                        self.set_task_state_info(pk, name, "state", "RUNNING")
+                    process.label = name
+                    process.workgraph_pk = pk
+                    self.set_task_state_info(pk, name, "process", process)
+                    self.to_context(**{name: process})
+                except Exception as e:
+                    self.set_task_state_info(pk, name, "state", "FAILED")
+                    # set child state to FAILED
+                    self.set_tasks_state(
+                        pk,
+                        self.ctx._workgraph[pk]["_connectivity"]["child_node"][name],
+                        "SKIPPED",
                     )
-                    self.set_task_state_info(pk, name, "state", "CREATED")
-                    process = process.node
-                else:
-                    process = launch.submit(executor, **kwargs)
-                    self.set_task_state_info(pk, name, "state", "RUNNING")
-                process.label = name
-                process.workgraph_pk = pk
-                self.set_task_state_info(pk, name, "process", process)
-                self.to_context(**{name: process})
+                    self.report(f"Error in task {name}: {e}", pk)
+                    self.continue_workgraph(pk)
             elif task["metadata"]["node_type"].upper() in ["GRAPH_BUILDER"]:
                 wg = self.run_executor(executor, [], kwargs, var_args, var_kwargs)
                 wg.name = name
