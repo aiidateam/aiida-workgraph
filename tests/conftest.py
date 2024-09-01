@@ -25,6 +25,46 @@ def fixture_localhost(aiida_localhost):
     return localhost
 
 
+@pytest.fixture(scope="session")
+def scheduler_client(aiida_profile):
+    """Return a daemon client for the configured test profile for the test session.
+
+    The daemon will be automatically stopped at the end of the test session.
+    """
+    from aiida_workgraph.engine.scheduler.client import SchedulerClient
+    from aiida.engine.daemon.client import (
+        DaemonNotRunningException,
+        DaemonTimeoutException,
+    )
+
+    scheduler_client = SchedulerClient(aiida_profile)
+
+    try:
+        yield scheduler_client
+    finally:
+        try:
+            scheduler_client.stop_daemon(wait=True)
+        except DaemonNotRunningException:
+            pass
+        # Give an additional grace period by manually waiting for the daemon to be stopped. In certain unit test
+        # scenarios, the built in wait time in ``scheduler_client.stop_daemon`` is not sufficient and even though the
+        # daemon is stopped, ``scheduler_client.is_daemon_running`` will return false for a little bit longer.
+        scheduler_client._await_condition(
+            lambda: not scheduler_client.is_daemon_running,
+            DaemonTimeoutException("The daemon failed to stop."),
+        )
+
+
+@pytest.fixture()
+def started_scheduler_client(scheduler_client):
+    """Ensure that the daemon is running for the test profile and return the associated client."""
+    if not scheduler_client.is_daemon_running:
+        scheduler_client.start_daemon()
+        assert scheduler_client.is_daemon_running
+
+    yield scheduler_client
+
+
 @pytest.fixture
 def add_code(fixture_localhost):
     from aiida.orm import InstalledCode

@@ -11,16 +11,11 @@ from aiida.orm import ProcessNode
 from aiida.engine.processes.builder import ProcessBuilder
 from aiida.engine.processes.functions import get_stack_size
 from aiida.engine.processes.process import Process
-from aiida.engine.utils import prepare_inputs, is_process_function
+from aiida.engine.utils import prepare_inputs
+from .utils import instantiate_process
 
 import signal
 import sys
-import inspect
-from typing import (
-    Type,
-    Union,
-)
-
 
 from aiida.manage import get_manager
 
@@ -40,7 +35,7 @@ def run_get_node(
     :param kwargs: input keyword arguments to construct the FunctionProcess
     :return: tuple of the outputs of the process and the process node
     """
-    parent_pid = kwargs.pop("_parent_pid", None)
+    parent_pid = kwargs.pop("parent_pid", None)
     frame_delta = 1000
     frame_count = get_stack_size()
     stack_limit = sys.getrecursionlimit()
@@ -70,10 +65,7 @@ def run_get_node(
         raise ValueError(
             f"{function.__name__} does not support these kwargs: {kwargs.keys()}"
         )
-    if parent_pid:
-        process = process_class(inputs=inputs, runner=runner, parent_pid=parent_pid)
-    else:
-        process = process_class(inputs=inputs, runner=runner)
+    process = process_class(inputs=inputs, runner=runner, parent_pid=parent_pid)
     # Only add handlers for interrupt signal to kill the process if we are in a local and not a daemon runner.
     # Without this check, running process functions in a daemon worker would be killed if the daemon is shutdown
     current_runner = manager.get_runner()
@@ -109,57 +101,14 @@ def run_get_node(
     return result, process.node
 
 
-def instantiate_process(
-    runner: "Runner",
-    process: Union["Process", Type["Process"], "ProcessBuilder"],
-    _parent_pid=None,
-    **inputs,
-) -> "Process":
-    """Return an instance of the process with the given inputs. The function can deal with various types
-    of the `process`:
-
-        * Process instance: will simply return the instance
-        * ProcessBuilder instance: will instantiate the Process from the class and inputs defined within it
-        * Process class: will instantiate with the specified inputs
-
-    If anything else is passed, a ValueError will be raised
-
-    :param process: Process instance or class, CalcJobNode class or ProcessBuilder instance
-    :param inputs: the inputs for the process to be instantiated with
-    """
-
-    if isinstance(process, Process):
-        assert not inputs
-        assert runner is process.runner
-        return process
-
-    if isinstance(process, ProcessBuilder):
-        builder = process
-        process_class = builder.process_class
-        inputs.update(**builder._inputs(prune=True))
-    elif is_process_function(process):
-        process_class = process.process_class  # type: ignore[attr-defined]
-    elif inspect.isclass(process) and issubclass(process, Process):
-        process_class = process
-    else:
-        raise ValueError(
-            f"invalid process {type(process)}, needs to be Process or ProcessBuilder"
-        )
-
-    if _parent_pid:
-        process = process_class(runner=runner, inputs=inputs, parent_pid=_parent_pid)
-    else:
-        process = process_class(runner=runner, inputs=inputs)
-
-    return process
-
-
 def submit(
     process: TYPE_SUBMIT_PROCESS,
     inputs: dict[str, t.Any] | None = None,
     *,
     wait: bool = False,
     wait_interval: int = 5,
+    parent_pid: int | None = None,
+    runner: "Runner" | None = None,
     **kwargs: t.Any,
 ) -> ProcessNode:
     """Submit the process with the supplied inputs to the daemon immediately returning control to the interpreter.
@@ -177,8 +126,6 @@ def submit(
     :param kwargs: inputs to be passed to the process. This is an alternative to the positional ``inputs`` argument.
     :return: the calculation node of the process
     """
-    _parent_pid = kwargs.pop("_parent_pid", None)
-    runner = kwargs.pop("runner", None)
     inputs = prepare_inputs(inputs, **kwargs)
 
     # Submitting from within another process requires ``self.submit``` unless it is a work function, in which case the
@@ -192,7 +139,7 @@ def submit(
     assert runner.controller is not None, "runner does not have a controller"
 
     process_inited = instantiate_process(
-        runner, process, _parent_pid=_parent_pid, **inputs
+        runner, process, parent_pid=parent_pid, **inputs
     )
 
     # If a dry run is requested, simply forward to `run`, because it is not compatible with `submit`. We choose for this
@@ -245,6 +192,7 @@ def start_scheduler_worker(foreground: bool = False) -> None:
     from aiida.engine.processes.launcher import ProcessLauncher
     from aiida.engine import persistence
     from plumpy.persistence import LoadSaveContext
+    from aiida.engine.daemon.worker import shutdown_worker
 
     daemon_client = get_scheduler_client()
     configure_logging(
@@ -287,6 +235,7 @@ def start_scheduler_worker(foreground: bool = False) -> None:
             )
         )
     except ValueError:
+        print("Starting a new Scheduler")
         process_inited = instantiate_process(runner, WorkGraphScheduler)
         runner.loop.create_task(process_inited.step_until_terminated())
 

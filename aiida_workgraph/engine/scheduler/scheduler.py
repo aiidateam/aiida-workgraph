@@ -33,6 +33,7 @@ from aiida_workgraph.utils import create_and_pause_process
 from aiida_workgraph.task import Task
 from aiida_workgraph.utils import get_nested_dict, update_nested_dict
 from aiida_workgraph.executors.monitors import monitor
+from aiida.common.log import LOG_LEVEL_REPORT
 
 if t.TYPE_CHECKING:
     from aiida.engine.runners import Runner  # pylint: disable=unused-import
@@ -58,6 +59,7 @@ class WorkGraphScheduler(Process, metaclass=Protect):
         logger: logging.Logger | None = None,
         runner: "Runner" | None = None,
         enable_persistence: bool = True,
+        **kwargs: t.Any,
     ) -> None:
         """Construct a WorkGraph instance.
 
@@ -68,7 +70,9 @@ class WorkGraphScheduler(Process, metaclass=Protect):
 
         """
 
-        super().__init__(inputs, logger, runner, enable_persistence=enable_persistence)
+        super().__init__(
+            inputs, logger, runner, enable_persistence=enable_persistence, **kwargs
+        )
 
         self._awaitables: list[Awaitable] = []
         self._context = AttributeDict()
@@ -166,7 +170,7 @@ class WorkGraphScheduler(Process, metaclass=Protect):
         for pk in launched_workgraphs:
             print("load workgraph: ", pk)
             node = load_node(pk)
-            wgdata = node.base.extras.get("_workgraph", None)
+            wgdata = node.base.extras.get("_checkpoint", None)
             if wgdata is None:
                 self.launch_workgraph(pk)
             else:
@@ -526,7 +530,6 @@ class WorkGraphScheduler(Process, metaclass=Protect):
         """Init the context from the workgraph data."""
         from aiida_workgraph.utils import update_nested_dict
 
-        self.report(f"Init workgraph: {pk}")
         # read the latest workgraph data
         wgdata, node = self.read_wgdata_from_base(pk)
         self.ctx._workgraph[pk] = {
@@ -548,7 +551,6 @@ class WorkGraphScheduler(Process, metaclass=Protect):
         """setup the workgraph in the context."""
         import cloudpickle as pickle
 
-        self.report(f"Setup workgraph: {pk}")
         self.ctx._workgraph[pk]["_tasks"] = wgdata.pop("tasks")
         self.ctx._workgraph[pk]["_links"] = wgdata.pop("links")
         self.ctx._workgraph[pk]["_connectivity"] = wgdata.pop("connectivity")
@@ -556,6 +558,7 @@ class WorkGraphScheduler(Process, metaclass=Protect):
         self.ctx._workgraph[pk]["_error_handlers"] = pickle.loads(
             wgdata.pop("error_handlers")
         )
+        self.ctx._workgraph[pk]["_metadata"] = wgdata.pop("metadata")
         self.ctx._workgraph[pk]["_workgraph"] = wgdata
         self.ctx._workgraph[pk]["_awaitable_actions"] = []
 
@@ -720,16 +723,32 @@ class WorkGraphScheduler(Process, metaclass=Protect):
                 except Exception as e:
                     self.logger.error(f"Error in killing task {name}: {e}")
 
+    def report(self, msg, pk=None):
+        """Report the message."""
+        if pk:
+            self.ctx._workgraph[pk]["_node"].logger.log(LOG_LEVEL_REPORT, msg)
+        else:
+            super().report(msg)
+
     def continue_workgraph(self, pk: int) -> None:
+        # if the workgraph is finished, skip
+        if pk not in self.ctx._workgraph:
+            # the workgraph is finished
+            return
         is_finished, _ = self.is_workgraph_finished(pk)
         if is_finished:
-            self.report(f"Workgraph {pk} finished.")
+            self.finalize_workgraph(pk)
             self.ctx._workgraph[pk]["_node"].set_process_state(Finished.LABEL)
             self.ctx._workgraph[pk]["_node"].set_exit_status(0)
             self.ctx._workgraph[pk]["_node"].seal()
+            # remove the workgraph from the context
+            del self.ctx._workgraph[pk]
+            self.ctx.launched_workgraphs.remove(pk)
+            self.node.base.extras.set(
+                "_launched_workgraphs", self.ctx.launched_workgraphs
+            )
             return
-        self.report("Continue workgraph.")
-        # self.update_workgraph_from_base()
+        self.report("Continue.", pk)
         task_to_run = []
         for name, task in self.ctx._workgraph[pk]["_tasks"].items():
             # update task state
@@ -749,11 +768,7 @@ class WorkGraphScheduler(Process, metaclass=Protect):
             if ready:
                 task_to_run.append(name)
         #
-        self.report(
-            "tasks ready to run in WorkGraph {}, tasks: {}".format(
-                pk, ",".join(task_to_run)
-            )
-        )
+        self.report("tasks ready to run: {}".format(",".join(task_to_run)), pk)
         if len(task_to_run) > 0:
             self.run_tasks(pk, task_to_run)
 
@@ -784,15 +799,15 @@ class WorkGraphScheduler(Process, metaclass=Protect):
                             task["results"][link.link_label] = link.node.outputs
                 else:
                     task["results"] = node.outputs
-                    # self.ctx._new_data[name] = task["results"]
+                    # self.ctx._workgraph[pk]["_new_data"][name] = task["results"]
                 self.set_task_state_info(pk, task["name"], "state", "FINISHED")
                 self.task_set_context(pk, name)
-                self.report(f"Workgraph: {pk}, Task: {name} finished.")
+                self.report(f"Task: {name} finished.", pk=pk)
             # all other states are considered as failed
             else:
                 print(f"set task result: {name} failed")
                 task["results"] = node.outputs
-                # self.ctx._new_data[name] = task["results"]
+                # self.ctx._workgraph[pk]["_new_data"][name] = task["results"]
                 self.set_task_state_info(pk, task["name"], "state", "FAILED")
                 # set child tasks state to SKIPPED
                 self.set_tasks_state(
@@ -800,20 +815,23 @@ class WorkGraphScheduler(Process, metaclass=Protect):
                     self.ctx._workgraph[pk]["_connectivity"]["child_node"][name],
                     "SKIPPED",
                 )
-                self.report(f"Workgraph: {pk}, Task: {name} failed.")
+                self.report(f"Task: {name} failed.", pk)
                 self.run_error_handlers(pk, name)
         elif isinstance(node, orm.Data):
             task["results"] = {task["outputs"][0]["name"]: node}
             self.set_task_state_info(pk, task["name"], "state", "FINISHED")
             self.task_set_context(pk, name)
-            self.report(f"Workgraph: {pk}, Task: {name} finished.")
+            self.report(f"Task: {name} finished.", pk)
         else:
             task.setdefault("results", None)
 
         self.update_parent_task_state(pk, name)
         self.save_workgraph_checkpoint(pk)
         if continue_workgraph:
-            self.continue_workgraph(pk)
+            try:
+                self.continue_workgraph(pk)
+            except Exception as e:
+                print(e)
 
     def set_normal_task_results(self, pk, name, results):
         """Set the results of a normal task.
@@ -831,12 +849,12 @@ class WorkGraphScheduler(Process, metaclass=Protect):
             task["results"][task["outputs"][0]["name"]] = results
         self.task_set_context(pk, name)
         self.set_task_state_info(pk, name, "state", "FINISHED")
-        self.report(f"Workgraph: {pk}, Task: {name} finished.")
+        self.report(f"Task: {name} finished.", pk=pk)
         self.update_parent_task_state(pk, name)
 
     def save_workgraph_checkpoint(self, pk: int):
         """Save the workgraph checkpoint."""
-        self.ctx._workgraph[pk]["_node"].set_extra(
+        self.ctx._workgraph[pk]["_node"].base.extras.set(
             "_checkpoint", serialize(self.ctx._workgraph[pk])
         )
 
@@ -848,19 +866,20 @@ class WorkGraphScheduler(Process, metaclass=Protect):
                 "node_type"
             ].upper()
             if task_type == "WHILE":
-                self.update_while_task_state(parent_task[0])
+                self.update_while_task_state(pk, parent_task[0])
             elif task_type == "IF":
-                self.update_zone_task_state(parent_task[0])
+                self.update_zone_task_state(pk, parent_task[0])
             elif task_type == "ZONE":
-                self.update_zone_task_state(parent_task[0])
+                self.update_zone_task_state(pk, parent_task[0])
 
-    def update_while_task_state(self, name: str) -> None:
+    def update_while_task_state(self, pk: int, name: str) -> None:
         """Update while task state."""
         finished, _ = self.are_childen_finished(name)
 
         if finished:
             self.report(
-                f"Wihle Task {name}: this iteration finished. Try to reset for the next iteration."
+                f"Wihle Task {name}: this iteration finished. Try to reset for the next iteration.",
+                pk,
             )
             # reset the condition tasks
             for input in self.ctx._workgraph[pk]["_tasks"][name]["inputs"]:
@@ -871,13 +890,13 @@ class WorkGraphScheduler(Process, metaclass=Protect):
             # do not reset the execution count
             self.reset_task(name, reset_execution_count=False)
 
-    def update_zone_task_state(self, name: str) -> None:
+    def update_zone_task_state(self, pk: int, name: str) -> None:
         """Update zone task state."""
         finished, _ = self.are_childen_finished(name)
         if finished:
             self.set_task_state_info(pk, name, "state", "FINISHED")
             self.update_parent_task_state(pk, name)
-            self.report(f"Task: {name} finished.")
+            self.report(f"Task: {name} finished.", pk)
 
     def should_run_while_task(self, pk: int, name: str) -> tuple[bool, t.Any]:
         """Check if the while task should run."""
@@ -933,7 +952,7 @@ class WorkGraphScheduler(Process, metaclass=Protect):
                 handler = data["handler"]
                 metadata = data["tasks"][task_name]
                 if node.exit_code.status in metadata.get("exit_codes", []):
-                    self.report(f"Run error handler: {metadata}")
+                    self.report(f"Run error handler: {metadata}", pk)
                     metadata.setdefault("retry", 0)
                     if metadata["retry"] < metadata["max_retries"]:
                         handler(self, task_name, **metadata.get("kwargs", {}))
@@ -967,7 +986,7 @@ class WorkGraphScheduler(Process, metaclass=Protect):
                 is_finished = not should_run
         if is_finished and len(failed_tasks) > 0:
             message = f"WorkGraph finished, but tasks: {failed_tasks} failed. Thus all their child tasks are skipped."
-            self.report(message)
+            self.report(message, pk)
             result = ExitCode(302, message)
         else:
             result = None
@@ -977,12 +996,11 @@ class WorkGraphScheduler(Process, metaclass=Protect):
         """Check while conditions.
         Run all condition tasks and check if all the conditions are True.
         """
-        self.report("Check while conditions.")
         if (
             self.ctx._workgraph[pk]["_execution_count"]
             >= self.ctx._workgraph[pk]["_max_iteration"]
         ):
-            self.report("Max iteration reached.")
+            self.report("Max iteration reached.", pk)
             return False
         condition_tasks = []
         for c in self.ctx._workgraph[pk]["conditions"]:
@@ -1084,7 +1102,7 @@ class WorkGraphScheduler(Process, metaclass=Protect):
             self.ctx._workgraph[pk]["_executed_tasks"].append(name)
             print("-" * 60)
 
-            self.report(f"Run task: {name}, type: {task['metadata']['node_type']}")
+            self.report(f"Run task: {name}, type: {task['metadata']['node_type']}", pk)
             executor, _ = get_executor(task["executor"])
             # print("executor: ", executor)
             args, kwargs, var_args, var_kwargs, args_dict = self.get_inputs(pk, name)
@@ -1112,7 +1130,7 @@ class WorkGraphScheduler(Process, metaclass=Protect):
                 results = create_data_node(executor, args, kwargs)
                 self.set_task_state_info(pk, name, "process", results)
                 self.update_task_state(pk, name)
-                self.ctx._new_data[name] = results
+                self.ctx._workgraph[pk]["_new_data"][name] = results
                 if continue_workgraph:
                     self.continue_workgraph(pk)
             elif task["metadata"]["node_type"].upper() in [
@@ -1121,7 +1139,7 @@ class WorkGraphScheduler(Process, metaclass=Protect):
             ]:
                 kwargs.setdefault("metadata", {})
                 kwargs["metadata"].update({"call_link_label": name})
-                kwargs["_parent_pid"] = pk
+                kwargs["parent_pid"] = pk
                 try:
                     # since aiida 2.5.0, we need to use args_dict to pass the args to the run_get_node
                     if var_kwargs is None:
@@ -1145,7 +1163,7 @@ class WorkGraphScheduler(Process, metaclass=Protect):
                         self.ctx._workgraph[pk]["_connectivity"]["child_node"][name],
                         "SKIPPED",
                     )
-                    self.report(f"Task: {name} failed.")
+                    self.report(f"Task: {name} failed.", pk)
                 # exclude the current tasks from the next run
                 if continue_workgraph:
                     self.continue_workgraph(pk)
@@ -1153,11 +1171,11 @@ class WorkGraphScheduler(Process, metaclass=Protect):
                 # process = run_get_node(executor, *args, **kwargs)
                 kwargs.setdefault("metadata", {})
                 kwargs["metadata"].update({"call_link_label": name})
-                kwargs["_parent_pid"] = pk
+                kwargs["parent_pid"] = pk
                 # transfer the args to kwargs
                 if self.get_task_state_info(pk, name, "action").upper() == "PAUSE":
                     self.set_task_state_info(pk, name, "action", "")
-                    self.report(f"Task {name} is created and paused.")
+                    self.report(f"Task {name} is created and paused.", pk)
                     process = create_and_pause_process(
                         self.runner,
                         executor,
@@ -1179,20 +1197,23 @@ class WorkGraphScheduler(Process, metaclass=Protect):
                 wg.group_outputs = self.ctx._workgraph[pk]["_tasks"][name]["metadata"][
                     "group_outputs"
                 ]
-                wg.parent_uuid = self.node.uuid
-                inputs = wg.prepare_inputs(metadata={"call_link_label": name})
-                inputs["parent_pid"] = pk
-                process = launch.submit(WorkGraphEngine, inputs=inputs)
-                process.workgraph_pk = pk
-                self.set_task_state_info(pk, name, "process", process)
-                self.set_task_state_info(pk, name, "state", "RUNNING")
-                self.to_context(**{name: process})
+                metadata = {"call_link_label": name}
+                try:
+                    wg.save(metadata=metadata, parent_pid=pk)
+                    process = wg.process
+                    self.launch_workgraph(process.pk)
+                    process.workgraph_pk = pk
+                    self.set_task_state_info(pk, name, "process", process)
+                    self.set_task_state_info(pk, name, "state", "RUNNING")
+                    self.report(f"GraphBuilder {name} is created.", pk)
+                    self.to_context(**{name: process})
+                except Exception as e:
+                    print("Error in launching the workgraph: ", e)
             elif task["metadata"]["node_type"].upper() in ["WORKGRAPH"]:
                 from .utils import prepare_for_workgraph_task
 
                 inputs, _ = prepare_for_workgraph_task(task, kwargs)
-                inputs["parent_pid"] = pk
-                process = launch.submit(WorkGraphEngine, inputs=inputs)
+                process = launch.submit(WorkGraphEngine, inputs=inputs, parent_pid=pk)
                 process.workgraph_pk = pk
                 self.set_task_state_info(pk, name, "process", process)
                 self.set_task_state_info(pk, name, "state", "RUNNING")
@@ -1202,11 +1223,10 @@ class WorkGraphScheduler(Process, metaclass=Protect):
                 from .utils import prepare_for_python_task
 
                 inputs = prepare_for_python_task(task, kwargs, var_kwargs)
-                inputs["parent_pid"] = pk
                 # since aiida 2.5.0, we can pass inputs directly to the submit, no need to use **inputs
                 if self.get_task_state_info(pk, name, "action").upper() == "PAUSE":
                     self.set_task_state_info(pk, name, "action", "")
-                    self.report(f"Task {name} is created and paused.")
+                    self.report(f"Task {name} is created and paused.", pk)
                     process = create_and_pause_process(
                         self.runner,
                         PythonJob,
@@ -1216,7 +1236,7 @@ class WorkGraphScheduler(Process, metaclass=Protect):
                     self.set_task_state_info(pk, name, "state", "CREATED")
                     process = process.node
                 else:
-                    process = launch.submit(PythonJob, **inputs)
+                    process = launch.submit(PythonJob, inputs=inputs, parent_pid=pk)
                     self.set_task_state_info(pk, name, "state", "RUNNING")
                 process.label = name
                 process.workgraph_pk = pk
@@ -1227,10 +1247,9 @@ class WorkGraphScheduler(Process, metaclass=Protect):
                 from .utils import prepare_for_shell_task
 
                 inputs = prepare_for_shell_task(task, kwargs)
-                inputs["parent_pid"] = pk
                 if self.get_task_state_info(pk, name, "action").upper() == "PAUSE":
                     self.set_task_state_info(pk, name, "action", "")
-                    self.report(f"Task {name} is created and paused.")
+                    self.report(f"Task {name} is created and paused.", pk)
                     process = create_and_pause_process(
                         self.runner,
                         ShellJob,
@@ -1240,7 +1259,7 @@ class WorkGraphScheduler(Process, metaclass=Protect):
                     self.set_task_state_info(pk, name, "state", "CREATED")
                     process = process.node
                 else:
-                    process = launch.submit(ShellJob, **inputs)
+                    process = launch.submit(ShellJob, inputs=inputs, parent_pid=pk)
                     self.set_task_state_info(pk, name, "state", "RUNNING")
                 process.label = name
                 process.workgraph_pk = pk
@@ -1258,7 +1277,8 @@ class WorkGraphScheduler(Process, metaclass=Protect):
                     )
                     self.update_parent_task_state(pk, name)
                     self.report(
-                        f"While Task {name}: Condition not fullilled, task finished. Skip all its children."
+                        f"While Task {name}: Condition not fullilled, task finished. Skip all its children.",
+                        pk,
                     )
                 else:
                     task["execution_count"] += 1
@@ -1270,7 +1290,7 @@ class WorkGraphScheduler(Process, metaclass=Protect):
                     self.set_task_state_info(pk, name, "state", "RUNNING")
                 else:
                     self.set_tasks_state(pk, task["children"], "SKIPPED")
-                    self.update_zone_task_state(name)
+                    self.update_zone_task_state(pk, name)
                 self.continue_workgraph(pk)
             elif task["metadata"]["node_type"].upper() in ["ZONE"]:
                 self.set_task_state_info(pk, name, "state", "RUNNING")
@@ -1334,7 +1354,7 @@ class WorkGraphScheduler(Process, metaclass=Protect):
                         self.ctx._workgraph[pk]["_connectivity"]["child_node"][name],
                         "SKIPPED",
                     )
-                    self.report(f"Task: {name} failed.")
+                    self.report(f"Task: {name} failed.", pk)
                     self.run_error_handlers(pk, name)
                 if continue_workgraph:
                     self.continue_workgraph(pk)
@@ -1602,11 +1622,11 @@ class WorkGraphScheduler(Process, metaclass=Protect):
         # Didn't match any known intents
         raise RuntimeError("Unknown intent")
 
-    def finalize(self) -> t.Optional[ExitCode]:
+    def finalize_workgraph(self, pk: int) -> t.Optional[ExitCode]:
         """"""
         # expose outputs of the workgraph
         group_outputs = {}
-        for output in self.ctx._workgraph["metadata"]["group_outputs"]:
+        for output in self.ctx._workgraph[pk]["_metadata"]["group_outputs"]:
             names = output["from"].split(".", 1)
             if names[0] == "context":
                 if len(names) == 1:
@@ -1640,12 +1660,12 @@ class WorkGraphScheduler(Process, metaclass=Protect):
                         )
         self.out_many(group_outputs)
         # output the new data
-        self.out("new_data", self.ctx._new_data)
+        self.out("new_data", self.ctx._workgraph[pk]["_new_data"])
         self.out(
             "execution_count",
             orm.Int(self.ctx._workgraph[pk]["_execution_count"]).store(),
         )
-        self.report("Finalize workgraph.")
+        self.report("Finalize workgraph.", pk)
         for _, task in self.ctx._workgraph[pk]["_tasks"].items():
             if self.get_task_state_info(pk, task["name"], "state") == "FAILED":
                 return self.exit_codes.TASK_FAILED

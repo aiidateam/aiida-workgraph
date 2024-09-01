@@ -154,20 +154,24 @@ class WorkGraph(node_graph.NodeGraph):
             self.wait(timeout=timeout)
         return self.process
 
-    def save(self, metadata: Optional[Dict[str, Any]] = None) -> None:
+    def save(
+        self, metadata: Optional[Dict[str, Any]] = None, parent_pid: int = None
+    ) -> None:
         """Save the udpated workgraph to the process
         This is only used for a running workgraph.
         Save the AiiDA workgraph process and update the process status.
         """
         from aiida.manage import manager
-        from aiida.engine.utils import instantiate_process
+        from aiida_workgraph.engine.utils import instantiate_process
         from aiida_workgraph.engine.workgraph import WorkGraphEngine
 
         inputs = self.prepare_inputs(metadata)
         if self.process is None:
             runner = manager.get_manager().get_runner()
             # init a process node
-            process_inited = instantiate_process(runner, WorkGraphEngine, **inputs)
+            process_inited = instantiate_process(
+                runner, WorkGraphEngine, parent_pid=parent_pid, **inputs
+            )
             process_inited.runner.persister.save_checkpoint(process_inited)
             self.process = process_inited.node
             self.process_inited = process_inited

@@ -60,6 +60,7 @@ class WorkGraphEngine(Process, metaclass=Protect):
         logger: logging.Logger | None = None,
         runner: "Runner" | None = None,
         enable_persistence: bool = True,
+        **kwargs: t.Any,
     ) -> None:
         """Construct a WorkGraph instance.
 
@@ -70,7 +71,9 @@ class WorkGraphEngine(Process, metaclass=Protect):
 
         """
 
-        super().__init__(inputs, logger, runner, enable_persistence=enable_persistence)
+        super().__init__(
+            inputs, logger, runner, enable_persistence=enable_persistence, **kwargs
+        )
 
         self._awaitables: list[Awaitable] = []
         self._context = AttributeDict()
