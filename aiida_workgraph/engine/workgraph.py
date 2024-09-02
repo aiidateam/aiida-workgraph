@@ -22,7 +22,6 @@ from aiida.orm.utils.serialize import deserialize_unsafe, serialize
 
 from aiida.engine.processes.exit_code import ExitCode
 from aiida.engine.processes.process import Process
-from aiida.engine import calcfunction
 
 from aiida.engine.processes.workchains.awaitable import (
     Awaitable,
@@ -923,16 +922,17 @@ class WorkGraphEngine(Process, metaclass=Protect):
             self.set_tasks_state(condition_tasks, "SKIPPED")
 
             @calcfunction
-            def getitem(sequence, count):
-                value = sequence.get_list()[count.value]
-                # TODO can we make this more generic?
-                if isinstance(value, int):
-                    return orm.Int(value)
+            def __getitem__(sequence, count):
+                value = sequence[count.value]
+                # only convert if not already orm type
+                # because sequence might be builtin collection with orm types
+                # so a conversion is not needed and would raise an error
+                if isinstance(value, orm.Data):
+                    return value
                 else:
-                    raise TypeError("`sequence` only supports sequence of integers")
+                    return orm.to_aiida_type(value)
 
-
-            self.ctx["i"] = getitem(self.ctx._sequence, self.ctx._count)
+            self.ctx["i"] = __getitem__(self.ctx._sequence, self.ctx._count)
         self.ctx._count += 1
         return should_run
 
