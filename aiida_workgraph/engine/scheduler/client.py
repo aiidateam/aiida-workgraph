@@ -302,8 +302,10 @@ def start_scheduler_process(number: int = 1) -> None:
 
         # Restart existing schedulers if they exceed the number to start
         for pk in schedulers[:number]:
-            create_scheduler_action(pk)
-            print(f"Scheduler with pk {pk} running.")
+            # When the runner stop, the runner does not ack back to rmq,
+            # so the msg is still in the queue, and the msg is not acked,
+            # we don't need send the msg to continue again
+            print(f"Scheduler with pk {pk} restart and running.")
             count += 1
         # not running
         for pk in schedulers[number:]:
