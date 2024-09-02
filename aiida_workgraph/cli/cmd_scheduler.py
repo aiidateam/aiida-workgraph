@@ -1,26 +1,10 @@
 from aiida_workgraph.cli.cmd_workgraph import workgraph
 import click
-from pathlib import Path
 from aiida.cmdline.utils import decorators, echo
+from aiida.cmdline.commands.cmd_daemon import validate_daemon_workers
 from aiida.cmdline.params import options
 from aiida_workgraph.engine.scheduler.client import get_scheduler_client
 import sys
-
-REACT_PORT = "3000"
-
-
-def get_package_root():
-    """Returns the root directory of the package."""
-    current_file = Path(__file__)
-    # Root directory of your package
-    return current_file.parent
-
-
-def get_pid_file_path():
-    """Get the path to the PID file in the desired directory."""
-    from aiida.manage.configuration.settings import AIIDA_CONFIG_FOLDER
-
-    return AIIDA_CONFIG_FOLDER / "scheduler_processes.pid"
 
 
 @workgraph.group("scheduler")
@@ -31,7 +15,7 @@ def scheduler():
 @scheduler.command()
 def worker():
     """Start the scheduler application."""
-    from aiida_workgraph.engine.launch import start_scheduler_worker
+    from aiida_workgraph.engine.scheduler.client import start_scheduler_worker
 
     click.echo("Starting the scheduler worker...")
 
@@ -40,17 +24,20 @@ def worker():
 
 @scheduler.command()
 @click.option("--foreground", is_flag=True, help="Run in foreground.")
+@click.argument("number", required=False, type=int, callback=validate_daemon_workers)
 @options.TIMEOUT(default=None, required=False, type=int)
 @decorators.with_dbenv()
 @decorators.requires_broker
 @decorators.check_circus_zmq_version
-def start(foreground, timeout):
+def start(foreground, number, timeout):
     """Start the scheduler application."""
+    from aiida_workgraph.engine.scheduler.client import start_scheduler_process
 
     click.echo("Starting the scheduler process...")
 
     client = get_scheduler_client()
-    client.start_daemon(foreground=foreground)
+    client.start_daemon(number_workers=number, foreground=foreground, timeout=timeout)
+    start_scheduler_process(number)
 
 
 @scheduler.command()
@@ -86,10 +73,11 @@ def stop(ctx, no_wait, all_profiles, timeout):
 
 @scheduler.command(hidden=True)
 @click.option("--foreground", is_flag=True, help="Run in foreground.")
+@click.argument("number", required=False, type=int, callback=validate_daemon_workers)
 @decorators.with_dbenv()
 @decorators.requires_broker
 @decorators.check_circus_zmq_version
-def start_circus(foreground):
+def start_circus(foreground, number):
     """This will actually launch the circus daemon, either daemonized in the background or in the foreground.
 
     If run in the foreground all logs are redirected to stdout.
@@ -97,7 +85,7 @@ def start_circus(foreground):
     .. note:: this should not be called directly from the commandline!
     """
 
-    get_scheduler_client()._start_daemon(foreground=foreground)
+    get_scheduler_client()._start_daemon(number_workers=number, foreground=foreground)
 
 
 @scheduler.command()

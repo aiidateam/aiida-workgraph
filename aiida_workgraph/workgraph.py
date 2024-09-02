@@ -124,15 +124,6 @@ class WorkGraph(node_graph.NodeGraph):
             restart (bool): Restart the process, and reset the modified tasks, then only re-run the modified tasks.
             new (bool): Submit a new process.
         """
-        from aiida_workgraph.engine.scheduler.client import get_scheduler
-
-        if to_scheduler:
-            try:
-                get_scheduler()
-            except ValueError as e:
-                print(e)
-                return
-
         # set task inputs
         if inputs is not None:
             for name, input in inputs.items():
@@ -439,27 +430,14 @@ class WorkGraph(node_graph.NodeGraph):
         """
         from aiida_workgraph.utils.control import (
             create_task_action,
-            create_scheduler_action,
+            create_workgraph_action,
         )
-        from aiida_workgraph.engine.scheduler.client import get_scheduler
-        import kiwipy
 
         try:
-            if isinstance(to_scheduler, int):
-                scheduler_pk = get_scheduler()
-                create_task_action(scheduler_pk, [self.pk], action="launch_workgraph")
+            if isinstance(to_scheduler, int) and not isinstance(to_scheduler, bool):
+                create_task_action(to_scheduler, [self.pk], action="launch_workgraph")
             else:
-                create_scheduler_action(self.pk)
-        except ValueError:
-            print(
-                """Scheduler is not running.
-Please start the scheduler first with `aiida-workgraph scheduler start`"""
-            )
-        except kiwipy.exceptions.UnroutableError:
-            print(
-                """Scheduler exists, but the daemon is not running.
-Please start the scheduler first with `aiida-workgraph scheduler start`"""
-            )
+                create_workgraph_action(self.pk)
         except Exception as e:
             print("""An unexpected error occurred:""", e)
 

@@ -1,6 +1,7 @@
 from aiida.manage import get_manager
 from aiida import orm
 from aiida.engine.processes import control
+from aiida_workgraph.engine.override import ControllerWithQueueName
 
 
 def create_task_action(
@@ -22,10 +23,23 @@ def create_scheduler_action(
 ):
     """Send workgraph task to scheduler."""
 
-    controller = get_manager().get_process_controller()
-    message = str(pk)
-    queue = controller._communicator.task_queue("scheduler_queue")
-    queue.task_send(message)
+    manager = get_manager()
+    controller = ControllerWithQueueName(
+        queue_name="scheduler_queue", communicator=manager.get_communicator()
+    )
+    controller.continue_process(pk, nowait=False)
+
+
+def create_workgraph_action(
+    pk: int,
+):
+    """Send workgraph task to scheduler."""
+
+    manager = get_manager()
+    controller = ControllerWithQueueName(
+        queue_name="workgraph_queue", communicator=manager.get_communicator()
+    )
+    controller.continue_process(pk, nowait=False)
 
 
 def get_task_state_info(node, name: str, key: str) -> str:

@@ -778,15 +778,12 @@ class WorkGraphScheduler(Process, metaclass=Protect):
     ) -> None:
         """Update task state when the task is finished."""
 
-        print("update task state: ", pk, name)
         task = self.ctx._workgraph[pk]["_tasks"][name]
         # print(f"set task result: {name}")
         node = self.get_task_state_info(pk, name, "process")
-        print("node", node)
         if isinstance(node, orm.ProcessNode):
             # print(f"set task result: {name} process")
             state = node.process_state.value.upper()
-            print("state", state)
             if node.is_finished_ok:
                 self.set_task_state_info(pk, task["name"], "state", state)
                 if task["metadata"]["node_type"].upper() == "WORKGRAPH":
@@ -1637,18 +1634,18 @@ class WorkGraphScheduler(Process, metaclass=Protect):
     def call_on_receive_workgraph_message(self, _comm, msg):
         """Call on receive workgraph message."""
         # self.report(f"Received workgraph message: {msg}")
-        pk = int(msg)
+        pk = msg["args"]["pid"]
         # To avoid "DbNode is not persistent", we need to schedule the call
         self._schedule_rpc(self.launch_workgraph, pk=pk)
         return True
 
     def add_workgraph_subsriber(self) -> None:
         """Add workgraph subscriber."""
-        queue_name = "scheduler_queue"
-        # self.report(f"Add workgraph subscriber on queue: {queue_name}")
+        queue_name = "workgraph_queue"
+        self.report(f"Add workgraph subscriber on queue: {queue_name}")
         comm = self.runner.communicator._communicator
         queue = comm.task_queue(queue_name, prefetch_count=1000)
-        queue.add_task_subscriber(self.callback)
+        queue.add_task_subscriber(self.call_on_receive_workgraph_message)
 
     def finalize_workgraph(self, pk: int) -> t.Optional[ExitCode]:
         """"""

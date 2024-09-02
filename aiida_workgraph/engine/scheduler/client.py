@@ -4,8 +4,11 @@ from aiida.manage.manager import get_manager
 from aiida.common.exceptions import ConfigurationError
 import os
 from typing import Optional
+from aiida.common.log import AIIDA_LOGGER
+from typing import List
 
 WORKGRAPH_BIN = shutil.which("workgraph")
+LOGGER = AIIDA_LOGGER.getChild("engine.launch")
 
 
 class SchedulerClient(DaemonClient):
@@ -102,6 +105,7 @@ class SchedulerClient(DaemonClient):
             self.profile.name,
             "scheduler",
             "start-circus",
+            str(number_workers),
         ]
 
         if foreground:
@@ -114,7 +118,7 @@ class SchedulerClient(DaemonClient):
         """Return the command to start a daemon worker process."""
         return [self._workgraph_bin, "-p", self.profile.name, "scheduler", "worker"]
 
-    def _start_daemon(self, foreground: bool = False) -> None:
+    def _start_daemon(self, number_workers: int = 1, foreground: bool = False) -> None:
         """Start the daemon.
 
         .. warning:: This will daemonize the current process and put it in the background. It is most likely not what
@@ -149,7 +153,7 @@ class SchedulerClient(DaemonClient):
                 {
                     "cmd": " ".join(self.cmd_start_daemon_worker),
                     "name": self.daemon_name,
-                    "numprocesses": 1,
+                    "numprocesses": number_workers,
                     "virtualenv": self.virtualenv,
                     "copy_env": True,
                     "stdout_stream": {
@@ -210,7 +214,7 @@ def get_scheduler_client(profile_name: Optional[str] = None) -> "SchedulerClient
     return SchedulerClient(profile)
 
 
-def get_scheduler():
+def get_scheduler() -> List[int]:
     from aiida.orm import QueryBuilder
     from aiida_workgraph.engine.scheduler import WorkGraphScheduler
 
@@ -224,7 +228,95 @@ def get_scheduler():
     }
     qb.append(WorkGraphScheduler, filters=filters, project=projections, tag="process")
     results = qb.all()
-    if len(results) == 0:
-        raise ValueError("No scheduler found. Please start the scheduler first.")
-    scheduler_id = results[0][0]
-    return scheduler_id
+    pks = [r[0] for r in results]
+    return pks
+
+
+def start_scheduler_worker(foreground: bool = False) -> None:
+    """Start a scheduler worker for the currently configured profile.
+
+    :param foreground: If true, the logging will be configured to write to stdout, otherwise it will be configured to
+        write to the scheduler log file.
+    """
+    import asyncio
+    import signal
+    import sys
+    from aiida_workgraph.engine.scheduler.client import get_scheduler_client
+    from aiida_workgraph.engine.override import create_daemon_runner
+
+    from aiida.common.log import configure_logging
+    from aiida.manage import get_config_option
+    from aiida.engine.daemon.worker import shutdown_worker
+
+    daemon_client = get_scheduler_client()
+    configure_logging(
+        daemon=not foreground, daemon_log_file=daemon_client.daemon_log_file
+    )
+
+    LOGGER.debug(f"sys.executable: {sys.executable}")
+    LOGGER.debug(f"sys.path: {sys.path}")
+
+    try:
+        manager = get_manager()
+        runner = create_daemon_runner(manager, queue_name="scheduler_queue")
+    except Exception:
+        LOGGER.exception("daemon worker failed to start")
+        raise
+
+    if isinstance(rlimit := get_config_option("daemon.recursion_limit"), int):
+        LOGGER.info("Setting maximum recursion limit of daemon worker to %s", rlimit)
+        sys.setrecursionlimit(rlimit)
+
+    signals = (signal.SIGTERM, signal.SIGINT)
+    for s in signals:
+        # https://github.com/python/mypy/issues/12557
+        runner.loop.add_signal_handler(s, lambda s=s: asyncio.create_task(shutdown_worker(runner)))  # type: ignore[misc]
+
+    try:
+        LOGGER.info("Starting a daemon worker")
+        runner.start()
+    except SystemError as exception:
+        LOGGER.info("Received a SystemError: %s", exception)
+        runner.close()
+
+    LOGGER.info("Daemon worker started")
+
+
+def start_scheduler_process(number: int = 1) -> None:
+    """Start or restart the specified number of scheduler processes."""
+    from aiida_workgraph.engine.scheduler import WorkGraphScheduler
+    from aiida_workgraph.engine.scheduler.client import get_scheduler
+    from aiida_workgraph.utils.control import create_scheduler_action
+    from aiida_workgraph.engine.utils import instantiate_process
+
+    try:
+        schedulers: List[int] = get_scheduler()
+        existing_schedulers_count = len(schedulers)
+        print(
+            "Found {} existing scheduler(s): {}".format(
+                existing_schedulers_count, " ".join([str(pk) for pk in schedulers])
+            )
+        )
+
+        count = 0
+
+        # Restart existing schedulers if they exceed the number to start
+        for pk in schedulers[:number]:
+            create_scheduler_action(pk)
+            print(f"Scheduler with pk {pk} running.")
+            count += 1
+        # not running
+        for pk in schedulers[number:]:
+            print(f"Scheduler with pk {pk} not running.")
+
+        # Start new schedulers if more are needed
+        runner = get_manager().get_runner()
+        for i in range(count, number):
+            process_inited = instantiate_process(runner, WorkGraphScheduler)
+            process_inited.runner.persister.save_checkpoint(process_inited)
+            process_inited.close()
+            create_scheduler_action(process_inited.node.pk)
+            print(f"Scheduler with pk {process_inited.node.pk} running.")
+
+    except Exception as e:
+        raise (f"An error occurred while starting schedulers: {e}")

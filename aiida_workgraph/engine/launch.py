@@ -27,6 +27,13 @@ TYPE_SUBMIT_PROCESS = t.Union[Process, t.Type[Process], ProcessBuilder]
 LOGGER = AIIDA_LOGGER.getChild("engine.launch")
 
 
+"""
+Note: I modified the run_get_node and submit functions to include the parent_pid argument.
+This is necessary for keeping track of the provenance of the processes.
+
+"""
+
+
 def run_get_node(
     process_class, *args, **kwargs
 ) -> tuple[dict[str, t.Any] | None, "ProcessNode"]:
@@ -170,80 +177,3 @@ def submit(
         time.sleep(wait_interval)
 
     return node
-
-
-def start_scheduler_worker(foreground: bool = False) -> None:
-    """Start a scheduler worker for the currently configured profile.
-
-    :param foreground: If true, the logging will be configured to write to stdout, otherwise it will be configured to
-        write to the scheduler log file.
-    """
-    import asyncio
-    import signal
-    import sys
-
-    from aiida.common.log import configure_logging
-    from aiida.manage import get_config_option, get_manager
-    from aiida_workgraph.engine.scheduler import WorkGraphScheduler
-    from aiida_workgraph.engine.scheduler.client import (
-        get_scheduler_client,
-        get_scheduler,
-    )
-    from aiida.engine.processes.launcher import ProcessLauncher
-    from aiida.engine import persistence
-    from plumpy.persistence import LoadSaveContext
-    from aiida.engine.daemon.worker import shutdown_worker
-
-    daemon_client = get_scheduler_client()
-    configure_logging(
-        daemon=not foreground, daemon_log_file=daemon_client.daemon_log_file
-    )
-
-    LOGGER.debug(f"sys.executable: {sys.executable}")
-    LOGGER.debug(f"sys.path: {sys.path}")
-
-    try:
-        manager = get_manager()
-        # runner = manager.create_daemon_runner()
-        runner = manager.create_runner(broker_submit=True)
-        manager.set_runner(runner)
-    except Exception:
-        LOGGER.exception("daemon worker failed to start")
-        raise
-
-    if isinstance(rlimit := get_config_option("daemon.recursion_limit"), int):
-        LOGGER.info("Setting maximum recursion limit of daemon worker to %s", rlimit)
-        sys.setrecursionlimit(rlimit)
-
-    signals = (signal.SIGTERM, signal.SIGINT)
-    for s in signals:
-        # https://github.com/python/mypy/issues/12557
-        runner.loop.add_signal_handler(s, lambda s=s: asyncio.create_task(shutdown_worker(runner)))  # type: ignore[misc]
-
-    try:
-        running_scheduler = get_scheduler()
-        runner_loop = runner.loop
-        task_receiver = ProcessLauncher(
-            loop=runner_loop,
-            persister=manager.get_persister(),
-            load_context=LoadSaveContext(runner=runner),
-            loader=persistence.get_object_loader(),
-        )
-        asyncio.run(
-            task_receiver._continue(
-                communicator=None, pid=running_scheduler, nowait=True
-            )
-        )
-    except ValueError:
-        print("Starting a new Scheduler")
-        process_inited = instantiate_process(runner, WorkGraphScheduler)
-        runner.loop.create_task(process_inited.step_until_terminated())
-
-    try:
-        LOGGER.info("Starting a daemon worker")
-        runner.start()
-    except SystemError as exception:
-        LOGGER.info("Received a SystemError: %s", exception)
-        runner.close()
-
-    LOGGER.info("Daemon worker started")

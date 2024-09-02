@@ -6,7 +6,7 @@ from aiida_workgraph.engine.scheduler.client import get_scheduler
 from aiida import orm
 
 
-@pytest.skip("Skip for now")
+@pytest.mark.skip("Skip for now")
 @pytest.mark.usefixtures("started_daemon_client")
 def test_scheduler(decorated_add: Callable, started_scheduler_client) -> None:
     """Test graph build."""
@@ -14,7 +14,6 @@ def test_scheduler(decorated_add: Callable, started_scheduler_client) -> None:
     add1 = wg.add_task(decorated_add, x=2, y=3)
     add2 = wg.add_task(decorated_add, "add2", x=3, y=add1.outputs["result"])
     # use run to check if graph builder workgraph can be submit inside the engine
-    pk = get_scheduler()
     wg.submit(to_scheduler=True, wait=True)
     pk = get_scheduler()
     report = get_workchain_report(orm.load(pk), "REPORT")
