@@ -149,6 +149,7 @@ class WorkGraphScheduler(Process, metaclass=Protect):
         self._temp = {"awaitables": {}}
 
         self.set_logger(self.node.logger)
+        self.add_workgraph_subsriber()
 
         if self._awaitables:
             # For the "ascyncio.tasks.Task" awaitable, because there are only in-memory,
@@ -512,7 +513,7 @@ class WorkGraphScheduler(Process, metaclass=Protect):
         # self.ctx._workgraph[pk]["_execution_count"] = {}
         # data not to be persisted, because they are not serializable
         self._temp = {"awaitables": {}}
-        # self.launch_workgraph(122305)
+        self.add_workgraph_subsriber()
 
     def launch_workgraph(self, pk: str) -> None:
         """Launch the workgraph."""
@@ -1632,6 +1633,22 @@ class WorkGraphScheduler(Process, metaclass=Protect):
 
         # Didn't match any known intents
         raise RuntimeError("Unknown intent")
+
+    def call_on_receive_workgraph_message(self, _comm, msg):
+        """Call on receive workgraph message."""
+        # self.report(f"Received workgraph message: {msg}")
+        pk = int(msg)
+        # To avoid "DbNode is not persistent", we need to schedule the call
+        self._schedule_rpc(self.launch_workgraph, pk=pk)
+        return True
+
+    def add_workgraph_subsriber(self) -> None:
+        """Add workgraph subscriber."""
+        queue_name = "scheduler_queue"
+        # self.report(f"Add workgraph subscriber on queue: {queue_name}")
+        comm = self.runner.communicator._communicator
+        queue = comm.task_queue(queue_name, prefetch_count=1000)
+        queue.add_task_subscriber(self.callback)
 
     def finalize_workgraph(self, pk: int) -> t.Optional[ExitCode]:
         """"""

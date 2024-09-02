@@ -145,7 +145,7 @@ class WorkGraph(node_graph.NodeGraph):
         if self.process.process_state.value.upper() not in ["CREATED"]:
             raise ValueError(f"Process {self.process.pk} has already been submitted.")
         if to_scheduler:
-            self.continue_process_in_scheduler()
+            self.continue_process_in_scheduler(to_scheduler)
         else:
             self.continue_process()
         # as long as we submit the process, it is a new submission, we should set restart_process to None
@@ -432,15 +432,24 @@ class WorkGraph(node_graph.NodeGraph):
         process_controller = get_manager().get_process_controller()
         process_controller.continue_process(self.pk)
 
-    def continue_process_in_scheduler(self):
-        """Ask the scheduler to pick up the process from the database and run it."""
-        from aiida_workgraph.utils.control import create_task_action
+    def continue_process_in_scheduler(self, to_scheduler: Union[int, bool]) -> None:
+        """Ask the scheduler to pick up the process from the database and run it.
+        If to_scheduler is an integer, it will be used as the scheduler pk.
+        Otherwise, it will send the message to the queue, and the scheduler will pick it up.
+        """
+        from aiida_workgraph.utils.control import (
+            create_task_action,
+            create_scheduler_action,
+        )
         from aiida_workgraph.engine.scheduler.client import get_scheduler
         import kiwipy
 
         try:
-            scheduler_pk = get_scheduler()
-            create_task_action(scheduler_pk, [self.pk], action="launch_workgraph")
+            if isinstance(to_scheduler, int):
+                scheduler_pk = get_scheduler()
+                create_task_action(scheduler_pk, [self.pk], action="launch_workgraph")
+            else:
+                create_scheduler_action(self.pk)
         except ValueError:
             print(
                 """Scheduler is not running.

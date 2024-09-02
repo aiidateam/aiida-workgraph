@@ -17,6 +17,17 @@ def create_task_action(
     controller._communicator.rpc_send(pk, message)
 
 
+def create_scheduler_action(
+    pk: int,
+):
+    """Send workgraph task to scheduler."""
+
+    controller = get_manager().get_process_controller()
+    message = str(pk)
+    queue = controller._communicator.task_queue("scheduler_queue")
+    queue.task_send(message)
+
+
 def get_task_state_info(node, name: str, key: str) -> str:
     """Get task state info from base.extras."""
     from aiida.orm.utils.serialize import deserialize_unsafe
