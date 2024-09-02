@@ -207,6 +207,7 @@ def build_task_from_AiiDA(
     spec = executor.spec()
     args = []
     kwargs = []
+    user_defined_input_names = [input["name"] for input in inputs]
     for _key, port in spec.inputs.ports.items():
         add_input_recursive(inputs, port, args, kwargs, required=port.required)
     for _key, port in spec.outputs.ports.items():
@@ -230,6 +231,14 @@ def build_task_from_AiiDA(
                     "property": {"identifier": "workgraph.any", "default": {}},
                 }
             )
+        # When the input is dyanmic, if user defines some input names does not included in the args and kwargs,
+        # which means the user define the input names manually, we must add them to the kwargs
+        for key in user_defined_input_names:
+            if key not in args and key not in kwargs:
+                if key == name:
+                    continue
+                kwargs.append(key)
+
     # TODO In order to reload the WorkGraph from process, "is_pickle" should be True
     # so I pickled the function here, but this is not necessary
     # we need to update the node_graph to support the path and name of the function

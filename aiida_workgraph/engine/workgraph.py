@@ -522,6 +522,7 @@ class WorkGraphEngine(Process, metaclass=Protect):
                 if isinstance(prop["value"], PickledLocalFunction):
                     prop["value"] = prop["value"].value
         wgdata["error_handlers"] = deserialize_unsafe(wgdata["error_handlers"])
+        wgdata["context"] = deserialize_unsafe(wgdata["context"])
         return wgdata
 
     def update_workgraph_from_base(self) -> None:
