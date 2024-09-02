@@ -924,9 +924,9 @@ class WorkGraphEngine(Process, metaclass=Protect):
             @calcfunction
             def __getitem__(sequence, count):
                 value = sequence[count.value]
-                # only convert if not already orm type
-                # because sequence might be builtin collection with orm types
-                # so a conversion is not needed and would raise an error
+                # only convert value f not already orm type because sequence
+                # might be builtin collection with orm types so a conversion is
+                # not needed and would raise an error
                 if isinstance(value, orm.Data):
                     return value
                 else:
