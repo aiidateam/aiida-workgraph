@@ -513,7 +513,6 @@ class WorkGraphScheduler(Process, metaclass=Protect):
         # self.ctx._workgraph[pk]["_execution_count"] = {}
         # data not to be persisted, because they are not serializable
         self._temp = {"awaitables": {}}
-        self.add_workgraph_subsriber()
 
     def launch_workgraph(self, pk: str) -> None:
         """Launch the workgraph."""
@@ -741,9 +740,6 @@ class WorkGraphScheduler(Process, metaclass=Protect):
         is_finished, _ = self.is_workgraph_finished(pk)
         if is_finished:
             self.finalize_workgraph(pk)
-            self.ctx._workgraph[pk]["_node"].set_process_state(Finished.LABEL)
-            self.ctx._workgraph[pk]["_node"].set_exit_status(0)
-            self.ctx._workgraph[pk]["_node"].seal()
             # remove the workgraph from the context
             del self.ctx._workgraph[pk]
             self.ctx.launched_workgraphs.remove(pk)
@@ -1203,6 +1199,8 @@ class WorkGraphScheduler(Process, metaclass=Protect):
                     self.report(f"Error in task {name}: {e}", pk)
                     self.continue_workgraph(pk)
             elif task["metadata"]["node_type"].upper() in ["GRAPH_BUILDER"]:
+                from aiida_workgraph.utils.control import create_workgraph_action
+
                 wg = self.run_executor(executor, [], kwargs, var_args, var_kwargs)
                 wg.name = name
                 wg.group_outputs = self.ctx._workgraph[pk]["_tasks"][name]["metadata"][
@@ -1212,7 +1210,7 @@ class WorkGraphScheduler(Process, metaclass=Protect):
                 try:
                     wg.save(metadata=metadata, parent_pid=pk)
                     process = wg.process
-                    self.launch_workgraph(process.pk)
+                    create_workgraph_action(process.pk)
                     process.workgraph_pk = pk
                     self.set_task_state_info(pk, name, "process", process)
                     self.set_task_state_info(pk, name, "state", "RUNNING")
@@ -1685,14 +1683,61 @@ class WorkGraphScheduler(Process, metaclass=Protect):
                                 names[1]
                             ],
                         )
-        self.out_many(group_outputs)
         # output the new data
-        self.out("new_data", self.ctx._workgraph[pk]["_new_data"])
-        self.out(
-            "execution_count",
-            orm.Int(self.ctx._workgraph[pk]["_execution_count"]).store(),
-        )
+        if self.ctx._workgraph[pk]["_new_data"]:
+            group_outputs["new_data"] = self.ctx._workgraph[pk]["_new_data"]
+        group_outputs["execution_count"] = orm.Int(
+            self.ctx._workgraph[pk]["_execution_count"]
+        ).store()
+        self.update_workgraph_output(pk, group_outputs)
         self.report("Finalize workgraph.", pk)
-        for _, task in self.ctx._workgraph[pk]["_tasks"].items():
-            if self.get_task_state_info(pk, task["name"], "state") == "FAILED":
-                return self.exit_codes.TASK_FAILED
+        self.report(f"Finalize workgraph {pk}.")
+        for name, task in self.ctx._workgraph[pk]["_tasks"].items():
+            if self.get_task_state_info(pk, name, "state") == "FAILED":
+                self.report(f"Task {name} failed.", pk)
+                self.ctx._workgraph[pk]["_node"].set_exit_status(302)
+                self.ctx._workgraph[pk]["_node"].set_exit_message(
+                    "Some of the tasks failed."
+                )
+                self.broadcast_workgraph_state(pk, "excepted")
+                self.ctx._workgraph[pk]["_node"].set_process_state(Finished.LABEL)
+                self.ctx._workgraph[pk]["_node"].seal()
+                return
+        # send a broadcast message to announce the workgraph is finished
+        self.broadcast_workgraph_state(pk, "finished")
+        self.ctx._workgraph[pk]["_node"].set_process_state(Finished.LABEL)
+        self.ctx._workgraph[pk]["_node"].seal()
+
+    def update_workgraph_output(self, pk, outputs: dict) -> None:
+        """Update the workgraph output."""
+        from aiida.common.links import LinkType
+
+        node = self.ctx._workgraph[pk]["_node"]
+
+        def add_link(node, outputs):
+            for link_label, output in outputs.items():
+                if isinstance(output, dict):
+                    add_link(node, output)
+                if isinstance(node, orm.CalculationNode):
+                    output.base.links.add_incoming(node, LinkType.CREATE, link_label)
+                elif isinstance(node, orm.WorkflowNode):
+                    output.base.links.add_incoming(node, LinkType.RETURN, link_label)
+
+        add_link(node, outputs)
+
+    def broadcast_workgraph_state(self, pk: int, state: str) -> None:
+        """Workgraph on entered."""
+        from aio_pika.exceptions import ConnectionClosed
+
+        from_label = None
+        subject = f"state_changed.{from_label}.{state}"
+        try:
+            self._communicator.broadcast_send(body=None, sender=pk, subject=subject)
+        except ConnectionClosed:
+            message = "Process<%s>: no connection available to broadcast state change from %s to %s"
+            self.logger.warning(message, pk, from_label, state)
+        except kiwipy.TimeoutError:
+            message = (
+                "Process<%s>: sending broadcast of state change from %s to %s timed out"
+            )
+            self.logger.warning(message, pk, from_label, state)
