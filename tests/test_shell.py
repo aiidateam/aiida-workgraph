@@ -1,11 +1,11 @@
 import pytest
 from aiida_workgraph import WorkGraph, task
 from aiida_shell.launch import prepare_code
-from aiida.orm import SinglefileData
+from aiida.orm import SinglefileData, load_computer
 
 
 @pytest.mark.usefixtures("started_daemon_client")
-def test_shell_command():
+def test_shell_command(fixture_localhost):
     """Test the ShellJob with command as a string."""
     wg = WorkGraph(name="test_shell_command")
     job1 = wg.add_task(
@@ -18,6 +18,8 @@ def test_shell_command():
             "file_b": SinglefileData.from_string("string b"),
         },
     )
+    # also check if we can set the computer explicitly
+    job1.set({"metadata.computer": load_computer("localhost")})
     wg.submit(wait=True)
     assert job1.node.outputs.stdout.get_content() == "string astring b"
 
