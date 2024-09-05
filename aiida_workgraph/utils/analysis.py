@@ -214,7 +214,6 @@ class WorkGraphSaver:
                     prop["value"] = PickledLocalFunction(prop["value"]).store()
             self.wgdata["tasks"][name] = serialize(task)
         # nodes is a copy of tasks, so we need to pop it out
-        self.wgdata.pop("nodes")
         self.wgdata["error_handlers"] = serialize(self.wgdata["error_handlers"])
         self.wgdata["context"] = serialize(self.wgdata["context"])
         self.process.base.extras.set("_workgraph", self.wgdata)
@@ -277,8 +276,6 @@ class WorkGraphSaver:
             return
         for name, task in wgdata["tasks"].items():
             wgdata["tasks"][name] = deserialize_unsafe(task)
-        # also make a alias for nodes
-        wgdata["nodes"] = wgdata["tasks"]
         wgdata["error_handlers"] = deserialize_unsafe(wgdata["error_handlers"])
         return wgdata
 
@@ -294,12 +291,18 @@ class WorkGraphSaver:
         from node_graph.analysis import DifferenceAnalysis
 
         wg1 = self.get_wgdata_from_db(restart_process)
+        # change tasks to nodes for DifferenceAnalysis
+        wg1["nodes"] = wg1.pop("tasks")
+        self.wgdata["nodes"] = self.wgdata.pop("tasks")
         dc = DifferenceAnalysis(nt1=wg1, nt2=self.wgdata)
         (
             new_tasks,
             modified_tasks,
             update_metadata,
         ) = dc.build_difference()
+        # change nodes back to tasks
+        wg1["tasks"] = wg1.pop("nodes")
+        self.wgdata["tasks"] = self.wgdata.pop("nodes")
         return new_tasks, modified_tasks, update_metadata
 
     def exist_in_db(self) -> bool:
@@ -316,7 +319,10 @@ class WorkGraphSaver:
         """Analyze the connectivity of workgraph and save it into dict."""
         from node_graph.analysis import ConnectivityAnalysis
 
-        self.wgdata["nodes"] = self.wgdata["tasks"]
+        # ConnectivityAnalysis use nodes instead of tasks
+        self.wgdata["nodes"] = self.wgdata.pop("tasks")
         nc = ConnectivityAnalysis(self.wgdata)
         self.wgdata["connectivity"] = nc.build_connectivity()
         self.wgdata["connectivity"]["zone"] = {}
+        # change nodes back to tasks
+        self.wgdata["tasks"] = self.wgdata.pop("nodes")
