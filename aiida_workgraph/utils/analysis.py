@@ -291,15 +291,18 @@ class WorkGraphSaver:
         from node_graph.analysis import DifferenceAnalysis
 
         wg1 = self.get_wgdata_from_db(restart_process)
-        # also make a alias for nodes
-        wg1["nodes"] = wg1["tasks"]
-        self.wgdata["nodes"] = self.wgdata["tasks"]
+        # change tasks to nodes for DifferenceAnalysis
+        wg1["nodes"] = wg1.pop("tasks")
+        self.wgdata["nodes"] = self.wgdata.pop("tasks")
         dc = DifferenceAnalysis(nt1=wg1, nt2=self.wgdata)
         (
             new_tasks,
             modified_tasks,
             update_metadata,
         ) = dc.build_difference()
+        # change nodes back to tasks
+        wg1["tasks"] = wg1.pop("nodes")
+        self.wgdata["tasks"] = self.wgdata.pop("nodes")
         return new_tasks, modified_tasks, update_metadata
 
     def exist_in_db(self) -> bool:
