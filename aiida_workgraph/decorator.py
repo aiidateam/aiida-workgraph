@@ -424,14 +424,12 @@ def build_task_from_workgraph(wg: any) -> Task:
     tdata["inputs"] = inputs
     tdata["outputs"] = outputs
     tdata["identifier"] = wg.name
-    # TODO In order to reload the WorkGraph from process, "is_pickle" should be True
-    # so I pickled the function here, but this is not necessary
-    # we need to update the node_graph to support the path and name of the function
     executor = {
-        "executor": None,
+        "path": "aiida_workgraph.engine.workgraph",
+        "name": "WorkGraphEngine",
         "wgdata": serialize(wg.to_dict(store_nodes=True)),
         "type": tdata["task_type"],
-        "is_pickle": True,
+        "is_pickle": False,
     }
     tdata["executor"] = executor
     task = create_task(tdata)
