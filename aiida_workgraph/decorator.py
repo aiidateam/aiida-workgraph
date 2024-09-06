@@ -17,7 +17,12 @@ task_types = {
     WorkChain: "WORKCHAIN",
 }
 
-aiida_socket_mapping = {
+type_mapping = {
+    "default": "workgraph.any",
+    int: "workgraph.int",
+    float: "workgraph.float",
+    str: "workgraph.string",
+    bool: "workgraph.bool",
     orm.Int: "workgraph.aiida_int",
     orm.Float: "workgraph.aiida_float",
     orm.Str: "workgraph.aiida_string",
@@ -29,6 +34,7 @@ def create_task(tdata):
     """Wrap create_node from node_graph to create a Task."""
     from node_graph.decorator import create_node
 
+    tdata["type_mapping"] = type_mapping
     tdata["node_type"] = tdata.pop("task_type")
     return create_node(tdata)
 
@@ -75,11 +81,9 @@ def add_input_recursive(
             if isinstance(port.valid_type, tuple) and len(port.valid_type) > 1:
                 socket_type = "workgraph.any"
             if isinstance(port.valid_type, tuple) and len(port.valid_type) == 1:
-                socket_type = aiida_socket_mapping.get(
-                    port.valid_type[0], "workgraph.any"
-                )
+                socket_type = type_mapping.get(port.valid_type[0], "workgraph.any")
             else:
-                socket_type = aiida_socket_mapping.get(port.valid_type, "workgraph.any")
+                socket_type = type_mapping.get(port.valid_type, "workgraph.any")
             inputs.append({"identifier": socket_type, "name": port_name})
         if required:
             args.append(port_name)
@@ -486,7 +490,7 @@ def generate_tdata(
     from aiida_workgraph.task import Task
 
     args, kwargs, var_args, var_kwargs, _inputs = generate_input_sockets(
-        func, inputs, properties
+        func, inputs, properties, type_mapping=type_mapping
     )
     task_outputs = outputs
     # add built-in sockets
