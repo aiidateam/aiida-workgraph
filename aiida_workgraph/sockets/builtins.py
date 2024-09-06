@@ -33,6 +33,54 @@ class SocketNamespace(TaskSocket, SerializePickle):
         self.add_property("workgraph.any", name, **kwargs)
 
 
+class SocketFloat(TaskSocket, SerializeJson):
+    """Float socket."""
+
+    identifier: str = "workgraph.float"
+
+    def __init__(
+        self, name, node=None, type="INPUT", index=0, uuid=None, **kwargs
+    ) -> None:
+        super().__init__(name, node, type, index, uuid=uuid)
+        self.add_property("workgraph.float", name, **kwargs)
+
+
+class SocketInt(TaskSocket, SerializeJson):
+    """Int socket."""
+
+    identifier: str = "workgraph.int"
+
+    def __init__(
+        self, name, node=None, type="INPUT", index=0, uuid=None, **kwargs
+    ) -> None:
+        super().__init__(name, node, type, index, uuid=uuid)
+        self.add_property("workgraph.int", name, **kwargs)
+
+
+class SocketString(TaskSocket, SerializeJson):
+    """String socket."""
+
+    identifier: str = "workgraph.string"
+
+    def __init__(
+        self, name, node=None, type="INPUT", index=0, uuid=None, **kwargs
+    ) -> None:
+        super().__init__(name, node, type, index, uuid=uuid)
+        self.add_property("workgraph.string", name, **kwargs)
+
+
+class SocketBool(TaskSocket, SerializeJson):
+    """Bool socket."""
+
+    identifier: str = "workgraph.bool"
+
+    def __init__(
+        self, name, node=None, type="INPUT", index=0, uuid=None, **kwargs
+    ) -> None:
+        super().__init__(name, node, type, index, uuid=uuid)
+        self.add_property("workgraph.bool", name, **kwargs)
+
+
 class SocketAiiDAFloat(TaskSocket, SerializeJson):
     """AiiDAFloat socket."""
 

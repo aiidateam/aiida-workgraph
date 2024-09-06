@@ -1,11 +1,91 @@
 from typing import Dict, List, Union, Callable
-from node_graph.property import NodeProperty
+from aiida_workgraph.property import TaskProperty
 from node_graph.serializer import SerializeJson
 from node_graph.properties.builtins import PropertyVector, PropertyAny
 from aiida import orm
 
 
-class PropertyAiiDAInt(NodeProperty, SerializeJson):
+class PropertyInt(TaskProperty, SerializeJson):
+    """A new class for integer type."""
+
+    identifier: str = "workgraph.int"
+    data_type = "Int"
+
+    def __init__(self, name, description="", default=None, update=None) -> None:
+        super().__init__(name, description, default, update)
+
+    def set_value(self, value):
+        # run the callback function
+        if isinstance(value, (int, type(None))):
+            self._value = value
+            if self.update is not None:
+                self.update()
+        else:
+            raise Exception("{} is not a integer.".format(value))
+
+
+class PropertyFloat(TaskProperty, SerializeJson):
+    """A new class for float type."""
+
+    identifier: str = "workgraph.float"
+    data_type = "Float"
+
+    def __init__(self, name, description="", default=None, update=None) -> None:
+        super().__init__(name, description, default, update)
+
+    def set_value(self, value):
+        # run the callback function
+        if isinstance(value, (int, float, type(None))):
+            self._value = value
+            if self.update is not None:
+                self.update()
+        else:
+            raise Exception("{} is not a float.".format(value))
+
+
+class PropertyBool(TaskProperty, SerializeJson):
+    """A new class for bool type."""
+
+    identifier: str = "workgraph.bool"
+    data_type = "Bool"
+
+    def __init__(self, name, description="", default=None, update=None) -> None:
+        super().__init__(name, description, default, update)
+
+    def set_value(self, value):
+        # run the callback function
+        if value is None:
+            self._value = value
+            if self.update is not None:
+                self.update()
+        elif isinstance(value, (bool, int)):
+            self._value = bool(value)
+            if self.update is not None:
+                self.update()
+        else:
+            raise Exception("{} is not a bool.".format(value))
+
+
+class PropertyString(TaskProperty, SerializeJson):
+    """A new class for string type."""
+
+    identifier: str = "workgraph.string"
+    data_type = "String"
+
+    def __init__(self, name, description="", default=None, update=None) -> None:
+        super().__init__(name, description, default, update)
+
+    def set_value(self, value):
+        if isinstance(value, (str, type(None))):
+            self._value = value
+            # run the callback function
+            if self.update is not None:
+                self.update()
+        else:
+            raise Exception("{} is not a string.".format(value))
+
+
+class PropertyAiiDAInt(TaskProperty, SerializeJson):
     """A new class for integer type."""
 
     identifier: str = "workgraph.aiida_int"
@@ -44,7 +124,7 @@ class PropertyAiiDAInt(NodeProperty, SerializeJson):
             raise Exception("{} is not a integer.".format(value))
 
 
-class PropertyAiiDAFloat(NodeProperty, SerializeJson):
+class PropertyAiiDAFloat(TaskProperty, SerializeJson):
     """A new class for float type."""
 
     identifier: str = "workgraph.aiida_float"
@@ -83,7 +163,7 @@ class PropertyAiiDAFloat(NodeProperty, SerializeJson):
             raise Exception("{} is not a float.".format(value))
 
 
-class PropertyAiiDABool(NodeProperty, SerializeJson):
+class PropertyAiiDABool(TaskProperty, SerializeJson):
     """A new class for bool type."""
 
     identifier: str = "workgraph.aiida_bool"
@@ -122,7 +202,7 @@ class PropertyAiiDABool(NodeProperty, SerializeJson):
             raise Exception("{} is not a bool.".format(value))
 
 
-class PropertyAiiDAString(NodeProperty, SerializeJson):
+class PropertyAiiDAString(TaskProperty, SerializeJson):
     """A new class for string type."""
 
     identifier: str = "workgraph.aiida_string"
@@ -160,7 +240,7 @@ class PropertyAiiDAString(NodeProperty, SerializeJson):
             raise Exception("{} is not a string.".format(value))
 
 
-class PropertyAiiDADict(NodeProperty, SerializeJson):
+class PropertyAiiDADict(TaskProperty, SerializeJson):
     """A new class for Dict type."""
 
     identifier: str = "workgraph.aiida_dict"
