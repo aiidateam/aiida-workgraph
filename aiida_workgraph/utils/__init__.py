@@ -604,10 +604,29 @@ def workgraph_to_short_json(
             for input in task["inputs"]
             if input["name"] in task["metadata"]["args"]
         ]
+        properties = {}
+        for key, prop in task["properties"].items():
+            if prop["identifier"] in [
+                "workgraph.int",
+                "workgraph.float",
+                "workgraph.string",
+                "workgraph.bool",
+            ]:
+                if prop["value"] is not None:
+                    properties[key] = prop["value"]
+            if prop["identifier"] in [
+                "workgraph.aiida_int",
+                "workgraph.aiida_float",
+                "workgraph.aiida_string",
+                "workgraph.aiida_bool",
+            ]:
+                if prop["value"] is not None:
+                    properties[key] = prop["value"].value
         wgdata_short["nodes"][name] = {
             "label": task["name"],
             "node_type": task["metadata"]["node_type"].upper(),
             "inputs": inputs,
+            "properties": properties,
             "outputs": [],
             "position": task["position"],
             "children": task["children"],

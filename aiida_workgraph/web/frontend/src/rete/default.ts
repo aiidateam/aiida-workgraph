@@ -22,6 +22,8 @@ import {
 // May move these interfaces to a separate file
 interface NodeInput {
   name: string;
+  identifier: string;
+  properties: any;
   // Add other properties of NodeInput here if needed
 }
 
@@ -107,7 +109,18 @@ function createDynamicNode(nodeData: any) {
   nodeData.inputs.forEach((input: NodeInput) => {
     let socket = new ClassicPreset.Socket(input.name);
     if (!node.inputs.hasOwnProperty(input.name)) {
-      node.addInput(input.name, new ClassicPreset.Input(socket, input.name));
+      const inp = new ClassicPreset.Input(socket, input.name);
+      if (input.identifier === "workgraph.int" || input.identifier === "workgraph.float" || input.identifier === "workgraph.aiida_int" || input.identifier === "workgraph.aiida_float") {
+        inp.addControl(
+          new ClassicPreset.InputControl("number", { initial: nodeData.properties[input.name], readonly: true })
+        );
+      }
+      if (input.identifier === "workgraph.string" || input.identifier === "workgraph.aiida_string") {
+        inp.addControl(
+          new ClassicPreset.InputControl("text", { initial: nodeData.properties[input.name], readonly: true })
+        );
+      }
+      node.addInput(input.name, inp);
       maxSocketNameLength = Math.max(maxSocketNameLength, input.name.length);
     }
   });
@@ -145,6 +158,7 @@ export async function createEditor(container: HTMLElement, workgraphData: any) {
   AreaExtensions.selectableNodes(area, AreaExtensions.selector(), {
     accumulating: AreaExtensions.accumulateOnCtrl()
   });
+  AreaExtensions.showInputControl(area);
 
   render.addPreset(Presets.classic.setup());
   render.addPreset(Presets.contextMenu.setup());
