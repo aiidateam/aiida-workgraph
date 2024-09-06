@@ -54,7 +54,11 @@ class PropertyBool(TaskProperty, SerializeJson):
 
     def set_value(self, value):
         # run the callback function
-        if isinstance(value, (bool, int, type(None))):
+        if value is None:
+            self._value = value
+            if self.update is not None:
+                self.update()
+        elif isinstance(value, (bool, int)):
             self._value = bool(value)
             if self.update is not None:
                 self.update()
