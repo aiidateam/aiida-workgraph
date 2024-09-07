@@ -1,7 +1,7 @@
 """
-==============================================
+==================================
 Aggregate data from multiple tasks
-==============================================
+==================================
 """
 # %%
 # Introduction
@@ -20,7 +20,7 @@ load_profile()
 
 # %%
 # Using multi-linking for dynamic inputs
-# =======================================
+# ======================================
 # In the following example, we create multiple tasks that return a random integer, and then aggregate all the results and calculate the sum by linking the inputs of the tasks to the input of one final task
 
 #
@@ -80,7 +80,7 @@ generate_node_graph(wg.pk)
 
 # %%
 # Multiple dynamic inputs
-# ----------------------------------
+# -----------------------
 # We now do the same exercise as before but add another dynamic input to it. We generate float numbers and link them to the aggregate task. The aggregate task now returns two sums one for the integers and one for the float numbers. To support this additional dynamic input we have to specify in the `task.calcfunction` decorator in dynamic inputs names.
 
 from aiida.orm import Float
@@ -219,8 +219,8 @@ generate_node_graph(wg.pk)
 
 
 # %%
-# Nested dynamic inputs for a calcfunction 
-# ================
+# Nested dynamic inputs for a calcfunction
+# ========================================
 # In principle, these methods can be also used for nested data types.
 # However AiiDA does not support a nesting of orm types which happens for lists and dicts.
 # It therefore tries to convert the nested data structures to native types when it becomes part of the provenance.
