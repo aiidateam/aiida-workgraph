@@ -1,8 +1,18 @@
 from typing import Dict, List, Union, Callable
 from aiida_workgraph.property import TaskProperty
-from node_graph.serializer import SerializeJson
-from node_graph.properties.builtins import PropertyVector, PropertyAny
+from node_graph.serializer import SerializeJson, SerializePickle
+from node_graph.properties.builtins import PropertyVector
 from aiida import orm
+
+
+class PropertyAny(TaskProperty, SerializePickle):
+    """A new class for Any type."""
+
+    identifier: str = "workgraph.any"
+    data_type = "Any"
+
+    def __init__(self, name, description="", default=None, update=None) -> None:
+        super().__init__(name, description, default, update)
 
 
 class PropertyInt(TaskProperty, SerializeJson):
@@ -394,6 +404,16 @@ class PropertyBoolVector(PropertyVector):
             raise Exception(
                 "Length {} is not equal to the size {}.".format(len(value), self.size)
             )
+
+
+class PropertyStructureData(TaskProperty, SerializePickle):
+    """A new class for Any type."""
+
+    identifier: str = "workgraph.aiida_structure"
+    data_type = "Any"
+
+    def __init__(self, name, description="", default=None, update=None) -> None:
+        super().__init__(name, description, default, update)
 
 
 __all__ = [

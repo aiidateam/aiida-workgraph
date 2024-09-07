@@ -18,6 +18,7 @@ import {
   Presets as ArrangePresets,
   ArrangeAppliers
 } from "rete-auto-arrange-plugin";
+import AtomsItem from './AtomsItem.js'; // Adjust the path as necessary
 
 // May move these interfaces to a separate file
 interface NodeInput {
@@ -49,6 +50,11 @@ interface NodeMap {
   [key: string]: Node; // Assuming `Node` is the correct type for the nodes in nodeMap
 }
 
+class AtomsControl extends ClassicPreset.Control {
+  constructor(public data: any) {
+    super();
+  }
+}
 
 export async function loadJSON(editor: NodeEditor<any>, area: any, workgraphData: any) {
 
@@ -91,7 +97,17 @@ export async function loadJSON(editor: NodeEditor<any>, area: any, workgraphData
 }
 
 
-class Node extends ClassicPreset.Node {
+class Node extends ClassicPreset.Node <
+{ [key in string]: ClassicPreset.Socket },
+{ [key in string]: ClassicPreset.Socket },
+{
+  [key in string]:
+    | AtomsControl
+    | ClassicPreset.Control
+    | ClassicPreset.InputControl<"number">
+    | ClassicPreset.InputControl<"text">;
+}
+> {
   width = 180;
   height = 100;
   parent?: string;
@@ -119,6 +135,12 @@ function createDynamicNode(nodeData: any) {
         inp.addControl(
           new ClassicPreset.InputControl("text", { initial: nodeData.properties[input.name], readonly: true })
         );
+      }
+      if (input.identifier === "workgraph.aiida_structure") {
+        // console.log("Adding atoms control: ", nodeData.properties[input.name]);
+        inp.addControl(new AtomsControl(nodeData.properties[input.name]));
+        node.width += 50;
+        node.height += 200;
       }
       node.addInput(input.name, inp);
       maxSocketNameLength = Math.max(maxSocketNameLength, input.name.length);
@@ -163,6 +185,21 @@ export async function createEditor(container: HTMLElement, workgraphData: any) {
   render.addPreset(Presets.classic.setup());
   render.addPreset(Presets.contextMenu.setup());
   render.addPreset(Presets.minimap.setup({ size: 200 }));
+  render.addPreset(
+    Presets.classic.setup({
+      customize: {
+        control(data) {
+          if (data.payload instanceof AtomsControl) {
+            return AtomsItem;
+          }
+          if (data.payload instanceof ClassicPreset.InputControl) {
+            return Presets.classic.Control;
+          }
+          return null;
+        }
+      }
+    })
+  );
 
   connection.addPreset(ConnectionPresets.classic.setup());
   scopes.addPreset(ScopesPresets.classic.setup());

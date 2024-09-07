@@ -622,6 +622,11 @@ def workgraph_to_short_json(
             ]:
                 if prop["value"] is not None:
                     properties[key] = prop["value"].value
+            if prop["identifier"] == "workgraph.aiida_structure":
+                if prop["value"] is not None:
+                    content = prop["value"].backend_entity.attributes
+                    content["node_type"] = prop["value"].node_type
+                    properties[key] = content
         wgdata_short["nodes"][name] = {
             "label": task["name"],
             "node_type": task["metadata"]["node_type"].upper(),
