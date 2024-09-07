@@ -6,8 +6,9 @@ Aggregate data from multiple tasks
 # %%
 # Introduction
 # ============
-# In this tutorial, you will learn how to aggregate data from the outputs of multiple tasks by linking tasks or by using context.
-# Then we discuss at the end how to deal with nested datatypes.
+# In this tutorial, you will learn how to aggregate data from the outputs of
+# multiple tasks by linking tasks or by using context. Then we discuss at the
+# end how to deal with nested datatypes.
 #
 # Load the AiiDA profile.
 #
@@ -21,7 +22,9 @@ load_profile()
 # %%
 # Using multi-linking for dynamic inputs
 # ======================================
-# In the following example, we create multiple tasks that return a random integer, and then aggregate all the results and calculate the sum by linking the inputs of the tasks to the input of one final task
+# In the following example, we create multiple tasks that return a random
+# integer, and then aggregate all the results and calculate the sum by linking
+# the inputs of the tasks to the input of one final task
 
 #
 
@@ -71,7 +74,9 @@ print("aggregate_task result", aggregate_task.outputs["sum"].value)
 
 
 # %%
-# The provenance is in this example also tracked. One can see how the generated integers are linked to the aggregate task and one final integer, the sum, is returned.
+# The provenance is in this example also tracked. One can see how the generated
+# integers are linked to the aggregate task and one final integer, the sum, is
+# returned.
 
 from aiida_workgraph.utils import generate_node_graph
 
@@ -81,7 +86,11 @@ generate_node_graph(wg.pk)
 # %%
 # Multiple dynamic inputs
 # -----------------------
-# We now do the same exercise as before but add another dynamic input to it. We generate float numbers and link them to the aggregate task. The aggregate task now returns two sums one for the integers and one for the float numbers. To support this additional dynamic input we have to specify in the `task.calcfunction` decorator in dynamic inputs names.
+# We now do the same exercise as before but add another dynamic input to it. We
+# generate float numbers and link them to the aggregate task. The aggregate
+# task now returns two sums one for the integers and one for the float numbers.
+# To support this additional dynamic input we have to specify in the
+# `task.calcfunction` decorator in dynamic inputs names.
 
 from aiida.orm import Float
 
@@ -118,8 +127,8 @@ wg = WorkGraph("aggregate")
 
 aggregate_task = wg.add_task(aggregate, name="aggregate_task")
 
-# we have to increase the link limit because by default workgraph only supports one link per input socket
-# this is still an experimental feature that is why
+# we have to increase the link limit because by default workgraph only supports
+# one link per input socket this is still an experimental feature that is why
 aggregate_task.inputs["collected_ints"].link_limit = 50
 aggregate_task.inputs["collected_floats"].link_limit = 50
 
@@ -174,7 +183,8 @@ def aggregate(**collected_values):  # We use a keyword argument to obtain a dict
     return {"result": sum(collected_values.values())}
 
 
-# For this use case it is more convenient to use the graph_builder as we can expose the context under a more convenient name.
+# For this use case it is more convenient to use the graph_builder as we can
+# expose the context under a more convenient name.
 @task.graph_builder(
     outputs=[{"name": "result", "from": "context.generated"}]
 )  # this port is created by `set_context`
@@ -221,10 +231,11 @@ generate_node_graph(wg.pk)
 # %%
 # Nested dynamic inputs for a calcfunction
 # ========================================
-# In principle, these methods can be also used for nested data types.
-# However AiiDA does not support a nesting of orm types which happens for lists and dicts.
-# It therefore tries to convert the nested data structures to native types when it becomes part of the provenance.
-# For example an `orm.Dict` of `orm.Int`s is converted to an `orm.Dict` of built-in integers.
+# In principle, these methods can be also used for nested data types. However
+# AiiDA does not support a nesting of orm types which happens for lists and
+# dicts. It therefore tries to convert the nested data structures to native
+# types when it becomes part of the provenance. For example an `orm.Dict` of
+# `orm.Int`s is converted to an `orm.Dict` of built-in integers.
 
 
 from aiida.orm import Dict
@@ -236,7 +247,7 @@ print(some_dict.get_dict())
 
 
 # %%
-# If it cannot convert the orm.Data type to a built-in type, an error message will be thrown
+# If it cannot convert the `orm.Data` type to a built-in type, an error message will be thrown
 
 
 from aiida.orm import StructureData
@@ -251,8 +262,9 @@ except Exception as err:
     print(err)
 
 # %%
-# One has to therefore remove the nestedness by using built-in types for the collections.
-# In this example we use a dict instead of an orm.Dict
+# One has to therefore remove the nestedness of the `orm.Data` type by using built-in
+# types for the collections. In this example we use a dict instead of an
+# `orm.Dict`
 
 
 @task.calcfunction()
@@ -271,9 +283,12 @@ except Exception as err:
     )  # Oops still the same error, but we now used a dict instead of an orm.Dict?
 
 # %%
-# For a fixed input port, AiiDA assumes each argument of the calcfunction corresponds to a specific AiiDA data node.
-# Even though we passed a set of AiiDA nodes within a dict, AiiDA automatically converts the whole dict into an orm.Dict.
-# In order to allow passing a set of AiiDA nodes as inputs, one must use a variable keyword argument, e.g., **kwargs, in the calcfunction signature.
+# For a fixed input port, AiiDA assumes each argument of the calcfunction
+# corresponds to a specific AiiDA data node. Even though we passed a set of
+# AiiDA nodes within a dict, AiiDA automatically converts the whole dict into
+# an `orm.Dict`. In order to allow passing a set of AiiDA nodes as inputs, one
+# must use a variable keyword argument, e.g., **kwargs, in the calcfunction
+# signature.
 
 
 @task.calcfunction()
