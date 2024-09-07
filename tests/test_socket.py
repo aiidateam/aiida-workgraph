@@ -1,15 +1,14 @@
 import pytest
 from aiida_workgraph import WorkGraph, task
 from aiida import orm
+from typing import Any
 
 
 @pytest.mark.parametrize(
-    "data_type, socket_type",
+    "data_type, identifier",
     (
-        (
-            int,
-            "workgraph.int",
-        ),
+        (Any, "workgraph.any"),
+        (int, "workgraph.int"),
         (float, "workgraph.float"),
         (bool, "workgraph.bool"),
         (str, "workgraph.string"),
@@ -19,14 +18,15 @@ from aiida import orm
         (orm.Bool, "workgraph.aiida_bool"),
     ),
 )
-def test_type_mapping(data_type, socket_type) -> None:
+def test_type_mapping(data_type, identifier) -> None:
     """Test the mapping of data types to socket types."""
 
     @task()
     def add(x: data_type):
         pass
 
-    assert add.task().inputs["x"].identifier == socket_type
+    assert add.task().inputs["x"].identifier == identifier
+    assert add.task().inputs["x"].property.identifier == identifier
 
 
 def test_socket(decorated_multiply) -> None:
