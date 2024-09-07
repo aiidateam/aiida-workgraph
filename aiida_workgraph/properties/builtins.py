@@ -1,8 +1,17 @@
 from typing import Dict, List, Union, Callable
 from aiida_workgraph.property import TaskProperty
-from node_graph.serializer import SerializeJson
-from node_graph.properties.builtins import PropertyVector, PropertyAny
+from node_graph.serializer import SerializeJson, SerializePickle
 from aiida import orm
+
+
+class PropertyAny(TaskProperty, SerializePickle):
+    """A new class for Any type."""
+
+    identifier: str = "workgraph.any"
+    data_type = "Any"
+
+    def __init__(self, name, description="", default=None, update=None) -> None:
+        super().__init__(name, description, default, update)
 
 
 class PropertyInt(TaskProperty, SerializeJson):
@@ -276,6 +285,25 @@ class PropertyAiiDADict(TaskProperty, SerializeJson):
             self._value = value
         else:
             raise Exception("{} is not a dict.".format(value))
+
+
+# ====================================
+class PropertyVector(TaskProperty, SerializePickle):
+    """Vector property"""
+
+    identifier: str = "workgraph.vector"
+    data_type = "Vector"
+
+    def __init__(self, name, description="", size=3, default=[], update=None) -> None:
+        super().__init__(name, description, default, update)
+        self.size = size
+
+    def copy(self):
+        p = self.__class__(
+            self.name, self.description, self.size, self.value, self.update
+        )
+        p.value = self.value
+        return p
 
 
 class PropertyAiiDAIntVector(PropertyVector):
