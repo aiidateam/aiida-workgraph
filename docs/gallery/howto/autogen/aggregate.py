@@ -6,7 +6,7 @@ Aggregate data from multiple tasks
 # %%
 # Introduction
 # ============
-# In this tutorial, you will learn how to aggregate dynamically sized outputs by linking tasks or by using context.
+# In this tutorial, you will learn how to aggregate data from the outputs of multiple tasks by linking tasks or by using context.
 # Then we discuss at the end how to deal with nested datatypes.
 #
 # Load the AiiDA profile.
