@@ -1,12 +1,12 @@
 """
 ==============================================
-Aggregate dynamically sized and nested outputs
+Aggregate data from multiple tasks
 ==============================================
 """
 # %%
 # Introduction
 # ============
-# In this tutorial, you will learn how to aggregate dynamically sized outputs by even by linking tasks or by using context.
+# In this tutorial, you will learn how to aggregate dynamically sized outputs by linking tasks or by using context.
 # Then we discuss at the end how to deal with nested datatypes.
 #
 # Load the AiiDA profile.
@@ -19,8 +19,10 @@ load_profile()
 
 
 # %%
-# Using multi-linking for dynamic outputs
+# Using multi-linking for dynamic inputs
 # =======================================
+# In the following example, we create multiple tasks that return a random integer, and then aggregate all the results and calculate the sum by linking the inputs of the tasks to the input of one final task
+
 #
 
 
@@ -40,7 +42,7 @@ def generator(seed: Int):
 def aggregate(**collected_values):  # We use a keyword argument to obtain a dictionary
     for key, value in collected_values.items():
         print("key:", key, "value:", value)
-    return {"result": sum(collected_values.values())}
+    return {"sum": sum(collected_values.values())}
 
 
 wg = WorkGraph("aggregate_by_multilinking")
@@ -65,11 +67,11 @@ wg.to_html()
 # Run the workgrhap
 
 wg.submit(wait=True)
-print("aggregate_task result", aggregate_task.outputs["result"].value)
+print("aggregate_task result", aggregate_task.outputs["sum"].value)
 
 
 # %%
-# Plot provenance
+# The provenance is in this example also tracked. One can see how the generated integers are linked to the aggregate task and one final integer, the sum, is returned.
 
 from aiida_workgraph.utils import generate_node_graph
 
@@ -77,9 +79,9 @@ generate_node_graph(wg.pk)
 
 
 # %%
-# Mulitple dynamically sized outputs
+# Multiple dynamic inputs
 # ----------------------------------
-#
+# We now do the same exercise as before but add another dynamic input to it. We generate float numbers and link them to the aggregate task. The aggregate task now returns two sums one for the integers and one for the float numbers. To support this additional dynamic input we have to specify in the `task.calcfunction` decorator in dynamic inputs names.
 
 from aiida.orm import Float
 
@@ -213,11 +215,11 @@ print("aggregate_task result", aggregate_task.outputs["result"].value)
 generate_node_graph(wg.pk)
 
 # %%
-# To support multiple dynamically sized outputs we can add another context and link it.
+# To support multiple dynamically sized inputs we can add another context and link it.
 
 
 # %%
-# Nested datatypes
+# Nested dynamic inputs for a calcfunction 
 # ================
 # In principle, these methods can be also used for nested data types.
 # However AiiDA does not support a nesting of orm types which happens for lists and dicts.
@@ -269,10 +271,9 @@ except Exception as err:
     )  # Oops still the same error, but we now used a dict instead of an orm.Dict?
 
 # %%
-# The problem that AiiDA tries to automatic convert built-in types to orm.Data types.
-# Even though we passed a dict, AiiDA automatically converts it to an orm.Dict.
-# This feature allows us to not wrap everything to orm.Data types, but is here obstructive.
-# To resolve this issue we have to specify the input arguments
+# For a fixed input port, AiiDA assumes each argument of the calcfunction corresponds to a specific AiiDA data node.
+# Even though we passed a set of AiiDA nodes within a dict, AiiDA automatically converts the whole dict into an orm.Dict.
+# In order to allow passing a set of AiiDA nodes as inputs, one must use a variable keyword argument, e.g., **kwargs, in the calcfunction signature.
 
 
 @task.calcfunction()
