@@ -10,10 +10,10 @@ This section contains a collection of HowTos for various topics.
 
    autogen/graph_builder
    autogen/parallel
-   autogen/aggregate
    if
    while
    context
+   autogen/aggregate
    waiting_on
    combine_workgraph
    restart
