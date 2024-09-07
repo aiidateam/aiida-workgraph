@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useMemo} from 'react';
 import { useParams } from 'react-router-dom';
 import '../App.css';
 import '../rete.css';
-import { createEditor } from '../rete/default';
+import { createEditor, addControls, removeControls } from '../rete/default';
 import { Button, Switch } from "antd";
 import WorkGraphIndicator from './WorkGraphIndicator'; // Import the WorkGraphIndicator component
 import WorkGraphSummary from './WorkGraphSummary';
@@ -81,6 +81,7 @@ function WorkGraph() {
   const [workgraphHierarchy, setWorkGraphHierarchy] = useState([]);
   const [selectedView, setSelectedView] = useState('Editor');
   const [realtimeSwitch, setRealtimeSwitch] = useState(false); // State to manage the realtime switch
+  const [detailNodeViewSwitch, setDetailNodeViewSwitch] = useState(false); // State to manage the realtime switch
 
   // Fetch state data from the backend
   const fetchStateData = async () => {
@@ -149,7 +150,25 @@ function WorkGraph() {
         clearInterval(intervalId); // Clear the interval when the component unmounts or the switch is turned off
       }
     };
-  }, [realtimeSwitch, pk, editor]); // Depend on the realtimeSwitch, pk, and editor
+  }, [realtimeSwitch]); // Depend on the realtimeSwitch, pk, and editor
+
+  // Setup interval for fetching real-time data when the switch is turned on
+  useEffect(() => {
+    if (editor) {
+      if (detailNodeViewSwitch) {
+        console.log('Adding controls');
+        addControls(editor.editor, editor.area, workgraphData);
+      }
+      else {
+        console.log('Removing controls');
+        removeControls(editor.editor, editor.area, workgraphData);
+      }
+      // need to call layout to update the view
+      editor?.layout(true);
+    }
+    return () => {
+    };
+  }, [detailNodeViewSwitch]); // Depend on the realtimeSwitch, pk, and editor
 
 
   // Fetch workgraph data from the API
@@ -263,13 +282,23 @@ function WorkGraph() {
           <WorkGraphIndicator parentWorkGraphs={workgraphHierarchy} />
             <EditorContainer>
               <LayoutAction>
-              <div>
-                <Switch
-                  checked={realtimeSwitch}
-                  onChange={(checked) => setRealtimeSwitch(checked)}
-                  style={{ marginRight: '10px' }}
-                />
-                <label>Real-time state</label>
+              <div style={{ display: 'flex', alignItems: 'center' }}>
+                <div style={{ marginRight: '20px' }}>
+                  <Switch
+                    checked={realtimeSwitch}
+                    onChange={(checked) => setRealtimeSwitch(checked)}
+                    style={{ marginRight: '10px' }}
+                  />
+                  <label>Real-time state</label>
+                </div>
+                <div>
+                  <Switch
+                    checked={detailNodeViewSwitch}
+                    onChange={(checked) => setDetailNodeViewSwitch(checked)}
+                    style={{ marginRight: '10px' }}
+                  />
+                  <label>Detail node view</label>
+                </div>
               </div>
               <div>
                 <ToastContainer />

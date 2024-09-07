@@ -118,6 +118,54 @@ type Schemes = GetSchemes<Node, Connection<Node>>;
 type AreaExtra = ReactArea2D<any> | MinimapExtra | ContextMenuExtra;
 
 
+export function addControls(editor: NodeEditor<any>, area: any,
+          workgraphData: any) {
+  // resize the node based on the max length of the input/output names
+  let maxSocketNameLength = 0;
+  const nodes = editor.getNodes();
+  // loop all node and add the input controls
+  nodes.forEach((node) => {
+    const nodeData = workgraphData.nodes[node.label];
+    nodeData.inputs.forEach((input: NodeInput) => {
+        const inp = node.inputs[input.name];
+        if (input.identifier === "workgraph.int" || input.identifier === "workgraph.float" || input.identifier === "workgraph.aiida_int" || input.identifier === "workgraph.aiida_float") {
+          inp.addControl(
+            new ClassicPreset.InputControl("number", { initial: nodeData.properties[input.name], readonly: true })
+          );
+        }
+        if (input.identifier === "workgraph.string" || input.identifier === "workgraph.aiida_string") {
+          inp.addControl(
+            new ClassicPreset.InputControl("text", { initial: nodeData.properties[input.name], readonly: true })
+          );
+        }
+        if (input.identifier === "workgraph.aiida_structure") {
+          inp.addControl(new AtomsControl(nodeData.properties[input.name]));
+          node.width += 0;
+          node.height += 150;
+    }
+    area.update('node', node.id);
+  })
+  });
+}
+
+export function removeControls(editor: NodeEditor<any>, area: any, workgraphData: any) {
+  const nodes = editor.getNodes();
+  nodes.forEach((node) => {
+      const nodeData = workgraphData.nodes[node.label];
+      nodeData.inputs.forEach((input: NodeInput) => {
+        const inp = node.inputs[input.name];
+        inp.control = null;
+        const identifier = input.identifier;
+        if (identifier === "workgraph.aiida_structure") {
+          node.width -= 0;
+          node.height -= 150;
+        }
+    });
+    area.update('node', node.id);
+  });
+}
+
+
 function createDynamicNode(nodeData: any) {
   const node = new Node(nodeData.label);
   // resize the node based on the max length of the input/output names
@@ -126,22 +174,6 @@ function createDynamicNode(nodeData: any) {
     let socket = new ClassicPreset.Socket(input.name);
     if (!node.inputs.hasOwnProperty(input.name)) {
       const inp = new ClassicPreset.Input(socket, input.name);
-      if (input.identifier === "workgraph.int" || input.identifier === "workgraph.float" || input.identifier === "workgraph.aiida_int" || input.identifier === "workgraph.aiida_float") {
-        inp.addControl(
-          new ClassicPreset.InputControl("number", { initial: nodeData.properties[input.name], readonly: true })
-        );
-      }
-      if (input.identifier === "workgraph.string" || input.identifier === "workgraph.aiida_string") {
-        inp.addControl(
-          new ClassicPreset.InputControl("text", { initial: nodeData.properties[input.name], readonly: true })
-        );
-      }
-      if (input.identifier === "workgraph.aiida_structure") {
-        // console.log("Adding atoms control: ", nodeData.properties[input.name]);
-        inp.addControl(new AtomsControl(nodeData.properties[input.name]));
-        node.width += 50;
-        node.height += 200;
-      }
       node.addInput(input.name, inp);
       maxSocketNameLength = Math.max(maxSocketNameLength, input.name.length);
     }
