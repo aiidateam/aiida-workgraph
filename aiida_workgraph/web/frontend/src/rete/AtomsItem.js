@@ -74,19 +74,19 @@ function AtomsItem({ data }) {
 
     if (weasContainerRef.current) {
       const defaultGuiConfig = {
-        enabled: false,
-        components: {
+        controls: {
+           enabled: false,
            atomsControl: false,
            colorControl: false,
            cameraControls: false,
-           buttons: true,
         },
         buttons: {
+           enabled: true,
            fullscreen: true,
-           undo: false,
-           redo: false,
+          //  undo: false,
+          //  redo: false,
            download: false,
-           measurement: false,
+          //  measurement: false,
         }
         };
 
@@ -98,7 +98,7 @@ function AtomsItem({ data }) {
         }
 
         let domElement = document.createElement("div");
-        domElement.style.cssText = "position: relative; width: 200px; height: 200px;";
+        domElement.style.cssText = "position: relative; width: 195px; height: 195px; border: 1px solid black;";
         weasContainerRef.current.appendChild(domElement);
 
       // Create an instance of AtomsViewer and pass the Atoms object to it
