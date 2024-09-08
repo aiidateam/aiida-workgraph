@@ -585,6 +585,43 @@ def recursive_to_dict(attr_dict):
         return attr_dict
 
 
+def process_properties(properties: Dict) -> Dict:
+    """Extract raw values."""
+    result = {}
+    for key, prop in properties.items():
+        identifier = prop["identifier"]
+        value = prop.get("value")
+
+        if identifier in [
+            "workgraph.int",
+            "workgraph.float",
+            "workgraph.string",
+            "workgraph.bool",
+        ]:
+            if value is not None:
+                result[key] = value
+        elif identifier in [
+            "workgraph.aiida_int",
+            "workgraph.aiida_float",
+            "workgraph.aiida_string",
+            "workgraph.aiida_bool",
+        ]:
+            if value is not None and isinstance(value, orm.Data):
+                result[key] = value.value
+            else:
+                result[key] = value
+        elif (
+            identifier == "workgraph.aiida_structure"
+            and value is not None
+            and isinstance(value, orm.StructureData)
+        ):
+            content = value.backend_entity.attributes
+            content["node_type"] = value.node_type
+            result[key] = content
+
+    return result
+
+
 def workgraph_to_short_json(
     wgdata: Dict[str, Union[str, List, Dict]]
 ) -> Dict[str, Union[str, Dict]]:
@@ -604,29 +641,7 @@ def workgraph_to_short_json(
             for input in task["inputs"]
             if input["name"] in task["metadata"]["args"]
         ]
-        properties = {}
-        for key, prop in task["properties"].items():
-            if prop["identifier"] in [
-                "workgraph.int",
-                "workgraph.float",
-                "workgraph.string",
-                "workgraph.bool",
-            ]:
-                if prop["value"] is not None:
-                    properties[key] = prop["value"]
-            if prop["identifier"] in [
-                "workgraph.aiida_int",
-                "workgraph.aiida_float",
-                "workgraph.aiida_string",
-                "workgraph.aiida_bool",
-            ]:
-                if prop["value"] is not None:
-                    properties[key] = prop["value"].value
-            if prop["identifier"] == "workgraph.aiida_structure":
-                if prop["value"] is not None:
-                    content = prop["value"].backend_entity.attributes
-                    content["node_type"] = prop["value"].node_type
-                    properties[key] = content
+        properties = process_properties(task.get("properties", {}))
         wgdata_short["nodes"][name] = {
             "label": task["name"],
             "node_type": task["metadata"]["node_type"].upper(),

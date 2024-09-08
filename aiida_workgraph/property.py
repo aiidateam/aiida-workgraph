@@ -1,9 +1,18 @@
 from typing import Any, Type, Union, Dict, Optional, Callable
 from node_graph.property import NodeProperty
+import re
 
 
 class TaskProperty(NodeProperty):
     """Represent a property of a Task in the AiiDA WorkGraph."""
+
+    def validate(self, value: any) -> None:
+        if isinstance(value, str) and not re.search(r"\{\{.*?\}\}", value):
+            raise TypeError(
+                f"""Expected value of type {self.allowed_types}, got {type(value).__name__} instead.
+If you want to use variable from context, use double curly braces like this: {{{{variable_name}}}}"""
+            )
+        super().validate(value)
 
     @classmethod
     def new(

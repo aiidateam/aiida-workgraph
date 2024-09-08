@@ -192,10 +192,10 @@ class SocketAiiDAFloatVector(TaskSocket, SerializeJson):
 class SocketStructureData(TaskSocket, SerializePickle):
     """Any socket."""
 
-    identifier: str = "workgraph.aiida_structure"
+    identifier: str = "workgraph.aiida_structuredata"
 
     def __init__(
         self, name, node=None, type="INPUT", index=0, uuid=None, **kwargs
     ) -> None:
         super().__init__(name, node, type, index, uuid=uuid)
-        self.add_property("workgraph.aiida_structure", name, **kwargs)
+        self.add_property("workgraph.aiida_structuredata", name, **kwargs)
