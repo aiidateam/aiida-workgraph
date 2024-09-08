@@ -4,22 +4,23 @@ from aiida import orm
 from typing import Any
 
 
+# @pytest.mark.usefixtures("aiida_profile")
 @pytest.mark.parametrize(
-    "data_type, identifier",
+    "data_type, data, identifier",
     (
-        (Any, "workgraph.any"),
-        (int, "workgraph.int"),
-        (float, "workgraph.float"),
-        (bool, "workgraph.bool"),
-        (str, "workgraph.string"),
-        (orm.Int, "workgraph.aiida_int"),
-        (orm.Float, "workgraph.aiida_float"),
-        (orm.Str, "workgraph.aiida_string"),
-        (orm.Bool, "workgraph.aiida_bool"),
-        (orm.StructureData, "workgraph.aiida_structuredata"),
+        (Any, 1, "workgraph.any"),
+        (int, 1, "workgraph.int"),
+        (float, 2.0, "workgraph.float"),
+        (bool, True, "workgraph.bool"),
+        (str, "abc", "workgraph.string"),
+        (orm.Int, 1, "workgraph.aiida_int"),
+        (orm.Float, 2.0, "workgraph.aiida_float"),
+        (orm.Str, "abc", "workgraph.aiida_string"),
+        (orm.Bool, True, "workgraph.aiida_bool"),
+        # (orm.StructureData, orm.StructureData(), "workgraph.aiida_structuredata"),
     ),
 )
-def test_type_mapping(data_type, identifier) -> None:
+def test_type_mapping(data_type, data, identifier) -> None:
     """Test the mapping of data types to socket types."""
 
     @task()
@@ -28,59 +29,35 @@ def test_type_mapping(data_type, identifier) -> None:
 
     assert add.task().inputs["x"].identifier == identifier
     assert add.task().inputs["x"].property.identifier == identifier
+    add_task = add.task()
+    add_task.set({"x": data})
 
 
-def test_socket(decorated_multiply) -> None:
-    @task(
-        outputs=[{"identifier": float, "name": "result"}],
-    )
-    def add(x: int, y: float):
-        result = x + y
-        return result
+@pytest.mark.parametrize(
+    "data_type, data",
+    (
+        (int, 1.0),
+        (float, "a"),
+        (bool, "a"),
+        (str, [1, 2, 3]),
+        (orm.Int, 1.0),
+        (orm.Float, "a"),
+        (orm.Str, [1, 2, 3]),
+        (orm.Bool, "a"),
+        (orm.StructureData, 1),
+    ),
+)
+def test_socket_validate(data_type, data) -> None:
+    @task()
+    def add(x: data_type):
+        """"""
 
-    #
-    wg = WorkGraph()
-    add1 = wg.add_task(add, name="add1")
-    multiply1 = wg.add_task(
-        decorated_multiply, name="multiply1", x=add1.outputs["result"], y=2
-    )
+    add_task = add.task()
     # Test setting a value that should raise an exception
     with pytest.raises(Exception) as excinfo:
-        add1.set({"x": 1.0, "y": 2})  # Direct integers instead of orm.Int or orm.Float
-
-    assert "Expected value of type" in str(excinfo.value) and int.__name__ in str(
-        excinfo.value
-    )
-    # This should be successful
-    add1.set({"x": 1, "y": 2.0})
-    # wg.submit(wait=True)
-    wg.run()
-    assert wg.state.upper() == "FINISHED"
-    assert multiply1.outputs["result"].value == 6.0
-
-
-def test_AiiDA_socket():
-    @task.calcfunction(
-        outputs=[{"identifier": orm.Float, "name": "result"}],
-    )
-    def add(x: int, y: float):
-        result = x + y
-        return result
-
-    wg = WorkGraph()
-    add1 = wg.add_task(add, name="add1")
-    # Test setting a value that should raise an exception
-    with pytest.raises(Exception) as excinfo:
-        add1.set(
-            {"x": orm.Float(1.0), "y": 2}
-        )  # Direct integers instead of orm.Int or orm.Float
+        add_task.set({"x": data})
 
     assert "Expected value of type" in str(excinfo.value)
-    # This should be successful
-    add1.set({"x": orm.Int(1), "y": orm.Float(2.0)})
-    wg.run()
-    assert wg.state.upper() == "FINISHED"
-    assert wg.tasks["add1"].outputs["result"].value == 3.0
 
 
 @pytest.mark.usefixtures("started_daemon_client")

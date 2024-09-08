@@ -40,6 +40,12 @@ class PropertyString(TaskProperty, SerializeJson):
     identifier: str = "workgraph.string"
     allowed_types = (str, type(None))
 
+    def validate(self, value: any) -> None:
+        if not isinstance(value, self.allowed_types):
+            raise TypeError(
+                f"Expected value of type {self.allowed_types}, got {type(value).__name__} instead."
+            )
+
 
 class PropertyAiiDAInt(TaskProperty, SerializeJson):
     """A new class for integer type."""
@@ -90,6 +96,12 @@ class PropertyAiiDAString(TaskProperty, SerializeJson):
             value = orm.Str(value)
         super().set_value(value)
 
+    def validate(self, value: any) -> None:
+        if not isinstance(value, self.allowed_types):
+            raise TypeError(
+                f"Expected value of type {self.allowed_types}, got {type(value).__name__} instead."
+            )
+
 
 class PropertyAiiDADict(TaskProperty, SerializeJson):
     """A new class for Dict type."""
@@ -128,7 +140,7 @@ class PropertyVector(TaskProperty, SerializePickle):
                         f"Invalid item type: Expected {self.allowed_item_types}, got {type(item)} instead."
                     )
 
-        return super().validate(value)
+        super().validate(value)
 
     def set_value(self, value: List) -> None:
         self.validate(value)
