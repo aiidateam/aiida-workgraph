@@ -9,8 +9,8 @@ class PropertyAny(TaskProperty, SerializePickle):
 
     identifier: str = "workgraph.any"
 
-    def __init__(self, name, description="", default=None, update=None) -> None:
-        super().__init__(name, description, default, update)
+    def validate(self, _: any) -> None:
+        """No validation needed."""
 
 
 class PropertyInt(TaskProperty, SerializeJson):

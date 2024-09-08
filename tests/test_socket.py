@@ -13,10 +13,12 @@ from typing import Any
         (float, 2.0, "workgraph.float"),
         (bool, True, "workgraph.bool"),
         (str, "abc", "workgraph.string"),
+        (str, "{{variable}}", "workgraph.string"),
         (orm.Int, 1, "workgraph.aiida_int"),
         (orm.Float, 2.0, "workgraph.aiida_float"),
         (orm.Str, "abc", "workgraph.aiida_string"),
         (orm.Bool, True, "workgraph.aiida_bool"),
+        (orm.Bool, "{{variable}}", "workgraph.aiida_bool"),
         # (orm.StructureData, orm.StructureData(), "workgraph.aiida_structuredata"),
     ),
 )
