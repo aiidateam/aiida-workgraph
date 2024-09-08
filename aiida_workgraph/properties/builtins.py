@@ -1,4 +1,4 @@
-from typing import Dict, List, Union, Callable
+from typing import List, Union, Any
 from aiida_workgraph.property import TaskProperty
 from node_graph.serializer import SerializeJson, SerializePickle
 from aiida import orm
@@ -8,283 +8,111 @@ class PropertyAny(TaskProperty, SerializePickle):
     """A new class for Any type."""
 
     identifier: str = "workgraph.any"
-    data_type = "Any"
 
-    def __init__(self, name, description="", default=None, update=None) -> None:
-        super().__init__(name, description, default, update)
+    def validate(self, _: any) -> None:
+        """No validation needed."""
 
 
 class PropertyInt(TaskProperty, SerializeJson):
     """A new class for integer type."""
 
     identifier: str = "workgraph.int"
-    data_type = "Int"
-
-    def __init__(self, name, description="", default=None, update=None) -> None:
-        super().__init__(name, description, default, update)
-
-    def set_value(self, value):
-        # run the callback function
-        if isinstance(value, (int, type(None))):
-            self._value = value
-            if self.update is not None:
-                self.update()
-        else:
-            raise Exception("{} is not a integer.".format(value))
+    allowed_types = (int, str, type(None))
 
 
 class PropertyFloat(TaskProperty, SerializeJson):
     """A new class for float type."""
 
     identifier: str = "workgraph.float"
-    data_type = "Float"
-
-    def __init__(self, name, description="", default=None, update=None) -> None:
-        super().__init__(name, description, default, update)
-
-    def set_value(self, value):
-        # run the callback function
-        if isinstance(value, (int, float, type(None))):
-            self._value = value
-            if self.update is not None:
-                self.update()
-        else:
-            raise Exception("{} is not a float.".format(value))
+    allowed_types = (int, float, str, type(None))
 
 
 class PropertyBool(TaskProperty, SerializeJson):
     """A new class for bool type."""
 
     identifier: str = "workgraph.bool"
-    data_type = "Bool"
-
-    def __init__(self, name, description="", default=None, update=None) -> None:
-        super().__init__(name, description, default, update)
-
-    def set_value(self, value):
-        # run the callback function
-        if value is None:
-            self._value = value
-            if self.update is not None:
-                self.update()
-        elif isinstance(value, (bool, int)):
-            self._value = bool(value)
-            if self.update is not None:
-                self.update()
-        else:
-            raise Exception("{} is not a bool.".format(value))
+    allowed_types = (bool, int, str, type(None))
 
 
 class PropertyString(TaskProperty, SerializeJson):
     """A new class for string type."""
 
     identifier: str = "workgraph.string"
-    data_type = "String"
+    allowed_types = (str, type(None))
 
-    def __init__(self, name, description="", default=None, update=None) -> None:
-        super().__init__(name, description, default, update)
-
-    def set_value(self, value):
-        if isinstance(value, (str, type(None))):
-            self._value = value
-            # run the callback function
-            if self.update is not None:
-                self.update()
-        else:
-            raise Exception("{} is not a string.".format(value))
+    def validate(self, value: any) -> None:
+        if not isinstance(value, self.allowed_types):
+            raise TypeError(
+                f"Expected value of type {self.allowed_types}, got {type(value).__name__} instead."
+            )
 
 
 class PropertyAiiDAInt(TaskProperty, SerializeJson):
     """A new class for integer type."""
 
     identifier: str = "workgraph.aiida_int"
-    data_type = "Int"
+    allowed_types = (int, str, orm.Int, type(None))
 
-    def __init__(
-        self,
-        name: str,
-        description: str = "",
-        default: Union[int, None] = None,
-        update: Callable = None,
-    ) -> None:
-        super().__init__(name, description, default, update)
-
-    def set_value(self, value: Union[int, orm.Int, str]) -> None:
-        # run the callback function
-        if value is None:
-            self._value = value
-            if self.update is not None:
-                self.update()
-        elif isinstance(value, int):
-            self._value = orm.Int(value)
-            if self.update is not None:
-                self.update()
-        elif isinstance(value, orm.Int):
-            self._value = value
-            if self.update is not None:
-                self.update()
-        elif (
-            isinstance(value, str)
-            and value.rstrip().startswith("{{")
-            and value.endswith("}}")
-        ):
-            self._value = value
-        else:
-            raise Exception("{} is not a integer.".format(value))
+    def set_value(self, value: Union[int, orm.Int, str] = None) -> None:
+        if isinstance(value, int):
+            value = orm.Int(value)
+        super().set_value(value)
 
 
 class PropertyAiiDAFloat(TaskProperty, SerializeJson):
     """A new class for float type."""
 
     identifier: str = "workgraph.aiida_float"
-    data_type = "Float"
+    allowed_types = (int, float, orm.Int, orm.Float, str, type(None))
 
-    def __init__(
-        self,
-        name: str,
-        description: str = "",
-        default: Union[int, None] = None,
-        update: Callable = None,
+    def set_value(
+        self, value: Union[int, float, orm.Int, orm.Float, str] = None
     ) -> None:
-        super().__init__(name, description, default, update)
-
-    def set_value(self, value: Union[float, orm.Float, int, orm.Int, str]) -> None:
-        # run the callback function
-        if value is None:
-            self._value = value
-            if self.update is not None:
-                self.update()
-        elif isinstance(value, (int, float)):
-            self._value = orm.Float(value)
-            if self.update is not None:
-                self.update()
-        elif isinstance(value, (orm.Int, orm.Float)):
-            self._value = value
-            if self.update is not None:
-                self.update()
-        elif (
-            isinstance(value, str)
-            and value.rstrip().startswith("{{")
-            and value.endswith("}}")
-        ):
-            self._value = value
-        else:
-            raise Exception("{} is not a float.".format(value))
+        if isinstance(value, (int, float)):
+            value = orm.Float(value)
+        super().set_value(value)
 
 
 class PropertyAiiDABool(TaskProperty, SerializeJson):
     """A new class for bool type."""
 
     identifier: str = "workgraph.aiida_bool"
-    data_type = "Bool"
+    allowed_types = (int, bool, orm.Int, orm.Bool, str, type(None))
 
-    def __init__(
-        self,
-        name: str,
-        description: str = "",
-        default: Union[bool, None] = None,
-        update: Callable = None,
-    ) -> None:
-        super().__init__(name, description, default, update)
-
-    def set_value(self, value: Union[bool, orm.Bool, int, str]) -> None:
-        # run the callback function
-        if value is None:
-            self._value = value
-            if self.update is not None:
-                self.update()
-        elif isinstance(value, (bool, int)):
-            self._value = orm.Bool(value)
-            if self.update is not None:
-                self.update()
-        elif isinstance(value, (orm.Bool)):
-            self._value = value
-            if self.update is not None:
-                self.update()
-        elif (
-            isinstance(value, str)
-            and value.rstrip().startswith("{{")
-            and value.endswith("}}")
-        ):
-            self._value = value
-        else:
-            raise Exception("{} is not a bool.".format(value))
+    def set_value(self, value: Union[int, bool, orm.Int, orm.Bool, str] = None) -> None:
+        if isinstance(value, int):
+            value = orm.Bool(value)
+        super().set_value(value)
 
 
 class PropertyAiiDAString(TaskProperty, SerializeJson):
     """A new class for string type."""
 
     identifier: str = "workgraph.aiida_string"
-    data_type = "String"
+    allowed_types = (int, float, str, orm.Str, type(None))
 
-    def __init__(
-        self,
-        name: str,
-        description: str = "",
-        default: Union[str, orm.Str, None] = None,
-        update: Callable = None,
-    ) -> None:
-        super().__init__(name, description, default, update)
+    def set_value(self, value: Union[int, float, str, orm.Str] = None) -> None:
+        if isinstance(value, (int, float)):
+            value = orm.Str(value)
+        super().set_value(value)
 
-    def set_value(self, value: Union[str, orm.Str]) -> None:
-        if value is None:
-            self._value = value
-            if self.update is not None:
-                self.update()
-        elif isinstance(value, str):
-            self._value = orm.Str(value)
-            if self.update is not None:
-                self.update()
-        elif isinstance(value, orm.Str):
-            self._value = value
-            if self.update is not None:
-                self.update()
-        elif (
-            isinstance(value, str)
-            and value.rstrip().startswith("{{")
-            and value.endswith("}}")
-        ):
-            self._value = value
-        else:
-            raise Exception("{} is not a string.".format(value))
+    def validate(self, value: any) -> None:
+        if not isinstance(value, self.allowed_types):
+            raise TypeError(
+                f"Expected value of type {self.allowed_types}, got {type(value).__name__} instead."
+            )
 
 
 class PropertyAiiDADict(TaskProperty, SerializeJson):
     """A new class for Dict type."""
 
     identifier: str = "workgraph.aiida_dict"
-    data_type = "Dict"
+    allowed_types = (dict, orm.Dict, str, type(None))
 
-    def __init__(
-        self,
-        name: str,
-        description: str = "",
-        default: Union[dict, orm.Dict, None] = True,
-        update: Callable = None,
-    ) -> None:
-        super().__init__(name, description, default, update)
-
-    def set_value(self, value: Union[Dict, orm.Dict, str]) -> None:
-        if value is None:
-            self._value = value
-            if self.update is not None:
-                self.update()
-        elif isinstance(value, dict):
-            self._value = orm.Dict(value)
-            if self.update is not None:
-                self.update()
-        elif isinstance(value, orm.Dict):
-            self._value = value
-            if self.update is not None:
-                self.update()
-        elif (
-            isinstance(value, str)
-            and value.rstrip().startswith("{{")
-            and value.endswith("}}")
-        ):
-            self._value = value
-        else:
-            raise Exception("{} is not a dict.".format(value))
+    def set_value(self, value: Union[dict, orm.Dict, str] = None) -> None:
+        if isinstance(value, (dict)):
+            value = orm.Dict(value)
+        super().set_value(value)
 
 
 # ====================================
@@ -292,11 +120,33 @@ class PropertyVector(TaskProperty, SerializePickle):
     """Vector property"""
 
     identifier: str = "workgraph.vector"
-    data_type = "Vector"
+    allowed_item_types = (object, type(None))
 
-    def __init__(self, name, description="", size=3, default=[], update=None) -> None:
-        super().__init__(name, description, default, update)
+    def __init__(self, name, description="", size=3, default=None, update=None) -> None:
         self.size = size
+        default = [] if default is None else default
+        super().__init__(name, description, default, update)
+
+    def validate(self, value: Any) -> None:
+        """Validate the given value based on allowed types."""
+        if value is not None:
+            if len(value) != self.size:
+                raise ValueError(
+                    f"Invalid size: Expected {self.size}, got {len(value)} instead."
+                )
+            for item in value:
+                if not isinstance(item, self.allowed_item_types):
+                    raise ValueError(
+                        f"Invalid item type: Expected {self.allowed_item_types}, got {type(item)} instead."
+                    )
+
+        super().validate(value)
+
+    def set_value(self, value: List) -> None:
+        self.validate(value)
+        self._value = value
+        if self.update:
+            self.update()
 
     def copy(self):
         p = self.__class__(
@@ -305,123 +155,32 @@ class PropertyVector(TaskProperty, SerializePickle):
         p.value = self.value
         return p
 
+    def get_metadata(self):
+        metadata = {"default": self.default, "size": self.size}
+        return metadata
+
 
 class PropertyAiiDAIntVector(PropertyVector):
     """A new class for integer vector type."""
 
     identifier: str = "workgraph.aiida_int_vector"
-    data_type = "AiiDAIntVector"
-
-    def __init__(
-        self,
-        name: str,
-        description: str = "",
-        size: int = 3,
-        default: List[int] = [0, 0, 0],
-        update: Callable = None,
-    ) -> None:
-        super().__init__(name, description, size, default, update)
-
-    def set_value(self, value: List[int]) -> None:
-        # run the callback function
-        if value is None:
-            self._value = value
-            if self.update is not None:
-                self.update()
-        elif len(value) == self.size:
-            for i in range(self.size):
-                if isinstance(value[i], int):
-                    self._value[i] = value[i]
-                    if self.update is not None:
-                        self.update()
-                else:
-                    raise Exception(
-                        f"Set property {self.name} failed. {value[i]} is not a integer."
-                    )
-        else:
-            raise Exception(
-                "Length {} is not equal to the size {}.".format(len(value), self.size)
-            )
+    allowed_types = (list, orm.List, type(None))
+    allowed_item_types = (int, type(None))
 
 
 class PropertyAiiDAFloatVector(PropertyVector):
     """A new class for float vector type."""
 
     identifier: str = "workgraph.aiida_float_vector"
-    data_type = "AiiDAFloatVector"
-
-    def __init__(
-        self,
-        name: str,
-        description: str = "",
-        size: int = 3,
-        default: List[float] = [0.0, 0.0, 0.0],
-        update: Callable = None,
-    ) -> None:
-        super().__init__(name, description, size, default, update)
-
-    def set_value(self, value: List[Union[int, float]]) -> None:
-        # run the callback function
-        if value is None:
-            self._value = value
-            if self.update is not None:
-                self.update()
-        elif len(value) == self.size:
-            for i in range(self.size):
-                if isinstance(value[i], (int, float)):
-                    self._value[i] = value[i]
-                    if self.update is not None:
-                        self.update()
-                else:
-                    raise Exception("{} is not a float.".format(value[i]))
-        else:
-            raise Exception(
-                "Length {} is not equal to the size {}.".format(len(value), self.size)
-            )
-
-    def get_metadata(self):
-        metadata = {"default": self.default, "size": self.size}
-        return metadata
+    allowed_types = (list, orm.List, type(None))
+    allowed_item_types = (int, float, type(None))
 
 
-# ====================================
-# Vector
+class PropertyStructureData(TaskProperty, SerializePickle):
+    """A new class for Any type."""
 
-
-class PropertyBoolVector(PropertyVector):
-    """A new class for bool vector type."""
-
-    identifier: str = "workgraph.bool_vector"
-    data_type = "BoolVector"
-
-    def __init__(
-        self,
-        name: str,
-        description: str = "",
-        size: int = 3,
-        default: List[bool] = [False, False, False],
-        update: Callable = None,
-    ) -> None:
-        super().__init__(name, description, size, default, update)
-
-    def set_value(self, value: List[Union[bool, int]]) -> None:
-        # run the callback function
-        if value is None:
-            self._value = value
-            if self.update is not None:
-                self.update()
-        elif len(value) == self.size:
-            for i in range(self.size):
-                if isinstance(value[i], (bool, int)):
-                    self._value[i] = value[i]
-                    if self.update is not None:
-                        self.update()
-                else:
-                    raise Exception("{} is not a bool.".format(value[i]))
-        else:
-            raise Exception(
-                "Length {} is not equal to the size {}.".format(len(value), self.size)
-            )
+    identifier: str = "workgraph.aiida_structuredata"
+    allowed_types = (orm.StructureData, type(None))
 
 
 __all__ = [
@@ -433,5 +192,4 @@ __all__ = [
     PropertyAiiDADict,
     PropertyAiiDAIntVector,
     PropertyAiiDAFloatVector,
-    PropertyBoolVector,
 ]
