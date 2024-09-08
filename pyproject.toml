@@ -28,7 +28,7 @@ dependencies = [
     "numpy~=1.21",
     "scipy",
     "ase",
-    "node-graph>=0.0.17",
+    "node-graph>=0.0.18",
     "aiida-core>=2.3",
     "cloudpickle",
     "aiida-shell",
@@ -136,6 +136,7 @@ workgraph = "aiida_workgraph.cli.cmd_workgraph:workgraph"
 "workgraph.aiida_int_vector" = "aiida_workgraph.properties.builtins:PropertyAiiDAIntVector"
 "workgraph.aiida_float_vector" = "aiida_workgraph.properties.builtins:PropertyAiiDAFloatVector"
 "workgraph.aiida_aiida_dict" = "aiida_workgraph.properties.builtins:PropertyAiiDADict"
+"workgraph.aiida_structuredata" = "aiida_workgraph.properties.builtins:PropertyStructureData"
 
 [project.entry-points."aiida_workgraph.socket"]
 "workgraph.any" = "aiida_workgraph.sockets.builtins:SocketAny"
@@ -150,6 +151,7 @@ workgraph = "aiida_workgraph.cli.cmd_workgraph:workgraph"
 "workgraph.aiida_bool" = "aiida_workgraph.sockets.builtins:SocketAiiDABool"
 "workgraph.aiida_int_vector" = "aiida_workgraph.sockets.builtins:SocketAiiDAIntVector"
 "workgraph.aiida_float_vector" = "aiida_workgraph.sockets.builtins:SocketAiiDAFloatVector"
+"workgraph.aiida_structuredata" = "aiida_workgraph.sockets.builtins:SocketStructureData"
 
 
 

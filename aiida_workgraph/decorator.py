@@ -27,6 +27,7 @@ type_mapping = {
     orm.Float: "workgraph.aiida_float",
     orm.Str: "workgraph.aiida_string",
     orm.Bool: "workgraph.aiida_bool",
+    orm.StructureData: "workgraph.aiida_structuredata",
 }
 
 

@@ -16,6 +16,7 @@ from typing import Any
         (orm.Float, "workgraph.aiida_float"),
         (orm.Str, "workgraph.aiida_string"),
         (orm.Bool, "workgraph.aiida_bool"),
+        (orm.StructureData, "workgraph.aiida_structuredata"),
     ),
 )
 def test_type_mapping(data_type, identifier) -> None:
@@ -47,7 +48,9 @@ def test_socket(decorated_multiply) -> None:
     with pytest.raises(Exception) as excinfo:
         add1.set({"x": 1.0, "y": 2})  # Direct integers instead of orm.Int or orm.Float
 
-    assert "is not" in str(excinfo.value) and int.__name__ in str(excinfo.value)
+    assert "Expected value of type" in str(excinfo.value) and int.__name__ in str(
+        excinfo.value
+    )
     # This should be successful
     add1.set({"x": 1, "y": 2.0})
     # wg.submit(wait=True)
@@ -72,7 +75,7 @@ def test_AiiDA_socket():
             {"x": orm.Float(1.0), "y": 2}
         )  # Direct integers instead of orm.Int or orm.Float
 
-    assert "is not" in str(excinfo.value)
+    assert "Expected value of type" in str(excinfo.value)
     # This should be successful
     add1.set({"x": orm.Int(1), "y": orm.Float(2.0)})
     wg.run()
