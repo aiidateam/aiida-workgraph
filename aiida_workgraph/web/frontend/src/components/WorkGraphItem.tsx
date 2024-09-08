@@ -288,16 +288,16 @@ function WorkGraph() {
                     checked={realtimeSwitch}
                     onChange={(checked) => setRealtimeSwitch(checked)}
                     style={{ marginRight: '10px' }}
-                  />
-                  <label>Real-time state</label>
+                    className="realtime-switch"
+                  />Real-time state
                 </div>
                 <div>
                   <Switch
                     checked={detailNodeViewSwitch}
                     onChange={(checked) => setDetailNodeViewSwitch(checked)}
                     style={{ marginRight: '10px' }}
-                  />
-                  <label>Detail node view</label>
+                    className="detail-switch"
+                  />Detail node view
                 </div>
               </div>
               <div>

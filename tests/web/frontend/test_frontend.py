@@ -78,7 +78,7 @@ def test_workgraph_item(web_server, page, ran_wg_calcfunction):
         "element => window.getComputedStyle(element).backgroundColor"
     )
     assert gui_node_color == "rgba(0, 0, 0, 0)"
-    page.get_by_role("switch").click()  # Switch "Real-time state"
+    page.locator(".realtime-switch").click()
 
     # this waits until a green background appears
     page.wait_for_function(
@@ -89,6 +89,14 @@ def test_workgraph_item(web_server, page, ran_wg_calcfunction):
         "element => window.getComputedStyle(element).backgroundColor"
     )
     assert gui_node_color == "rgb(0, 128, 0)"
+
+    # Check the node-detail-view switch
+    page.locator(".detail-switch").click()
+    # pause here for debugging
+    # page.pause()
+    # page.wait_for_selector('[data-testid="input-x"] input', timeout=5000)  # Wait for up to 5 seconds
+    # input_x_control = page.get_by_test_id("input-x").first.locator("input")
+    # assert input_x_control.input_value() == "2"
 
     # Verify that clicking on the gui node will pop up a sidebar
     gui_node.click()
