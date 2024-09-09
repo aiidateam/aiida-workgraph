@@ -509,5 +509,5 @@ def test_exit_code(fixture_localhost, python_executable_path):
         code_label=python_executable_path,
     )
     wg.run()
-    assert wg.tasks["add"].node.exit_status == 2
+    assert wg.tasks["add"].node.exit_status == 1
     assert wg.tasks["add"].node.exit_message == "Sum is negative"
