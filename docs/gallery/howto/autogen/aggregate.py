@@ -75,7 +75,10 @@ wg.to_html()
 # %%
 # Run the workgrhap
 
-wg.submit(wait=True)
+wg.run()
+
+# %%
+# Print the output
 print("aggregate_task result", aggregate_task.outputs["sum"].value)
 
 
@@ -163,6 +166,9 @@ wg.to_html()
 # Run the workgraph
 
 wg.run()
+
+# %%
+# Print the output
 print("aggregate_task int_sum", aggregate_task.outputs["int_sum"].value)
 print("aggregate_task float_sum", aggregate_task.outputs["float_sum"].value)
 
@@ -175,7 +181,7 @@ generate_node_graph(wg.pk)
 # %%
 # Using context for dynamic outputs
 # =================================
-# If are not familiar with context please refer to`:doc:`context doc page <../context>`
+# If are not familiar with context please refer to the doc page `Use Context to pass data between tasks`.
 
 
 @task.calcfunction()
@@ -226,6 +232,10 @@ wg.to_html()
 # Run the workgrhap
 
 wg.run()
+
+# %%
+# Print the output
+
 print("aggregate_task result", aggregate_task.outputs["result"].value)
 
 
