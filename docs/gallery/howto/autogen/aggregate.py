@@ -175,6 +175,7 @@ generate_node_graph(wg.pk)
 # %%
 # Using context for dynamic outputs
 # =================================
+# If are not familiar with context please refer to`:doc:`context doc page <../context>`
 
 
 @task.calcfunction()
