@@ -31,13 +31,14 @@ class PythonParser(Parser):
                 "remote_folder",
                 "remote_stash",
                 "retrieved",
+                "exit_code",
             ]
         ]
         # first we remove nested outputs, e.g., "add_multiply.add"
         top_level_output_list = [
             output for output in self.output_list if "." not in output["name"]
         ]
-
+        exit_code = 0
         try:
             with self.retrieved.base.repository.open("results.pickle", "rb") as handle:
                 results = pickle.load(handle)
@@ -49,6 +50,8 @@ class PythonParser(Parser):
                             results[i], top_level_output_list[i]
                         )
                 elif isinstance(results, dict) and len(top_level_output_list) > 1:
+                    # pop the exit code if it exists
+                    exit_code = results.pop("exit_code", 0)
                     for output in top_level_output_list:
                         if output.get("required", False):
                             if output["name"] not in results:
@@ -84,6 +87,8 @@ class PythonParser(Parser):
                     )
                 for output in top_level_output_list:
                     self.out(output["name"], output["value"])
+                if exit_code:
+                    return exit_code
         except OSError:
             return self.exit_codes.ERROR_READING_OUTPUT_FILE
         except ValueError as exception:
