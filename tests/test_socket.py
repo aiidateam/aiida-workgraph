@@ -6,10 +6,7 @@ from aiida import orm
 @pytest.mark.parametrize(
     "data_type, socket_type",
     (
-        (
-            int,
-            "workgraph.int",
-        ),
+        (int, "workgraph.int"),
         (float, "workgraph.float"),
         (bool, "workgraph.bool"),
         (str, "workgraph.string"),
@@ -93,3 +90,46 @@ def test_numpy_array(decorated_normal_add):
     # wg.run()
     assert wg.state.upper() == "FINISHED"
     # assert (wg.tasks["add1"].outputs["result"].value == np.array([5, 7, 9])).all()
+
+
+@pytest.mark.parametrize(
+    "data_type, socket_value, node_value",
+(
+    (None, None, None),
+    # Check that SocketAny works for int node, without providing type hint
+    (None, 1, 1),
+    (int, 1, 1),
+    (float, 1., 1.),
+    (bool, True, True),
+    (str, "abc", "abc"),
+    # TODO: Wanted to instantiate the AiiDA ORM classes here, but that raises an
+    # TODO: aiida.common.exceptions.ConfigurationError, due to profile not being loaded
+    # TODO: which also isn't resolved by: `@pytest.mark.usefixtures("aiida_profile")`
+    (orm.Int, 1, 1),
+    (orm.Float, 1., 1.),
+    (orm.Str, 'abc', 'abc'),
+    (orm.Bool, True, True),
+))
+def test_node_value(data_type, socket_value, node_value):
+
+    wg = WorkGraph()
+
+    def my_task(x: data_type):
+        pass
+
+    my_task1 = wg.add_task(my_task, name="my_task", x=socket_value)
+    socket = my_task1.inputs['x']
+
+    # Private attribute is undefined (and shouldn't be called anyway)
+    with pytest.raises(AttributeError):
+        socket._node_value
+
+    # This should call the `get_node_value` method
+    socket_node_value = socket.node_value
+
+    assert isinstance(socket_node_value, type(node_value))
+    assert socket_node_value == node_value
+
+    # Now the private attribute should be set, such that the `get_node_value` method doesn't have to be called again
+    assert isinstance(socket_node_value, type(socket._node_value))
+    assert socket_node_value == socket._node_value
