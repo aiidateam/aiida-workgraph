@@ -26,9 +26,9 @@ load_profile()
 # integer, and then aggregate all the results and calculate the sum by linking
 # the outputs of the tasks to the input of one final task
 #
-# By default, the workgraph only allows one link per input socket, 
+# By default, the workgraph only allows one link per input socket,
 # mirroring typical function argument behavior where each argument accepts a single value.
-# However, for scenarios requiring dynamic input handling, e.g., functions with variable 
+# However, for scenarios requiring dynamic input handling, e.g., functions with variable
 # keyword arguments, the link limit can be safely expanded to accommodate multiple inputs.
 # This adjustment is particularly useful in tasks designed to aggregate or process collections of data.
 
@@ -102,7 +102,6 @@ generate_node_graph(wg.pk)
 # as shown in the code example below:
 
 
-
 from aiida.orm import Float
 
 
@@ -120,6 +119,7 @@ def generator_float(seed: Int):
 
     random.seed(seed.value)
     return Float(random.random())
+
 
 # The variable keyword arguments (**collected_values) declare the input as dynamic.
 # Thus, we can safely and flexibly add numerous input sockets.
