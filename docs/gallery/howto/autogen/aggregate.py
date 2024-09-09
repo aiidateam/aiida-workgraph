@@ -24,7 +24,13 @@ load_profile()
 # ======================================
 # In the following example, we create multiple tasks that return a random
 # integer, and then aggregate all the results and calculate the sum by linking
-# the inputs of the tasks to the input of one final task
+# the outputs of the tasks to the input of one final task
+#
+# By default, the workgraph only allows one link per input socket, 
+# mirroring typical function argument behavior where each argument accepts a single value.
+# However, for scenarios requiring dynamic input handling, e.g., functions with variable 
+# keyword arguments, the link limit can be safely expanded to accommodate multiple inputs.
+# This adjustment is particularly useful in tasks designed to aggregate or process collections of data.
 
 #
 
@@ -41,7 +47,7 @@ def generator(seed: Int):
     return Int(random.randint(0, 1))  # one can also use
 
 
-@task.calcfunction()
+@task.calcfunction(outputs=[{"name": "sum"}])
 def aggregate(**collected_values):  # We use a keyword argument to obtain a dictionary
     for key, value in collected_values.items():
         print("key:", key, "value:", value)
@@ -89,8 +95,10 @@ generate_node_graph(wg.pk)
 # We now do the same exercise as before but add another dynamic input to it. We
 # generate float numbers and link them to the aggregate task. The aggregate
 # task now returns two sums one for the integers and one for the float numbers.
-# To support this additional dynamic input we have to specify in the
-# `task.calcfunction` decorator in dynamic inputs names.
+# To support this additional dynamic input, we can define multiple input sockets in the decorator,
+# as shown in the code example below:
+
+
 
 from aiida.orm import Float
 
@@ -110,7 +118,8 @@ def generator_float(seed: Int):
     random.seed(seed.value)
     return Float(random.random())
 
-
+# The variable keyword arguments (**collected_values) declare the input as dynamic.
+# Thus, we can safely and flexibly add numerous input sockets.
 @task.calcfunction(
     inputs=[{"name": "collected_ints"}, {"name": "collected_floats"}],
     outputs=[{"name": "int_sum"}, {"name": "float_sum"}],
