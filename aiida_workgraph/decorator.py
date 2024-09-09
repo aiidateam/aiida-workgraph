@@ -310,6 +310,7 @@ def build_pythonjob_task(func: Callable) -> Task:
     for output in tdata_py["outputs"]:
         if output not in outputs:
             outputs.append(output)
+    outputs.append({"identifier": "workgraph.any", "name": "exit_code"})
     # change "copy_files" link_limit to 1e6
     for input in inputs:
         if input["name"] == "copy_files":

@@ -486,3 +486,28 @@ def test_load_pythonjob(fixture_localhost, python_executable_path):
     )
     assert wg.tasks["add"].outputs["result"].value.value == "Hello, World!"
     wg = WorkGraph.load(wg.pk)
+
+
+def test_exit_code(fixture_localhost, python_executable_path):
+    """Test function with exit code."""
+
+    @task.pythonjob(outputs=[{"name": "sum"}])
+    def add(x: int, y: int) -> int:
+        sum = x + y
+        if sum < 0:
+            exit_code = {"status": 1, "message": "Sum is negative"}
+            return {"sum": sum, "exit_code": exit_code}
+        return {"sum": sum}
+
+    wg = WorkGraph("test_PythonJob")
+    wg.add_task(
+        add,
+        name="add",
+        x=1,
+        y=-2,
+        computer="localhost",
+        code_label=python_executable_path,
+    )
+    wg.run()
+    assert wg.tasks["add"].node.exit_status == 2
+    assert wg.tasks["add"].node.exit_message == "Sum is negative"
