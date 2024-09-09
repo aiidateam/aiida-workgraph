@@ -531,7 +531,12 @@ class WorkGraphEngine(Process, metaclass=Protect):
 
     def get_task(self, name: str):
         """Get task from the context."""
-        task = Task.from_dict(self.ctx._tasks[name])
+        from aiida_workgraph.tasks.builtins import PythonJob
+
+        if self.ctx._tasks[name]["metadata"]["node_type"].upper() == "PYTHONJOB":
+            task = PythonJob.from_dict(self.ctx._tasks[name])
+        else:
+            task = Task.from_dict(self.ctx._tasks[name])
         return task
 
     def update_task(self, task: Task):
