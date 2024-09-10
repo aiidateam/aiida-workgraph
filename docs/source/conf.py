@@ -71,7 +71,7 @@ sphinx_gallery_conf = {
     "filename_pattern": "/*",
     "examples_dirs": gallery_src_dirs,  # in sphinx-gallery doc referred as gallery source
     "gallery_dirs": sphinx_src_autogen_dirs,  # path to where to gallery puts generated files
-    "run_stale_examples": True
+    "run_stale_examples": True,
 }
 
 exclude_patterns = []
