@@ -537,12 +537,24 @@ class WorkGraphEngine(Process, metaclass=Protect):
             task = PythonJob.from_dict(self.ctx._tasks[name])
         else:
             task = Task.from_dict(self.ctx._tasks[name])
+        # update task results
+        for output in task.outputs:
+            output.value = get_nested_dict(
+                self.ctx._tasks[name]["results"],
+                output.name,
+                default=output.value,
+            )
         return task
 
     def update_task(self, task: Task):
         """Update task in the context.
         This is used in error handlers to update the task parameters."""
-        self.ctx._tasks[task.name]["properties"] = task.properties_to_dict()
+        from aiida_workgraph.utils import serialize_pythonjob_properties
+
+        tdata = task.to_dict()
+        if task.identifier.upper() == "PYTHONJOB":
+            serialize_pythonjob_properties(tdata)
+        self.ctx._tasks[task.name]["properties"] = tdata["properties"]
         self.reset_task(task.name)
 
     def get_task_state_info(self, name: str, key: str) -> str:

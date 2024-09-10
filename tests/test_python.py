@@ -490,12 +490,13 @@ def test_load_pythonjob(fixture_localhost, python_executable_path):
 
 def test_exit_code(fixture_localhost, python_executable_path):
     """Test function with exit code."""
+    from numpy import array
 
     @task.pythonjob(outputs=[{"name": "sum"}])
-    def add(x: int, y: int) -> int:
+    def add(x: array, y: array) -> array:
         sum = x + y
-        if sum < 0:
-            exit_code = {"status": 410, "message": "Sum is negative"}
+        if (sum < 0).any():
+            exit_code = {"status": 410, "message": "Some elements are negative"}
             return {"sum": sum, "exit_code": exit_code}
         return {"sum": sum}
 
@@ -515,8 +516,8 @@ def test_exit_code(fixture_localhost, python_executable_path):
     wg.add_task(
         add,
         name="add1",
-        x=1,
-        y=-2,
+        x=array([1, 1]),
+        y=array([1, -2]),
         computer="localhost",
         code_label=python_executable_path,
     )
@@ -531,8 +532,8 @@ def test_exit_code(fixture_localhost, python_executable_path):
     assert wg.process.base.links.get_outgoing().all()[0].node.exit_status == 410
     assert (
         wg.process.base.links.get_outgoing().all()[0].node.exit_message
-        == "Sum is negative"
+        == "Some elements are negative"
     )
     # the final task should have exit status 0
     assert wg.tasks["add1"].node.exit_status == 0
-    assert wg.tasks["add1"].outputs["sum"].value.value == 3
+    assert (wg.tasks["add1"].outputs["sum"].value.value == array([2, 3])).all()

@@ -244,9 +244,12 @@ def get_pythonjob_data(tdata: Dict[str, Any]) -> Dict[str, Any]:
         if name == "computer":
             break
         if name in tdata["properties"]:
-            tdata["properties"][name]["value"] = tdata["properties"][name][
-                "value"
-            ].value
+            value = tdata["properties"][name]["value"]
+            if isinstance(value, orm.Data):
+                value = value.value
+            elif value != {}:
+                raise ValueError(f"There something wrong with the input {name}")
+            tdata["properties"][name]["value"] = value
     return tdata
 
 
@@ -382,6 +385,27 @@ def get_or_create_code(
         return code
 
 
+def serialize_pythonjob_properties(task):
+    """Serialize the properties for PythonJob."""
+
+    from aiida_workgraph.orm.serializer import general_serializer
+
+    input_kwargs = []
+    for input in task["inputs"]:
+        if input["name"] == "_wait":
+            break
+        input_kwargs.append(input["name"])
+    for name in input_kwargs:
+        prop = task["properties"][name]
+        # if value is not None, not {}
+        if not (
+            prop["value"] is None
+            or isinstance(prop["value"], dict)
+            and prop["value"] == {}
+        ):
+            prop["value"] = general_serializer(prop["value"])
+
+
 def serialize_properties(wgdata):
     """Serialize the properties.
     Because we use yaml (aiida's serialize) to serialize the data and
@@ -390,27 +414,13 @@ def serialize_properties(wgdata):
     So, if a function is used as input, we needt to serialize the function.
 
     For PythonJob, serialize the function inputs."""
-    from aiida_workgraph.orm.serializer import general_serializer
     from aiida_workgraph.orm.function_data import PickledLocalFunction
     import inspect
 
     for _, task in wgdata["tasks"].items():
         if task["metadata"]["node_type"].upper() == "PYTHONJOB":
             # get the names kwargs for the PythonJob, which are the inputs before _wait
-            input_kwargs = []
-            for input in task["inputs"]:
-                if input["name"] == "_wait":
-                    break
-                input_kwargs.append(input["name"])
-            for name in input_kwargs:
-                prop = task["properties"][name]
-                # if value is not None, not {}
-                if not (
-                    prop["value"] is None
-                    or isinstance(prop["value"], dict)
-                    and prop["value"] == {}
-                ):
-                    prop["value"] = general_serializer(prop["value"])
+            serialize_pythonjob_properties(task)
         else:
             for _, prop in task["properties"].items():
                 if inspect.isfunction(prop["value"]):
