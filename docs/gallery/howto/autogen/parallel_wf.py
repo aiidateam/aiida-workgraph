@@ -229,7 +229,7 @@ print("Time for running parallelized graph builder", parallel_add_task.mtime - p
 from aiida.engine.daemon.client import get_daemon_client
 
 client = get_daemon_client()
-print(f"Number of current daemon workers {client.get_numprocesses()}")
+print(f"Number of current daemon workers {client.get_numprocesses()["numprocesses"]}")
 
 # %%
 # We rerun the last graph builder with 2 damon workers
