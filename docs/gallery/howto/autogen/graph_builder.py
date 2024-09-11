@@ -1,25 +1,23 @@
 """
-==============================================
-Use Graph Builder to create a nested workflows
-==============================================
+==========================================================
+Use Graph Builder to create a nested and dynamic workflows
+==========================================================
 """
 
 # %%
-# Introduction
-# ============
+# Nested workflows
+# ================
 # The `Graph Builder` allow user to create nested workflows from an input.
-#
+
 # Load the AiiDA profile.
-
-
 from aiida import load_profile
 
 load_profile()
 
 
 # %%
-# Example
-# =======
+# Example 
+# -------
 # Suppose we want a WorkGraph which includes another WorkGraph`(x+y)*z` inside it.
 # We can actually add a WorkGraph to another WorkGraph
 
@@ -53,7 +51,8 @@ wg.to_html()
 # %%
 # Run the workgraph
 
-wg.run()
+wg.submit(wait=True)
+print(add_multiply1.outputs["result"].value)
 
 # %%
 # However linking the two WorkGraphs will not work
@@ -156,7 +155,7 @@ wg.submit(wait=True)
 from aiida_workgraph import WorkGraph
 
 wg1 = WorkGraph()
-# note, one can not set the inputs values here using AiiDA data types
+# Note, one can not set the inputs values here using AiiDA data types
 wg1.add_task(add, name="add")
 wg1.add_task(multiply, name="multiply")
 wg1.add_link(wg1.tasks["add"].outputs[0], wg1.tasks["multiply"].inputs["y"])
@@ -174,7 +173,7 @@ add_multiply2 = wg2.add_task(wg1, name="add_multiply2")
 wg2.add_link(add_multiply1.outputs["multiply.result"], add_multiply2.inputs["add.x"])
 
 
-# create a task using the WorkGraph
+# Create a task using the WorkGraph
 print("Inputs:")
 for input in add_multiply1.inputs:
     print(f"  - {input.name}")
@@ -207,3 +206,99 @@ generate_node_graph(wg2.pk)
 
 # %%
 # More usage (like `if` and `while`) of graph builder will be shown in the following tutorials.
+
+# %%
+# Dynamic workflows
+# =================
+# The `Graph Builder` also allows us to create dynamic workflows that can change depending on the input.
+
+
+# %%
+# Example for loop 
+# ----------------
+# In this example we will create a dynamic number as specified in the input of the WorkGraph.
+
+
+@task.calcfunction()
+def add_one(x):
+    return x + 1
+
+@task.graph_builder(outputs=[{"name": "result", "from": "context.task_out]"}])
+def for_loop(nb_iterations: Int):
+    wg = WorkGraph()
+    for i in range(nb_iterations):
+         task = wg.add_task(add_one, x=i)
+
+    # We cannot refer to a specific task as output in the graph builder decorator
+    # as in the examples below as the name of the last task depends on the input.
+    # Therefore we use the context to not directly refer to the name but the last
+    # task object that was created. The context can then be reffered in the outputs
+    # of the graph builder decorator.
+    task.set_context({"result": "task_out"}) # put result of the task to the context under the name task_out
+    # If want to know more about the usage of the context please refer to the
+    # context howto in the documentation
+    return wg
+
+
+wg = WorkGraph()
+task = wg.add_task(for_loop, nb_iterations=Int(2))
+wg.to_html()
+
+# %%
+# Running the workgraph.
+
+wg.submit(wait=True)
+print("Output of last task", task.outputs["result"].value)  # 1 + 1 result
+
+# %%
+# Plotting provenance
+
+generate_node_graph(wg.pk)
+
+
+
+# %%
+# Example if-then-else
+# --------------------
+# Suppose to run a different task depending on the input. We want to run the add_one task if the number is below 2
+# otherwise we want to run a modulo 2 task. For thet we require to create a context.
+
+from aiida_workgraph import task, WorkGraph
+from aiida.orm import Int
+
+
+@task.calcfunction()
+def modulo_two(x):
+    return x % 2
+
+
+@task.graph_builder(outputs=[{"name": "result", "from": "context.task_out"}])
+def if_then_else(i: Int):
+    wg = WorkGraph()
+    if i.value < 2:
+        task = wg.add_task(add_one, x=i)
+    else:
+        task = wg.add_task(modulo_two, x=i)
+
+    task.set_context({"result": "task_out"}) 
+    return wg
+
+
+wg = WorkGraph()
+task1 = wg.add_task(if_then_else, i=Int(1))
+task2 = wg.add_task(if_then_else, i=task1.outputs["result"])
+wg.to_html()
+
+# %%
+# Running the workgraph.
+
+wg.submit(wait=True)
+print("Output of first task", task1.outputs["result"].value)  # 1 + 1 result
+print("Output of second task", task2.outputs["result"].value)  # 2 % 2 result
+
+# %%
+# Plotting provenance
+
+from aiida_workgraph.utils import generate_node_graph
+
+generate_node_graph(wg.pk)
