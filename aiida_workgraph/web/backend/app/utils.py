@@ -83,7 +83,7 @@ def node_to_short_json(workgraph_pk: int, tdata: Dict[str, Any]) -> Dict[str, An
         "metadata": [
             ["name", tdata["name"]],
             ["node_type", tdata["metadata"]["node_type"]],
-            ["identifier", tdata["metadata"]["identifier"]],
+            ["identifier", tdata["identifier"]],
         ],
         "executor": executor,
     }

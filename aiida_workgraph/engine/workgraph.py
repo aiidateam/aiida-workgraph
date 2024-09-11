@@ -31,7 +31,7 @@ from aiida.engine.processes.workchains.awaitable import (
 )
 from aiida.engine.processes.workchains.workchain import Protect, WorkChainSpec
 from aiida.engine import run_get_node
-from aiida_workgraph.utils import create_and_pause_process
+from aiida_workgraph.utils import create_and_pause_process, get_item_by_name
 from aiida_workgraph.task import Task
 from aiida_workgraph.utils import get_nested_dict, update_nested_dict
 from aiida_workgraph.executors.monitors import monitor
@@ -459,7 +459,7 @@ class WorkGraphEngine(Process, metaclass=Protect):
 
         super().on_create()
         wgdata = self.inputs.wg._dict
-        # print("wgdata: ", wgdata)
+        print("wgdata: ", wgdata["tasks"]["multiply"])
         restart_process = (
             orm.load_node(wgdata["restart_process"].value)
             if wgdata.get("restart_process")
@@ -515,7 +515,7 @@ class WorkGraphEngine(Process, metaclass=Protect):
         wgdata = self.node.base.extras.get("_workgraph")
         for name, task in wgdata["tasks"].items():
             wgdata["tasks"][name] = deserialize_unsafe(task)
-            for _, prop in wgdata["tasks"][name]["properties"].items():
+            for prop in wgdata["tasks"][name]["properties"]:
                 if isinstance(prop["value"], PickledLocalFunction):
                     prop["value"] = prop["value"].value
         wgdata["error_handlers"] = deserialize_unsafe(wgdata["error_handlers"])
@@ -981,7 +981,9 @@ class WorkGraphEngine(Process, metaclass=Protect):
             executor, _ = get_executor(task["executor"])
             # print("executor: ", executor)
             args, kwargs, var_args, var_kwargs, args_dict = self.get_inputs(name)
-            for i, key in enumerate(self.ctx._tasks[name]["metadata"]["args"]):
+            print("args: ", args)
+            print("kwargs: ", kwargs)
+            for i, key in enumerate(self.ctx._tasks[name]["args"]):
                 kwargs[key] = args[i]
             # update the port namespace
             kwargs = update_nested_dict_with_special_keys(kwargs)
@@ -998,7 +1000,7 @@ class WorkGraphEngine(Process, metaclass=Protect):
                 if continue_workgraph:
                     self.continue_workgraph()
             elif task["metadata"]["node_type"].upper() == "DATA":
-                for key in self.ctx._tasks[name]["metadata"]["args"]:
+                for key in self.ctx._tasks[name]["args"]:
                     kwargs.pop(key, None)
                 results = create_data_node(executor, args, kwargs)
                 self.set_task_state_info(name, "process", results)
@@ -1174,7 +1176,7 @@ class WorkGraphEngine(Process, metaclass=Protect):
                 self.update_parent_task_state(name)
                 self.continue_workgraph()
             elif task["metadata"]["node_type"].upper() in ["AWAITABLE"]:
-                for key in self.ctx._tasks[name]["metadata"]["args"]:
+                for key in self.ctx._tasks[name]["args"]:
                     kwargs.pop(key, None)
                 awaitable_target = asyncio.ensure_future(
                     self.run_executor(executor, args, kwargs, var_args, var_kwargs),
@@ -1185,7 +1187,7 @@ class WorkGraphEngine(Process, metaclass=Protect):
                 self.to_context(**{name: awaitable})
             elif task["metadata"]["node_type"].upper() in ["MONITOR"]:
 
-                for key in self.ctx._tasks[name]["metadata"]["args"]:
+                for key in self.ctx._tasks[name]["args"]:
                     kwargs.pop(key, None)
                 # add function and interval to the args
                 args = [executor, kwargs.pop("interval"), kwargs.pop("timeout"), *args]
@@ -1200,10 +1202,10 @@ class WorkGraphEngine(Process, metaclass=Protect):
                 self.to_context(**{name: awaitable})
             elif task["metadata"]["node_type"].upper() in ["NORMAL"]:
                 # Normal task is created by decoratoring a function with @task()
-                if "context" in task["metadata"]["kwargs"]:
+                if "context" in task["kwargs"]:
                     self.ctx.task_name = name
                     kwargs.update({"context": self.ctx})
-                for key in self.ctx._tasks[name]["metadata"]["args"]:
+                for key in self.ctx._tasks[name]["args"]:
                     kwargs.pop(key, None)
                 try:
                     results = self.run_executor(
@@ -1260,13 +1262,13 @@ class WorkGraphEngine(Process, metaclass=Protect):
         var_args = None
         var_kwargs = None
         task = self.ctx._tasks[name]
-        properties = task.get("properties", {})
+        properties = task.get("properties", [])
         inputs = {}
         for input in task["inputs"]:
             # print(f"input: {input['name']}")
             if len(input["links"]) == 0:
                 inputs[input["name"]] = self.update_context_variable(
-                    properties[input["name"]]["value"]
+                    input["property"]["value"]
                 )
             elif len(input["links"]) == 1:
                 link = input["links"][0]
@@ -1300,33 +1302,42 @@ class WorkGraphEngine(Process, metaclass=Protect):
                             link["from_socket"]
                         ]
                 inputs[input["name"]] = value
-        for name in task["metadata"].get("args", []):
+        print("inputs: ", inputs)
+        for name in task.get("args", []):
             if name in inputs:
                 args.append(inputs[name])
                 args_dict[name] = inputs[name]
             else:
-                value = self.update_context_variable(properties[name]["value"])
+                value = self.update_context_variable(
+                    get_item_by_name(properties, name)["value"]
+                )
                 args.append(value)
                 args_dict[name] = value
-        for name in task["metadata"].get("kwargs", []):
+        for name in task.get("kwargs", []):
             if name in inputs:
                 kwargs[name] = inputs[name]
             else:
-                value = self.update_context_variable(properties[name]["value"])
+                value = self.update_context_variable(
+                    get_item_by_name(properties, name)["value"]
+                )
                 kwargs[name] = value
-        if task["metadata"]["var_args"] is not None:
-            name = task["metadata"]["var_args"]
+        if task["var_args"] is not None:
+            name = task["var_args"]
             if name in inputs:
                 var_args = inputs[name]
             else:
-                value = self.update_context_variable(properties[name]["value"])
+                value = self.update_context_variable(
+                    get_item_by_name(properties, name)["value"]
+                )
                 var_args = value
-        if task["metadata"]["var_kwargs"] is not None:
-            name = task["metadata"]["var_kwargs"]
+        if task["var_kwargs"] is not None:
+            name = task["var_kwargs"]
             if name in inputs:
                 var_kwargs = inputs[name]
             else:
-                value = self.update_context_variable(properties[name]["value"])
+                value = self.update_context_variable(
+                    get_item_by_name(properties, name)["value"]
+                )
                 var_kwargs = value
         return args, kwargs, var_args, var_kwargs, args_dict
 

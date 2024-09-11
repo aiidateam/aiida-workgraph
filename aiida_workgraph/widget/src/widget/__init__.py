@@ -43,7 +43,7 @@ class NodeGraphWidget(anywidget.AnyWidget):
         tdata.pop("executor", None)
         tdata.pop("node_class", None)
         tdata.pop("process", None)
-        tdata["label"] = tdata["metadata"]["identifier"]
+        tdata["label"] = tdata["identifier"]
         wgdata = {"name": node.name, "nodes": {node.name: tdata}, "links": []}
         self.value = wgdata
 

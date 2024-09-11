@@ -201,9 +201,12 @@ class WorkGraph(node_graph.NodeGraph):
         wgdata["tasks"] = wgdata.pop("nodes")
         if store_nodes:
             for task in wgdata["tasks"].values():
-                for prop in task["properties"].values():
+                for prop in task["properties"]:
                     if isinstance(prop["value"], aiida.orm.Node):
                         prop["value"].store()
+                for input in task["inputs"]:
+                    if isinstance(input["property"]["value"], aiida.orm.Node):
+                        input["property"]["value"].store()
 
         return wgdata
 

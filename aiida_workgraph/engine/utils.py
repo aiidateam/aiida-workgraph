@@ -37,8 +37,8 @@ def prepare_for_python_task(task: dict, kwargs: dict, var_kwargs: dict) -> dict:
         function_kwargs[input["name"]] = kwargs.pop(input["name"], None)
     # if the var_kwargs is not None, we need to pop the var_kwargs from the kwargs
     # then update the function_kwargs if var_kwargs is not None
-    if task["metadata"]["var_kwargs"] is not None:
-        function_kwargs.pop(task["metadata"]["var_kwargs"], None)
+    if task["var_kwargs"] is not None:
+        function_kwargs.pop(task["var_kwargs"], None)
         if var_kwargs:
             # var_kwargs can be AttributeDict if it get data from the previous task output
             if isinstance(var_kwargs, (dict, AttributeDict)):

@@ -209,7 +209,7 @@ class WorkGraphSaver:
         self.process.base.extras.set("_workgraph_short", short_wgdata)
         self.save_task_states()
         for name, task in self.wgdata["tasks"].items():
-            for _, prop in task["properties"].items():
+            for prop in task["properties"]:
                 if inspect.isfunction(prop["value"]):
                     prop["value"] = PickledLocalFunction(prop["value"]).store()
             self.wgdata["tasks"][name] = serialize(task)
