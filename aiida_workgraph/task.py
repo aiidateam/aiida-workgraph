@@ -114,7 +114,7 @@ class Task(GraphNode):
         from aiida_workgraph.tasks import task_pool
         from aiida.orm.utils.serialize import deserialize_unsafe
 
-        task = super().from_dict(data, node_pool=task_pool)
+        task = GraphNode.from_dict(data, node_pool=task_pool)
         task.context_mapping = data.get("context_mapping", {})
         task.waiting_on.add(data.get("wait", []))
         process = data.get("process", None)

@@ -531,12 +531,7 @@ class WorkGraphEngine(Process, metaclass=Protect):
 
     def get_task(self, name: str):
         """Get task from the context."""
-        from aiida_workgraph.tasks.builtins import PythonJob
-
-        if self.ctx._tasks[name]["metadata"]["node_type"].upper() == "PYTHONJOB":
-            task = PythonJob.from_dict(self.ctx._tasks[name])
-        else:
-            task = Task.from_dict(self.ctx._tasks[name])
+        task = Task.from_dict(self.ctx._tasks[name])
         # update task results
         for output in task.outputs:
             output.value = get_nested_dict(
@@ -549,11 +544,7 @@ class WorkGraphEngine(Process, metaclass=Protect):
     def update_task(self, task: Task):
         """Update task in the context.
         This is used in error handlers to update the task parameters."""
-        from aiida_workgraph.utils import serialize_pythonjob_properties
-
         tdata = task.to_dict()
-        if task.identifier.upper() == "PYTHONJOB":
-            serialize_pythonjob_properties(tdata)
         self.ctx._tasks[task.name]["properties"] = tdata["properties"]
         self.reset_task(task.name)
 

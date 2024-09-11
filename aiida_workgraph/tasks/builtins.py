@@ -306,27 +306,3 @@ class Select(Task):
             "path": "aiida_workgraph.executors.builtins",
             "name": "select",
         }
-
-
-class PythonJob(Task):
-    """PythonJob Task.
-    Note: this task is only used for loading the task from a dictionary."""
-
-    @classmethod
-    def from_dict(cls, data: Dict[str, Any], **kwargs) -> "Task":
-        # deserialize the properties
-        input_kwargs = []
-        for input in data["inputs"]:
-            if input["name"] == "_wait":
-                break
-            input_kwargs.append(input["name"])
-        for name in input_kwargs:
-            prop = data["properties"][name]
-            if not (
-                prop["value"] is None
-                or isinstance(prop["value"], dict)
-                and prop["value"] == {}
-            ):
-                prop["value"] = prop["value"].value
-
-        return super().from_dict(data, **kwargs)
