@@ -2,7 +2,6 @@
 ==============================================
 Use Graph Builder to create a nested workflows
 ==============================================
-
 """
 
 # %%
@@ -21,7 +20,7 @@ load_profile()
 # %%
 # Example
 # =======
-# Suppose we want to WorkGraph which include another WorkGraph`(x+y)*z` inside it.
+# Suppose we want a WorkGraph which includes another WorkGraph`(x+y)*z` inside it.
 # We can actually add a WorkGraph to another WorkGraph
 
 from aiida_workgraph import task, WorkGraph
@@ -72,13 +71,15 @@ except Exception as err:
 # %%
 # For that use case we need to use the graph builder
 
-# Create graph builder
-# ---------------------
-# We add `task.graph_builder` decorator to a function to define a graph builder task. The function create a WorkGraph based on the inputs, and returns the WorkGraph at the end.
+# Create a graph builder function
+# -------------------------------
+# We add `task.graph_builder` decorator to a function to define a graph builder
+# function. The function constructs a WorkGraph based on the inputs, and returns
+# it at the end.
 #
 #
 # Expose outputs
-# ---------------
+# --------------
 # We can expose the outputs of the tasks as the outputs of the WorkGraph:
 #
 # .. code:: python
@@ -90,8 +91,8 @@ except Exception as err:
 #
 
 
-# use task.graph_builder decorator, expose the output of "multiply" task
-# as the output of the `WorkGraph`.
+# We use task.graph_builder decorator and expose the output of the "multiply"
+# task as the output of the graph builder function.
 @task.graph_builder(outputs=[{"name": "multiply", "from": "multiply.result"}])
 def add_multiply(x, y, z):
     # Create a WorkGraph
@@ -99,13 +100,13 @@ def add_multiply(x, y, z):
     wg.add_task(add, name="add", x=x, y=y)
     wg.add_task(multiply, name="multiply", x=z)
     wg.add_link(wg.tasks["add"].outputs[0], wg.tasks["multiply"].inputs["y"])
-    # don't forget to return the `wg`
+    # Don't forget to return the `wg`
     return wg
 
 
 # %%
 # Create nested workflow
-# -------------------------
+# ----------------------
 # We can use the graph builder task inside another WorkGraph to create nested workflow. Here is an example:
 
 
@@ -128,6 +129,13 @@ from aiida_workgraph.utils import generate_node_graph
 
 generate_node_graph(wg.pk)
 
+# %%
+# Looking at the process list we can also that multiple WorkGraphs have been submitted
+#
+# .. code-block:: bash
+# 
+#     verdi process list -a
+
 
 # %%
 # Use the graph builder directly
@@ -140,8 +148,8 @@ wg.submit(wait=True)
 
 
 # %%
-# Create the a Task from the workgraph (Experimental)
-# ---------------------------------------------------
+# Create a Task from the workgraph (Experimental)
+# -----------------------------------------------
 # One can create a Task from a WorkGraph directly.
 
 
