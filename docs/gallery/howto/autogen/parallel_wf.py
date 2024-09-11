@@ -271,7 +271,6 @@ client.decrease_workers(1)
 #        verdi daemon restart
 
 
-
 # %%
 # Further reading
 # ---------------
