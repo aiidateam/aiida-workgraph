@@ -216,7 +216,7 @@ print(
 
 # %%
 # We can also look at the total time and see the overhead costs.
-print("Time for running parallelized graph builder", add_task.mtime - add_task.ctime)
+print("Time for running parallelized graph builder", parallel_add_task.mtime - parallel_add_task.ctime)
 
 # %%
 # Increasing number of daemon workers
