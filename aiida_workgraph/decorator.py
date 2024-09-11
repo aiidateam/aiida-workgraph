@@ -280,6 +280,7 @@ def build_task_from_AiiDA(
 def build_pythonjob_task(func: Callable) -> Task:
     """Build PythonJob task from function."""
     from aiida_workgraph.calculations.python import PythonJob
+    from aiida_workgraph.tasks.pythonjob import PythonJob as PythonJobTask
     from copy import deepcopy
 
     # if the function is not a task, build a task from the function
@@ -310,6 +311,7 @@ def build_pythonjob_task(func: Callable) -> Task:
     for output in tdata_py["outputs"]:
         if output not in outputs:
             outputs.append(output)
+    outputs.append({"identifier": "workgraph.any", "name": "exit_code"})
     # change "copy_files" link_limit to 1e6
     for input in inputs:
         if input["name"] == "copy_files":
@@ -322,6 +324,8 @@ def build_pythonjob_task(func: Callable) -> Task:
     tdata["outputs"] = outputs
     tdata["kwargs"] = kwargs
     tdata["task_type"] = "PYTHONJOB"
+    tdata["identifier"] = "workgraph.pythonjob"
+    tdata["node_class"] = PythonJobTask
     task = create_task(tdata)
     task.is_aiida_component = True
     return task, tdata

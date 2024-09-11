@@ -218,38 +218,6 @@ def get_dict_from_builder(builder: Any) -> Dict:
         return builder
 
 
-def get_pythonjob_data(tdata: Dict[str, Any]) -> Dict[str, Any]:
-    """
-    Process the task data dictionary for a PythonJob.
-    It load the orignal Python data from the AiiDA Data node for the
-    args and kwargs of the function.
-
-    Args:
-        tdata (Dict[str, Any]): The input data dictionary.
-
-    Returns:
-        Dict[str, Any]: The processed data dictionary.
-    """
-    for name in tdata["metadata"]["args"]:
-        if tdata["properties"][name]["value"] is None:
-            continue
-        if name in tdata["properties"]:
-            tdata["properties"][name]["value"] = tdata["properties"][name][
-                "value"
-            ].value
-    for name in tdata["metadata"]["kwargs"]:
-        # all the kwargs are after computer is the input for the PythonJob, should be AiiDA Data node
-        if tdata["properties"][name]["value"] is None:
-            continue
-        if name == "computer":
-            break
-        if name in tdata["properties"]:
-            tdata["properties"][name]["value"] = tdata["properties"][name][
-                "value"
-            ].value
-    return tdata
-
-
 def serialize_workgraph_data(wgdata: Dict[str, Any]) -> Dict[str, Any]:
     from aiida.orm.utils.serialize import serialize
 
@@ -270,8 +238,6 @@ def get_workgraph_data(process: Union[int, orm.Node]) -> Optional[Dict[str, Any]
         return
     for name, task in wgdata["tasks"].items():
         wgdata["tasks"][name] = deserialize_unsafe(task)
-        if wgdata["tasks"][name]["metadata"]["node_type"].upper() == "PYTHONJOB":
-            get_pythonjob_data(wgdata["tasks"][name])
     wgdata["error_handlers"] = deserialize_unsafe(wgdata["error_handlers"])
     return wgdata
 
@@ -388,33 +354,14 @@ def serialize_properties(wgdata):
     save it to the node.base.extras. yaml can not handle the function
     defined in a scope, e.g., local function in another function.
     So, if a function is used as input, we needt to serialize the function.
-
-    For PythonJob, serialize the function inputs."""
-    from aiida_workgraph.orm.serializer import general_serializer
+    """
     from aiida_workgraph.orm.function_data import PickledLocalFunction
     import inspect
 
     for _, task in wgdata["tasks"].items():
-        if task["metadata"]["node_type"].upper() == "PYTHONJOB":
-            # get the names kwargs for the PythonJob, which are the inputs before _wait
-            input_kwargs = []
-            for input in task["inputs"]:
-                if input["name"] == "_wait":
-                    break
-                input_kwargs.append(input["name"])
-            for name in input_kwargs:
-                prop = task["properties"][name]
-                # if value is not None, not {}
-                if not (
-                    prop["value"] is None
-                    or isinstance(prop["value"], dict)
-                    and prop["value"] == {}
-                ):
-                    prop["value"] = general_serializer(prop["value"])
-        else:
-            for _, prop in task["properties"].items():
-                if inspect.isfunction(prop["value"]):
-                    prop["value"] = PickledLocalFunction(prop["value"]).store()
+        for _, prop in task["properties"].items():
+            if inspect.isfunction(prop["value"]):
+                prop["value"] = PickledLocalFunction(prop["value"]).store()
 
 
 def generate_bash_to_create_python_env(

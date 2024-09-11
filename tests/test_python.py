@@ -486,3 +486,54 @@ def test_load_pythonjob(fixture_localhost, python_executable_path):
     )
     assert wg.tasks["add"].outputs["result"].value.value == "Hello, World!"
     wg = WorkGraph.load(wg.pk)
+
+
+def test_exit_code(fixture_localhost, python_executable_path):
+    """Test function with exit code."""
+    from numpy import array
+
+    @task.pythonjob(outputs=[{"name": "sum"}])
+    def add(x: array, y: array) -> array:
+        sum = x + y
+        if (sum < 0).any():
+            exit_code = {"status": 410, "message": "Some elements are negative"}
+            return {"sum": sum, "exit_code": exit_code}
+        return {"sum": sum}
+
+    def handle_negative_sum(self, task_name: str):
+        """Handle the failure code 410 of the `add`.
+        Simply make the inputs positive by taking the absolute value.
+        """
+        self.report("Run error handler: handle_negative_sum.")
+        # load the task from the WorkGraph engine
+        task = self.get_task(task_name)
+        # modify task inputs
+        task.set({"x": abs(task.inputs["x"].value), "y": abs(task.inputs["y"].value)})
+
+        self.update_task(task)
+
+    wg = WorkGraph("test_PythonJob")
+    wg.add_task(
+        add,
+        name="add1",
+        x=array([1, 1]),
+        y=array([1, -2]),
+        computer="localhost",
+        code_label=python_executable_path,
+    )
+    # register error handler
+    wg.attach_error_handler(
+        handle_negative_sum,
+        name="handle_negative_sum",
+        tasks={"add1": {"exit_codes": [410], "max_retries": 5}},
+    )
+    wg.run()
+    # the first task should have exit status 410
+    assert wg.process.base.links.get_outgoing().all()[0].node.exit_status == 410
+    assert (
+        wg.process.base.links.get_outgoing().all()[0].node.exit_message
+        == "Some elements are negative"
+    )
+    # the final task should have exit status 0
+    assert wg.tasks["add1"].node.exit_status == 0
+    assert (wg.tasks["add1"].outputs["sum"].value.value == array([2, 3])).all()
