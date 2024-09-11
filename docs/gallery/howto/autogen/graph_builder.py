@@ -16,7 +16,7 @@ load_profile()
 
 
 # %%
-# Example 
+# Example
 # -------
 # Suppose we want a WorkGraph which includes another WorkGraph`(x+y)*z` inside it.
 # We can actually add a WorkGraph to another WorkGraph
@@ -131,7 +131,7 @@ generate_node_graph(wg.pk)
 # Looking at the process list we can also that multiple WorkGraphs have been submitted
 #
 # .. code-block:: bash
-# 
+#
 #     verdi process list -a
 
 
@@ -213,7 +213,7 @@ generate_node_graph(wg2.pk)
 
 
 # %%
-# Example for loop 
+# Example for loop
 # ----------------
 # In this example we will create a dynamic number as specified in the input of the WorkGraph.
 
@@ -222,18 +222,21 @@ generate_node_graph(wg2.pk)
 def add_one(x):
     return x + 1
 
+
 @task.graph_builder(outputs=[{"name": "result", "from": "context.task_out]"}])
 def for_loop(nb_iterations: Int):
     wg = WorkGraph()
     for i in range(nb_iterations):
-         task = wg.add_task(add_one, x=i)
+        task = wg.add_task(add_one, x=i)
 
     # We cannot refer to a specific task as output in the graph builder decorator
     # as in the examples below as the name of the last task depends on the input.
     # Therefore we use the context to not directly refer to the name but the last
     # task object that was created. The context can then be reffered in the outputs
     # of the graph builder decorator.
-    task.set_context({"result": "task_out"}) # put result of the task to the context under the name task_out
+    task.set_context(
+        {"result": "task_out"}
+    )  # put result of the task to the context under the name task_out
     # If want to know more about the usage of the context please refer to the
     # context howto in the documentation
     return wg
@@ -253,7 +256,6 @@ print("Output of last task", task.outputs["result"].value)  # 1 + 1 result
 # Plotting provenance
 
 generate_node_graph(wg.pk)
-
 
 
 # %%
@@ -279,7 +281,7 @@ def if_then_else(i: Int):
     else:
         task = wg.add_task(modulo_two, x=i)
 
-    task.set_context({"result": "task_out"}) 
+    task.set_context({"result": "task_out"})
     return wg
 
 
