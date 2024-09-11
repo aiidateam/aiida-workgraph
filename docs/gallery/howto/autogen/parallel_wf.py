@@ -269,3 +269,13 @@ client.decrease_workers(1)
 #
 #        verdi config set daemon.worker_process_slots 200
 #        verdi daemon restart
+
+
+
+# %%
+# Further reading
+# ---------------
+# Now you learned how to run tasks in parallel you might want to know how to
+# aggregate the results of all these parallel tasks (e.g. taking the mean of
+# all computed values). For this you can further read
+# :ref:`sphx_glr_howto_autogen_aggregate.py`.
