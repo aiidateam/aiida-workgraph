@@ -235,6 +235,7 @@ print(f"Number of current daemon workers {client.get_numprocesses()}")
 # We rerun the last graph builder with 2 damon workers
 
 client.increase_workers(1)
+print(f"Number of current daemon workers {client.get_numprocesses()["numprocesses"]}")
 wg = WorkGraph("wg_daemon_worker_2")
 parallel_add_task_2 = wg.add_task(parallel_add, name="parallel_add", nb_iterations=2)
 wg.to_html()
@@ -248,7 +249,8 @@ print(
 
 # %%
 # The overhead time has shortens a bit as the handling of the CalcJobs and
-# WorkGraphs could be parallelized.
+# WorkGraphs could be parallelized. One can increase the number of iterations
+# to see a more significant difference.
 
 
 # %%
