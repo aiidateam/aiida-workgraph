@@ -140,9 +140,10 @@ def add10(integer):
 # %%
 
 wgs = []
+tasks = []
 for i in range(2):
     wg = WorkGraph(f"parallel_wg{i}")
-    wg.add_task(add10, name=f"add10_{i}", integer=i)
+    tasks.append(wg.add_task(add10, name="add10", integer=i))
     wgs.append(wg)
 
 # We use wait=False so we can continue submitting
@@ -152,21 +153,22 @@ wgs[1].submit(wait=True)
 wgs[0].wait()
 
 # %%
-# We print the difference between the mtime (the time the WorkGraph has been last time changed) and the ctime (the time of creation). Since the WorkGraph's status is changed when finished, this give us a good estimate of the running time.
+# We print the difference between the mtime (the time the WorkGraph has been
+# last time changed) and the ctime (the time of creation). Since the
+# WorkGraph's status is changed when finished, this give us a good estimate of
+# the running time.
 print(
-    "WG0 created:",
-    load_node(wgs[0].pk).ctime.time(),
+    "add10 task of WG0 created:",
+    load_node(tasks[0].pk).ctime.time(),
     "finished:",
-    load_node(wgs[0].pk).mtime.time(),
+    load_node(tasks[0].pk).mtime.time(),
 )
-print("Time WG0", load_node(wgs[0].pk).mtime - load_node(wgs[0].pk).ctime)
 print(
-    "WG1 created:",
-    load_node(wgs[1].pk).ctime.time(),
+    "add10 task of WG1 created:",
+    load_node(tasks[1].pk).ctime.time(),
     "finished:",
-    load_node(wgs[1].pk).mtime.time(),
+    load_node(tasks[1].pk).mtime.time(),
 )
-print("Time WG1", load_node(wgs[1].pk).mtime - load_node(wgs[1].pk).ctime)
 
 
 # %%
@@ -185,20 +187,36 @@ def parallel_add(nb_iterations):
 
 # Submitting a parallel that adds 10 two times to different numbers
 wg = WorkGraph(f"parallel_graph_builder")
-add_task = wg.add_task(parallel_add, name="parallel_add", nb_iterations=2)
+parallel_add_task = wg.add_task(parallel_add, name="parallel_add", nb_iterations=2)
 wg.to_html()
 
 # %%
 wg.submit(wait=True)
 
-
 # %%
-# We look at the times of creation and last change
-print("Time for running with graph builder", add_task.mtime - add_task.ctime)
+parallel_add_wg = WorkGraph.load(parallel_add_task.pk)
+add10_0_task = parallel_add_wg.tasks["add10_0"]
+add10_1_task = parallel_add_wg.tasks["add10_1"]
+print(
+    "add10_0 task created:",
+    add10_0_task.ctime.time(),
+    "finished:",
+    add10_0_task.mtime.time(),
+)
+print(
+    "add10_1 task created:",
+    add10_1_task.ctime.time(),
+    "finished:",
+    add10_1_task.mtime.time(),
+)
 
 # %%
 # We can see that the time is less than 6 seconds which means that the two additions
 # were performed in parallel
+
+# %%
+# We can also look at the total time and see the overhead costs.
+print("Time for running parallelized graph builder", add_task.mtime - add_task.ctime)
 
 # %%
 # Increasing number of daemon workers
@@ -211,49 +229,27 @@ print("Time for running with graph builder", add_task.mtime - add_task.ctime)
 from aiida.engine.daemon.client import get_daemon_client
 
 client = get_daemon_client()
+print(f"Number of current daemon workers {client.get_numprocesses()}")
 
 # %%
-# We rerun the last graph builder for 3 iterations
+# We rerun the last graph builder with 2 damon workers
 
-wg = WorkGraph("wg_daemon_worker_1")
-wg.add_task(parallel_add, name="parallel_add", nb_iterations=3)
-wg.to_html()
-
-# %%
-wg.submit(wait=True)
-print(
-    f"Time for running with {client.get_numprocesses()['numprocesses']} worker",
-    load_node(wg.pk).mtime - load_node(wg.pk).ctime,
-)
-
-# %%
-# We increase the number of workers by one. One can also do this in the workgraph GUI.
-
-client = get_daemon_client()
 client.increase_workers(1)
-
-# %%
-# Now we submit again and the time have shortens a bit.
-
 wg = WorkGraph("wg_daemon_worker_2")
-wg.add_task(parallel_add, name="parallel_add", nb_iterations=3)
+parallel_add_task_2 = wg.add_task(parallel_add, name="parallel_add", nb_iterations=2)
 wg.to_html()
 
 # %%
-
 wg.submit(wait=True)
 print(
-    f"Time for running with {client.get_numprocesses()['numprocesses']} worker",
-    load_node(wg.pk).mtime - load_node(wg.pk).ctime,
+    "Time for running parallelized graph builder with 2 daemons",
+    parallel_add_task_2.mtime - parallel_add_task_2.ctime,
 )
 
 # %%
-# Note that on readthedocs you will not see a big difference due to the hardware.
-# With a limited number of CPU the workers cannot be parallelized
+# The overhead time has shortens a bit as the handling of the CalcJobs and
+# WorkGraphs could be parallelized.
 
-import multiprocessing
-
-print("Number of CPUs", multiprocessing.cpu_count())
 
 # %%
 # Reset back to one worker
