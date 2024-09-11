@@ -7,7 +7,7 @@ from aiida.orm.nodes.process.workflow.workfunction import WorkFunctionNode
 from aiida.engine.processes.ports import PortNamespace
 import cloudpickle as pickle
 from aiida_workgraph.task import Task
-from aiida_workgraph.orm.function_data import PickledFunction
+from aiida_workgraph.utils import build_executor
 import inspect
 
 task_types = {
@@ -260,7 +260,7 @@ def build_task_from_AiiDA(
             else outputs
         )
         # build executor from the function
-        tdata["executor"] = PickledFunction.build_executor(executor)
+        tdata["executor"] = build_executor(executor)
         # tdata["executor"]["type"] = tdata["task_type"]
     # print("kwargs: ", kwargs)
     # add built-in sockets
@@ -513,7 +513,7 @@ def generate_tdata(
         "outputs": task_outputs,
         "catalog": catalog,
     }
-    tdata["executor"] = PickledFunction.build_executor(func)
+    tdata["executor"] = build_executor(func)
     if additional_data:
         tdata.update(additional_data)
     return tdata

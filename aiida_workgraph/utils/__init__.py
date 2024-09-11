@@ -5,6 +5,36 @@ from aiida.common.exceptions import NotExistent
 from aiida.engine.runners import Runner
 
 
+def build_executor(obj: Callable) -> Dict[str, Any]:
+    """
+    Build the executor data from the callable. This will either serialize the callable
+    using cloudpickle if it's a local or lambda function, or store its module and name
+    if it's a globally defined callable (function or class).
+
+    Args:
+        obj (Callable): The callable to be serialized or referenced.
+
+    Returns:
+        Dict[str, Any]: A dictionary containing the serialized callable or a reference
+                        to its module and name.
+    """
+    import types
+    from aiida_workgraph.orm.function_data import PickledFunction
+
+    # Check if the callable is locally defined
+    if isinstance(obj, types.FunctionType) and obj.__module__ == "__main__":
+        # Local callable (function/lambda), so pickle the callable
+        executor = PickledFunction.build_executor(obj)
+    else:
+        # Global callable (function/class), store its module and name for reference
+        executor = {
+            "path": obj.__module__,
+            "name": obj.__name__,
+            "is_pickle": False,
+        }
+    return executor
+
+
 def get_executor(data: Dict[str, Any]) -> Union[Process, Any]:
     """Import executor from path and return the executor and type."""
     import importlib
