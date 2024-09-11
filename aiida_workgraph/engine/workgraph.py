@@ -845,19 +845,34 @@ class WorkGraphEngine(Process, metaclass=Protect):
 
     def run_error_handlers(self, task_name: str) -> None:
         """Run error handler."""
+        from inspect import signature
+
         node = self.get_task_state_info(task_name, "process")
         if not node or not node.exit_status:
             return
         for _, data in self.ctx._error_handlers.items():
             if task_name in data["tasks"]:
                 handler = data["handler"]
+                handler_sig = signature(handler)
                 metadata = data["tasks"][task_name]
                 if node.exit_code.status in metadata.get("exit_codes", []):
                     self.report(f"Run error handler: {metadata}")
                     metadata.setdefault("retry", 0)
                     if metadata["retry"] < metadata["max_retries"]:
-                        handler(self, task_name, **metadata.get("kwargs", {}))
-                        metadata["retry"] += 1
+                        task = self.get_task(task_name)
+                        try:
+                            if "engine" in handler_sig.parameters:
+                                msg = handler(
+                                    task, engine=self, **metadata.get("kwargs", {})
+                                )
+                            else:
+                                msg = handler(task, **metadata.get("kwargs", {}))
+                            self.update_task(task)
+                            if msg:
+                                self.report(msg)
+                            metadata["retry"] += 1
+                        except Exception as e:
+                            self.report(f"Error in running error handler: {e}")
 
     def is_workgraph_finished(self) -> bool:
         """Check if the workgraph is finished.

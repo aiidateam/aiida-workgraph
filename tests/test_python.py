@@ -1,5 +1,5 @@
 import pytest
-from aiida_workgraph import WorkGraph, task
+from aiida_workgraph import WorkGraph, task, Task
 from typing import Any
 
 
@@ -500,17 +500,14 @@ def test_exit_code(fixture_localhost, python_executable_path):
             return {"sum": sum, "exit_code": exit_code}
         return {"sum": sum}
 
-    def handle_negative_sum(self, task_name: str):
+    def handle_negative_sum(task: Task):
         """Handle the failure code 410 of the `add`.
         Simply make the inputs positive by taking the absolute value.
         """
-        self.report("Run error handler: handle_negative_sum.")
-        # load the task from the WorkGraph engine
-        task = self.get_task(task_name)
-        # modify task inputs
+
         task.set({"x": abs(task.inputs["x"].value), "y": abs(task.inputs["y"].value)})
 
-        self.update_task(task)
+        return "Run error handler: handle_negative_sum."
 
     wg = WorkGraph("test_PythonJob")
     wg.add_task(
@@ -522,7 +519,7 @@ def test_exit_code(fixture_localhost, python_executable_path):
         code_label=python_executable_path,
     )
     # register error handler
-    wg.attach_error_handler(
+    wg.add_error_handler(
         handle_negative_sum,
         name="handle_negative_sum",
         tasks={"add1": {"exit_codes": [410], "max_retries": 5}},

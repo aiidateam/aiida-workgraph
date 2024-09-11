@@ -457,7 +457,7 @@ class WorkGraph(node_graph.NodeGraph):
         for link in wg.links:
             self.links.append(link)
 
-    def attach_error_handler(self, handler, name, tasks: dict = None) -> None:
+    def add_error_handler(self, handler, name, tasks: dict = None) -> None:
         """Attach an error handler to the workgraph."""
         self.error_handlers[name] = {"handler": handler, "tasks": tasks}
 
