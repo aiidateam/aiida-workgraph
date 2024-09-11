@@ -131,9 +131,10 @@ for i in range(2):
     wgs.append(wg)
 
 # We use wait=False so we can continue submitting
-wgs[0].submit(wait=False)
-# we wait for the last WorkGraph to finish
+wgs[0].submit()  # do not wait (by default), so that we can continue to submit next WG.
 wgs[1].submit(wait=True)
+# we wait for all the WorkGraphs to finish
+wgs[0].wait()
 
 # %%
 # We print the difference between the mtime (the time the WorkGraph has been last time changed) and the ctime (the time of creation). Since the WorkGraph's status is changed when finished, this give us a good estimate of the running time.
@@ -160,16 +161,16 @@ print("Time WG1", load_node(wgs[1].pk).mtime - load_node(wgs[1].pk).ctime)
 
 # This graph_builder runs the add10_wg over a loop and its
 @task.graph_builder()
-def parallel_add(nb_it):
+def parallel_add(nb_iterations):
     wg = WorkGraph()
-    for i in range(nb_it):
+    for i in range(nb_iterations):
         wg.add_task(add10_wg, name=f"add10_{i}", integer=i)
     return wg
 
 
 # Submitting a parallel that adds 10 two times to different numbers
 wg = WorkGraph(f"parallel_graph_builder")
-add_task = wg.add_task(parallel_add, name="parallel_add", nb_it=2)
+add_task = wg.add_task(parallel_add, name="parallel_add", nb_iterations=2)
 wg.submit(wait=True)
 
 
@@ -178,7 +179,7 @@ wg.submit(wait=True)
 print("Time for running with graph builder", add_task.mtime - add_task.ctime)
 
 # %%
-# We can see that the time is more than 5 seconds which means that the two additions
+# We can see that the time is less than 10 seconds which means that the two additions
 # were performed in parallel
 
 # %%
@@ -197,7 +198,7 @@ client = get_daemon_client()
 # We rerun the last graph builder for 5 iterations
 
 wg = WorkGraph("wg_daemon_worker_1")
-wg.add_task(parallel_add, name="parallel_add", nb_it=5)
+wg.add_task(parallel_add, name="parallel_add", nb_iterations=5)
 wg.submit(wait=True)
 print(
     f"Time for running with {client.get_numprocesses()['numprocesses']} worker",
@@ -214,7 +215,7 @@ client.increase_workers(1)
 # Now we submit again and the time have shortens a bit.
 
 wg = WorkGraph("wg_daemon_worker_2")
-wg.add_task(parallel_add, name="parallel_add", nb_it=5)
+wg.add_task(parallel_add, name="parallel_add", nb_iterations=5)
 wg.submit(wait=True)
 print(
     f"Time for running with {client.get_numprocesses()['numprocesses']} worker",
