@@ -51,8 +51,7 @@ wg.to_html()
 # %%
 # Run the workgraph
 
-wg.submit(wait=True)
-print(add_multiply1.outputs["result"].value)
+wg.run()
 
 # %%
 # However linking the two WorkGraphs will not work
