@@ -127,7 +127,7 @@ print("add_uv created at", add_uv.ctime.time(), "finished at", add_uv.mtime.time
 @task.graph_builder(
     inputs=[{"name": "integer"}], outputs=[{"name": "sum", "from": "sum_task.result"}]
 )
-def add10_wg(integer):
+def add10(integer):
     wg = WorkGraph()
     code = load_code("add@localhost")  # code needs to loaded in the graph builder
     add = wg.add_task(
@@ -142,7 +142,7 @@ def add10_wg(integer):
 wgs = []
 for i in range(2):
     wg = WorkGraph(f"parallel_wg{i}")
-    wg.add_task(add10_wg, name=f"add10_{i}", integer=i)
+    wg.add_task(add10, name=f"add10_{i}", integer=i)
     wgs.append(wg)
 
 # We use wait=False so we can continue submitting
@@ -174,12 +174,12 @@ print("Time WG1", load_node(wgs[1].pk).mtime - load_node(wgs[1].pk).ctime)
 # -------------------
 
 
-# This graph_builder runs the add10_wg over a loop and its
+# This graph_builder runs the add10 over a loop and its
 @task.graph_builder()
 def parallel_add(nb_iterations):
     wg = WorkGraph()
     for i in range(nb_iterations):
-        wg.add_task(add10_wg, name=f"add10_{i}", integer=i)
+        wg.add_task(add10, name=f"add10_{i}", integer=i)
     return wg
 
 
