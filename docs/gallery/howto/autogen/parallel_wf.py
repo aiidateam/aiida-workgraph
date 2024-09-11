@@ -48,9 +48,9 @@ except NotExistent:
 wg = WorkGraph("parallel")
 x, y, u, v = (1, 2, 3, 4)
 add_xy = wg.add_task(ArithmeticAddCalculation, name="add_xy", x=x, y=y, code=code)
-add_xy.set({"metadata.options.sleep": 5})  # the CalcJob will sleep 5 seconds
+add_xy.set({"metadata.options.sleep": 3})  # the CalcJob will sleep 3 seconds
 add_uv = wg.add_task(ArithmeticAddCalculation, name="add_uv", x=u, y=v, code=code)
-add_uv.set({"metadata.options.sleep": 5})  # the CalcJob will sleep 5 seconds
+add_uv.set({"metadata.options.sleep": 3})  # the CalcJob will sleep 3 seconds
 add_xyuv = wg.add_task(
     ArithmeticAddCalculation,
     name="add_xyuv",
@@ -94,8 +94,8 @@ def add(x, y, sleep):
 
 wg = WorkGraph("parallel")
 x, y, u, v = (1, 2, 3, 4)
-add_xy = wg.add_task(add, x=x, y=y, sleep=5)
-add_uv = wg.add_task(add, x=x, y=y, sleep=5)
+add_xy = wg.add_task(add, x=x, y=y, sleep=3)
+add_uv = wg.add_task(add, x=x, y=y, sleep=3)
 add_xyuv = wg.add_task(
     add, x=add_xy.outputs["result"], y=add_uv.outputs["result"], sleep=0
 )
@@ -113,7 +113,7 @@ print("add_xy created at", add_xy.ctime.time(), "finished at", add_xy.mtime.time
 print("add_uv created at", add_uv.ctime.time(), "finished at", add_uv.mtime.time())
 
 # %%
-# We can see that the calcfunctions have been run with a 5 seconds delay
+# We can see that the calcfunctions have been run with a 3 seconds delay
 
 
 # %%
@@ -133,7 +133,7 @@ def add10_wg(integer):
     add = wg.add_task(
         ArithmeticAddCalculation, name="sum_task", x=10, y=integer, code=code
     )
-    add.set({"metadata.options.sleep": 5})
+    add.set({"metadata.options.sleep": 3})
     return wg
 
 
@@ -197,7 +197,7 @@ wg.submit(wait=True)
 print("Time for running with graph builder", add_task.mtime - add_task.ctime)
 
 # %%
-# We can see that the time is less than 10 seconds which means that the two additions
+# We can see that the time is less than 6 seconds which means that the two additions
 # were performed in parallel
 
 # %%
@@ -213,10 +213,10 @@ from aiida.engine.daemon.client import get_daemon_client
 client = get_daemon_client()
 
 # %%
-# We rerun the last graph builder for 5 iterations
+# We rerun the last graph builder for 3 iterations
 
 wg = WorkGraph("wg_daemon_worker_1")
-wg.add_task(parallel_add, name="parallel_add", nb_iterations=5)
+wg.add_task(parallel_add, name="parallel_add", nb_iterations=3)
 wg.to_html()
 
 # %%
@@ -236,7 +236,7 @@ client.increase_workers(1)
 # Now we submit again and the time have shortens a bit.
 
 wg = WorkGraph("wg_daemon_worker_2")
-wg.add_task(parallel_add, name="parallel_add", nb_iterations=5)
+wg.add_task(parallel_add, name="parallel_add", nb_iterations=3)
 wg.to_html()
 
 # %%
