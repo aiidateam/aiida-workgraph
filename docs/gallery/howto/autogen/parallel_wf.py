@@ -31,7 +31,7 @@ load_profile()
 
 from aiida_workgraph import WorkGraph, task
 from aiida.calculations.arithmetic.add import ArithmeticAddCalculation
-from aiida.orm import Int, InstalledCode, load_computer, load_code, load_node
+from aiida.orm import InstalledCode, load_computer, load_code, load_node
 from aiida.common.exceptions import NotExistent
 
 # The ArithmeticAddCalculation needs to know where bash is stored
@@ -47,16 +47,27 @@ except NotExistent:
 
 wg = WorkGraph("parallel")
 x, y, u, v = (1, 2, 3, 4)
-add_xy = wg.add_task(ArithmeticAddCalculation, x=x, y=y, code=code)
+add_xy = wg.add_task(ArithmeticAddCalculation, name="add_xy", x=x, y=y, code=code)
 add_xy.set({"metadata.options.sleep": 5})  # the CalcJob will sleep 5 seconds
-add_uv = wg.add_task(ArithmeticAddCalculation, x=u, y=v, code=code)
+add_uv = wg.add_task(ArithmeticAddCalculation, name="add_uv", x=u, y=v, code=code)
 add_uv.set({"metadata.options.sleep": 5})  # the CalcJob will sleep 5 seconds
 add_xyuv = wg.add_task(
     ArithmeticAddCalculation,
+    name="add_xyuv",
     x=add_xy.outputs["sum"],
     y=add_uv.outputs["sum"],
     code=code,
 )
+# %%
+# We can verify that the tasks add_xy and add_uv are independent from each other
+# and therefore will be run automatically in parallel.
+
+wg.to_html()
+
+
+# %%
+# Running workgraph
+
 wg.submit(wait=True)
 
 # %%
@@ -88,6 +99,10 @@ add_uv = wg.add_task(add, x=x, y=y, sleep=5)
 add_xyuv = wg.add_task(
     add, x=add_xy.outputs["result"], y=add_uv.outputs["result"], sleep=0
 )
+
+wg.to_html()
+
+# %%
 
 wg.submit(wait=True)
 
@@ -171,6 +186,9 @@ def parallel_add(nb_iterations):
 # Submitting a parallel that adds 10 two times to different numbers
 wg = WorkGraph(f"parallel_graph_builder")
 add_task = wg.add_task(parallel_add, name="parallel_add", nb_iterations=2)
+wg.to_html()
+
+# %%
 wg.submit(wait=True)
 
 
@@ -199,6 +217,9 @@ client = get_daemon_client()
 
 wg = WorkGraph("wg_daemon_worker_1")
 wg.add_task(parallel_add, name="parallel_add", nb_iterations=5)
+wg.to_html()
+
+# %%
 wg.submit(wait=True)
 print(
     f"Time for running with {client.get_numprocesses()['numprocesses']} worker",
@@ -216,6 +237,10 @@ client.increase_workers(1)
 
 wg = WorkGraph("wg_daemon_worker_2")
 wg.add_task(parallel_add, name="parallel_add", nb_iterations=5)
+wg.to_html()
+
+# %%
+
 wg.submit(wait=True)
 print(
     f"Time for running with {client.get_numprocesses()['numprocesses']} worker",
