@@ -215,7 +215,8 @@ generate_node_graph(wg2.pk)
 # %%
 # Example for loop
 # ----------------
-# In this example we will create a dynamic number as specified in the input of the WorkGraph.
+# In this example we will create a dynamic number of tasks as specified in the
+# input of the WorkGraph.
 
 
 @task.calcfunction()
@@ -223,7 +224,7 @@ def add_one(x):
     return x + 1
 
 
-@task.graph_builder(outputs=[{"name": "result", "from": "context.task_out]"}])
+@task.graph_builder(outputs=[{"name": "result", "from": "context.task_out"}])
 def for_loop(nb_iterations: Int):
     wg = WorkGraph()
     for i in range(nb_iterations):
@@ -261,8 +262,9 @@ generate_node_graph(wg.pk)
 # %%
 # Example if-then-else
 # --------------------
-# Suppose to run a different task depending on the input. We want to run the add_one task if the number is below 2
-# otherwise we want to run a modulo 2 task. For thet we require to create a context.
+# Suppose we want to run a different task depending on the input. We run the
+# add_one task if the number is below 2 otherwise we run a modulo 2
+# task.
 
 from aiida_workgraph import task, WorkGraph
 from aiida.orm import Int
@@ -281,6 +283,7 @@ def if_then_else(i: Int):
     else:
         task = wg.add_task(modulo_two, x=i)
 
+    # same concept as before, please read the for loop example for explanation
     task.set_context({"result": "task_out"})
     return wg
 
