@@ -632,9 +632,7 @@ def workgraph_to_short_json(
     #
     for name, task in wgdata["tasks"].items():
         # Add required inputs to nodes
-        inputs = [
-            input for name, input in task["inputs"].items() if name in task["args"]
-        ]
+        inputs = [{"name": name} for name in task["inputs"] if name in task["args"]]
         properties = process_properties(task)
         wgdata_short["nodes"][name] = {
             "label": task["name"],

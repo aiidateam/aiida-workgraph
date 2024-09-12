@@ -210,8 +210,6 @@ class WorkGraphSaver:
         # self.wgdata["created"] = datetime.datetime.utcnow()
         # self.wgdata["lastUpdate"] = datetime.datetime.utcnow()
         short_wgdata = workgraph_to_short_json(self.wgdata)
-        for name, task in short_wgdata.items():
-            short_wgdata["nodes"][name] = serialize(task)
         self.process.base.extras.set("_workgraph_short", short_wgdata)
         self.save_task_states()
         for name, task in self.wgdata["tasks"].items():
