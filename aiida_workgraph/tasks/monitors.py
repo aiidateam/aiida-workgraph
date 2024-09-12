@@ -27,7 +27,7 @@ class TimeMonitor(Task):
 
     def get_executor(self) -> Dict[str, str]:
         return {
-            "path": "aiida_workgraph.executors.monitors",
+            "module": "aiida_workgraph.executors.monitors",
             "name": "time_monitor",
         }
 
@@ -57,7 +57,7 @@ class FileMonitor(Task):
 
     def get_executor(self) -> Dict[str, str]:
         return {
-            "path": "aiida_workgraph.executors.monitors",
+            "module": "aiida_workgraph.executors.monitors",
             "name": "file_monitor",
         }
 
@@ -89,6 +89,6 @@ class TaskMonitor(Task):
 
     def get_executor(self) -> Dict[str, str]:
         return {
-            "path": "aiida_workgraph.executors.monitors",
+            "module": "aiida_workgraph.executors.monitors",
             "name": "task_monitor",
         }

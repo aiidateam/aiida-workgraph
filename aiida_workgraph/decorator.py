@@ -132,10 +132,10 @@ def build_task(
         return build_task_from_workgraph(executor)
     elif isinstance(executor, str):
         (
-            path,
+            module,
             executor_name,
         ) = executor.rsplit(".", 1)
-        executor, _ = get_executor({"path": path, "name": executor_name})
+        executor, _ = get_executor({"module": module, "name": executor_name})
     if callable(executor):
         return build_task_from_callable(executor, inputs=inputs, outputs=outputs)
 
@@ -268,7 +268,7 @@ def build_task_from_AiiDA(
     outputs.append({"identifier": "workgraph.any", "name": "_outputs"})
     outputs.append({"identifier": "workgraph.any", "name": "_wait"})
     inputs.append({"identifier": "workgraph.any", "name": "_wait", "link_limit": 1e6})
-    tdata["metadata"]["node_class"] = {"path": "aiida_workgraph.task", "name": "Task"}
+    tdata["metadata"]["node_class"] = {"module": "aiida_workgraph.task", "name": "Task"}
     tdata["args"] = args
     tdata["kwargs"] = kwargs
     tdata["inputs"] = inputs
@@ -328,7 +328,7 @@ def build_pythonjob_task(func: Callable) -> Task:
     tdata["metadata"]["task_type"] = "PYTHONJOB"
     tdata["identifier"] = "workgraph.pythonjob"
     tdata["metadata"]["node_class"] = {
-        "path": "aiida_workgraph.tasks.pythonjob",
+        "module": "aiida_workgraph.tasks.pythonjob",
         "name": "PythonJob",
     }
     task = create_task(tdata)
@@ -438,13 +438,13 @@ def build_task_from_workgraph(wg: any) -> Task:
     outputs.append({"identifier": "workgraph.any", "name": "_outputs"})
     outputs.append({"identifier": "workgraph.any", "name": "_wait"})
     inputs.append({"identifier": "workgraph.any", "name": "_wait", "link_limit": 1e6})
-    tdata["metadata"]["node_class"] = {"path": "aiida_workgraph.task", "name": "Task"}
+    tdata["metadata"]["node_class"] = {"module": "aiida_workgraph.task", "name": "Task"}
     tdata["kwargs"] = kwargs
     tdata["inputs"] = inputs
     tdata["outputs"] = outputs
     tdata["identifier"] = wg.name
     executor = {
-        "path": "aiida_workgraph.engine.workgraph",
+        "module": "aiida_workgraph.engine.workgraph",
         "name": "WorkGraphEngine",
         "wgdata": serialize(wg.to_dict(store_nodes=True)),
         "type": tdata["metadata"]["task_type"],
@@ -518,7 +518,7 @@ def generate_tdata(
         "metadata": {
             "task_type": task_type,
             "catalog": catalog,
-            "node_class": {"path": "aiida_workgraph.task", "name": "Task"},
+            "node_class": {"module": "aiida_workgraph.task", "name": "Task"},
         },
         "properties": properties,
         "inputs": _inputs,

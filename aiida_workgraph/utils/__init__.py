@@ -57,10 +57,10 @@ def get_executor(data: Dict[str, Any]) -> Union[Process, Any]:
             executor = CalculationFactory(data["name"])
         elif type == "DataFactory":
             executor = DataFactory(data["name"])
-        elif data["name"] == "" and data["path"] == "":
+        elif data["name"] == "" and data["module"] == "":
             executor = None
         else:
-            module = importlib.import_module("{}".format(data.get("path", "")))
+            module = importlib.import_module("{}".format(data.get("module", "")))
             executor = getattr(module, data["name"])
 
     return executor, type
@@ -397,7 +397,10 @@ def serialize_properties(wgdata):
     import inspect
 
     for _, task in wgdata["tasks"].items():
-        for _, prop in task["properties"].items():
+        for _, input in task["inputs"].items():
+            if input["property"] is None:
+                continue
+            prop = input["property"]
             if inspect.isfunction(prop["value"]):
                 prop["value"] = PickledLocalFunction(prop["value"]).store()
 

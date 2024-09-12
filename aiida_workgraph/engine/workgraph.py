@@ -514,7 +514,10 @@ class WorkGraphEngine(Process, metaclass=Protect):
         wgdata = self.node.base.extras.get("_workgraph")
         for name, task in wgdata["tasks"].items():
             wgdata["tasks"][name] = deserialize_unsafe(task)
-            for _, prop in wgdata["tasks"][name]["properties"].items():
+            for _, input in wgdata["tasks"][name]["inputs"].items():
+                if input["property"] is None:
+                    continue
+                prop = input["property"]
                 if isinstance(prop["value"], PickledLocalFunction):
                     prop["value"] = prop["value"].value
         wgdata["error_handlers"] = deserialize_unsafe(wgdata["error_handlers"])
@@ -799,10 +802,8 @@ class WorkGraphEngine(Process, metaclass=Protect):
                 f"Wihle Task {name}: this iteration finished. Try to reset for the next iteration."
             )
             # reset the condition tasks
-            for input in self.ctx._tasks[name]["inputs"]:
-                if input["name"].upper() == "CONDITIONS":
-                    for link in input["links"]:
-                        self.reset_task(link["from_node"], recursive=False)
+            for link in self.ctx._tasks[name]["inputs"]["conditions"]["links"]:
+                self.reset_task(link["from_node"], recursive=False)
             # reset the task and all its children, so that the task can run again
             # do not reset the execution count
             self.reset_task(name, reset_execution_count=False)
@@ -820,7 +821,7 @@ class WorkGraphEngine(Process, metaclass=Protect):
         # check the conditions of the while task
         not_excess_max_iterations = (
             self.ctx._tasks[name]["execution_count"]
-            < self.ctx._tasks[name]["properties"]["max_iterations"]["value"]
+            < self.ctx._tasks[name]["inputs"]["max_iterations"]["property"]["value"]
         )
         conditions = [not_excess_max_iterations]
         _, kwargs, _, _, _ = self.get_inputs(name)
