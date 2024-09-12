@@ -5,17 +5,13 @@ import time
 from aiida.calculations.arithmetic.add import ArithmeticAddCalculation
 
 
-def test_to_dict(wg_calcfunction):
+def test_from_dict(decorated_add):
     """Export NodeGraph to dict."""
-    wg = wg_calcfunction
-    wgdata = wg.to_dict()
-    assert len(wgdata["tasks"]) == len(wg.tasks)
-    assert len(wgdata["links"]) == len(wg.links)
-
-
-def test_from_dict(wg_calcfunction):
-    """Export NodeGraph to dict."""
-    wg = wg_calcfunction
+    wg = WorkGraph("test_from_dict")
+    task1 = wg.add_task(decorated_add, x=2, y=3)
+    wg.add_task(
+        "workgraph.test_sum_diff", name="sumdiff2", x=4, y=task1.outputs["result"]
+    )
     wgdata = wg.to_dict()
     wg1 = WorkGraph.from_dict(wgdata)
     assert len(wg.tasks) == len(wg1.tasks)

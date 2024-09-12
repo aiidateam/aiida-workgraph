@@ -5,9 +5,34 @@ from aiida.common.exceptions import NotExistent
 from aiida.engine.runners import Runner
 
 
-def get_item_by_name(data: List[Dict[str, Any]], name: str) -> Dict[str, Any]:
-    """Get the item by name from a list of dictionaries."""
-    return [item for item in data if item["name"] == name][0]
+def get_sorted_names(data: dict) -> list:
+    """Get the sorted names from a dictionary."""
+    print("data: ", data)
+    sorted_names = [
+        name
+        for name, _ in sorted(
+            ((name, item["list_index"]) for name, item in data.items()),
+            key=lambda x: x[1],
+        )
+    ]
+    return sorted_names
+
+
+def store_nodes_recursely(data: Any) -> None:
+    """Recurse through a data structure and store any unstored nodes that are found along the way
+    :param data: a data structure potentially containing unstored nodes
+    """
+    from aiida.orm import Node
+    import collections.abc
+
+    if isinstance(data, Node) and not data.is_stored:
+        data.store()
+    elif isinstance(data, collections.abc.Mapping):
+        for _, value in data.items():
+            store_nodes_recursely(value)
+    elif isinstance(data, collections.abc.Sequence) and not isinstance(data, str):
+        for value in data:
+            store_nodes_recursely(value)
 
 
 def get_executor(data: Dict[str, Any]) -> Union[Process, Any]:
@@ -137,11 +162,19 @@ def merge_properties(wgdata: Dict[str, Any]) -> None:
     So that no "." in the key name.
     """
     for _, task in wgdata["tasks"].items():
-        for prop in task["properties"]:
-            key = prop["name"]
+        for key, prop in task["properties"].items():
             if "." in key and prop["value"] not in [None, {}]:
                 root, key = key.split(".", 1)
-                root_prop = get_item_by_name(task["properties"], root)
+                root_prop = task["properties"][root]
+                update_nested_dict(root_prop["value"], key, prop["value"])
+                prop["value"] = None
+        for key, input in task["inputs"].items():
+            if input["property"] is None:
+                continue
+            prop = input["property"]
+            if "." in key and prop["value"] not in [None, {}]:
+                root, key = key.split(".", 1)
+                root_prop = task["inputs"][root]["property"]
                 update_nested_dict(root_prop["value"], key, prop["value"])
                 prop["value"] = None
 
@@ -364,7 +397,7 @@ def serialize_properties(wgdata):
     import inspect
 
     for _, task in wgdata["tasks"].items():
-        for prop in task["properties"]:
+        for _, prop in task["properties"].items():
             if inspect.isfunction(prop["value"]):
                 prop["value"] = PickledLocalFunction(prop["value"]).store()
 
@@ -537,39 +570,50 @@ def recursive_to_dict(attr_dict):
         return attr_dict
 
 
-def process_properties(properties: Dict) -> Dict:
+def get_raw_value(identifier, value: Any) -> Any:
+    """Get the raw value from a Data node."""
+    if identifier in [
+        "workgraph.int",
+        "workgraph.float",
+        "workgraph.string",
+        "workgraph.bool",
+    ]:
+        if value is not None:
+            return value
+    elif identifier in [
+        "workgraph.aiida_int",
+        "workgraph.aiida_float",
+        "workgraph.aiida_string",
+        "workgraph.aiida_bool",
+    ]:
+        if value is not None and isinstance(value, orm.Data):
+            return value.value
+        else:
+            return value
+    elif (
+        identifier == "workgraph.aiida_structure"
+        and value is not None
+        and isinstance(value, orm.StructureData)
+    ):
+        content = value.backend_entity.attributes
+        content["node_type"] = value.node_type
+        return content
+
+
+def process_properties(task: Dict) -> Dict:
     """Extract raw values."""
     result = {}
-    for prop in properties:
+    for name, prop in task["properties"].items():
         identifier = prop["identifier"]
         value = prop.get("value")
-
-        if identifier in [
-            "workgraph.int",
-            "workgraph.float",
-            "workgraph.string",
-            "workgraph.bool",
-        ]:
-            if value is not None:
-                result[prop["name"]] = value
-        elif identifier in [
-            "workgraph.aiida_int",
-            "workgraph.aiida_float",
-            "workgraph.aiida_string",
-            "workgraph.aiida_bool",
-        ]:
-            if value is not None and isinstance(value, orm.Data):
-                result[prop["name"]] = value.value
-            else:
-                result[prop["name"]] = value
-        elif (
-            identifier == "workgraph.aiida_structure"
-            and value is not None
-            and isinstance(value, orm.StructureData)
-        ):
-            content = value.backend_entity.attributes
-            content["node_type"] = value.node_type
-            result[prop["name"]] = content
+        result[name] = get_raw_value(identifier, value)
+    #
+    for name, input in task["inputs"].items():
+        if input["property"] is not None:
+            prop = input["property"]
+            identifier = prop["identifier"]
+            value = prop.get("value")
+            result[name] = get_raw_value(identifier, value)
 
     return result
 
@@ -588,8 +632,10 @@ def workgraph_to_short_json(
     #
     for name, task in wgdata["tasks"].items():
         # Add required inputs to nodes
-        inputs = [input for input in task["inputs"] if input["name"] in task["args"]]
-        properties = process_properties(task.get("properties", []))
+        inputs = [
+            input for name, input in task["inputs"].items() if name in task["args"]
+        ]
+        properties = process_properties(task)
         wgdata_short["nodes"][name] = {
             "label": task["name"],
             "node_type": task["metadata"]["node_type"].upper(),

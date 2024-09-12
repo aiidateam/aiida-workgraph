@@ -177,6 +177,7 @@ class WorkGraph(node_graph.NodeGraph):
 
     def to_dict(self, store_nodes=False) -> Dict[str, Any]:
         import cloudpickle as pickle
+        from aiida_workgraph.utils import store_nodes_recursely
 
         wgdata = super().to_dict()
         # save the sequence and context
@@ -200,14 +201,7 @@ class WorkGraph(node_graph.NodeGraph):
         wgdata["error_handlers"] = pickle.dumps(self.error_handlers)
         wgdata["tasks"] = wgdata.pop("nodes")
         if store_nodes:
-            for task in wgdata["tasks"].values():
-                for prop in task["properties"]:
-                    if isinstance(prop["value"], aiida.orm.Node):
-                        prop["value"].store()
-                for input in task["inputs"]:
-                    if isinstance(input["property"]["value"], aiida.orm.Node):
-                        input["property"]["value"].store()
-
+            store_nodes_recursely(wgdata)
         return wgdata
 
     def wait(self, timeout: int = 50, tasks: dict = None) -> None:

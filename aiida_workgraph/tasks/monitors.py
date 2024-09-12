@@ -22,6 +22,7 @@ class TimeMonitor(Task):
         inp.add_property("workgraph.any", default=86400.0)
         inp = self.inputs.new("workgraph.any", "_wait")
         inp.link_limit = 100000
+        self.outputs.new("workgraph.any", "result")
         self.outputs.new("workgraph.any", "_wait")
 
     def get_executor(self) -> Dict[str, str]:
@@ -51,6 +52,7 @@ class FileMonitor(Task):
         inp.add_property("workgraph.any", default=86400.0)
         inp = self.inputs.new("workgraph.any", "_wait")
         inp.link_limit = 100000
+        self.outputs.new("workgraph.any", "result")
         self.outputs.new("workgraph.any", "_wait")
 
     def get_executor(self) -> Dict[str, str]:
@@ -82,6 +84,7 @@ class TaskMonitor(Task):
         inp.add_property("workgraph.any", default=86400.0)
         inp = self.inputs.new("workgraph.any", "_wait")
         inp.link_limit = 100000
+        self.outputs.new("workgraph.any", "result")
         self.outputs.new("workgraph.any", "_wait")
 
     def get_executor(self) -> Dict[str, str]:

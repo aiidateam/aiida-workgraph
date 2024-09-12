@@ -16,7 +16,9 @@ def prepare_for_workgraph_task(task: dict, kwargs: dict) -> tuple:
         # because kwargs is updated using update_nested_dict_with_special_keys
         # which means the data is grouped by the task name
         for socket_name, value in data.items():
-            wgdata["tasks"][task_name]["properties"][socket_name]["value"] = value
+            wgdata["tasks"][task_name]["inputs"][socket_name]["property"][
+                "value"
+            ] = value
     # merge the properties
     merge_properties(wgdata)
     metadata = {"call_link_label": task["name"]}
@@ -31,10 +33,18 @@ def prepare_for_python_task(task: dict, kwargs: dict, var_kwargs: dict) -> dict:
 
     # get the names kwargs for the PythonJob, which are the inputs before _wait
     function_kwargs = {}
-    for input in task["inputs"]:
-        if input["name"] == "_wait":
+    # TODO better way to find the function_kwargs
+    input_names = [
+        name
+        for name, _ in sorted(
+            ((name, input["list_index"]) for name, input in task["inputs"].items()),
+            key=lambda x: x[1],
+        )
+    ]
+    for name in input_names:
+        if name == "_wait":
             break
-        function_kwargs[input["name"]] = kwargs.pop(input["name"], None)
+        function_kwargs[name] = kwargs.pop(name, None)
     # if the var_kwargs is not None, we need to pop the var_kwargs from the kwargs
     # then update the function_kwargs if var_kwargs is not None
     if task["var_kwargs"] is not None:
@@ -88,7 +98,13 @@ def prepare_for_python_task(task: dict, kwargs: dict, var_kwargs: dict) -> dict:
         + task["executor"]["function_source_code_without_decorator"]
     )
     # outputs
-    function_outputs = task["outputs"]
+    function_outputs = [
+        output
+        for output, _ in sorted(
+            ((output, output["list_index"]) for output in task["outputs"].values()),
+            key=lambda x: x[1],
+        )
+    ]
     # serialize the kwargs into AiiDA Data
     function_kwargs = serialize_to_aiida_nodes(function_kwargs)
     # transfer the args to kwargs

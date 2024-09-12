@@ -83,20 +83,24 @@ class WorkGraphSaver:
         """
         # reset task input links
         for name, task in self.wgdata["tasks"].items():
-            for input in task["inputs"]:
+            for _, input in task["inputs"].items():
                 input["links"] = []
-            for output in task["outputs"]:
+            for _, output in task["outputs"].items():
                 output["links"] = []
         for link in self.wgdata["links"]:
             to_socket = [
                 socket
-                for socket in self.wgdata["tasks"][link["to_node"]]["inputs"]
-                if socket["name"] == link["to_socket"]
+                for name, socket in self.wgdata["tasks"][link["to_node"]][
+                    "inputs"
+                ].items()
+                if name == link["to_socket"]
             ][0]
             from_socket = [
                 socket
-                for socket in self.wgdata["tasks"][link["from_node"]]["outputs"]
-                if socket["name"] == link["from_socket"]
+                for name, socket in self.wgdata["tasks"][link["from_node"]][
+                    "outputs"
+                ].items()
+                if name == link["from_socket"]
             ][0]
             to_socket["links"].append(link)
             from_socket["links"].append(link)
@@ -134,7 +138,7 @@ class WorkGraphSaver:
         """Find the input and outputs tasks for the zone."""
         task = self.wgdata["tasks"][name]
         input_tasks = []
-        for input in self.wgdata["tasks"][name]["inputs"]:
+        for _, input in self.wgdata["tasks"][name]["inputs"].items():
             for link in input["links"]:
                 input_tasks.append(link["from_node"])
         # find all the input tasks
@@ -152,7 +156,7 @@ class WorkGraphSaver:
             else:
                 # if the child task is not a zone, get the input tasks of the child task
                 # find all the input tasks which outside the while zone
-                for input in self.wgdata["tasks"][child_task]["inputs"]:
+                for _, input in self.wgdata["tasks"][child_task]["inputs"].items():
                     for link in input["links"]:
                         input_tasks.append(link["from_node"])
         # find the input tasks which are not in the zone
@@ -206,10 +210,12 @@ class WorkGraphSaver:
         # self.wgdata["created"] = datetime.datetime.utcnow()
         # self.wgdata["lastUpdate"] = datetime.datetime.utcnow()
         short_wgdata = workgraph_to_short_json(self.wgdata)
+        for name, task in short_wgdata.items():
+            short_wgdata["nodes"][name] = serialize(task)
         self.process.base.extras.set("_workgraph_short", short_wgdata)
         self.save_task_states()
         for name, task in self.wgdata["tasks"].items():
-            for prop in task["properties"]:
+            for _, prop in task["properties"].items():
                 if inspect.isfunction(prop["value"]):
                     prop["value"] = PickledLocalFunction(prop["value"]).store()
             self.wgdata["tasks"][name] = serialize(task)

@@ -70,9 +70,7 @@ def test_decorators_task_args(task_function):
     assert tdata["kwargs"] == ["b"]
     assert tdata["var_args"] is None
     assert tdata["var_kwargs"] == "c"
-    assert set([output["name"] for output in tdata["outputs"]]) == set(
-        ["result", "_outputs", "_wait"]
-    )
+    assert set(tdata["outputs"].keys()) == set(["result", "_outputs", "_wait"])
 
 
 @pytest.fixture(params=["decorator_factory", "decorator"])
