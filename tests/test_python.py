@@ -486,6 +486,8 @@ def test_load_pythonjob(fixture_localhost, python_executable_path):
     )
     assert wg.tasks["add"].outputs["result"].value.value == "Hello, World!"
     wg = WorkGraph.load(wg.pk)
+    wg.tasks["add"].inputs["x"].value = "Hello, "
+    wg.tasks["add"].inputs["y"].value = "World!"
 
 
 def test_exit_code(fixture_localhost, python_executable_path):

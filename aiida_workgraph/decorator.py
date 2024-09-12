@@ -293,7 +293,6 @@ def build_pythonjob_task(func: Callable) -> Task:
     tdata = {
         "metadata": {"task_type": "PYTHONJOB"},
         "executor": PythonJob,
-        "task_type": "CALCJOB",
     }
     _, tdata_py = build_task_from_AiiDA(tdata)
     tdata = deepcopy(func.tdata)
@@ -347,7 +346,6 @@ def build_shelljob_task(
     tdata = {
         "metadata": {"task_type": "SHELLJOB"},
         "executor": ShellJob,
-        "task_type": "SHELLJOB",
     }
     _, tdata = build_task_from_AiiDA(tdata)
     # create input sockets for the nodes, if it is linked other sockets
