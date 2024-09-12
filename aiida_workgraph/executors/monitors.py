@@ -13,16 +13,19 @@ async def monitor(function, interval, timeout, *args, **kwargs):
         await asyncio.sleep(interval)
 
 
-def file_monitor(filename):
+def file_monitor(filename: str):
     """Check if the file exists."""
     import os
 
     return os.path.exists(filename)
 
 
-def time_monitor(time):
+def time_monitor(time: str):
     """Return True if the current time is greater than the given time."""
     import datetime
+
+    # load the time string
+    time = datetime.datetime.strptime(time, "%Y-%m-%d %H:%M:%S.%f")
 
     return datetime.datetime.now() > time
 

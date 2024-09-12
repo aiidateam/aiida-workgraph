@@ -22,11 +22,12 @@ class TimeMonitor(Task):
         inp.add_property("workgraph.any", default=86400.0)
         inp = self.inputs.new("workgraph.any", "_wait")
         inp.link_limit = 100000
+        self.outputs.new("workgraph.any", "result")
         self.outputs.new("workgraph.any", "_wait")
 
     def get_executor(self) -> Dict[str, str]:
         return {
-            "path": "aiida_workgraph.executors.monitors",
+            "module": "aiida_workgraph.executors.monitors",
             "name": "time_monitor",
         }
 
@@ -51,11 +52,12 @@ class FileMonitor(Task):
         inp.add_property("workgraph.any", default=86400.0)
         inp = self.inputs.new("workgraph.any", "_wait")
         inp.link_limit = 100000
+        self.outputs.new("workgraph.any", "result")
         self.outputs.new("workgraph.any", "_wait")
 
     def get_executor(self) -> Dict[str, str]:
         return {
-            "path": "aiida_workgraph.executors.monitors",
+            "module": "aiida_workgraph.executors.monitors",
             "name": "file_monitor",
         }
 
@@ -82,10 +84,11 @@ class TaskMonitor(Task):
         inp.add_property("workgraph.any", default=86400.0)
         inp = self.inputs.new("workgraph.any", "_wait")
         inp.link_limit = 100000
+        self.outputs.new("workgraph.any", "result")
         self.outputs.new("workgraph.any", "_wait")
 
     def get_executor(self) -> Dict[str, str]:
         return {
-            "path": "aiida_workgraph.executors.monitors",
+            "module": "aiida_workgraph.executors.monitors",
             "name": "task_monitor",
         }

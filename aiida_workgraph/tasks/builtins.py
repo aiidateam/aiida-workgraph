@@ -91,7 +91,7 @@ class Gather(Task):
 
     def get_executor(self) -> Dict[str, str]:
         return {
-            "path": "aiida_workgraph.executors.builtins",
+            "module": "aiida_workgraph.executors.builtins",
             "name": "GatherWorkChain",
         }
 
@@ -143,7 +143,7 @@ class AiiDAInt(Task):
 
     def get_executor(self) -> Dict[str, str]:
         return {
-            "path": "aiida.orm",
+            "module": "aiida.orm",
             "name": "Int",
         }
 
@@ -162,7 +162,7 @@ class AiiDAFloat(Task):
 
     def get_executor(self) -> Dict[str, str]:
         return {
-            "path": "aiida.orm",
+            "module": "aiida.orm",
             "name": "Float",
         }
 
@@ -181,7 +181,7 @@ class AiiDAString(Task):
 
     def get_executor(self) -> Dict[str, str]:
         return {
-            "path": "aiida.orm",
+            "module": "aiida.orm",
             "name": "Str",
         }
 
@@ -202,7 +202,7 @@ class AiiDAList(Task):
 
     def get_executor(self) -> Dict[str, str]:
         return {
-            "path": "aiida.orm",
+            "module": "aiida.orm",
             "name": "List",
         }
 
@@ -223,7 +223,7 @@ class AiiDADict(Task):
 
     def get_executor(self) -> Dict[str, str]:
         return {
-            "path": "aiida.orm",
+            "module": "aiida.orm",
             "name": "Dict",
         }
 
@@ -251,7 +251,7 @@ class AiiDANode(Task):
 
     def get_executor(self) -> Dict[str, str]:
         return {
-            "path": "aiida.orm",
+            "module": "aiida.orm",
             "name": "load_node",
         }
 
@@ -276,7 +276,7 @@ class AiiDACode(Task):
 
     def get_executor(self) -> Dict[str, str]:
         return {
-            "path": "aiida.orm",
+            "module": "aiida.orm",
             "name": "load_code",
         }
 
@@ -303,6 +303,6 @@ class Select(Task):
 
     def get_executor(self) -> Dict[str, str]:
         return {
-            "path": "aiida_workgraph.executors.builtins",
+            "module": "aiida_workgraph.executors.builtins",
             "name": "select",
         }

@@ -26,7 +26,7 @@ class TestAdd(Task):
 
     def get_executor(self) -> Dict[str, str]:
         return {
-            "path": "aiida_workgraph.executors.test",
+            "module": "aiida_workgraph.executors.test",
             "name": "add",
         }
 
@@ -51,7 +51,7 @@ class TestGreater(Task):
 
     def get_executor(self) -> Dict[str, str]:
         return {
-            "path": "aiida_workgraph.executors.test",
+            "module": "aiida_workgraph.executors.test",
             "name": "greater",
         }
 
@@ -81,7 +81,7 @@ class TestSumDiff(Task):
 
     def get_executor(self) -> Dict[str, str]:
         return {
-            "path": "aiida_workgraph.executors.test",
+            "module": "aiida_workgraph.executors.test",
             "name": "sum_diff",
         }
 
