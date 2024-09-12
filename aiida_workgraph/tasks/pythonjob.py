@@ -12,7 +12,7 @@ class PythonJob(Task):
     @classmethod
     def get_function_kwargs(cls, data) -> Dict[str, Any]:
         input_kwargs = set()
-        for name in data["metadata"]["kwargs"]:
+        for name in data["kwargs"]:
             # all the kwargs are after computer is the input for the PythonJob, should be AiiDA Data node
             if name == "computer":
                 break

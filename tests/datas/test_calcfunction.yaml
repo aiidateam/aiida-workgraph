@@ -7,21 +7,28 @@ metadata:
 tasks:
   - identifier: workgraph.aiida_float
     name: float1
-    properties:
-      value: 3.0
+    inputs:
+      - name: value
+        property:
+          value: 3.0
   - identifier: workgraph.test_sum_diff
     name: sumdiff1
-    properties:
-      x: 2.0
     inputs:
-    - to_socket: y
-      from_node: float1
-      from_socket: 0
+      - name: x
+        property:
+          value: 2.0
   - identifier: workgraph.test_sum_diff
     name: sumdiff2
-    properties:
-      x: 4.0
     inputs:
-    - to_socket: y
-      from_node: sumdiff1
-      from_socket: 0
+      - name: x
+        property:
+          value: 4.0
+links:
+  - to_node: sumdiff1
+    from_node: float1
+    to_socket: y
+    from_socket: result
+  - to_node: sumdiff2
+    from_node: sumdiff1
+    to_socket: y
+    from_socket: sum

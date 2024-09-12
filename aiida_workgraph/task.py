@@ -111,9 +111,11 @@ class Task(GraphNode):
 
         Returns:
             Node: An instance of Node initialized with the provided data."""
-        from aiida_workgraph.tasks import task_pool
+        from aiida_workgraph.tasks import task_pool as workgraph_task_pool
         from aiida.orm.utils.serialize import deserialize_unsafe
 
+        if task_pool is None:
+            task_pool = workgraph_task_pool
         task = GraphNode.from_dict(data, node_pool=task_pool)
         task.context_mapping = data.get("context_mapping", {})
         task.waiting_on.add(data.get("wait", []))
