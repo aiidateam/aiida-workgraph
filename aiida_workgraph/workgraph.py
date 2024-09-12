@@ -115,6 +115,7 @@ class WorkGraph(node_graph.NodeGraph):
         wait: bool = False,
         timeout: int = 60,
         metadata: Optional[Dict[str, Any]] = None,
+        to_scheduler: bool = False,
     ) -> aiida.orm.ProcessNode:
         """Submit the AiiDA workgraph process and optionally wait for it to finish.
         Args:
@@ -134,27 +135,34 @@ class WorkGraph(node_graph.NodeGraph):
         self.save(metadata=metadata)
         if self.process.process_state.value.upper() not in ["CREATED"]:
             raise ValueError(f"Process {self.process.pk} has already been submitted.")
-        self.continue_process()
+        if to_scheduler:
+            self.continue_process_in_scheduler(to_scheduler)
+        else:
+            self.continue_process()
         # as long as we submit the process, it is a new submission, we should set restart_process to None
         self.restart_process = None
         if wait:
             self.wait(timeout=timeout)
         return self.process
 
-    def save(self, metadata: Optional[Dict[str, Any]] = None) -> None:
+    def save(
+        self, metadata: Optional[Dict[str, Any]] = None, parent_pid: int = None
+    ) -> None:
         """Save the udpated workgraph to the process
         This is only used for a running workgraph.
         Save the AiiDA workgraph process and update the process status.
         """
         from aiida.manage import manager
-        from aiida.engine.utils import instantiate_process
+        from aiida_workgraph.engine.utils import instantiate_process
         from aiida_workgraph.engine.workgraph import WorkGraphEngine
 
         inputs = self.prepare_inputs(metadata)
         if self.process is None:
             runner = manager.get_manager().get_runner()
             # init a process node
-            process_inited = instantiate_process(runner, WorkGraphEngine, **inputs)
+            process_inited = instantiate_process(
+                runner, WorkGraphEngine, parent_pid=parent_pid, **inputs
+            )
             process_inited.runner.persister.save_checkpoint(process_inited)
             self.process = process_inited.node
             self.process_inited = process_inited
@@ -411,6 +419,24 @@ class WorkGraph(node_graph.NodeGraph):
 
         process_controller = get_manager().get_process_controller()
         process_controller.continue_process(self.pk)
+
+    def continue_process_in_scheduler(self, to_scheduler: Union[int, bool]) -> None:
+        """Ask the scheduler to pick up the process from the database and run it.
+        If to_scheduler is an integer, it will be used as the scheduler pk.
+        Otherwise, it will send the message to the queue, and the scheduler will pick it up.
+        """
+        from aiida_workgraph.utils.control import (
+            create_task_action,
+            create_workgraph_action,
+        )
+
+        try:
+            if isinstance(to_scheduler, int) and not isinstance(to_scheduler, bool):
+                create_task_action(to_scheduler, [self.pk], action="launch_workgraph")
+            else:
+                create_workgraph_action(self.pk)
+        except Exception as e:
+            print("""An unexpected error occurred:""", e)
 
     def play(self):
         import os

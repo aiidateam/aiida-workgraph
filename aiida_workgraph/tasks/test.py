@@ -1,5 +1,6 @@
 from typing import Dict
 from aiida_workgraph.task import Task
+from aiida_workgraph.decorator import task
 
 
 class TestAdd(Task):
@@ -114,3 +115,19 @@ class TestArithmeticMultiplyAdd(Task):
             "name": "core.arithmetic.multiply_add",
             "type": "WorkflowFactory",
         }
+
+
+@task.graph_builder()
+def create_workgraph_recrusively(n):
+    from aiida_workgraph import WorkGraph
+    from aiida_workgraph.tasks.test import create_workgraph_recrusively
+    from aiida.calculations.arithmetic.add import ArithmeticAddCalculation
+    from aiida import orm
+
+    code = orm.load_code("add@localhost")
+    wg = WorkGraph(f"n-{n}")
+    if n > 0:
+        wg.add_task(create_workgraph_recrusively, name=f"n_{n}", n=n - 1)
+    else:
+        wg.add_task(ArithmeticAddCalculation, code=code, x=1, y=2)
+    return wg
