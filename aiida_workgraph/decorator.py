@@ -5,7 +5,6 @@ from aiida import orm
 from aiida.orm.nodes.process.calculation.calcfunction import CalcFunctionNode
 from aiida.orm.nodes.process.workflow.workfunction import WorkFunctionNode
 from aiida.engine.processes.ports import PortNamespace
-import cloudpickle as pickle
 from aiida_workgraph.task import Task
 from aiida_workgraph.utils import build_executor
 import inspect
@@ -249,21 +248,14 @@ def build_task_from_AiiDA(
     # so I pickled the function here, but this is not necessary
     # we need to update the node_graph to support the path and name of the function
     tdata["identifier"] = tdata.pop("identifier", tdata["executor"].__name__)
-    tdata["executor"] = {
-        "executor": pickle.dumps(executor),
-        "type": tdata["metadata"]["task_type"],
-        "is_pickle": True,
-    }
+    tdata["executor"] = build_executor(executor)
+    tdata["executor"]["type"] = tdata["metadata"]["task_type"]
     if tdata["metadata"]["task_type"].upper() in ["CALCFUNCTION", "WORKFUNCTION"]:
         outputs = (
             [{"identifier": "workgraph.any", "name": "result"}]
             if not outputs
             else outputs
         )
-        # build executor from the function
-        tdata["executor"] = build_executor(executor)
-        # tdata["executor"]["type"] = tdata["metadata"]["task_type"]
-    # print("kwargs: ", kwargs)
     # add built-in sockets
     outputs.append({"identifier": "workgraph.any", "name": "_outputs"})
     outputs.append({"identifier": "workgraph.any", "name": "_wait"})

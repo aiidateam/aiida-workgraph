@@ -21,17 +21,21 @@ def build_executor(obj: Callable) -> Dict[str, Any]:
     import types
     from aiida_workgraph.orm.function_data import PickledFunction
 
-    # Check if the callable is locally defined
-    if isinstance(obj, types.FunctionType) and obj.__module__ == "__main__":
-        # Local callable (function/lambda), so pickle the callable
-        executor = PickledFunction.build_executor(obj)
+    # Check if the callable is a function or class
+    if isinstance(obj, (types.FunctionType, type)):
+        # Check if callable is nested (contains dots in __qualname__ after the first segment)
+        if obj.__module__ == "__main__" or "." in obj.__qualname__.split(".", 1)[-1]:
+            # Local or nested callable, so pickle the callable
+            executor = PickledFunction.build_executor(obj)
+        else:
+            # Global callable (function/class), store its module and name for reference
+            executor = {
+                "module": obj.__module__,
+                "name": obj.__name__,
+                "is_pickle": False,
+            }
     else:
-        # Global callable (function/class), store its module and name for reference
-        executor = {
-            "path": obj.__module__,
-            "name": obj.__name__,
-            "is_pickle": False,
-        }
+        raise TypeError("Provided object is not a callable function or class.")
     return executor
 
 
