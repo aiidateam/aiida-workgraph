@@ -425,7 +425,7 @@ class WorkGraphEngine(Process, metaclass=Protect):
                     self.report(f"Task: {awaitable.key} cancelled.")
                 else:
                     results = awaitable.result()
-                    self.set_normal_task_results(awaitable.key, results)
+                    self.update_normal_task_state(awaitable.key, results)
             except Exception as e:
                 self.logger.error(f"Error in awaitable {awaitable.key}: {e}")
                 self.set_task_state_info(awaitable.key, "state", "FAILED")
@@ -701,83 +701,87 @@ class WorkGraphEngine(Process, metaclass=Protect):
         self.report("tasks ready to run: {}".format(",".join(task_to_run)))
         self.run_tasks(task_to_run)
 
-    def update_task_state(self, name: str) -> None:
+    def update_task_state(self, name: str, success=True) -> None:
         """Update task state when the task is finished."""
         task = self.ctx._tasks[name]
-        # print(f"set task result: {name}")
-        node = self.get_task_state_info(name, "process")
-        if isinstance(node, orm.ProcessNode):
-            # print(f"set task result: {name} process")
-            state = node.process_state.value.upper()
-            if node.is_finished_ok:
-                self.set_task_state_info(task["name"], "state", state)
-                if task["metadata"]["node_type"].upper() == "WORKGRAPH":
-                    # expose the outputs of all the tasks in the workgraph
-                    task["results"] = {}
-                    outgoing = node.base.links.get_outgoing()
-                    for link in outgoing.all():
-                        if isinstance(link.node, ProcessNode) and getattr(
-                            link.node, "process_state", False
-                        ):
-                            task["results"][link.link_label] = link.node.outputs
+        if success:
+            node = self.get_task_state_info(name, "process")
+            if isinstance(node, orm.ProcessNode):
+                # print(f"set task result: {name} process")
+                state = node.process_state.value.upper()
+                if node.is_finished_ok:
+                    self.set_task_state_info(task["name"], "state", state)
+                    if task["metadata"]["node_type"].upper() == "WORKGRAPH":
+                        # expose the outputs of all the tasks in the workgraph
+                        task["results"] = {}
+                        outgoing = node.base.links.get_outgoing()
+                        for link in outgoing.all():
+                            if isinstance(link.node, ProcessNode) and getattr(
+                                link.node, "process_state", False
+                            ):
+                                task["results"][link.link_label] = link.node.outputs
+                    else:
+                        task["results"] = node.outputs
+                        # self.ctx._new_data[name] = task["results"]
+                    self.set_task_state_info(task["name"], "state", "FINISHED")
+                    self.task_set_context(name)
+                    self.report(f"Task: {name} finished.")
+                # all other states are considered as failed
                 else:
                     task["results"] = node.outputs
-                    # self.ctx._new_data[name] = task["results"]
+                    self.on_task_failed(name)
+            elif isinstance(node, orm.Data):
+                #
+                output_name = [
+                    output_name
+                    for output_name in list(task["outputs"].keys())
+                    if output_name not in ["_wait", "_outputs"]
+                ][0]
+                task["results"] = {output_name: node}
                 self.set_task_state_info(task["name"], "state", "FINISHED")
                 self.task_set_context(name)
                 self.report(f"Task: {name} finished.")
-            # all other states are considered as failed
             else:
-                task["results"] = node.outputs
-                # self.ctx._new_data[name] = task["results"]
-                self.set_task_state_info(task["name"], "state", "FAILED")
-                # set child tasks state to SKIPPED
-                self.set_tasks_state(
-                    self.ctx._connectivity["child_node"][name], "SKIPPED"
-                )
-                self.report(f"Task: {name} failed.")
-                self.run_error_handlers(name)
-        elif isinstance(node, orm.Data):
-            #
-            output_name = [
-                output_name
-                for output_name in list(task["outputs"].keys())
-                if output_name not in ["_wait", "_outputs"]
-            ][0]
-            task["results"] = {output_name: node}
-            self.set_task_state_info(task["name"], "state", "FINISHED")
-            self.task_set_context(name)
-            self.report(f"Task: {name} finished.")
+                task.setdefault("results", None)
         else:
-            task.setdefault("results", None)
-
+            self.on_task_failed(name)
         self.update_parent_task_state(name)
 
-    def set_normal_task_results(self, name, results):
+    def on_task_failed(self, name: str) -> None:
+        """Handle the case where a task has failed."""
+        self.set_task_state_info(name, "state", "FAILED")
+        self.set_tasks_state(self.ctx._connectivity["child_node"][name], "SKIPPED")
+        self.report(f"Task: {name} failed.")
+        self.run_error_handlers(name)
+
+    def update_normal_task_state(self, name, results, success=True):
         """Set the results of a normal task.
         A normal task is created by decorating a function with @task().
         """
         from aiida_workgraph.utils import get_sorted_names
 
-        task = self.ctx._tasks[name]
-        if isinstance(results, tuple):
-            if len(task["outputs"]) != len(results):
-                return self.exit_codes.OUTPUS_NOT_MATCH_RESULTS
-            output_names = get_sorted_names(task["outputs"])
-            for i, output_name in enumerate(output_names):
-                task["results"][output_name] = results[i]
-        elif isinstance(results, dict):
-            task["results"] = results
+        if success:
+            task = self.ctx._tasks[name]
+            if isinstance(results, tuple):
+                if len(task["outputs"]) != len(results):
+                    return self.exit_codes.OUTPUS_NOT_MATCH_RESULTS
+                output_names = get_sorted_names(task["outputs"])
+                for i, output_name in enumerate(output_names):
+                    task["results"][output_name] = results[i]
+            elif isinstance(results, dict):
+                task["results"] = results
+            else:
+                output_name = [
+                    output_name
+                    for output_name in list(task["outputs"].keys())
+                    if output_name not in ["_wait", "_outputs"]
+                ][0]
+                task["results"][output_name] = results
+            self.task_set_context(name)
+            self.set_task_state_info(name, "state", "FINISHED")
+            self.report(f"Task: {name} finished.")
         else:
-            output_name = [
-                output_name
-                for output_name in list(task["outputs"].keys())
-                if output_name not in ["_wait", "_outputs"]
-            ][0]
-            task["results"][output_name] = results
-        self.task_set_context(name)
-        self.set_task_state_info(name, "state", "FINISHED")
-        self.report(f"Task: {name} finished.")
+            self.on_task_failed(name)
         self.update_parent_task_state(name)
 
     def update_parent_task_state(self, name: str) -> None:
@@ -1068,12 +1072,7 @@ class WorkGraphEngine(Process, metaclass=Protect):
                     self.update_task_state(name)
                 except Exception as e:
                     self.logger.error(f"Error in task {name}: {e}")
-                    self.set_task_state_info(name, "state", "FAILED")
-                    # set child state to FAILED
-                    self.set_tasks_state(
-                        self.ctx._connectivity["child_node"][name], "SKIPPED"
-                    )
-                    self.report(f"Task: {name} failed.")
+                    self.update_task_state(name, success=False)
                 # exclude the current tasks from the next run
                 if continue_workgraph:
                     self.continue_workgraph()
@@ -1256,16 +1255,10 @@ class WorkGraphEngine(Process, metaclass=Protect):
                     results = self.run_executor(
                         executor, args, kwargs, var_args, var_kwargs
                     )
-                    self.set_normal_task_results(name, results)
+                    self.update_normal_task_state(name, results)
                 except Exception as e:
                     self.logger.error(f"Error in task {name}: {e}")
-                    self.set_task_state_info(name, "state", "FAILED")
-                    # set child tasks state to SKIPPED
-                    self.set_tasks_state(
-                        self.ctx._connectivity["child_node"][name], "SKIPPED"
-                    )
-                    self.report(f"Task: {name} failed.")
-                    self.run_error_handlers(name)
+                    self.update_normal_task_state(name, results=None, success=False)
                 if continue_workgraph:
                     self.continue_workgraph()
             else:
