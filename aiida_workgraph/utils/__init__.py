@@ -5,7 +5,7 @@ from aiida.common.exceptions import NotExistent
 from aiida.engine.runners import Runner
 
 
-def build_executor(obj: Callable) -> Dict[str, Any]:
+def build_callable(obj: Callable) -> Dict[str, Any]:
     """
     Build the executor data from the callable. This will either serialize the callable
     using cloudpickle if it's a local or lambda function, or store its module and name
@@ -26,7 +26,7 @@ def build_executor(obj: Callable) -> Dict[str, Any]:
         # Check if callable is nested (contains dots in __qualname__ after the first segment)
         if obj.__module__ == "__main__" or "." in obj.__qualname__.split(".", 1)[-1]:
             # Local or nested callable, so pickle the callable
-            executor = PickledFunction.build_executor(obj)
+            executor = PickledFunction.build_callable(obj)
         else:
             # Global callable (function/class), store its module and name for reference
             executor = {
@@ -34,6 +34,8 @@ def build_executor(obj: Callable) -> Dict[str, Any]:
                 "name": obj.__name__,
                 "is_pickle": False,
             }
+    elif isinstance(obj, PickledFunction) or isinstance(obj, dict):
+        executor = obj
     else:
         raise TypeError("Provided object is not a callable function or class.")
     return executor

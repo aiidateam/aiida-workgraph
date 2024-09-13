@@ -60,7 +60,7 @@ class WorkGraph(node_graph.NodeGraph):
         self.nodes.post_creation_hooks = [task_creation_hook]
         self.links.post_creation_hooks = [link_creation_hook]
         self.links.post_deletion_hooks = [link_deletion_hook]
-        self.error_handlers = {}
+        self._error_handlers = {}
         self._widget = NodeGraphWidget(parent=self) if USE_WIDGET else None
 
     @property
@@ -176,7 +176,6 @@ class WorkGraph(node_graph.NodeGraph):
         saver.save()
 
     def to_dict(self, store_nodes=False) -> Dict[str, Any]:
-        import cloudpickle as pickle
         from aiida_workgraph.utils import store_nodes_recursely
 
         wgdata = super().to_dict()
@@ -198,11 +197,23 @@ class WorkGraph(node_graph.NodeGraph):
                 "max_number_jobs": self.max_number_jobs,
             }
         )
-        wgdata["error_handlers"] = pickle.dumps(self.error_handlers)
+        # save error handlers
+        wgdata["error_handlers"] = self.get_error_handlers()
         wgdata["tasks"] = wgdata.pop("nodes")
         if store_nodes:
             store_nodes_recursely(wgdata)
         return wgdata
+
+    def get_error_handlers(self) -> Dict[str, Any]:
+        """Get the error handlers."""
+
+        from aiida_workgraph.utils import build_callable
+
+        error_handlers = {}
+        for name, error_handler in self._error_handlers.items():
+            error_handler["handler"] = build_callable(error_handler["handler"])
+            error_handlers[name] = error_handler
+        return error_handlers
 
     def wait(self, timeout: int = 50, tasks: dict = None) -> None:
         """
@@ -283,7 +294,6 @@ class WorkGraph(node_graph.NodeGraph):
 
     @classmethod
     def from_dict(cls, wgdata: Dict[str, Any]) -> "WorkGraph":
-        import cloudpickle as pickle
 
         if "tasks" in wgdata:
             wgdata["nodes"] = wgdata.pop("tasks")
@@ -298,7 +308,7 @@ class WorkGraph(node_graph.NodeGraph):
             if key in wgdata:
                 setattr(wg, key, wgdata[key])
         if "error_handlers" in wgdata:
-            wg.error_handlers = pickle.loads(wgdata["error_handlers"])
+            wg._error_handlers = wgdata["error_handlers"]
         return wg
 
     @classmethod
@@ -456,7 +466,7 @@ class WorkGraph(node_graph.NodeGraph):
 
     def add_error_handler(self, handler, name, tasks: dict = None) -> None:
         """Attach an error handler to the workgraph."""
-        self.error_handlers[name] = {"handler": handler, "tasks": tasks}
+        self._error_handlers[name] = {"handler": handler, "tasks": tasks}
 
     def _repr_mimebundle_(self, *args, **kwargs):
 

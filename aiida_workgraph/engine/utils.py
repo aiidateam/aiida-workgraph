@@ -92,11 +92,11 @@ def prepare_for_python_task(task: dict, kwargs: dict, var_kwargs: dict) -> dict:
     metadata = kwargs.pop("metadata", {})
     metadata.update({"call_link_label": task["name"]})
     # get the source code of the function
-    function_name = task["executor"]["function_name"]
+    function_name = task["executor"]["name"]
     function_source_code = (
         task["executor"]["import_statements"]
         + "\n"
-        + task["executor"]["function_source_code_without_decorator"]
+        + task["executor"]["source_code_without_decorator"]
     )
     # outputs
     function_outputs = [

@@ -6,7 +6,7 @@ from aiida.orm.nodes.process.calculation.calcfunction import CalcFunctionNode
 from aiida.orm.nodes.process.workflow.workfunction import WorkFunctionNode
 from aiida.engine.processes.ports import PortNamespace
 from aiida_workgraph.task import Task
-from aiida_workgraph.utils import build_executor
+from aiida_workgraph.utils import build_callable
 import inspect
 
 task_types = {
@@ -248,7 +248,7 @@ def build_task_from_AiiDA(
     # so I pickled the function here, but this is not necessary
     # we need to update the node_graph to support the path and name of the function
     tdata["identifier"] = tdata.pop("identifier", tdata["executor"].__name__)
-    tdata["executor"] = build_executor(executor)
+    tdata["executor"] = build_callable(executor)
     tdata["executor"]["type"] = tdata["metadata"]["task_type"]
     if tdata["metadata"]["task_type"].upper() in ["CALCFUNCTION", "WORKFUNCTION"]:
         outputs = (
@@ -514,7 +514,7 @@ def generate_tdata(
         "inputs": _inputs,
         "outputs": task_outputs,
     }
-    tdata["executor"] = build_executor(func)
+    tdata["executor"] = build_callable(func)
     if additional_data:
         tdata.update(additional_data)
     return tdata
@@ -532,6 +532,7 @@ class TaskDecoratorCollection:
         properties: Optional[List[Tuple[str, str]]] = None,
         inputs: Optional[List[Tuple[str, str]]] = None,
         outputs: Optional[List[Tuple[str, str]]] = None,
+        error_handlers: Optional[List[Dict[str, Any]]] = None,
         catalog: str = "Others",
     ) -> Callable:
         """Generate a decorator that register a function as a task.
@@ -566,6 +567,7 @@ class TaskDecoratorCollection:
                 task_type,
             )
             task = create_task(tdata)
+            task._error_handlers = error_handlers
             func.identifier = identifier
             func.task = func.node = task
             func.tdata = tdata
@@ -678,6 +680,7 @@ class TaskDecoratorCollection:
             task_decorated, _ = build_pythonjob_task(func)
             func.identifier = "PythonJob"
             func.task = func.node = task_decorated
+            task_decorated._error_handlers = kwargs.get("error_handlers", [])
 
             return func
 
