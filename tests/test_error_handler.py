@@ -1,5 +1,5 @@
 import pytest
-from aiida_workgraph import WorkGraph
+from aiida_workgraph import WorkGraph, Task
 from aiida import orm
 from aiida.calculations.arithmetic.add import ArithmeticAddCalculation
 
@@ -9,12 +9,10 @@ def test_error_handlers(add_code):
     """Test error handlers."""
     from aiida.cmdline.utils.common import get_workchain_report
 
-    def handle_negative_sum(self, task_name: str, **kwargs):
+    def handle_negative_sum(task: Task):
         """Handle negative sum by resetting the task and changing the inputs.
         self is the WorkGraph instance, thus we can access the tasks and the context.
         """
-        self.report("Run error handler: handle_negative_sum.")
-        task = self.get_task(task_name)
         # modify task inputs
         task.set(
             {
@@ -22,11 +20,12 @@ def test_error_handlers(add_code):
                 "y": orm.Int(abs(task.inputs["y"].value)),
             }
         )
-        self.update_task(task)
+        msg = "Run error handler: handle_negative_sum."
+        return msg
 
     wg = WorkGraph("restart_graph")
     wg.add_task(ArithmeticAddCalculation, name="add1")
-    wg.attach_error_handler(
+    wg.add_error_handler(
         handle_negative_sum,
         name="handle_negative_sum",
         tasks={"add1": {"exit_codes": [410], "max_retries": 5, "kwargs": {}}},

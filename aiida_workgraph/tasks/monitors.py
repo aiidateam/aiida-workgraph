@@ -1,4 +1,3 @@
-from typing import Dict
 from aiida_workgraph.task import Task
 
 
@@ -10,6 +9,11 @@ class TimeMonitor(Task):
     node_type = "MONITOR"
     catalog = "Monitor"
     args = ["datetime"]
+
+    _executor = {
+        "module": "aiida_workgraph.executors.monitors",
+        "name": "time_monitor",
+    }
     kwargs = ["interval", "timeout"]
 
     def create_sockets(self) -> None:
@@ -25,12 +29,6 @@ class TimeMonitor(Task):
         self.outputs.new("workgraph.any", "result")
         self.outputs.new("workgraph.any", "_wait")
 
-    def get_executor(self) -> Dict[str, str]:
-        return {
-            "module": "aiida_workgraph.executors.monitors",
-            "name": "time_monitor",
-        }
-
 
 class FileMonitor(Task):
     """Monitor the file"""
@@ -40,6 +38,11 @@ class FileMonitor(Task):
     node_type = "MONITOR"
     catalog = "Monitor"
     args = ["filepath"]
+
+    _executor = {
+        "module": "aiida_workgraph.executors.monitors",
+        "name": "file_monitor",
+    }
     kwargs = ["interval", "timeout"]
 
     def create_sockets(self) -> None:
@@ -55,12 +58,6 @@ class FileMonitor(Task):
         self.outputs.new("workgraph.any", "result")
         self.outputs.new("workgraph.any", "_wait")
 
-    def get_executor(self) -> Dict[str, str]:
-        return {
-            "module": "aiida_workgraph.executors.monitors",
-            "name": "file_monitor",
-        }
-
 
 class TaskMonitor(Task):
     """Monitor the file"""
@@ -70,6 +67,11 @@ class TaskMonitor(Task):
     node_type = "MONITOR"
     catalog = "Monitor"
     args = ["task_name"]
+
+    _executor = {
+        "module": "aiida_workgraph.executors.monitors",
+        "name": "task_monitor",
+    }
     kwargs = ["interval", "timeout", "workgraph_pk", "workgraph_name"]
 
     def create_sockets(self) -> None:
@@ -86,9 +88,3 @@ class TaskMonitor(Task):
         inp.link_limit = 100000
         self.outputs.new("workgraph.any", "result")
         self.outputs.new("workgraph.any", "_wait")
-
-    def get_executor(self) -> Dict[str, str]:
-        return {
-            "module": "aiida_workgraph.executors.monitors",
-            "name": "task_monitor",
-        }

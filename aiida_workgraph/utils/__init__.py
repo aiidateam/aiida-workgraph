@@ -5,6 +5,42 @@ from aiida.common.exceptions import NotExistent
 from aiida.engine.runners import Runner
 
 
+def build_callable(obj: Callable) -> Dict[str, Any]:
+    """
+    Build the executor data from the callable. This will either serialize the callable
+    using cloudpickle if it's a local or lambda function, or store its module and name
+    if it's a globally defined callable (function or class).
+
+    Args:
+        obj (Callable): The callable to be serialized or referenced.
+
+    Returns:
+        Dict[str, Any]: A dictionary containing the serialized callable or a reference
+                        to its module and name.
+    """
+    import types
+    from aiida_workgraph.orm.function_data import PickledFunction
+
+    # Check if the callable is a function or class
+    if isinstance(obj, (types.FunctionType, type)):
+        # Check if callable is nested (contains dots in __qualname__ after the first segment)
+        if obj.__module__ == "__main__" or "." in obj.__qualname__.split(".", 1)[-1]:
+            # Local or nested callable, so pickle the callable
+            executor = PickledFunction.build_callable(obj)
+        else:
+            # Global callable (function/class), store its module and name for reference
+            executor = {
+                "module": obj.__module__,
+                "name": obj.__name__,
+                "is_pickle": False,
+            }
+    elif isinstance(obj, PickledFunction) or isinstance(obj, dict):
+        executor = obj
+    else:
+        raise TypeError("Provided object is not a callable function or class.")
+    return executor
+
+
 def get_sorted_names(data: dict) -> list:
     """Get the sorted names from a dictionary."""
     print("data: ", data)
@@ -40,6 +76,7 @@ def get_executor(data: Dict[str, Any]) -> Union[Process, Any]:
     import importlib
     from aiida.plugins import CalculationFactory, WorkflowFactory, DataFactory
 
+    data = data or {}
     is_pickle = data.get("is_pickle", False)
     type = data.get("type", "function")
     if is_pickle:
@@ -57,7 +94,7 @@ def get_executor(data: Dict[str, Any]) -> Union[Process, Any]:
             executor = CalculationFactory(data["name"])
         elif type == "DataFactory":
             executor = DataFactory(data["name"])
-        elif data["name"] == "" and data["module"] == "":
+        elif not data.get("name", None) and not data.get("module", None):
             executor = None
         else:
             module = importlib.import_module("{}".format(data.get("module", "")))

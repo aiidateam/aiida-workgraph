@@ -498,14 +498,13 @@ class WorkGraphEngine(Process, metaclass=Protect):
 
     def setup_ctx_workgraph(self, wgdata: t.Dict[str, t.Any]) -> None:
         """setup the workgraph in the context."""
-        import cloudpickle as pickle
 
         self.ctx._tasks = wgdata["tasks"]
         self.ctx._links = wgdata["links"]
         self.ctx._connectivity = wgdata["connectivity"]
         self.ctx._ctrl_links = wgdata["ctrl_links"]
         self.ctx._workgraph = wgdata
-        self.ctx._error_handlers = pickle.loads(wgdata["error_handlers"])
+        self.ctx._error_handlers = wgdata["error_handlers"]
 
     def read_wgdata_from_base(self) -> t.Dict[str, t.Any]:
         """Read workgraph data from base.extras."""
@@ -859,20 +858,48 @@ class WorkGraphEngine(Process, metaclass=Protect):
         return finished, None
 
     def run_error_handlers(self, task_name: str) -> None:
-        """Run error handler."""
+        """Run error handler for a task."""
+
         node = self.get_task_state_info(task_name, "process")
         if not node or not node.exit_status:
             return
+        # error_handlers from the task
+        for _, data in self.ctx._tasks[task_name]["error_handlers"].items():
+            if node.exit_status in data.get("exit_codes", []):
+                handler = data["handler"]
+                self.run_error_handler(handler, data, task_name)
+                return
+        # error_handlers from the workgraph
         for _, data in self.ctx._error_handlers.items():
-            if task_name in data["tasks"]:
+            if node.exit_code.status in data["tasks"].get(task_name, {}).get(
+                "exit_codes", []
+            ):
                 handler = data["handler"]
                 metadata = data["tasks"][task_name]
-                if node.exit_code.status in metadata.get("exit_codes", []):
-                    self.report(f"Run error handler: {metadata}")
-                    metadata.setdefault("retry", 0)
-                    if metadata["retry"] < metadata["max_retries"]:
-                        handler(self, task_name, **metadata.get("kwargs", {}))
-                        metadata["retry"] += 1
+                self.run_error_handler(handler, metadata, task_name)
+                return
+
+    def run_error_handler(self, handler: dict, metadata: dict, task_name: str) -> None:
+        from inspect import signature
+        from aiida_workgraph.utils import get_executor
+
+        handler, _ = get_executor(handler)
+        handler_sig = signature(handler)
+        metadata.setdefault("retry", 0)
+        self.report(f"Run error handler: {handler.__name__}")
+        if metadata["retry"] < metadata["max_retries"]:
+            task = self.get_task(task_name)
+            try:
+                if "engine" in handler_sig.parameters:
+                    msg = handler(task, engine=self, **metadata.get("kwargs", {}))
+                else:
+                    msg = handler(task, **metadata.get("kwargs", {}))
+                self.update_task(task)
+                if msg:
+                    self.report(msg)
+                metadata["retry"] += 1
+            except Exception as e:
+                self.report(f"Error in running error handler: {e}")
 
     def is_workgraph_finished(self) -> bool:
         """Check if the workgraph is finished.

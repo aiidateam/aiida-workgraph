@@ -1,4 +1,3 @@
-from typing import Dict
 from aiida_workgraph.task import Task
 
 
@@ -9,6 +8,10 @@ class TestAdd(Task):
     node_type = "CALCFUNCTION"
     catalog = "Test"
 
+    _executor = {
+        "module": "aiida_workgraph.executors.test",
+        "name": "add",
+    }
     args = ["x", "y"]
     kwargs = ["t"]
 
@@ -24,12 +27,6 @@ class TestAdd(Task):
         inp.add_property("workgraph.aiida_float", "y", default=0.0)
         self.outputs.new("workgraph.aiida_float", "sum")
 
-    def get_executor(self) -> Dict[str, str]:
-        return {
-            "module": "aiida_workgraph.executors.test",
-            "name": "add",
-        }
-
 
 class TestGreater(Task):
 
@@ -37,6 +34,11 @@ class TestGreater(Task):
     name = "TestGreater"
     node_type = "CALCFUNCTION"
     catalog = "Test"
+
+    _executor = {
+        "module": "aiida_workgraph.executors.test",
+        "name": "greater",
+    }
     kwargs = ["x", "y"]
 
     def create_properties(self) -> None:
@@ -49,12 +51,6 @@ class TestGreater(Task):
         self.inputs.new("workgraph.aiida_float", "y")
         self.outputs.new("workgraph.aiida_bool", "result")
 
-    def get_executor(self) -> Dict[str, str]:
-        return {
-            "module": "aiida_workgraph.executors.test",
-            "name": "greater",
-        }
-
 
 class TestSumDiff(Task):
 
@@ -63,6 +59,10 @@ class TestSumDiff(Task):
     node_type = "CALCFUNCTION"
     catalog = "Test"
 
+    _executor = {
+        "module": "aiida_workgraph.executors.test",
+        "name": "sum_diff",
+    }
     args = ["x", "y"]
     kwargs = ["t"]
 
@@ -79,12 +79,6 @@ class TestSumDiff(Task):
         self.outputs.new("workgraph.aiida_float", "sum")
         self.outputs.new("workgraph.aiida_float", "diff")
 
-    def get_executor(self) -> Dict[str, str]:
-        return {
-            "module": "aiida_workgraph.executors.test",
-            "name": "sum_diff",
-        }
-
 
 class TestArithmeticMultiplyAdd(Task):
 
@@ -92,6 +86,11 @@ class TestArithmeticMultiplyAdd(Task):
     name = "TestArithmeticMultiplyAdd"
     node_type = "WORKCHAIN"
     catalog = "Test"
+
+    _executor = {
+        "name": "core.arithmetic.multiply_add",
+        "type": "WorkflowFactory",
+    }
     kwargs = ["code", "x", "y", "z"]
 
     def create_properties(self) -> None:
@@ -108,9 +107,3 @@ class TestArithmeticMultiplyAdd(Task):
         inp = self.inputs.new("workgraph.aiida_int", "z")
         inp.add_property("workgraph.aiida_int", "z", default=0.0)
         self.outputs.new("workgraph.aiida_int", "result")
-
-    def get_executor(self) -> Dict[str, str]:
-        return {
-            "name": "core.arithmetic.multiply_add",
-            "type": "WorkflowFactory",
-        }

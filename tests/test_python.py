@@ -1,5 +1,5 @@
 import pytest
-from aiida_workgraph import WorkGraph, task
+from aiida_workgraph import WorkGraph, task, Task
 from typing import Any
 
 
@@ -494,25 +494,27 @@ def test_exit_code(fixture_localhost, python_executable_path):
     """Test function with exit code."""
     from numpy import array
 
-    @task.pythonjob(outputs=[{"name": "sum"}])
+    def handle_negative_sum(task: Task):
+        """Handle the failure code 410 of the `add`.
+        Simply make the inputs positive by taking the absolute value.
+        """
+
+        task.set({"x": abs(task.inputs["x"].value), "y": abs(task.inputs["y"].value)})
+
+        return "Run error handler: handle_negative_sum."
+
+    @task.pythonjob(
+        outputs=[{"name": "sum"}],
+        error_handlers=[
+            {"handler": handle_negative_sum, "exit_codes": [410], "max_retries": 5}
+        ],
+    )
     def add(x: array, y: array) -> array:
         sum = x + y
         if (sum < 0).any():
             exit_code = {"status": 410, "message": "Some elements are negative"}
             return {"sum": sum, "exit_code": exit_code}
         return {"sum": sum}
-
-    def handle_negative_sum(self, task_name: str):
-        """Handle the failure code 410 of the `add`.
-        Simply make the inputs positive by taking the absolute value.
-        """
-        self.report("Run error handler: handle_negative_sum.")
-        # load the task from the WorkGraph engine
-        task = self.get_task(task_name)
-        # modify task inputs
-        task.set({"x": abs(task.inputs["x"].value), "y": abs(task.inputs["y"].value)})
-
-        self.update_task(task)
 
     wg = WorkGraph("test_PythonJob")
     wg.add_task(
@@ -522,12 +524,6 @@ def test_exit_code(fixture_localhost, python_executable_path):
         y=array([1, -2]),
         computer="localhost",
         code_label=python_executable_path,
-    )
-    # register error handler
-    wg.attach_error_handler(
-        handle_negative_sum,
-        name="handle_negative_sum",
-        tasks={"add1": {"exit_codes": [410], "max_retries": 5}},
     )
     wg.run()
     # the first task should have exit status 410
