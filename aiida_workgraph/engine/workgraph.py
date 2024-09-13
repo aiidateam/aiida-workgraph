@@ -858,7 +858,7 @@ class WorkGraphEngine(Process, metaclass=Protect):
         return finished, None
 
     def run_error_handlers(self, task_name: str) -> None:
-        """Run error handler."""
+        """Run error handler for a task."""
 
         node = self.get_task_state_info(task_name, "process")
         if not node or not node.exit_status:
@@ -868,6 +868,7 @@ class WorkGraphEngine(Process, metaclass=Protect):
             if node.exit_status in data.get("exit_codes", []):
                 handler = data["handler"]
                 self.run_error_handler(handler, data, task_name)
+                return
         # error_handlers from the workgraph
         for _, data in self.ctx._error_handlers.items():
             if node.exit_code.status in data["tasks"].get(task_name, {}).get(
@@ -876,6 +877,7 @@ class WorkGraphEngine(Process, metaclass=Protect):
                 handler = data["handler"]
                 metadata = data["tasks"][task_name]
                 self.run_error_handler(handler, metadata, task_name)
+                return
 
     def run_error_handler(self, handler: dict, metadata: dict, task_name: str) -> None:
         from inspect import signature
