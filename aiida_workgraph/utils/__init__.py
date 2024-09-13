@@ -76,6 +76,7 @@ def get_executor(data: Dict[str, Any]) -> Union[Process, Any]:
     import importlib
     from aiida.plugins import CalculationFactory, WorkflowFactory, DataFactory
 
+    data = data or {}
     is_pickle = data.get("is_pickle", False)
     type = data.get("type", "function")
     if is_pickle:
@@ -93,7 +94,7 @@ def get_executor(data: Dict[str, Any]) -> Union[Process, Any]:
             executor = CalculationFactory(data["name"])
         elif type == "DataFactory":
             executor = DataFactory(data["name"])
-        elif data["name"] == "" and data["module"] == "":
+        elif not data.get("name", None) and not data.get("module", None):
             executor = None
         else:
             module = importlib.import_module("{}".format(data.get("module", "")))
