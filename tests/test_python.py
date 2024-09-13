@@ -48,11 +48,11 @@ def test_decorator(fixture_localhost, python_executable_path):
     assert wg.tasks["add1"].node.label == "add1"
 
 
-@pytest.mark.usefixtures("started_daemon_client")
 def test_PythonJob_kwargs(fixture_localhost, python_executable_path):
     """Test function with kwargs."""
 
-    def add(x, **kwargs):
+    def add(x, y=1, **kwargs):
+        x += y
         for value in kwargs.values():
             x += value
         return x
@@ -63,13 +63,19 @@ def test_PythonJob_kwargs(fixture_localhost, python_executable_path):
         inputs={
             "add": {
                 "x": 1,
-                "kwargs": {"y": 2, "z": 3},
+                "y": 2,
+                "kwargs": {"m": 2, "n": 3},
                 "computer": "localhost",
                 "code_label": python_executable_path,
             },
         },
     )
-    assert wg.tasks["add"].outputs["result"].value.value == 6
+    # data inside the kwargs should be serialized separately
+    wg.process.inputs.wg.tasks.add.inputs.kwargs.property.value.m.value == 2
+    assert wg.tasks["add"].outputs["result"].value.value == 8
+    # load the workgraph
+    wg = WorkGraph.load(wg.pk)
+    assert wg.tasks["add"].inputs["kwargs"].value == {"m": 2, "n": 3}
 
 
 def test_PythonJob_typing():

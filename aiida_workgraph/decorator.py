@@ -18,6 +18,7 @@ task_types = {
 
 type_mapping = {
     "default": "workgraph.any",
+    "namespace": "workgraph.namespace",
     int: "workgraph.int",
     float: "workgraph.float",
     str: "workgraph.string",
@@ -288,6 +289,9 @@ def build_pythonjob_task(func: Callable) -> Task:
     }
     _, tdata_py = build_task_from_AiiDA(tdata)
     tdata = deepcopy(func.tdata)
+    function_kwargs = [
+        name for name in tdata["inputs"] if name not in ["_wait", "_outputs"]
+    ]
     # merge the inputs and outputs from the PythonJob task to the function task
     # skip the already existed inputs and outputs
     for input in [
@@ -324,6 +328,7 @@ def build_pythonjob_task(func: Callable) -> Task:
     }
     task = create_task(tdata)
     task.is_aiida_component = True
+    task.function_kwargs = function_kwargs
     return task, tdata
 
 

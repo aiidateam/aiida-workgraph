@@ -75,3 +75,15 @@ def test_numpy_array(decorated_normal_add):
     # wg.run()
     assert wg.state.upper() == "FINISHED"
     # assert (wg.tasks["add1"].outputs["result"].value == np.array([5, 7, 9])).all()
+
+
+def test_kwargs() -> None:
+    """Test the kwargs of a task."""
+
+    @task()
+    def test(a, b=1, **kwargs):
+        return {"sum": a + b, "product": a * b}
+
+    test1 = test.node()
+    assert test1.inputs["kwargs"].link_limit == 1e6
+    assert test1.inputs["kwargs"].identifier == "workgraph.namespace"
