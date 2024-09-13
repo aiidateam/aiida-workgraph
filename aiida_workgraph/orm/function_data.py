@@ -27,18 +27,18 @@ class PickledFunction(GeneralData):
     def metadata(self):
         """Return a dictionary of metadata."""
         return {
-            "function_name": self.base.attributes.get("function_name"),
+            "name": self.base.attributes.get("name"),
             "import_statements": self.base.attributes.get("import_statements"),
-            "function_source_code": self.base.attributes.get("function_source_code"),
-            "function_source_code_without_decorator": self.base.attributes.get(
-                "function_source_code_without_decorator"
+            "source_code": self.base.attributes.get("source_code"),
+            "source_code_without_decorator": self.base.attributes.get(
+                "source_code_without_decorator"
             ),
             "type": "function",
             "is_pickle": True,
         }
 
     @classmethod
-    def build_executor(cls, func):
+    def build_callable(cls, func):
         """Return the executor for this node."""
         import cloudpickle as pickle
 
@@ -59,16 +59,14 @@ class PickledFunction(GeneralData):
         serialized_data = self.inspect_function(value)
 
         # Store relevant metadata
-        self.base.attributes.set("function_name", serialized_data["function_name"])
+        self.base.attributes.set("name", serialized_data["name"])
         self.base.attributes.set(
             "import_statements", serialized_data["import_statements"]
         )
+        self.base.attributes.set("source_code", serialized_data["source_code"])
         self.base.attributes.set(
-            "function_source_code", serialized_data["function_source_code"]
-        )
-        self.base.attributes.set(
-            "function_source_code_without_decorator",
-            serialized_data["function_source_code_without_decorator"],
+            "source_code_without_decorator",
+            serialized_data["source_code_without_decorator"],
         )
 
     @classmethod
@@ -108,9 +106,9 @@ class PickledFunction(GeneralData):
             function_source_code_without_decorator = ""
             import_statements = ""
         return {
-            "function_name": func.__name__,
-            "function_source_code": function_source_code,
-            "function_source_code_without_decorator": function_source_code_without_decorator,
+            "name": func.__name__,
+            "source_code": function_source_code,
+            "source_code_without_decorator": function_source_code_without_decorator,
             "import_statements": import_statements,
         }
 

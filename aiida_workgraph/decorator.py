@@ -5,9 +5,8 @@ from aiida import orm
 from aiida.orm.nodes.process.calculation.calcfunction import CalcFunctionNode
 from aiida.orm.nodes.process.workflow.workfunction import WorkFunctionNode
 from aiida.engine.processes.ports import PortNamespace
-import cloudpickle as pickle
 from aiida_workgraph.task import Task
-from aiida_workgraph.orm.function_data import PickledFunction
+from aiida_workgraph.utils import build_callable
 import inspect
 
 task_types = {
@@ -19,6 +18,7 @@ task_types = {
 
 type_mapping = {
     "default": "workgraph.any",
+    "namespace": "workgraph.namespace",
     int: "workgraph.int",
     float: "workgraph.float",
     str: "workgraph.string",
@@ -27,6 +27,7 @@ type_mapping = {
     orm.Float: "workgraph.aiida_float",
     orm.Str: "workgraph.aiida_string",
     orm.Bool: "workgraph.aiida_bool",
+    orm.StructureData: "workgraph.aiida_structuredata",
 }
 
 
@@ -35,7 +36,7 @@ def create_task(tdata):
     from node_graph.decorator import create_node
 
     tdata["type_mapping"] = type_mapping
-    tdata["node_type"] = tdata.pop("task_type")
+    tdata["metadata"]["node_type"] = tdata["metadata"].pop("task_type")
     return create_node(tdata)
 
 
@@ -131,10 +132,10 @@ def build_task(
         return build_task_from_workgraph(executor)
     elif isinstance(executor, str):
         (
-            path,
+            module,
             executor_name,
         ) = executor.rsplit(".", 1)
-        executor, _ = get_executor({"path": path, "name": executor_name})
+        executor, _ = get_executor({"module": module, "name": executor_name})
     if callable(executor):
         return build_task_from_callable(executor, inputs=inputs, outputs=outputs)
 
@@ -161,24 +162,26 @@ def build_task_from_callable(
         and issubclass(executor, Task)
     ):
         return executor
-    tdata = {}
+    tdata = {"metadata": {}}
     if inspect.isfunction(executor):
         # calcfunction and workfunction
         if getattr(executor, "node_class", False):
-            tdata["task_type"] = task_types.get(executor.node_class, "NORMAL")
+            tdata["metadata"]["task_type"] = task_types.get(
+                executor.node_class, "NORMAL"
+            )
             tdata["executor"] = executor
             return build_task_from_AiiDA(tdata, inputs=inputs, outputs=outputs)[0]
         else:
-            tdata["task_type"] = "NORMAL"
+            tdata["metadata"]["task_type"] = "NORMAL"
             tdata["executor"] = executor
             return build_task_from_function(executor, inputs=inputs, outputs=outputs)
     else:
         if issubclass(executor, CalcJob):
-            tdata["task_type"] = "CALCJOB"
+            tdata["metadata"]["task_type"] = "CALCJOB"
             tdata["executor"] = executor
             return build_task_from_AiiDA(tdata, inputs=inputs, outputs=outputs)[0]
         elif issubclass(executor, WorkChain):
-            tdata["task_type"] = "WORKCHAIN"
+            tdata["metadata"]["task_type"] = "WORKCHAIN"
             tdata["executor"] = executor
             return build_task_from_AiiDA(tdata, inputs=inputs, outputs=outputs)[0]
     raise ValueError("The executor is not supported.")
@@ -202,9 +205,8 @@ def build_task_from_AiiDA(
 ) -> Task:
     """Register a task from a AiiDA component.
     For example: CalcJob, WorkChain, CalcFunction, WorkFunction."""
-    from aiida_workgraph.task import Task
 
-    # print(executor)
+    tdata.setdefault("metadata", {})
     inputs = [] if inputs is None else inputs
     outputs = [] if outputs is None else outputs
     executor = tdata["executor"]
@@ -247,26 +249,19 @@ def build_task_from_AiiDA(
     # so I pickled the function here, but this is not necessary
     # we need to update the node_graph to support the path and name of the function
     tdata["identifier"] = tdata.pop("identifier", tdata["executor"].__name__)
-    tdata["executor"] = {
-        "executor": pickle.dumps(executor),
-        "type": tdata["task_type"],
-        "is_pickle": True,
-    }
-    if tdata["task_type"].upper() in ["CALCFUNCTION", "WORKFUNCTION"]:
+    tdata["executor"] = build_callable(executor)
+    tdata["executor"]["type"] = tdata["metadata"]["task_type"]
+    if tdata["metadata"]["task_type"].upper() in ["CALCFUNCTION", "WORKFUNCTION"]:
         outputs = (
             [{"identifier": "workgraph.any", "name": "result"}]
             if not outputs
             else outputs
         )
-        # build executor from the function
-        tdata["executor"] = PickledFunction.build_executor(executor)
-        # tdata["executor"]["type"] = tdata["task_type"]
-    # print("kwargs: ", kwargs)
     # add built-in sockets
     outputs.append({"identifier": "workgraph.any", "name": "_outputs"})
     outputs.append({"identifier": "workgraph.any", "name": "_wait"})
     inputs.append({"identifier": "workgraph.any", "name": "_wait", "link_limit": 1e6})
-    tdata["node_class"] = Task
+    tdata["metadata"]["node_class"] = {"module": "aiida_workgraph.task", "name": "Task"}
     tdata["args"] = args
     tdata["kwargs"] = kwargs
     tdata["inputs"] = inputs
@@ -288,41 +283,52 @@ def build_pythonjob_task(func: Callable) -> Task:
         raise ValueError(
             "GraphBuilder task cannot be run remotely. Please remove 'PythonJob'."
         )
-    tdata = {"executor": PythonJob, "task_type": "CALCJOB"}
+    tdata = {
+        "metadata": {"task_type": "PYTHONJOB"},
+        "executor": PythonJob,
+    }
     _, tdata_py = build_task_from_AiiDA(tdata)
     tdata = deepcopy(func.tdata)
+    function_kwargs = [
+        name for name in tdata["inputs"] if name not in ["_wait", "_outputs"]
+    ]
     # merge the inputs and outputs from the PythonJob task to the function task
     # skip the already existed inputs and outputs
-    inputs = tdata["inputs"]
-    inputs.extend(
-        [
-            {"identifier": "workgraph.string", "name": "computer"},
-            {"identifier": "workgraph.string", "name": "code_label"},
-            {"identifier": "workgraph.string", "name": "code_path"},
-            {"identifier": "workgraph.string", "name": "prepend_text"},
-        ]
-    )
-    outputs = tdata["outputs"]
-    for input in tdata_py["inputs"]:
-        if input not in inputs:
-            inputs.append(input)
-    for output in tdata_py["outputs"]:
-        if output not in outputs:
-            outputs.append(output)
+    for input in [
+        {"identifier": "workgraph.string", "name": "computer"},
+        {"identifier": "workgraph.string", "name": "code_label"},
+        {"identifier": "workgraph.string", "name": "code_path"},
+        {"identifier": "workgraph.string", "name": "prepend_text"},
+    ]:
+        input["list_index"] = len(tdata["inputs"]) + 1
+        tdata["inputs"][input["name"]] = input
+    for name, input in tdata_py["inputs"].items():
+        if name not in tdata["inputs"]:
+            input["list_index"] = len(tdata["inputs"]) + 1
+            tdata["inputs"][name] = input
+    for name, output in tdata_py["outputs"].items():
+        if name not in tdata["outputs"]:
+            output["list_index"] = len(tdata["outputs"]) + 1
+            tdata["outputs"][name] = output
+    for output in [{"identifier": "workgraph.any", "name": "exit_code"}]:
+        output["list_index"] = len(tdata["outputs"]) + 1
+        tdata["outputs"][output["name"]] = output
     # change "copy_files" link_limit to 1e6
-    for input in inputs:
-        if input["name"] == "copy_files":
-            input["link_limit"] = 1e6
+    tdata["inputs"]["copy_files"]["link_limit"] = 1e6
     # append the kwargs of the PythonJob task to the function task
     kwargs = tdata["kwargs"]
     kwargs.extend(["computer", "code_label", "code_path", "prepend_text"])
     kwargs.extend(tdata_py["kwargs"])
-    tdata["inputs"] = inputs
-    tdata["outputs"] = outputs
     tdata["kwargs"] = kwargs
-    tdata["task_type"] = "PYTHONJOB"
+    tdata["metadata"]["task_type"] = "PYTHONJOB"
+    tdata["identifier"] = "workgraph.pythonjob"
+    tdata["metadata"]["node_class"] = {
+        "module": "aiida_workgraph.tasks.pythonjob",
+        "name": "PythonJob",
+    }
     task = create_task(tdata)
     task.is_aiida_component = True
+    task.function_kwargs = function_kwargs
     return task, tdata
 
 
@@ -334,7 +340,10 @@ def build_shelljob_task(
     from aiida_shell.parsers.shell import ShellParser
     from node_graph.socket import NodeSocket
 
-    tdata = {"executor": ShellJob, "task_type": "SHELLJOB"}
+    tdata = {
+        "metadata": {"task_type": "SHELLJOB"},
+        "executor": ShellJob,
+    }
     _, tdata = build_task_from_AiiDA(tdata)
     # create input sockets for the nodes, if it is linked other sockets
     links = {}
@@ -349,16 +358,17 @@ def build_shelljob_task(
             # Output socket itself is not a value, so we remove the key from the nodes
             nodes.pop(key)
     for input in inputs:
-        if input not in tdata["inputs"]:
-            tdata["inputs"].append(input)
+        if input["name"] not in tdata["inputs"]:
+            input["list_index"] = len(tdata["inputs"]) + 1
+            tdata["inputs"][input["name"]] = input
             tdata["kwargs"].append(input["name"])
     # Extend the outputs
-    tdata["outputs"].extend(
-        [
-            {"identifier": "workgraph.any", "name": "stdout"},
-            {"identifier": "workgraph.any", "name": "stderr"},
-        ]
-    )
+    for output in [
+        {"identifier": "workgraph.any", "name": "stdout"},
+        {"identifier": "workgraph.any", "name": "stderr"},
+    ]:
+        output["list_index"] = len(tdata["outputs"]) + 1
+        tdata["outputs"][output["name"]] = output
     outputs = [] if outputs is None else outputs
     parser_outputs = [] if parser_outputs is None else parser_outputs
     outputs = [
@@ -368,18 +378,19 @@ def build_shelljob_task(
     outputs.extend(parser_outputs)
     # add user defined outputs
     for output in outputs:
-        if output not in tdata["outputs"]:
-            tdata["outputs"].append(output)
+        if output["name"] not in tdata["outputs"]:
+            output["list_index"] = len(tdata["outputs"]) + 1
+            tdata["outputs"][output["name"]] = output
     #
     tdata["identifier"] = "ShellJob"
-    tdata["inputs"].extend(
-        [
-            {"identifier": "workgraph.any", "name": "command"},
-            {"identifier": "workgraph.any", "name": "resolve_command"},
-        ]
-    )
+    for input in [
+        {"identifier": "workgraph.any", "name": "command"},
+        {"identifier": "workgraph.any", "name": "resolve_command"},
+    ]:
+        input["list_index"] = len(tdata["inputs"]) + 1
+        tdata["inputs"][input["name"]] = input
     tdata["kwargs"].extend(["command", "resolve_command"])
-    tdata["task_type"] = "SHELLJOB"
+    tdata["metadata"]["task_type"] = "SHELLJOB"
     task = create_task(tdata)
     task.is_aiida_component = True
     return task, tdata, links
@@ -387,10 +398,9 @@ def build_shelljob_task(
 
 def build_task_from_workgraph(wg: any) -> Task:
     """Build task from workgraph."""
-    from aiida_workgraph.task import Task
     from aiida.orm.utils.serialize import serialize
 
-    tdata = {"task_type": "workgraph"}
+    tdata = {"metadata": {"task_type": "workgraph"}}
     inputs = []
     outputs = []
     group_outputs = []
@@ -402,7 +412,7 @@ def build_task_from_workgraph(wg: any) -> Task:
             if socket.name == "_wait":
                 continue
             inputs.append(
-                {"identifier": "workgraph.any", "name": f"{task.name}.{socket.name}"}
+                {"identifier": socket.identifier, "name": f"{task.name}.{socket.name}"}
             )
         # outputs
         outputs.append({"identifier": "workgraph.any", "name": f"{task.name}"})
@@ -410,7 +420,7 @@ def build_task_from_workgraph(wg: any) -> Task:
             if socket.name in ["_wait", "_outputs"]:
                 continue
             outputs.append(
-                {"identifier": "workgraph.any", "name": f"{task.name}.{socket.name}"}
+                {"identifier": socket.identifier, "name": f"{task.name}.{socket.name}"}
             )
             group_outputs.append(
                 {
@@ -423,19 +433,17 @@ def build_task_from_workgraph(wg: any) -> Task:
     outputs.append({"identifier": "workgraph.any", "name": "_outputs"})
     outputs.append({"identifier": "workgraph.any", "name": "_wait"})
     inputs.append({"identifier": "workgraph.any", "name": "_wait", "link_limit": 1e6})
-    tdata["node_class"] = Task
+    tdata["metadata"]["node_class"] = {"module": "aiida_workgraph.task", "name": "Task"}
     tdata["kwargs"] = kwargs
     tdata["inputs"] = inputs
     tdata["outputs"] = outputs
     tdata["identifier"] = wg.name
-    # TODO In order to reload the WorkGraph from process, "is_pickle" should be True
-    # so I pickled the function here, but this is not necessary
-    # we need to update the node_graph to support the path and name of the function
     executor = {
-        "executor": None,
+        "module": "aiida_workgraph.engine.workgraph",
+        "name": "WorkGraphEngine",
         "wgdata": serialize(wg.to_dict(store_nodes=True)),
-        "type": tdata["task_type"],
-        "is_pickle": True,
+        "type": tdata["metadata"]["task_type"],
+        "is_pickle": False,
     }
     tdata["executor"] = executor
     task = create_task(tdata)
@@ -487,7 +495,6 @@ def generate_tdata(
 ) -> Dict[str, Any]:
     """Generate task data for creating a task."""
     from node_graph.decorator import generate_input_sockets
-    from aiida_workgraph.task import Task
 
     args, kwargs, var_args, var_kwargs, _inputs = generate_input_sockets(
         func, inputs, properties, type_mapping=type_mapping
@@ -498,19 +505,21 @@ def generate_tdata(
     task_outputs.append({"identifier": "workgraph.any", "name": "_wait"})
     task_outputs.append({"identifier": "workgraph.any", "name": "_outputs"})
     tdata = {
-        "node_class": Task,
         "identifier": identifier,
         "args": args,
         "kwargs": kwargs,
         "var_args": var_args,
         "var_kwargs": var_kwargs,
-        "task_type": task_type,
+        "metadata": {
+            "task_type": task_type,
+            "catalog": catalog,
+            "node_class": {"module": "aiida_workgraph.task", "name": "Task"},
+        },
         "properties": properties,
         "inputs": _inputs,
         "outputs": task_outputs,
-        "catalog": catalog,
     }
-    tdata["executor"] = PickledFunction.build_executor(func)
+    tdata["executor"] = build_callable(func)
     if additional_data:
         tdata.update(additional_data)
     return tdata
@@ -528,6 +537,7 @@ class TaskDecoratorCollection:
         properties: Optional[List[Tuple[str, str]]] = None,
         inputs: Optional[List[Tuple[str, str]]] = None,
         outputs: Optional[List[Tuple[str, str]]] = None,
+        error_handlers: Optional[List[Dict[str, Any]]] = None,
         catalog: str = "Others",
     ) -> Callable:
         """Generate a decorator that register a function as a task.
@@ -562,6 +572,7 @@ class TaskDecoratorCollection:
                 task_type,
             )
             task = create_task(tdata)
+            task._error_handlers = error_handlers
             func.identifier = identifier
             func.task = func.node = task
             func.tdata = tdata
@@ -674,6 +685,7 @@ class TaskDecoratorCollection:
             task_decorated, _ = build_pythonjob_task(func)
             func.identifier = "PythonJob"
             func.task = func.node = task_decorated
+            task_decorated._error_handlers = kwargs.get("error_handlers", [])
 
             return func
 

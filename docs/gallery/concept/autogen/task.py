@@ -156,6 +156,11 @@ class MyAdd(Task):
     name = "MyAdd"
     node_type = "calcfunction"
     catalog = "Test"
+
+    _executor = {
+        "module": "aiida_workgraph.executors.test",
+        "name": "add",
+    }
     kwargs = ["x", "y"]
 
     def create_sockets(self):
@@ -166,12 +171,6 @@ class MyAdd(Task):
         inp = self.inputs.new("workgraph.Any", "y")
         inp.add_property("workgraph.Any", "y", default=0.0)
         self.outputs.new("workgraph.Any", "sum")
-
-    def get_executor(self):
-        return {
-            "path": "aiida_workgraph.executors.test",
-            "name": "add",
-        }
 
 
 ######################################################################

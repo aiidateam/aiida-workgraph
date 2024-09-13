@@ -17,7 +17,7 @@ def get_executor_source(tdata: Any) -> Tuple[bool, Optional[str]]:
             source_code = "".join(source_lines)
             return source_code
         except (TypeError, OSError):
-            source_code = tdata["executor"].get("function_source_code", "")
+            source_code = tdata["executor"].get("source_code", "")
             return source_code
     else:
         return str(executor)
@@ -83,7 +83,7 @@ def node_to_short_json(workgraph_pk: int, tdata: Dict[str, Any]) -> Dict[str, An
         "metadata": [
             ["name", tdata["name"]],
             ["node_type", tdata["metadata"]["node_type"]],
-            ["identifier", tdata["metadata"]["identifier"]],
+            ["identifier", tdata["identifier"]],
         ],
         "executor": executor,
     }

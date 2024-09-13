@@ -30,7 +30,7 @@ def test_time_monitor(decorated_add):
     monitor1 = wg.add_task(
         "workgraph.time_monitor",
         "monitor1",
-        datetime=datetime.datetime.now() + datetime.timedelta(seconds=10),
+        datetime=str(datetime.datetime.now() + datetime.timedelta(seconds=10)),
     )
     add1 = wg.add_task(decorated_add, "add1", x=1, y=2)
     add1.waiting_on.add(monitor1)
@@ -49,7 +49,7 @@ def test_file_monitor(decorated_add, tmp_path):
         with open(filepath, "w") as f:
             f.write("test")
 
-    monitor_file_path = tmp_path / "test_file_monitor.txt"
+    monitor_file_path = str(tmp_path / "test_file_monitor.txt")
 
     wg = WorkGraph(name="test_file_monitor")
     monitor1 = wg.add_task(

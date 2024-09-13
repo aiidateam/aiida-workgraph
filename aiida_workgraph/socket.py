@@ -51,12 +51,12 @@ def build_socket_from_AiiDA(DataClass: Type[Any]) -> Type[TaskSocket]:
             self.add_property(DataClass, name, **kwargs)
 
         def get_serialize(self) -> dict:
-            serialize = {"path": "aiida.orm.utils.serialize", "name": "serialize"}
+            serialize = {"module": "aiida.orm.utils.serialize", "name": "serialize"}
             return serialize
 
         def get_deserialize(self) -> dict:
             deserialize = {
-                "path": "aiida.orm.utils.serialize",
+                "module": "aiida.orm.utils.serialize",
                 "name": "deserialize_unsafe",
             }
             return deserialize
