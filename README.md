@@ -4,35 +4,14 @@
 [![codecov](https://codecov.io/gh/superstar54/aiida-workgraph/branch/main/graph/badge.svg)](https://codecov.io/gh/superstar54/aiida-workgraph)
 [![Docs status](https://readthedocs.org/projects/aiida-workgraph/badge)](http://aiida-workgraph.readthedocs.io/)
 
-Efficiently design and manage flexible workflows with AiiDA, featuring an interactive GUI, checkpoints, provenance tracking, and remote execution capabilities.
-
-
-
-Here is a detailed comparison between the ``WorkGraph`` with two AiiDA built-in workflow components.
-
-
-| Aspect                   | WorkFunction           | WorkChain                     | WorkGraph               |
-| ------------------------ | ---------------------- | ----------------------------- | ---------------------- |
-| Use Case                 | Short-running jobs     | Long-running jobs             | Long-running jobs      |
-| Checkpointing            | ``No``                 | Yes                           | Yes                    |
-| Execution order          | ``Sequential``         | ``Hybrid Sequential-Parallel``| Directed Acyclic Graph |
-| Non-blocking             | ``No``                 | Yes                           | Yes                    |
-| Implementation           | Easy                   | ``Difficult``                 | Easy                   |
-| Dynamic                  | ``No``                 | ``No``                        | Yes                    |
-| Ready to Use             | Yes                    | ``Need PYTHONPATH``           | Yes                    |
-| Subprocesses Handling    | ``No``                 | Launches & waits              | Launches & waits       |
-| Flow Control             | All                    | `if`, `while`                 | `if`, `while`, `match` |
-| Termination              | ``Hard exit``          | ExitCode                      | ExitCode               |
-| Data Passing             | Direct passing         | Context                       | Link & Context         |
-| Output Recording         | Limited support        | Out & validates               | Out                    |
-| Port Exposing            | Limited support        | Manual & automatic            | Manual                 |
+Efficiently design and manage flexible workflows with AiiDA, featuring an interactive GUI, checkpoints, provenance tracking, error-resistant, and remote execution capabilities.
 
 
 
 ## Installation
 
 ```console
-    pip install aiida-workgraph
+    pip install aiida-workgraph[widget]
 ```
 
 To install the latest version from source, first clone the repository and then install using `pip`:
@@ -67,16 +46,15 @@ Visit the [Workgraph Collections repository](https://github.com/superstar54/work
 Suppose we want to calculate ```(x + y) * z ``` in two steps. First, add `x` and `y`, then multiply the result with `z`.
 
 ```python
-from aiida.engine import calcfunction
-from aiida_workgraph import WorkGraph
+from aiida_workgraph import WorkGraph, task
 
-# define add calcfunction
-@calcfunction
+# define add task
+@task.calcfunction
 def add(x, y):
     return x + y
 
-# define multiply calcfunction
-@calcfunction
+# define multiply task
+@task.calcfunction
 def multiply(x, y):
     return x*y
 
