@@ -17,7 +17,7 @@ def get_executor_source(tdata: Any) -> Tuple[bool, Optional[str]]:
             source_code = "".join(source_lines)
             return source_code
         except (TypeError, OSError):
-            source_code = tdata["executor"].get("function_source_code", "")
+            source_code = tdata["executor"].get("source_code", "")
             return source_code
     else:
         return str(executor)
