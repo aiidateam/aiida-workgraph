@@ -48,6 +48,23 @@ def test_decorator(fixture_localhost, python_executable_path):
     assert wg.tasks["add1"].node.label == "add1"
 
 
+def test_importable_function(fixture_localhost, python_executable_path):
+    """Test importable function."""
+    from aiida_workgraph.executors.test import add_pythonjob
+
+    wg = WorkGraph("test_importable_function")
+    wg.add_task(
+        add_pythonjob,
+        name="add",
+        x=1,
+        y=2,
+        computer="localhost",
+        code_label=python_executable_path,
+    )
+    wg.run()
+    assert wg.tasks["add"].outputs["result"].value.value == 3
+
+
 def test_PythonJob_kwargs(fixture_localhost, python_executable_path):
     """Test function with kwargs."""
 

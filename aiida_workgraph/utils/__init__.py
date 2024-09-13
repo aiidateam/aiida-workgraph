@@ -617,10 +617,6 @@ def get_raw_value(identifier, value: Any) -> Any:
         "workgraph.float",
         "workgraph.string",
         "workgraph.bool",
-    ]:
-        if value is not None:
-            return value
-    elif identifier in [
         "workgraph.aiida_int",
         "workgraph.aiida_float",
         "workgraph.aiida_string",
@@ -635,6 +631,10 @@ def get_raw_value(identifier, value: Any) -> Any:
         and value is not None
         and isinstance(value, orm.StructureData)
     ):
+        content = value.backend_entity.attributes
+        content["node_type"] = value.node_type
+        return content
+    elif isinstance(value, orm.Data):
         content = value.backend_entity.attributes
         content["node_type"] = value.node_type
         return content

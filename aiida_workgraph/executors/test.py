@@ -2,6 +2,7 @@ from typing import Union, Dict
 import time
 from aiida.engine import calcfunction
 from aiida.orm import Int, Float
+from aiida_workgraph import task
 
 
 @calcfunction
@@ -29,3 +30,8 @@ def sum_diff(
     """Add node."""
     time.sleep(t.value)
     return {"sum": x + y, "diff": x - y}
+
+
+@task.pythonjob()
+def add_pythonjob(x: int, y: int) -> int:
+    return x + y

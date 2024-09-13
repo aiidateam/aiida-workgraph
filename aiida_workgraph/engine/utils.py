@@ -93,11 +93,17 @@ def prepare_for_python_task(task: dict, kwargs: dict, var_kwargs: dict) -> dict:
     metadata.update({"call_link_label": task["name"]})
     # get the source code of the function
     function_name = task["executor"]["name"]
-    function_source_code = (
-        task["executor"]["import_statements"]
-        + "\n"
-        + task["executor"]["source_code_without_decorator"]
-    )
+    if task["executor"].get("is_pickle", False):
+        function_source_code = (
+            task["executor"]["import_statements"]
+            + "\n"
+            + task["executor"]["source_code_without_decorator"]
+        )
+    else:
+        function_source_code = (
+            f"from {task['executor']['module']} import {function_name}"
+        )
+
     # outputs
     function_outputs = [
         output
