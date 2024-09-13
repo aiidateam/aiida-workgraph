@@ -87,3 +87,39 @@ def test_kwargs() -> None:
     test1 = test.node()
     assert test1.inputs["kwargs"].link_limit == 1e6
     assert test1.inputs["kwargs"].identifier == "workgraph.namespace"
+
+
+@pytest.mark.parametrize(
+    "data_type, socket_value, node_value",
+    (
+        (None, None, None),
+        # Check that SocketAny works for int node, without providing type hint
+        (None, 1, 1),
+        (int, 1, 1),
+        (float, 1.0, 1.0),
+        (bool, True, True),
+        (str, "abc", "abc"),
+        (orm.Int, 1, 1),
+        (orm.Float, 1.0, 1.0),
+        (orm.Str, "abc", "abc"),
+        (orm.Bool, True, True),
+    ),
+)
+def test_node_value(data_type, socket_value, node_value):
+
+    wg = WorkGraph()
+
+    def my_task(x: data_type):
+        pass
+
+    my_task1 = wg.add_task(my_task, name="my_task", x=socket_value)
+    socket = my_task1.inputs["x"]
+
+    socket_node_value = socket.get_node_value()
+    assert isinstance(socket_node_value, type(node_value))
+    assert socket_node_value == node_value
+
+    # Check that property also returns the correct results
+    socket_node_value = socket.node_value
+    assert isinstance(socket_node_value, type(node_value))
+    assert socket_node_value == node_value
