@@ -494,14 +494,6 @@ def test_exit_code(fixture_localhost, python_executable_path):
     """Test function with exit code."""
     from numpy import array
 
-    @task.pythonjob(outputs=[{"name": "sum"}])
-    def add(x: array, y: array) -> array:
-        sum = x + y
-        if (sum < 0).any():
-            exit_code = {"status": 410, "message": "Some elements are negative"}
-            return {"sum": sum, "exit_code": exit_code}
-        return {"sum": sum}
-
     def handle_negative_sum(task: Task):
         """Handle the failure code 410 of the `add`.
         Simply make the inputs positive by taking the absolute value.
@@ -511,6 +503,19 @@ def test_exit_code(fixture_localhost, python_executable_path):
 
         return "Run error handler: handle_negative_sum."
 
+    @task.pythonjob(
+        outputs=[{"name": "sum"}],
+        error_handlers=[
+            {"handler": handle_negative_sum, "exit_codes": [410], "max_retries": 5}
+        ],
+    )
+    def add(x: array, y: array) -> array:
+        sum = x + y
+        if (sum < 0).any():
+            exit_code = {"status": 410, "message": "Some elements are negative"}
+            return {"sum": sum, "exit_code": exit_code}
+        return {"sum": sum}
+
     wg = WorkGraph("test_PythonJob")
     wg.add_task(
         add,
@@ -519,12 +524,6 @@ def test_exit_code(fixture_localhost, python_executable_path):
         y=array([1, -2]),
         computer="localhost",
         code_label=python_executable_path,
-    )
-    # register error handler
-    wg.add_error_handler(
-        handle_negative_sum,
-        name="handle_negative_sum",
-        tasks={"add1": {"exit_codes": [410], "max_retries": 5}},
     )
     wg.run()
     # the first task should have exit status 410
