@@ -140,6 +140,7 @@ class Task(GraphNode):
     def get_error_handlers(self) -> list:
         """Get the error handler function for this task."""
         from aiida_workgraph.utils import build_callable
+        from aiida.engine import ExitCode
 
         if self._error_handlers is None:
             return {}
@@ -152,6 +153,17 @@ class Task(GraphNode):
             for handler in self._error_handlers:
                 handler["handler"] = build_callable(handler["handler"])
                 handlers[handler["handler"]["name"]] = handler
+        # convert exit code label (str) to status (int)
+        for handler in handlers.values():
+            exit_codes = []
+            for exit_code in handler["exit_codes"]:
+                if isinstance(exit_code, int):
+                    exit_codes.append(exit_code)
+                elif isinstance(exit_code, ExitCode):
+                    exit_codes.append(exit_code.status)
+                else:
+                    raise ValueError(f"Exit code {exit_code} is not a valid exit code.")
+            handler["exit_codes"] = exit_codes
         return handlers
 
     def _repr_mimebundle_(self, *args: Any, **kwargs: Any) -> any:

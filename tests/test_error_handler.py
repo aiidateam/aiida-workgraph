@@ -28,7 +28,15 @@ def test_error_handlers(add_code):
     wg.add_error_handler(
         handle_negative_sum,
         name="handle_negative_sum",
-        tasks={"add1": {"exit_codes": [410], "max_retries": 5, "kwargs": {}}},
+        tasks={
+            "add1": {
+                "exit_codes": [
+                    ArithmeticAddCalculation.exit_codes.ERROR_NEGATIVE_NUMBER
+                ],
+                "max_retries": 5,
+                "kwargs": {},
+            }
+        },
     )
     wg.submit(
         inputs={
