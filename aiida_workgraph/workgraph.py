@@ -206,6 +206,7 @@ class WorkGraph(node_graph.NodeGraph):
 
     def get_error_handlers(self) -> Dict[str, Any]:
         """Get the error handlers."""
+        from aiida.engine import ExitCode
 
         from aiida_workgraph.utils import build_callable
 
@@ -213,6 +214,20 @@ class WorkGraph(node_graph.NodeGraph):
         for name, error_handler in self._error_handlers.items():
             error_handler["handler"] = build_callable(error_handler["handler"])
             error_handlers[name] = error_handler
+        # convert exit code label (str) to status (int)
+        for handler in error_handlers.values():
+            for task in handler["tasks"].values():
+                exit_codes = []
+                for exit_code in task["exit_codes"]:
+                    if isinstance(exit_code, int):
+                        exit_codes.append(exit_code)
+                    elif isinstance(exit_code, ExitCode):
+                        exit_codes.append(exit_code.status)
+                    else:
+                        raise ValueError(
+                            f"Exit code {exit_code} is not a valid exit code."
+                        )
+                task["exit_codes"] = exit_codes
         return error_handlers
 
     def wait(self, timeout: int = 50, tasks: dict = None) -> None:
