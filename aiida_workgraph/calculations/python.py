@@ -152,7 +152,7 @@ class PythonJob(CalcJob):
             return self.inputs.process_label.value
         else:
             data = self.get_function_data()
-            return f"PythonJob<{data['function_name']}>"
+            return f"PythonJob<{data['name']}>"
 
     def on_create(self) -> None:
         """Called when a Process is created."""
@@ -167,16 +167,16 @@ class PythonJob(CalcJob):
         """
         if "function" in self.inputs:
             metadata = self.inputs.function.metadata
-            metadata["function_source_code"] = (
+            metadata["source_code"] = (
                 metadata["import_statements"]
                 + "\n"
-                + metadata["function_source_code_without_decorator"]
+                + metadata["source_code_without_decorator"]
             )
             return metadata
         else:
             return {
-                "function_source_code": self.inputs.function_source_code.value,
-                "function_name": self.inputs.function_name.value,
+                "source_code": self.inputs.function_source_code.value,
+                "name": self.inputs.function_name.value,
             }
 
     def prepare_for_submission(self, folder: Folder) -> CalcInfo:
@@ -207,14 +207,14 @@ class PythonJob(CalcJob):
 import pickle
 
 # define the function
-{function_data["function_source_code"]}
+{function_data["source_code"]}
 
 # load the inputs from the pickle file
 with open('inputs.pickle', 'rb') as handle:
     inputs = pickle.load(handle)
 
 # run the function
-result = {function_data["function_name"]}(**inputs)
+result = {function_data["name"]}(**inputs)
 # save the result as a pickle file
 with open('results.pickle', 'wb') as handle:
     pickle.dump(result, handle)

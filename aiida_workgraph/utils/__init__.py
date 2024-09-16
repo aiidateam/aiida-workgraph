@@ -5,11 +5,78 @@ from aiida.common.exceptions import NotExistent
 from aiida.engine.runners import Runner
 
 
+def build_callable(obj: Callable) -> Dict[str, Any]:
+    """
+    Build the executor data from the callable. This will either serialize the callable
+    using cloudpickle if it's a local or lambda function, or store its module and name
+    if it's a globally defined callable (function or class).
+
+    Args:
+        obj (Callable): The callable to be serialized or referenced.
+
+    Returns:
+        Dict[str, Any]: A dictionary containing the serialized callable or a reference
+                        to its module and name.
+    """
+    import types
+    from aiida_workgraph.orm.function_data import PickledFunction
+
+    # Check if the callable is a function or class
+    if isinstance(obj, (types.FunctionType, type)):
+        # Check if callable is nested (contains dots in __qualname__ after the first segment)
+        if obj.__module__ == "__main__" or "." in obj.__qualname__.split(".", 1)[-1]:
+            # Local or nested callable, so pickle the callable
+            executor = PickledFunction.build_callable(obj)
+        else:
+            # Global callable (function/class), store its module and name for reference
+            executor = {
+                "module": obj.__module__,
+                "name": obj.__name__,
+                "is_pickle": False,
+            }
+    elif isinstance(obj, PickledFunction) or isinstance(obj, dict):
+        executor = obj
+    else:
+        raise TypeError("Provided object is not a callable function or class.")
+    return executor
+
+
+def get_sorted_names(data: dict) -> list:
+    """Get the sorted names from a dictionary."""
+    print("data: ", data)
+    sorted_names = [
+        name
+        for name, _ in sorted(
+            ((name, item["list_index"]) for name, item in data.items()),
+            key=lambda x: x[1],
+        )
+    ]
+    return sorted_names
+
+
+def store_nodes_recursely(data: Any) -> None:
+    """Recurse through a data structure and store any unstored nodes that are found along the way
+    :param data: a data structure potentially containing unstored nodes
+    """
+    from aiida.orm import Node
+    import collections.abc
+
+    if isinstance(data, Node) and not data.is_stored:
+        data.store()
+    elif isinstance(data, collections.abc.Mapping):
+        for _, value in data.items():
+            store_nodes_recursely(value)
+    elif isinstance(data, collections.abc.Sequence) and not isinstance(data, str):
+        for value in data:
+            store_nodes_recursely(value)
+
+
 def get_executor(data: Dict[str, Any]) -> Union[Process, Any]:
     """Import executor from path and return the executor and type."""
     import importlib
     from aiida.plugins import CalculationFactory, WorkflowFactory, DataFactory
 
+    data = data or {}
     is_pickle = data.get("is_pickle", False)
     type = data.get("type", "function")
     if is_pickle:
@@ -27,10 +94,10 @@ def get_executor(data: Dict[str, Any]) -> Union[Process, Any]:
             executor = CalculationFactory(data["name"])
         elif type == "DataFactory":
             executor = DataFactory(data["name"])
-        elif data["name"] == "" and data["path"] == "":
+        elif not data.get("name", None) and not data.get("module", None):
             executor = None
         else:
-            module = importlib.import_module("{}".format(data.get("path", "")))
+            module = importlib.import_module("{}".format(data.get("module", "")))
             executor = getattr(module, data["name"])
 
     return executor, type
@@ -131,13 +198,21 @@ def merge_properties(wgdata: Dict[str, Any]) -> None:
                     "code": 1}}
     So that no "." in the key name.
     """
-    for name, task in wgdata["tasks"].items():
+    for _, task in wgdata["tasks"].items():
         for key, prop in task["properties"].items():
             if "." in key and prop["value"] not in [None, {}]:
                 root, key = key.split(".", 1)
-                update_nested_dict(
-                    task["properties"][root]["value"], key, prop["value"]
-                )
+                root_prop = task["properties"][root]
+                update_nested_dict(root_prop["value"], key, prop["value"])
+                prop["value"] = None
+        for key, input in task["inputs"].items():
+            if input["property"] is None:
+                continue
+            prop = input["property"]
+            if "." in key and prop["value"] not in [None, {}]:
+                root, key = key.split(".", 1)
+                root_prop = task["inputs"][root]["property"]
+                update_nested_dict(root_prop["value"], key, prop["value"])
                 prop["value"] = None
 
 
@@ -218,38 +293,6 @@ def get_dict_from_builder(builder: Any) -> Dict:
         return builder
 
 
-def get_pythonjob_data(tdata: Dict[str, Any]) -> Dict[str, Any]:
-    """
-    Process the task data dictionary for a PythonJob.
-    It load the orignal Python data from the AiiDA Data node for the
-    args and kwargs of the function.
-
-    Args:
-        tdata (Dict[str, Any]): The input data dictionary.
-
-    Returns:
-        Dict[str, Any]: The processed data dictionary.
-    """
-    for name in tdata["metadata"]["args"]:
-        if tdata["properties"][name]["value"] is None:
-            continue
-        if name in tdata["properties"]:
-            tdata["properties"][name]["value"] = tdata["properties"][name][
-                "value"
-            ].value
-    for name in tdata["metadata"]["kwargs"]:
-        # all the kwargs are after computer is the input for the PythonJob, should be AiiDA Data node
-        if tdata["properties"][name]["value"] is None:
-            continue
-        if name == "computer":
-            break
-        if name in tdata["properties"]:
-            tdata["properties"][name]["value"] = tdata["properties"][name][
-                "value"
-            ].value
-    return tdata
-
-
 def serialize_workgraph_data(wgdata: Dict[str, Any]) -> Dict[str, Any]:
     from aiida.orm.utils.serialize import serialize
 
@@ -270,8 +313,6 @@ def get_workgraph_data(process: Union[int, orm.Node]) -> Optional[Dict[str, Any]
         return
     for name, task in wgdata["tasks"].items():
         wgdata["tasks"][name] = deserialize_unsafe(task)
-        if wgdata["tasks"][name]["metadata"]["node_type"].upper() == "PYTHONJOB":
-            get_pythonjob_data(wgdata["tasks"][name])
     wgdata["error_handlers"] = deserialize_unsafe(wgdata["error_handlers"])
     return wgdata
 
@@ -388,33 +429,20 @@ def serialize_properties(wgdata):
     save it to the node.base.extras. yaml can not handle the function
     defined in a scope, e.g., local function in another function.
     So, if a function is used as input, we needt to serialize the function.
-
-    For PythonJob, serialize the function inputs."""
-    from aiida_workgraph.orm.serializer import general_serializer
+    """
     from aiida_workgraph.orm.function_data import PickledLocalFunction
+    from aiida_workgraph.tasks.pythonjob import PythonJob
     import inspect
 
     for _, task in wgdata["tasks"].items():
         if task["metadata"]["node_type"].upper() == "PYTHONJOB":
-            # get the names kwargs for the PythonJob, which are the inputs before _wait
-            input_kwargs = []
-            for input in task["inputs"]:
-                if input["name"] == "_wait":
-                    break
-                input_kwargs.append(input["name"])
-            for name in input_kwargs:
-                prop = task["properties"][name]
-                # if value is not None, not {}
-                if not (
-                    prop["value"] is None
-                    or isinstance(prop["value"], dict)
-                    and prop["value"] == {}
-                ):
-                    prop["value"] = general_serializer(prop["value"])
-        else:
-            for _, prop in task["properties"].items():
-                if inspect.isfunction(prop["value"]):
-                    prop["value"] = PickledLocalFunction(prop["value"]).store()
+            PythonJob.serialize_pythonjob_data(task)
+        for _, input in task["inputs"].items():
+            if input["property"] is None:
+                continue
+            prop = input["property"]
+            if inspect.isfunction(prop["value"]):
+                prop["value"] = PickledLocalFunction(prop["value"]).store()
 
 
 def generate_bash_to_create_python_env(
@@ -585,39 +613,50 @@ def recursive_to_dict(attr_dict):
         return attr_dict
 
 
-def process_properties(properties: Dict) -> Dict:
+def get_raw_value(identifier, value: Any) -> Any:
+    """Get the raw value from a Data node."""
+    if identifier in [
+        "workgraph.int",
+        "workgraph.float",
+        "workgraph.string",
+        "workgraph.bool",
+        "workgraph.aiida_int",
+        "workgraph.aiida_float",
+        "workgraph.aiida_string",
+        "workgraph.aiida_bool",
+    ]:
+        if value is not None and isinstance(value, orm.Data):
+            return value.value
+        else:
+            return value
+    elif (
+        identifier == "workgraph.aiida_structure"
+        and value is not None
+        and isinstance(value, orm.StructureData)
+    ):
+        content = value.backend_entity.attributes
+        content["node_type"] = value.node_type
+        return content
+    elif isinstance(value, orm.Data):
+        content = value.backend_entity.attributes
+        content["node_type"] = value.node_type
+        return content
+
+
+def process_properties(task: Dict) -> Dict:
     """Extract raw values."""
     result = {}
-    for key, prop in properties.items():
+    for name, prop in task["properties"].items():
         identifier = prop["identifier"]
         value = prop.get("value")
-
-        if identifier in [
-            "workgraph.int",
-            "workgraph.float",
-            "workgraph.string",
-            "workgraph.bool",
-        ]:
-            if value is not None:
-                result[key] = value
-        elif identifier in [
-            "workgraph.aiida_int",
-            "workgraph.aiida_float",
-            "workgraph.aiida_string",
-            "workgraph.aiida_bool",
-        ]:
-            if value is not None and isinstance(value, orm.Data):
-                result[key] = value.value
-            else:
-                result[key] = value
-        elif (
-            identifier == "workgraph.aiida_structure"
-            and value is not None
-            and isinstance(value, orm.StructureData)
-        ):
-            content = value.backend_entity.attributes
-            content["node_type"] = value.node_type
-            result[key] = content
+        result[name] = get_raw_value(identifier, value)
+    #
+    for name, input in task["inputs"].items():
+        if input["property"] is not None:
+            prop = input["property"]
+            identifier = prop["identifier"]
+            value = prop.get("value")
+            result[name] = get_raw_value(identifier, value)
 
     return result
 
@@ -636,12 +675,8 @@ def workgraph_to_short_json(
     #
     for name, task in wgdata["tasks"].items():
         # Add required inputs to nodes
-        inputs = [
-            input
-            for input in task["inputs"]
-            if input["name"] in task["metadata"]["args"]
-        ]
-        properties = process_properties(task.get("properties", {}))
+        inputs = [{"name": name} for name in task["inputs"] if name in task["args"]]
+        properties = process_properties(task)
         wgdata_short["nodes"][name] = {
             "label": task["name"],
             "node_type": task["metadata"]["node_type"].upper(),

@@ -1,5 +1,5 @@
 import pytest
-from aiida_workgraph import WorkGraph, task
+from aiida_workgraph import WorkGraph, task, Task
 from typing import Any
 
 
@@ -48,11 +48,28 @@ def test_decorator(fixture_localhost, python_executable_path):
     assert wg.tasks["add1"].node.label == "add1"
 
 
-@pytest.mark.usefixtures("started_daemon_client")
+def test_importable_function(fixture_localhost, python_executable_path):
+    """Test importable function."""
+    from aiida_workgraph.executors.test import add_pythonjob
+
+    wg = WorkGraph("test_importable_function")
+    wg.add_task(
+        add_pythonjob,
+        name="add",
+        x=1,
+        y=2,
+        computer="localhost",
+        code_label=python_executable_path,
+    )
+    wg.run()
+    assert wg.tasks["add"].outputs["result"].value.value == 3
+
+
 def test_PythonJob_kwargs(fixture_localhost, python_executable_path):
     """Test function with kwargs."""
 
-    def add(x, **kwargs):
+    def add(x, y=1, **kwargs):
+        x += y
         for value in kwargs.values():
             x += value
         return x
@@ -63,13 +80,19 @@ def test_PythonJob_kwargs(fixture_localhost, python_executable_path):
         inputs={
             "add": {
                 "x": 1,
-                "kwargs": {"y": 2, "z": 3},
+                "y": 2,
+                "kwargs": {"m": 2, "n": 3},
                 "computer": "localhost",
                 "code_label": python_executable_path,
             },
         },
     )
-    assert wg.tasks["add"].outputs["result"].value.value == 6
+    # data inside the kwargs should be serialized separately
+    wg.process.inputs.wg.tasks.add.inputs.kwargs.property.value.m.value == 2
+    assert wg.tasks["add"].outputs["result"].value.value == 8
+    # load the workgraph
+    wg = WorkGraph.load(wg.pk)
+    assert wg.tasks["add"].inputs["kwargs"].value == {"m": 2, "n": 3}
 
 
 def test_PythonJob_typing():
@@ -486,3 +509,52 @@ def test_load_pythonjob(fixture_localhost, python_executable_path):
     )
     assert wg.tasks["add"].outputs["result"].value.value == "Hello, World!"
     wg = WorkGraph.load(wg.pk)
+    wg.tasks["add"].inputs["x"].value = "Hello, "
+    wg.tasks["add"].inputs["y"].value = "World!"
+
+
+def test_exit_code(fixture_localhost, python_executable_path):
+    """Test function with exit code."""
+    from numpy import array
+
+    def handle_negative_sum(task: Task):
+        """Handle the failure code 410 of the `add`.
+        Simply make the inputs positive by taking the absolute value.
+        """
+
+        task.set({"x": abs(task.inputs["x"].value), "y": abs(task.inputs["y"].value)})
+
+        return "Run error handler: handle_negative_sum."
+
+    @task.pythonjob(
+        outputs=[{"name": "sum"}],
+        error_handlers=[
+            {"handler": handle_negative_sum, "exit_codes": [410], "max_retries": 5}
+        ],
+    )
+    def add(x: array, y: array) -> array:
+        sum = x + y
+        if (sum < 0).any():
+            exit_code = {"status": 410, "message": "Some elements are negative"}
+            return {"sum": sum, "exit_code": exit_code}
+        return {"sum": sum}
+
+    wg = WorkGraph("test_PythonJob")
+    wg.add_task(
+        add,
+        name="add1",
+        x=array([1, 1]),
+        y=array([1, -2]),
+        computer="localhost",
+        code_label=python_executable_path,
+    )
+    wg.run()
+    # the first task should have exit status 410
+    assert wg.process.base.links.get_outgoing().all()[0].node.exit_status == 410
+    assert (
+        wg.process.base.links.get_outgoing().all()[0].node.exit_message
+        == "Some elements are negative"
+    )
+    # the final task should have exit status 0
+    assert wg.tasks["add1"].node.exit_status == 0
+    assert (wg.tasks["add1"].outputs["sum"].value.value == array([2, 3])).all()

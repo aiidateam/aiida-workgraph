@@ -425,7 +425,7 @@ class WorkGraphEngine(Process, metaclass=Protect):
                     self.report(f"Task: {awaitable.key} cancelled.")
                 else:
                     results = awaitable.result()
-                    self.set_normal_task_results(awaitable.key, results)
+                    self.update_normal_task_state(awaitable.key, results)
             except Exception as e:
                 self.logger.error(f"Error in awaitable {awaitable.key}: {e}")
                 self.set_task_state_info(awaitable.key, "state", "FAILED")
@@ -459,7 +459,6 @@ class WorkGraphEngine(Process, metaclass=Protect):
 
         super().on_create()
         wgdata = self.inputs.wg._dict
-        # print("wgdata: ", wgdata)
         restart_process = (
             orm.load_node(wgdata["restart_process"].value)
             if wgdata.get("restart_process")
@@ -499,14 +498,13 @@ class WorkGraphEngine(Process, metaclass=Protect):
 
     def setup_ctx_workgraph(self, wgdata: t.Dict[str, t.Any]) -> None:
         """setup the workgraph in the context."""
-        import cloudpickle as pickle
 
         self.ctx._tasks = wgdata["tasks"]
         self.ctx._links = wgdata["links"]
         self.ctx._connectivity = wgdata["connectivity"]
         self.ctx._ctrl_links = wgdata["ctrl_links"]
         self.ctx._workgraph = wgdata
-        self.ctx._error_handlers = pickle.loads(wgdata["error_handlers"])
+        self.ctx._error_handlers = wgdata["error_handlers"]
 
     def read_wgdata_from_base(self) -> t.Dict[str, t.Any]:
         """Read workgraph data from base.extras."""
@@ -515,7 +513,10 @@ class WorkGraphEngine(Process, metaclass=Protect):
         wgdata = self.node.base.extras.get("_workgraph")
         for name, task in wgdata["tasks"].items():
             wgdata["tasks"][name] = deserialize_unsafe(task)
-            for _, prop in wgdata["tasks"][name]["properties"].items():
+            for _, input in wgdata["tasks"][name]["inputs"].items():
+                if input["property"] is None:
+                    continue
+                prop = input["property"]
                 if isinstance(prop["value"], PickledLocalFunction):
                     prop["value"] = prop["value"].value
         wgdata["error_handlers"] = deserialize_unsafe(wgdata["error_handlers"])
@@ -532,12 +533,21 @@ class WorkGraphEngine(Process, metaclass=Protect):
     def get_task(self, name: str):
         """Get task from the context."""
         task = Task.from_dict(self.ctx._tasks[name])
+        # update task results
+        for output in task.outputs:
+            output.value = get_nested_dict(
+                self.ctx._tasks[name]["results"],
+                output.name,
+                default=output.value,
+            )
         return task
 
     def update_task(self, task: Task):
         """Update task in the context.
         This is used in error handlers to update the task parameters."""
-        self.ctx._tasks[task.name]["properties"] = task.properties_to_dict()
+        tdata = task.to_dict()
+        self.ctx._tasks[task.name]["properties"] = tdata["properties"]
+        self.ctx._tasks[task.name]["inputs"] = tdata["inputs"]
         self.reset_task(task.name)
 
     def get_task_state_info(self, name: str, key: str) -> str:
@@ -691,69 +701,87 @@ class WorkGraphEngine(Process, metaclass=Protect):
         self.report("tasks ready to run: {}".format(",".join(task_to_run)))
         self.run_tasks(task_to_run)
 
-    def update_task_state(self, name: str) -> None:
+    def update_task_state(self, name: str, success=True) -> None:
         """Update task state when the task is finished."""
         task = self.ctx._tasks[name]
-        # print(f"set task result: {name}")
-        node = self.get_task_state_info(name, "process")
-        if isinstance(node, orm.ProcessNode):
-            # print(f"set task result: {name} process")
-            state = node.process_state.value.upper()
-            if node.is_finished_ok:
-                self.set_task_state_info(task["name"], "state", state)
-                if task["metadata"]["node_type"].upper() == "WORKGRAPH":
-                    # expose the outputs of all the tasks in the workgraph
-                    task["results"] = {}
-                    outgoing = node.base.links.get_outgoing()
-                    for link in outgoing.all():
-                        if isinstance(link.node, ProcessNode) and getattr(
-                            link.node, "process_state", False
-                        ):
-                            task["results"][link.link_label] = link.node.outputs
+        if success:
+            node = self.get_task_state_info(name, "process")
+            if isinstance(node, orm.ProcessNode):
+                # print(f"set task result: {name} process")
+                state = node.process_state.value.upper()
+                if node.is_finished_ok:
+                    self.set_task_state_info(task["name"], "state", state)
+                    if task["metadata"]["node_type"].upper() == "WORKGRAPH":
+                        # expose the outputs of all the tasks in the workgraph
+                        task["results"] = {}
+                        outgoing = node.base.links.get_outgoing()
+                        for link in outgoing.all():
+                            if isinstance(link.node, ProcessNode) and getattr(
+                                link.node, "process_state", False
+                            ):
+                                task["results"][link.link_label] = link.node.outputs
+                    else:
+                        task["results"] = node.outputs
+                        # self.ctx._new_data[name] = task["results"]
+                    self.set_task_state_info(task["name"], "state", "FINISHED")
+                    self.task_set_context(name)
+                    self.report(f"Task: {name} finished.")
+                # all other states are considered as failed
                 else:
                     task["results"] = node.outputs
-                    # self.ctx._new_data[name] = task["results"]
+                    self.on_task_failed(name)
+            elif isinstance(node, orm.Data):
+                #
+                output_name = [
+                    output_name
+                    for output_name in list(task["outputs"].keys())
+                    if output_name not in ["_wait", "_outputs"]
+                ][0]
+                task["results"] = {output_name: node}
                 self.set_task_state_info(task["name"], "state", "FINISHED")
                 self.task_set_context(name)
                 self.report(f"Task: {name} finished.")
-            # all other states are considered as failed
             else:
-                task["results"] = node.outputs
-                # self.ctx._new_data[name] = task["results"]
-                self.set_task_state_info(task["name"], "state", "FAILED")
-                # set child tasks state to SKIPPED
-                self.set_tasks_state(
-                    self.ctx._connectivity["child_node"][name], "SKIPPED"
-                )
-                self.report(f"Task: {name} failed.")
-                self.run_error_handlers(name)
-        elif isinstance(node, orm.Data):
-            task["results"] = {task["outputs"][0]["name"]: node}
-            self.set_task_state_info(task["name"], "state", "FINISHED")
-            self.task_set_context(name)
-            self.report(f"Task: {name} finished.")
+                task.setdefault("results", None)
         else:
-            task.setdefault("results", None)
-
+            self.on_task_failed(name)
         self.update_parent_task_state(name)
 
-    def set_normal_task_results(self, name, results):
+    def on_task_failed(self, name: str) -> None:
+        """Handle the case where a task has failed."""
+        self.set_task_state_info(name, "state", "FAILED")
+        self.set_tasks_state(self.ctx._connectivity["child_node"][name], "SKIPPED")
+        self.report(f"Task: {name} failed.")
+        self.run_error_handlers(name)
+
+    def update_normal_task_state(self, name, results, success=True):
         """Set the results of a normal task.
         A normal task is created by decorating a function with @task().
         """
-        task = self.ctx._tasks[name]
-        if isinstance(results, tuple):
-            if len(task["outputs"]) != len(results):
-                return self.exit_codes.OUTPUS_NOT_MATCH_RESULTS
-            for i in range(len(task["outputs"])):
-                task["results"][task["outputs"][i]["name"]] = results[i]
-        elif isinstance(results, dict):
-            task["results"] = results
+        from aiida_workgraph.utils import get_sorted_names
+
+        if success:
+            task = self.ctx._tasks[name]
+            if isinstance(results, tuple):
+                if len(task["outputs"]) != len(results):
+                    return self.exit_codes.OUTPUS_NOT_MATCH_RESULTS
+                output_names = get_sorted_names(task["outputs"])
+                for i, output_name in enumerate(output_names):
+                    task["results"][output_name] = results[i]
+            elif isinstance(results, dict):
+                task["results"] = results
+            else:
+                output_name = [
+                    output_name
+                    for output_name in list(task["outputs"].keys())
+                    if output_name not in ["_wait", "_outputs"]
+                ][0]
+                task["results"][output_name] = results
+            self.task_set_context(name)
+            self.set_task_state_info(name, "state", "FINISHED")
+            self.report(f"Task: {name} finished.")
         else:
-            task["results"][task["outputs"][0]["name"]] = results
-        self.task_set_context(name)
-        self.set_task_state_info(name, "state", "FINISHED")
-        self.report(f"Task: {name} finished.")
+            self.on_task_failed(name)
         self.update_parent_task_state(name)
 
     def update_parent_task_state(self, name: str) -> None:
@@ -777,10 +805,8 @@ class WorkGraphEngine(Process, metaclass=Protect):
                 f"Wihle Task {name}: this iteration finished. Try to reset for the next iteration."
             )
             # reset the condition tasks
-            for input in self.ctx._tasks[name]["inputs"]:
-                if input["name"].upper() == "CONDITIONS":
-                    for link in input["links"]:
-                        self.reset_task(link["from_node"], recursive=False)
+            for link in self.ctx._tasks[name]["inputs"]["conditions"]["links"]:
+                self.reset_task(link["from_node"], recursive=False)
             # reset the task and all its children, so that the task can run again
             # do not reset the execution count
             self.reset_task(name, reset_execution_count=False)
@@ -798,7 +824,7 @@ class WorkGraphEngine(Process, metaclass=Protect):
         # check the conditions of the while task
         not_excess_max_iterations = (
             self.ctx._tasks[name]["execution_count"]
-            < self.ctx._tasks[name]["properties"]["max_iterations"]["value"]
+            < self.ctx._tasks[name]["inputs"]["max_iterations"]["property"]["value"]
         )
         conditions = [not_excess_max_iterations]
         _, kwargs, _, _, _ = self.get_inputs(name)
@@ -836,20 +862,48 @@ class WorkGraphEngine(Process, metaclass=Protect):
         return finished, None
 
     def run_error_handlers(self, task_name: str) -> None:
-        """Run error handler."""
+        """Run error handler for a task."""
+
         node = self.get_task_state_info(task_name, "process")
         if not node or not node.exit_status:
             return
+        # error_handlers from the task
+        for _, data in self.ctx._tasks[task_name]["error_handlers"].items():
+            if node.exit_status in data.get("exit_codes", []):
+                handler = data["handler"]
+                self.run_error_handler(handler, data, task_name)
+                return
+        # error_handlers from the workgraph
         for _, data in self.ctx._error_handlers.items():
-            if task_name in data["tasks"]:
+            if node.exit_code.status in data["tasks"].get(task_name, {}).get(
+                "exit_codes", []
+            ):
                 handler = data["handler"]
                 metadata = data["tasks"][task_name]
-                if node.exit_code.status in metadata.get("exit_codes", []):
-                    self.report(f"Run error handler: {metadata}")
-                    metadata.setdefault("retry", 0)
-                    if metadata["retry"] < metadata["max_retries"]:
-                        handler(self, task_name, **metadata.get("kwargs", {}))
-                        metadata["retry"] += 1
+                self.run_error_handler(handler, metadata, task_name)
+                return
+
+    def run_error_handler(self, handler: dict, metadata: dict, task_name: str) -> None:
+        from inspect import signature
+        from aiida_workgraph.utils import get_executor
+
+        handler, _ = get_executor(handler)
+        handler_sig = signature(handler)
+        metadata.setdefault("retry", 0)
+        self.report(f"Run error handler: {handler.__name__}")
+        if metadata["retry"] < metadata["max_retries"]:
+            task = self.get_task(task_name)
+            try:
+                if "engine" in handler_sig.parameters:
+                    msg = handler(task, engine=self, **metadata.get("kwargs", {}))
+                else:
+                    msg = handler(task, **metadata.get("kwargs", {}))
+                self.update_task(task)
+                if msg:
+                    self.report(msg)
+                metadata["retry"] += 1
+            except Exception as e:
+                self.report(f"Error in running error handler: {e}")
 
     def is_workgraph_finished(self) -> bool:
         """Check if the workgraph is finished.
@@ -973,7 +1027,7 @@ class WorkGraphEngine(Process, metaclass=Protect):
             executor, _ = get_executor(task["executor"])
             # print("executor: ", executor)
             args, kwargs, var_args, var_kwargs, args_dict = self.get_inputs(name)
-            for i, key in enumerate(self.ctx._tasks[name]["metadata"]["args"]):
+            for i, key in enumerate(self.ctx._tasks[name]["args"]):
                 kwargs[key] = args[i]
             # update the port namespace
             kwargs = update_nested_dict_with_special_keys(kwargs)
@@ -990,7 +1044,7 @@ class WorkGraphEngine(Process, metaclass=Protect):
                 if continue_workgraph:
                     self.continue_workgraph()
             elif task["metadata"]["node_type"].upper() == "DATA":
-                for key in self.ctx._tasks[name]["metadata"]["args"]:
+                for key in self.ctx._tasks[name]["args"]:
                     kwargs.pop(key, None)
                 results = create_data_node(executor, args, kwargs)
                 self.set_task_state_info(name, "process", results)
@@ -1018,12 +1072,7 @@ class WorkGraphEngine(Process, metaclass=Protect):
                     self.update_task_state(name)
                 except Exception as e:
                     self.logger.error(f"Error in task {name}: {e}")
-                    self.set_task_state_info(name, "state", "FAILED")
-                    # set child state to FAILED
-                    self.set_tasks_state(
-                        self.ctx._connectivity["child_node"][name], "SKIPPED"
-                    )
-                    self.report(f"Task: {name} failed.")
+                    self.update_task_state(name, success=False)
                 # exclude the current tasks from the next run
                 if continue_workgraph:
                     self.continue_workgraph()
@@ -1166,7 +1215,7 @@ class WorkGraphEngine(Process, metaclass=Protect):
                 self.update_parent_task_state(name)
                 self.continue_workgraph()
             elif task["metadata"]["node_type"].upper() in ["AWAITABLE"]:
-                for key in self.ctx._tasks[name]["metadata"]["args"]:
+                for key in self.ctx._tasks[name]["args"]:
                     kwargs.pop(key, None)
                 awaitable_target = asyncio.ensure_future(
                     self.run_executor(executor, args, kwargs, var_args, var_kwargs),
@@ -1177,10 +1226,15 @@ class WorkGraphEngine(Process, metaclass=Protect):
                 self.to_context(**{name: awaitable})
             elif task["metadata"]["node_type"].upper() in ["MONITOR"]:
 
-                for key in self.ctx._tasks[name]["metadata"]["args"]:
+                for key in self.ctx._tasks[name]["args"]:
                     kwargs.pop(key, None)
                 # add function and interval to the args
-                args = [executor, kwargs.pop("interval"), kwargs.pop("timeout"), *args]
+                args = [
+                    executor,
+                    kwargs.pop("interval", 1),
+                    kwargs.pop("timeout", 3600),
+                    *args,
+                ]
                 awaitable_target = asyncio.ensure_future(
                     self.run_executor(monitor, args, kwargs, var_args, var_kwargs),
                     loop=self.loop,
@@ -1192,25 +1246,19 @@ class WorkGraphEngine(Process, metaclass=Protect):
                 self.to_context(**{name: awaitable})
             elif task["metadata"]["node_type"].upper() in ["NORMAL"]:
                 # Normal task is created by decoratoring a function with @task()
-                if "context" in task["metadata"]["kwargs"]:
+                if "context" in task["kwargs"]:
                     self.ctx.task_name = name
                     kwargs.update({"context": self.ctx})
-                for key in self.ctx._tasks[name]["metadata"]["args"]:
+                for key in self.ctx._tasks[name]["args"]:
                     kwargs.pop(key, None)
                 try:
                     results = self.run_executor(
                         executor, args, kwargs, var_args, var_kwargs
                     )
-                    self.set_normal_task_results(name, results)
+                    self.update_normal_task_state(name, results)
                 except Exception as e:
                     self.logger.error(f"Error in task {name}: {e}")
-                    self.set_task_state_info(name, "state", "FAILED")
-                    # set child tasks state to SKIPPED
-                    self.set_tasks_state(
-                        self.ctx._connectivity["child_node"][name], "SKIPPED"
-                    )
-                    self.report(f"Task: {name} failed.")
-                    self.run_error_handlers(name)
+                    self.update_normal_task_state(name, results=None, success=False)
                 if continue_workgraph:
                     self.continue_workgraph()
             else:
@@ -1254,26 +1302,22 @@ class WorkGraphEngine(Process, metaclass=Protect):
         task = self.ctx._tasks[name]
         properties = task.get("properties", {})
         inputs = {}
-        for input in task["inputs"]:
+        for name, input in task["inputs"].items():
             # print(f"input: {input['name']}")
             if len(input["links"]) == 0:
-                inputs[input["name"]] = self.update_context_variable(
-                    properties[input["name"]]["value"]
-                )
+                inputs[name] = self.update_context_variable(input["property"]["value"])
             elif len(input["links"]) == 1:
                 link = input["links"][0]
                 if self.ctx._tasks[link["from_node"]]["results"] is None:
-                    inputs[input["name"]] = None
+                    inputs[name] = None
                 else:
                     # handle the special socket _wait, _outputs
                     if link["from_socket"] == "_wait":
                         continue
                     elif link["from_socket"] == "_outputs":
-                        inputs[input["name"]] = self.ctx._tasks[link["from_node"]][
-                            "results"
-                        ]
+                        inputs[name] = self.ctx._tasks[link["from_node"]]["results"]
                     else:
-                        inputs[input["name"]] = get_nested_dict(
+                        inputs[name] = get_nested_dict(
                             self.ctx._tasks[link["from_node"]]["results"],
                             link["from_socket"],
                         )
@@ -1281,18 +1325,18 @@ class WorkGraphEngine(Process, metaclass=Protect):
             elif len(input["links"]) > 1:
                 value = {}
                 for link in input["links"]:
-                    name = f'{link["from_node"]}_{link["from_socket"]}'
+                    item_name = f'{link["from_node"]}_{link["from_socket"]}'
                     # handle the special socket _wait, _outputs
                     if link["from_socket"] == "_wait":
                         continue
                     if self.ctx._tasks[link["from_node"]]["results"] is None:
-                        value[name] = None
+                        value[item_name] = None
                     else:
-                        value[name] = self.ctx._tasks[link["from_node"]]["results"][
-                            link["from_socket"]
-                        ]
-                inputs[input["name"]] = value
-        for name in task["metadata"].get("args", []):
+                        value[item_name] = self.ctx._tasks[link["from_node"]][
+                            "results"
+                        ][link["from_socket"]]
+                inputs[name] = value
+        for name in task.get("args", []):
             if name in inputs:
                 args.append(inputs[name])
                 args_dict[name] = inputs[name]
@@ -1300,21 +1344,21 @@ class WorkGraphEngine(Process, metaclass=Protect):
                 value = self.update_context_variable(properties[name]["value"])
                 args.append(value)
                 args_dict[name] = value
-        for name in task["metadata"].get("kwargs", []):
+        for name in task.get("kwargs", []):
             if name in inputs:
                 kwargs[name] = inputs[name]
             else:
                 value = self.update_context_variable(properties[name]["value"])
                 kwargs[name] = value
-        if task["metadata"]["var_args"] is not None:
-            name = task["metadata"]["var_args"]
+        if task["var_args"] is not None:
+            name = task["var_args"]
             if name in inputs:
                 var_args = inputs[name]
             else:
                 value = self.update_context_variable(properties[name]["value"])
                 var_args = value
-        if task["metadata"]["var_kwargs"] is not None:
-            name = task["metadata"]["var_kwargs"]
+        if task["var_kwargs"] is not None:
+            name = task["var_kwargs"]
             if name in inputs:
                 var_kwargs = inputs[name]
             else:

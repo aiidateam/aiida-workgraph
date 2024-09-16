@@ -80,6 +80,11 @@ class Gather(Task):
     name = "Gather"
     node_type = "WORKCHAIN"
     catalog = "Control"
+
+    _executor = {
+        "module": "aiida_workgraph.executors.builtins",
+        "name": "GatherWorkChain",
+    }
     kwargs = ["datas"]
 
     def create_sockets(self) -> None:
@@ -88,12 +93,6 @@ class Gather(Task):
         inp = self.inputs.new("workgraph.any", "datas")
         inp.link_limit = 100000
         self.outputs.new("workgraph.any", "result")
-
-    def get_executor(self) -> Dict[str, str]:
-        return {
-            "path": "aiida_workgraph.executors.builtins",
-            "name": "GatherWorkChain",
-        }
 
 
 class ToContext(Task):
@@ -134,18 +133,16 @@ class AiiDAInt(Task):
     node_type = "data"
     catalog = "Test"
 
+    _executor = {
+        "module": "aiida.orm",
+        "name": "Int",
+    }
     args = ["value"]
 
     def create_sockets(self) -> None:
         inp = self.inputs.new("workgraph.any", "value", default=0.0)
         inp.add_property("workgraph.aiida_int", default=1.0)
         self.outputs.new("workgraph.aiida_int", "result")
-
-    def get_executor(self) -> Dict[str, str]:
-        return {
-            "path": "aiida.orm",
-            "name": "Int",
-        }
 
 
 class AiiDAFloat(Task):
@@ -154,17 +151,15 @@ class AiiDAFloat(Task):
     node_type = "data"
     catalog = "Test"
 
+    _executor = {
+        "module": "aiida.orm",
+        "name": "Float",
+    }
     args = ["value"]
 
     def create_sockets(self) -> None:
         self.inputs.new("workgraph.aiida_float", "value", default=0.0)
         self.outputs.new("workgraph.aiida_float", "result")
-
-    def get_executor(self) -> Dict[str, str]:
-        return {
-            "path": "aiida.orm",
-            "name": "Float",
-        }
 
 
 class AiiDAString(Task):
@@ -173,17 +168,15 @@ class AiiDAString(Task):
     node_type = "data"
     catalog = "Test"
 
+    _executor = {
+        "module": "aiida.orm",
+        "name": "Str",
+    }
     args = ["value"]
 
     def create_sockets(self) -> None:
         self.inputs.new("AiiDAString", "value", default="")
         self.outputs.new("AiiDAString", "result")
-
-    def get_executor(self) -> Dict[str, str]:
-        return {
-            "path": "aiida.orm",
-            "name": "Str",
-        }
 
 
 class AiiDAList(Task):
@@ -192,6 +185,10 @@ class AiiDAList(Task):
     node_type = "data"
     catalog = "Test"
 
+    _executor = {
+        "module": "aiida.orm",
+        "name": "List",
+    }
     args = ["value"]
 
     def create_properties(self) -> None:
@@ -200,12 +197,6 @@ class AiiDAList(Task):
     def create_sockets(self) -> None:
         self.outputs.new("workgraph.any", "Parameters")
 
-    def get_executor(self) -> Dict[str, str]:
-        return {
-            "path": "aiida.orm",
-            "name": "List",
-        }
-
 
 class AiiDADict(Task):
     identifier = "workgraph.aiida_dict"
@@ -213,6 +204,10 @@ class AiiDADict(Task):
     node_type = "data"
     catalog = "Test"
 
+    _executor = {
+        "module": "aiida.orm",
+        "name": "Dict",
+    }
     args = ["value"]
 
     def create_properties(self) -> None:
@@ -220,12 +215,6 @@ class AiiDADict(Task):
 
     def create_sockets(self) -> None:
         self.outputs.new("workgraph.any", "Parameters")
-
-    def get_executor(self) -> Dict[str, str]:
-        return {
-            "path": "aiida.orm",
-            "name": "Dict",
-        }
 
 
 class AiiDANode(Task):
@@ -235,6 +224,11 @@ class AiiDANode(Task):
     name = "AiiDANode"
     node_type = "node"
     catalog = "Test"
+
+    _executor = {
+        "module": "aiida.orm",
+        "name": "load_node",
+    }
     kwargs = ["identifier", "pk", "uuid", "label"]
 
     def create_properties(self) -> None:
@@ -249,12 +243,6 @@ class AiiDANode(Task):
         self.inputs.new("workgraph.any", "label")
         self.outputs.new("workgraph.any", "node")
 
-    def get_executor(self) -> Dict[str, str]:
-        return {
-            "path": "aiida.orm",
-            "name": "load_node",
-        }
-
 
 class AiiDACode(Task):
     """AiiDACode"""
@@ -263,6 +251,11 @@ class AiiDACode(Task):
     name = "AiiDACode"
     node_type = "node"
     catalog = "Test"
+
+    _executor = {
+        "module": "aiida.orm",
+        "name": "load_code",
+    }
     kwargs = ["identifier", "pk", "uuid", "label"]
 
     def create_sockets(self) -> None:
@@ -274,12 +267,6 @@ class AiiDACode(Task):
         self.inputs.new("workgraph.any", "label")
         self.outputs.new("workgraph.any", "Code")
 
-    def get_executor(self) -> Dict[str, str]:
-        return {
-            "path": "aiida.orm",
-            "name": "load_code",
-        }
-
 
 class Select(Task):
     """Select"""
@@ -288,6 +275,11 @@ class Select(Task):
     name = "Select"
     node_type = "Normal"
     catalog = "Control"
+
+    _executor = {
+        "module": "aiida_workgraph.executors.builtins",
+        "name": "select",
+    }
     args = ["condition", "true", "false"]
 
     def create_sockets(self) -> None:
@@ -300,9 +292,3 @@ class Select(Task):
         inp.link_limit = 100000
         self.outputs.new("workgraph.any", "result")
         self.outputs.new("workgraph.any", "_wait")
-
-    def get_executor(self) -> Dict[str, str]:
-        return {
-            "path": "aiida_workgraph.executors.builtins",
-            "name": "select",
-        }

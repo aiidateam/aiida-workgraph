@@ -6,24 +6,24 @@ def test_multiply_link() -> None:
     """Test multiply link."""
 
     from aiida_workgraph import task, WorkGraph
-    from aiida.orm import Float, load_node
+    from aiida.orm import Float
 
     @task.calcfunction()
-    def sum(datas):
+    def sum(**datas):
         total = 0
-        for data in datas:
-            total += load_node(data).value
+        for _, data in datas.items():
+            total += data.value
         return Float(total)
 
     wg = WorkGraph(name="test_multiply_link")
     float1 = wg.add_task("workgraph.aiida_node", pk=Float(1.0).store().pk)
     float2 = wg.add_task("workgraph.aiida_node", pk=Float(2.0).store().pk)
     float3 = wg.add_task("workgraph.aiida_node", pk=Float(3.0).store().pk)
-    gather1 = wg.add_task("workgraph.gather", "gather1")
     sum1 = wg.add_task(sum, "sum1")
-    wg.add_link(float1.outputs[0], gather1.inputs[0])
-    wg.add_link(float2.outputs[0], gather1.inputs[0])
-    wg.add_link(float3.outputs[0], gather1.inputs[0])
-    wg.add_link(gather1.outputs["result"], sum1.inputs["datas"])
-    wg.submit(wait=True)
+    sum1.inputs["datas"].link_limit = 100
+    wg.add_link(float1.outputs[0], sum1.inputs["datas"])
+    wg.add_link(float2.outputs[0], sum1.inputs["datas"])
+    wg.add_link(float3.outputs[0], sum1.inputs["datas"])
+    # wg.submit(wait=True)
+    wg.run()
     assert sum1.node.outputs.result.value == 6

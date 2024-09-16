@@ -28,7 +28,7 @@ dependencies = [
     "numpy~=1.21",
     "scipy",
     "ase",
-    "node-graph>=0.0.18",
+    "node-graph>=0.1.0",
     "aiida-core>=2.3",
     "cloudpickle",
     "aiida-shell",
@@ -122,6 +122,7 @@ workgraph = "aiida_workgraph.cli.cmd_workgraph:workgraph"
 "workgraph.test_greater" = "aiida_workgraph.tasks.test:TestGreater"
 "workgraph.test_sum_diff" = "aiida_workgraph.tasks.test:TestSumDiff"
 "workgraph.test_arithmetic_multiply_add" = "aiida_workgraph.tasks.test:TestArithmeticMultiplyAdd"
+"workgraph.pythonjob" = "aiida_workgraph.tasks.pythonjob:PythonJob"
 
 [project.entry-points."aiida_workgraph.property"]
 "workgraph.any" = "aiida_workgraph.properties.builtins:PropertyAny"

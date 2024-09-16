@@ -25,6 +25,7 @@ class Task(GraphNode):
     property_pool = property_pool
     socket_pool = socket_pool
     is_aiida_component = False
+    _error_handlers = None
 
     def __init__(
         self,
@@ -68,6 +69,7 @@ class Task(GraphNode):
         tdata["process"] = serialize(self.process) if self.process else serialize(None)
         tdata["metadata"]["pk"] = self.process.pk if self.process else None
         tdata["metadata"]["is_aiida_component"] = self.is_aiida_component
+        tdata["error_handlers"] = self.get_error_handlers()
 
         return tdata
 
@@ -111,18 +113,58 @@ class Task(GraphNode):
 
         Returns:
             Node: An instance of Node initialized with the provided data."""
-        from aiida_workgraph.tasks import task_pool
+        from aiida_workgraph.tasks import task_pool as workgraph_task_pool
+        from aiida.orm.utils.serialize import deserialize_unsafe
 
-        task = super().from_dict(data, node_pool=task_pool)
+        if task_pool is None:
+            task_pool = workgraph_task_pool
+        task = GraphNode.from_dict(data, node_pool=task_pool)
         task.context_mapping = data.get("context_mapping", {})
         task.waiting_on.add(data.get("wait", []))
-        task.process = data.get("process", None)
+        process = data.get("process", None)
+        if process and isinstance(process, str):
+            process = deserialize_unsafe(process)
+        task.process = process
+        task._error_handlers = data.get("error_handlers", [])
 
         return task
 
     def reset(self) -> None:
         self.process = None
         self.state = "PLANNED"
+
+    @property
+    def error_handlers(self) -> list:
+        return self.get_error_handlers()
+
+    def get_error_handlers(self) -> list:
+        """Get the error handler function for this task."""
+        from aiida_workgraph.utils import build_callable
+        from aiida.engine import ExitCode
+
+        if self._error_handlers is None:
+            return {}
+
+        handlers = {}
+        if isinstance(self._error_handlers, dict):
+            for handler in self._error_handlers.values():
+                handler["handler"] = build_callable(handler["handler"])
+        elif isinstance(self._error_handlers, list):
+            for handler in self._error_handlers:
+                handler["handler"] = build_callable(handler["handler"])
+                handlers[handler["handler"]["name"]] = handler
+        # convert exit code label (str) to status (int)
+        for handler in handlers.values():
+            exit_codes = []
+            for exit_code in handler["exit_codes"]:
+                if isinstance(exit_code, int):
+                    exit_codes.append(exit_code)
+                elif isinstance(exit_code, ExitCode):
+                    exit_codes.append(exit_code.status)
+                else:
+                    raise ValueError(f"Exit code {exit_code} is not a valid exit code.")
+            handler["exit_codes"] = exit_codes
+        return handlers
 
     def _repr_mimebundle_(self, *args: Any, **kwargs: Any) -> any:
 

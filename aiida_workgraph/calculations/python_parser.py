@@ -1,6 +1,7 @@
 """Parser for an `PythonJob` job."""
 from aiida.parsers.parser import Parser
 from aiida_workgraph.orm import general_serializer
+from aiida.engine import ExitCode
 
 
 class PythonParser(Parser):
@@ -31,13 +32,14 @@ class PythonParser(Parser):
                 "remote_folder",
                 "remote_stash",
                 "retrieved",
+                "exit_code",
             ]
         ]
         # first we remove nested outputs, e.g., "add_multiply.add"
         top_level_output_list = [
             output for output in self.output_list if "." not in output["name"]
         ]
-
+        exit_code = 0
         try:
             with self.retrieved.base.repository.open("results.pickle", "rb") as handle:
                 results = pickle.load(handle)
@@ -49,6 +51,8 @@ class PythonParser(Parser):
                             results[i], top_level_output_list[i]
                         )
                 elif isinstance(results, dict) and len(top_level_output_list) > 1:
+                    # pop the exit code if it exists
+                    exit_code = results.pop("exit_code", 0)
                     for output in top_level_output_list:
                         if output.get("required", False):
                             if output["name"] not in results:
@@ -62,6 +66,7 @@ class PythonParser(Parser):
                             f"Found extra results that are not included in the output: {results.keys()}"
                         )
                 elif isinstance(results, dict) and len(top_level_output_list) == 1:
+                    exit_code = results.pop("exit_code", 0)
                     # if output name in results, use it
                     if top_level_output_list[0]["name"] in results:
                         top_level_output_list[0]["value"] = self.serialize_output(
@@ -84,6 +89,12 @@ class PythonParser(Parser):
                     )
                 for output in top_level_output_list:
                     self.out(output["name"], output["value"])
+                if exit_code:
+                    if isinstance(exit_code, dict):
+                        exit_code = ExitCode(exit_code["status"], exit_code["message"])
+                    elif isinstance(exit_code, int):
+                        exit_code = ExitCode(exit_code)
+                    return exit_code
         except OSError:
             return self.exit_codes.ERROR_READING_OUTPUT_FILE
         except ValueError as exception:
