@@ -16,6 +16,7 @@ from aiida_workgraph.utils.graph import (
     link_deletion_hook,
 )
 from typing import Any, Dict, List, Optional, Union
+from collections.abc import Iterable
 
 if USE_WIDGET:
     from aiida_workgraph.widget import NodeGraphWidget
@@ -48,7 +49,8 @@ class WorkGraph(node_graph.NodeGraph):
         super().__init__(name, **kwargs)
         self.context = {}
         self.workgraph_type = "NORMAL"
-        self.sequence = []
+        self._sequence = []
+        self._sequence_keys = range(0)
         self.conditions = []
         self.process = None
         self.restart_process = None
@@ -67,6 +69,26 @@ class WorkGraph(node_graph.NodeGraph):
     def tasks(self) -> TaskCollection:
         """Add alias to `nodes` for WorkGraph"""
         return self.nodes
+
+    @property
+    def sequence(self):
+        return self._sequence
+    
+    @sequence.setter
+    def sequence(self, value):
+        # We need to store the keys for later use since iterators cannot be stored
+        # in the provenance as they have a mutable state (pointer to current element).
+        if isinstance(self._sequence, dict) or isinstance(self._sequence, aiida.orm.Dict):
+            self._sequence = aiida.orm.Dict(value) 
+            self._sequence_keys = value.keys()
+        elif isinstance(self._sequence, Iterable):
+            self._sequence_keys = range(len(value))
+            self._sequence = aiida.orm.List(list(value))
+
+        else:
+            raise TypeError(f"Sequence of type {type(value)} is not "
+                            "allowed. Please use an iterable.")
+        
 
     def prepare_inputs(self, metadata: Optional[Dict[str, Any]]) -> Dict[str, Any]:
         from aiida_workgraph.utils import (
@@ -180,7 +202,9 @@ class WorkGraph(node_graph.NodeGraph):
 
         wgdata = super().to_dict()
         # save the sequence and context
-        self.context["_sequence"] = self.sequence
+        self.context["_sequence"] = self._sequence
+        self.context["_sequence_keys"] = self._sequence_keys
+        
         # only alphanumeric and underscores are allowed
         wgdata["context"] = {
             key.replace(".", "__"): value for key, value in self.context.items()
