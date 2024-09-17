@@ -17,7 +17,7 @@ from aiida.common import exceptions
 from aiida.common.extendeddicts import AttributeDict
 from aiida.common.lang import override
 from aiida import orm
-from aiida.orm import load_node, Node, ProcessNode, WorkChainNode
+from aiida.orm import load_node, Node, ProcessNode, WorkChainNode, to_aiida_type
 from aiida.orm.utils.serialize import deserialize_unsafe, serialize
 
 from aiida.engine.processes.exit_code import ExitCode
@@ -921,16 +921,17 @@ class WorkGraphEngine(Process, metaclass=Protect):
         if should_run:
             self.reset()
             self.set_tasks_state(condition_tasks, "SKIPPED")
-            def __getitem__(**kwargs):
-
-                value = kwargs['iter'][kwargs['key']]
+            @task.calcfunction()
+            def __getitem__(iter, key):
+                #value = kwargs['iter'][kwargs['key'].value]
+                value = iter[key.value]
                 if isinstance(value, orm.Data):
                     return value
                 else:
                     return orm.to_aiida_type(value)
 
             key = self.ctx._sequence_keys[self.ctx._count]
-            self.ctx["i"] = __getitem__(iter=self.ctx._sequence, key=key)
+            self.ctx["i"] = __getitem__(iter=self.ctx._sequence, key=to_aiida_type(key))
         self.ctx._count += 1
 
 
