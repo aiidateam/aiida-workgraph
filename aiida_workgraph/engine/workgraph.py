@@ -921,33 +921,14 @@ class WorkGraphEngine(Process, metaclass=Protect):
         if should_run:
             self.reset()
             self.set_tasks_state(condition_tasks, "SKIPPED")
-
-            #@calcfunction
-            #def __getitem__(sequence, count):
-            #    value = sequence[count.value]
-            #    # only convert value f not already orm type because sequence
-            #    # might be builtin collection with orm types so a conversion is
-            #    # not needed and would raise an error
-            #    if isinstance(value, orm.Data):
-            #        return value
-            #    else:
-            #        return orm.to_aiida_type(value)
-
-            #@task.calcfunction(inputs=[{'name':'iter'},
-            #                           {'name': 'key'}])
             def __getitem__(**kwargs):
+
                 value = kwargs['iter'][kwargs['key']]
-                print("\n\n Exec __getitem__ \n\n)")
                 if isinstance(value, orm.Data):
                     return value
                 else:
                     return orm.to_aiida_type(value)
 
-            #@calcfunction
-            #def __next__(iterator):
-            #    value = next(iterator)
-            #    return value
-            # dict --> orm.Dict?
             key = self.ctx._sequence_keys[self.ctx._count]
             self.ctx["i"] = __getitem__(iter=self.ctx._sequence, key=key)
         self.ctx._count += 1
