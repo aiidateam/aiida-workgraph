@@ -149,20 +149,44 @@ def get_nested_dict(d: Dict, name: str, **kwargs) -> Any:
     return current
 
 
-def update_nested_dict(d: Dict[str, Any], key: str, value: Any) -> None:
+def update_nested_dict(d: Dict[str, Any] | None, key: str, value: Any) -> None:
     """
-    d = {}
-    key = "base.pw.parameters"
-    value = 2
-    will give:
-    d = {"base": {"pw": {"parameters": 2}}
+    Update or create a nested dictionary structure based on a dotted key path.
+
+    This function allows updating a nested dictionary or creating one if `d` is `None`.
+    Given a dictionary and a key path (e.g., "base.pw.parameters"), it will traverse
+    or create the necessary nested structure to set the provided value at the specified
+    key location. If intermediate dictionaries do not exist, they will be created.
+    If the resulting dictionary is empty, it is set to `None`.
+
+    Args:
+        d (Dict[str, Any] | None): The dictionary to update, which can be `None`.
+                                   If `None`, an empty dictionary will be created.
+        key (str): A dotted key path string representing the nested structure.
+        value (Any): The value to set at the specified key.
+
+    Example:
+        d = None
+        key = "base.pw.parameters"
+        value = 2
+        After running:
+            update_nested_dict(d, key, value)
+        The result will be:
+            d = {"base": {"pw": {"parameters": 2}}}
+
+    Edge Case:
+        If the resulting dictionary is empty after the update, it will be set to `None`.
+
     """
     keys = key.split(".")
-    current = d
-    current = {} if current is None else current
+    current = d if d is not None else {}
     for k in keys[:-1]:
         current = current.setdefault(k, {})
     current[keys[-1]] = value
+    # if current is empty, set it to None
+    if not current:
+        current = None
+    return current
 
 
 def is_empty(value: Any) -> bool:
@@ -203,7 +227,9 @@ def merge_properties(wgdata: Dict[str, Any]) -> None:
             if "." in key and prop["value"] not in [None, {}]:
                 root, key = key.split(".", 1)
                 root_prop = task["properties"][root]
-                update_nested_dict(root_prop["value"], key, prop["value"])
+                root_prop["value"] = update_nested_dict(
+                    root_prop["value"], key, prop["value"]
+                )
                 prop["value"] = None
         for key, input in task["inputs"].items():
             if input["property"] is None:
@@ -212,7 +238,9 @@ def merge_properties(wgdata: Dict[str, Any]) -> None:
             if "." in key and prop["value"] not in [None, {}]:
                 root, key = key.split(".", 1)
                 root_prop = task["inputs"][root]["property"]
-                update_nested_dict(root_prop["value"], key, prop["value"])
+                root_prop["value"] = update_nested_dict(
+                    root_prop["value"], key, prop["value"]
+                )
                 prop["value"] = None
 
 
