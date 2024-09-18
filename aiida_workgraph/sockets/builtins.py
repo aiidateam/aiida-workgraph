@@ -30,6 +30,8 @@ class SocketNamespace(TaskSocket, SerializePickle):
         **kwargs: Any
     ) -> None:
         super().__init__(name, node, type, index, uuid=uuid)
+        # Set the default value to an empty dictionary
+        kwargs.setdefault("default", {})
         self.add_property("workgraph.any", name, **kwargs)
 
 

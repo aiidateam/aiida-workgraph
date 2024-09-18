@@ -411,7 +411,6 @@ def build_task_from_workgraph(wg: any) -> Task:
             {
                 "identifier": "workgraph.namespace",
                 "name": f"{task.name}",
-                "property": {"identifier": "workgraph.any", "default": {}},
             }
         )
         for socket in task.inputs:
@@ -425,7 +424,6 @@ def build_task_from_workgraph(wg: any) -> Task:
             {
                 "identifier": "workgraph.namespace",
                 "name": f"{task.name}",
-                "property": {"identifier": "workgraph.any", "default": {}},
             }
         )
         for socket in task.outputs:
