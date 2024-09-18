@@ -149,7 +149,7 @@ def get_nested_dict(d: Dict, name: str, **kwargs) -> Any:
     return current
 
 
-def update_nested_dict(d: Dict[str, Any] | None, key: str, value: Any) -> None:
+def update_nested_dict(d: Optional[Dict[str, Any]], key: str, value: Any) -> None:
     """
     Update or create a nested dictionary structure based on a dotted key path.
 
@@ -227,9 +227,7 @@ def merge_properties(wgdata: Dict[str, Any]) -> None:
             if "." in key and prop["value"] not in [None, {}]:
                 root, key = key.split(".", 1)
                 root_prop = task["properties"][root]
-                root_prop["value"] = update_nested_dict(
-                    root_prop["value"], key, prop["value"]
-                )
+                update_nested_dict(root_prop["value"], key, prop["value"])
                 prop["value"] = None
         for key, input in task["inputs"].items():
             if input["property"] is None:
@@ -238,9 +236,7 @@ def merge_properties(wgdata: Dict[str, Any]) -> None:
             if "." in key and prop["value"] not in [None, {}]:
                 root, key = key.split(".", 1)
                 root_prop = task["inputs"][root]["property"]
-                root_prop["value"] = update_nested_dict(
-                    root_prop["value"], key, prop["value"]
-                )
+                update_nested_dict(root_prop["value"], key, prop["value"])
                 prop["value"] = None
 
 
