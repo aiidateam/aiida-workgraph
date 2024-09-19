@@ -59,7 +59,6 @@ wg = WorkGraph("aggregate_by_multilinking")
 aggregate_task = wg.add_task(aggregate, name="aggregate_task")
 
 # we have to increase the link limit because by default workgraph only supports one link per input socket
-# this is still an experimental feature that is why
 aggregate_task.inputs["collected_values"].link_limit = 50
 
 for i in range(2):  # this can be chosen as wanted
@@ -140,7 +139,7 @@ wg = WorkGraph("aggregate")
 aggregate_task = wg.add_task(aggregate, name="aggregate_task")
 
 # we have to increase the link limit because by default workgraph only supports
-# one link per input socket this is still an experimental feature that is why
+# one link per input socket.
 aggregate_task.inputs["collected_ints"].link_limit = 50
 aggregate_task.inputs["collected_floats"].link_limit = 50
 
