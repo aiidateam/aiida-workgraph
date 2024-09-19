@@ -119,9 +119,9 @@ wg.to_html()
 
 
 # %%
-# Run the workgrhap
+# Run the workgraph
 
-wg.run()
+wg.submit(wait=True)
 
 # %%
 # Print the output
@@ -209,7 +209,7 @@ wg.to_html()
 # %%
 # Run the workgraph
 
-wg.run()
+wg.submit(wait=True)
 
 # %%
 # Print the output
@@ -225,7 +225,7 @@ generate_node_graph(wg.pk)
 # %%
 # Using context for dynamic outputs
 # =================================
-    # If your are not familiar with `context` please refer to the `doc page explaining it in detail <../context.html>`_.
+# If your are not familiar with `context` please refer to the `doc page explaining it in detail <../context.html>`_.
 
 
 @task.calcfunction()
@@ -273,9 +273,9 @@ wg.to_html()
 
 
 # %%
-# Run the workgrhap
+# Run the workgraph
 
-wg.run()
+wg.submit(wait=True)
 
 # %%
 # Print the output
