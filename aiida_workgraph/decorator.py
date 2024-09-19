@@ -407,7 +407,12 @@ def build_task_from_workgraph(wg: any) -> Task:
     # add all the inputs/outputs from the tasks in the workgraph
     for task in wg.tasks:
         # inputs
-        inputs.append({"identifier": "workgraph.any", "name": f"{task.name}"})
+        inputs.append(
+            {
+                "identifier": "workgraph.namespace",
+                "name": f"{task.name}",
+            }
+        )
         for socket in task.inputs:
             if socket.name == "_wait":
                 continue
@@ -415,7 +420,12 @@ def build_task_from_workgraph(wg: any) -> Task:
                 {"identifier": socket.identifier, "name": f"{task.name}.{socket.name}"}
             )
         # outputs
-        outputs.append({"identifier": "workgraph.any", "name": f"{task.name}"})
+        outputs.append(
+            {
+                "identifier": "workgraph.namespace",
+                "name": f"{task.name}",
+            }
+        )
         for socket in task.outputs:
             if socket.name in ["_wait", "_outputs"]:
                 continue
