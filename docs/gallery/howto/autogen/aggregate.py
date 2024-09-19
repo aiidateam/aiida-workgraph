@@ -225,7 +225,7 @@ generate_node_graph(wg.pk)
 # %%
 # Using context for dynamic outputs
 # =================================
-# If are not familiar with context please refer to the doc page `Use Context to pass data between tasks`.
+# If your are not familiar with `context` please refer to the doc page `Concepts <../../concept/index.html>`_.
 
 
 @task.calcfunction()
