@@ -9,7 +9,7 @@ This section contains a collection of HowTos for various topics.
    :caption: Contents:
 
    autogen/graph_builder
-   autogen/parallel_wf
+   autogen/parallel
    if
    while
    context
