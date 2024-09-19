@@ -12,7 +12,7 @@ Aggregate data from multiple tasks
 #
 # By default, the workgraph only allows one link per input socket, mirroring
 # typical function argument behavior where each argument accepts a single
-# value. However, for scenarios requiring dynamic input handling, e.g.,
+# value. However, for scenarios requiring dynamic input port handling, e.g.,
 # functions with variable keyword arguments, the link limit can be safely
 # expanded to accommodate multiple inputs. An input port can be marked as dynamic
 # by using the double asterisk symbol `**` as it is also done to mark an
@@ -26,9 +26,9 @@ from aiida import load_profile
 load_profile()
 
 # %%
-# Dynamic inputs vs orm.Dict
+# Dynamic input ports vs orm.Dict
 # --------------------------
-# We want to first focus shortly on the difference between a dynamic input and a orm.Dict as input
+# We want to first focus shortly on the difference between a dynamic input ports and a orm.Dict as input
 # as this is essential for understanding the aggregation mechanism. For that we firstly
 # imitate the `aggregate` function using a Dict as input.
 
@@ -40,7 +40,7 @@ from aiida_workgraph import task, WorkGraph
 @task.calcfunction()
 def aggregate(
     **collected_values,
-):  # We use the double asterisk to allow dynamic input handling
+):  # We use the double asterisk to mark it as an dynamic input port
     for key, value in collected_values.items():
         print("key:", key, "value:", value)
     return Int(sum(collected_values.values()))
@@ -49,7 +49,7 @@ def aggregate(
 @task.calcfunction
 def aggregate_dict(
     collected_values,
-):  # We use the double asterisk to allow dynamic input handling
+):  # We use the double asterisk to mark it as an dynamic input port
     for key, value in collected_values.items():
         print("key:", key, "value:", value)
     return Int(sum(collected_values.get_dict().values()))
@@ -70,12 +70,12 @@ generate_node_graph(aggregate_dict_sum.pk)
 
 # %%
 # We can see while the Dict version only considers the whole dictionary as one
-# entity, the dynamic input allows to consider the different orm.Data instances.
+# entity in the provenance graph, while the dynamic input port allows us to consider the different orm.Data instances.
 
 
 # %%
-# Using multi-linking to create dynamic inputs
-# ============================================
+# Using multi-linking to create dynamic input ports
+# =================================================
 # In the following example, we create multiple tasks that return a random
 # integer, and then aggregate all the results and calculate the sum by linking
 # the outputs of the tasks to the input of one final task
@@ -95,7 +95,7 @@ def generator(seed: Int):
 @task.calcfunction(outputs=[{"name": "sum"}])
 def aggregate(
     **collected_values,
-):  # We use the double asterisk to allow dynamic input handling
+):  # We use the double asterisk to mark it as an dynamic input port
     for key, value in collected_values.items():
         print("key:", key, "value:", value)
     return {"sum": Int(sum(collected_values.values()))}
@@ -137,12 +137,12 @@ generate_node_graph(wg.pk)
 
 
 # %%
-# Multiple dynamic inputs
-# -----------------------
-# We now do the same exercise as before but add another dynamic input to it. We
+# Multiple dynamic input ports
+# ----------------------------
+# We now do the same exercise as before but add another dynamic input port to it. We
 # generate float numbers and link them to the aggregate task. The aggregate
 # task now returns two sums one for the integers and one for the float numbers.
-# To support this additional dynamic input, we can define multiple input
+# To support this additional dynamic input ports, we can define multiple input
 # sockets in the decorator, as shown in the code example below:
 
 
@@ -225,7 +225,7 @@ generate_node_graph(wg.pk)
 # %%
 # Using context for dynamic outputs
 # =================================
-# If your are not familiar with `context` please refer to the doc page `Concepts <../../concept/index.html>`_.
+    # If your are not familiar with `context` please refer to the `doc page explaining it in detail <../context.html>`_.
 
 
 @task.calcfunction()
