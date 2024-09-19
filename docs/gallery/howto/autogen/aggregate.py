@@ -10,33 +10,78 @@ Aggregate data from multiple tasks
 # multiple tasks by linking tasks or by using context. Then we discuss at the
 # end how to deal with nested datatypes.
 #
+# By default, the workgraph only allows one link per input socket, mirroring
+# typical function argument behavior where each argument accepts a single
+# value. However, for scenarios requiring dynamic input handling, e.g.,
+# functions with variable keyword arguments, the link limit can be safely
+# expanded to accommodate multiple inputs. An input port can be marked as dynamic
+# by using the double asterisk symbol `**` as it is also done to mark an
+# arbitrary number of keyword arguments. This adjustment is particularly
+# useful in tasks designed to aggregate or process collections of data.
+
+
 # Load the AiiDA profile.
-#
-
-
 from aiida import load_profile
 
 load_profile()
 
+# %%
+# Dynamic inputs vs orm.Dict
+# --------------------------
+# We want to first focus shortly on the difference between a dynamic input and a orm.Dict as input
+# as this is essential for understanding the aggregation mechanism. For that we firstly
+# imitate the `aggregate` function using a Dict as input.
+
+from aiida.orm import Int, Dict
+from aiida_workgraph.utils import generate_node_graph
+from aiida_workgraph import task, WorkGraph
+
+
+@task.calcfunction()
+def aggregate(
+    **collected_values,
+):  # We use the double asterisk to allow dynamic input handling
+    for key, value in collected_values.items():
+        print("key:", key, "value:", value)
+    return Int(sum(collected_values.values()))
+
+
+@task.calcfunction
+def aggregate_dict(
+    collected_values,
+):  # We use the double asterisk to allow dynamic input handling
+    for key, value in collected_values.items():
+        print("key:", key, "value:", value)
+    return Int(sum(collected_values.get_dict().values()))
+
+
+some_dict = {f"value{i}": Int(i) for i in range(3)}
+aggregate_sum = aggregate(**some_dict)
+aggregate_dict_sum = aggregate_dict(Dict(some_dict))
 
 # %%
-# Using multi-linking for dynamic inputs
-# ======================================
+# We plot the provenance graph for both
+
+generate_node_graph(aggregate_sum.pk)
+
+# %%
+
+generate_node_graph(aggregate_dict_sum.pk)
+
+# %%
+# We can see while the Dict version only considers the whole dictionary as one
+# entity, the dynamic input allows to consider the different orm.Data instances.
+
+
+# %%
+# Using multi-linking to create dynamic inputs
+# ============================================
 # In the following example, we create multiple tasks that return a random
 # integer, and then aggregate all the results and calculate the sum by linking
 # the outputs of the tasks to the input of one final task
-#
-# By default, the workgraph only allows one link per input socket,
-# mirroring typical function argument behavior where each argument accepts a single value.
-# However, for scenarios requiring dynamic input handling, e.g., functions with variable
-# keyword arguments, the link limit can be safely expanded to accommodate multiple inputs.
-# This adjustment is particularly useful in tasks designed to aggregate or process collections of data.
-
-#
 
 
-from aiida_workgraph import task, WorkGraph
-from aiida.orm import Int
+from aiida_workgraph import WorkGraph
 
 
 @task.calcfunction()
@@ -48,10 +93,12 @@ def generator(seed: Int):
 
 
 @task.calcfunction(outputs=[{"name": "sum"}])
-def aggregate(**collected_values):  # We use a keyword argument to obtain a dictionary
+def aggregate(
+    **collected_values,
+):  # We use the double asterisk to allow dynamic input handling
     for key, value in collected_values.items():
         print("key:", key, "value:", value)
-    return {"sum": sum(collected_values.values())}
+    return {"sum": Int(sum(collected_values.values()))}
 
 
 wg = WorkGraph("aggregate_by_multilinking")
@@ -86,8 +133,6 @@ print("aggregate_task result", aggregate_task.outputs["sum"].value)
 # integers are linked to the aggregate task and one final integer, the sum, is
 # returned.
 
-from aiida_workgraph.utils import generate_node_graph
-
 generate_node_graph(wg.pk)
 
 
@@ -97,8 +142,8 @@ generate_node_graph(wg.pk)
 # We now do the same exercise as before but add another dynamic input to it. We
 # generate float numbers and link them to the aggregate task. The aggregate
 # task now returns two sums one for the integers and one for the float numbers.
-# To support this additional dynamic input, we can define multiple input sockets in the decorator,
-# as shown in the code example below:
+# To support this additional dynamic input, we can define multiple input
+# sockets in the decorator, as shown in the code example below:
 
 
 from aiida.orm import Float
@@ -245,84 +290,3 @@ generate_node_graph(wg.pk)
 
 # %%
 # To support multiple dynamically sized inputs we can add another context and link it.
-
-
-# %%
-# Nested dynamic inputs for a calcfunction
-# ========================================
-# In principle, these methods can be also used for nested data types. However
-# AiiDA does not support a nesting of orm types which happens for lists and
-# dicts. It therefore tries to convert the nested data structures to native
-# types when it becomes part of the provenance. For example an `orm.Dict` of
-# `orm.Int`s is converted to an `orm.Dict` of built-in integers.
-
-
-from aiida.orm import Dict
-
-some_dict = Dict({"key": Int(5)})
-print(some_dict.get_dict())
-some_dict.store()  # store it in the database thereby it becomes part of the provenance
-print(some_dict.get_dict())
-
-
-# %%
-# If it cannot convert the `orm.Data` type to a built-in type, an error message will be thrown
-
-
-from aiida.orm import StructureData
-import numpy as np
-
-nonserializable_data = StructureData(cell=np.random.rand(3, 3))
-some_dict = Dict({"key": nonserializable_data})
-
-try:
-    some_dict.store()
-except Exception as err:
-    print(err)
-
-# %%
-# One has to therefore remove the nestedness of the `orm.Data` type by using built-in
-# types for the collections. In this example we use a dict instead of an
-# `orm.Dict`
-
-
-@task.calcfunction()
-def compute_cell_volumes(strucs):
-    return {"result": {key: struc.get_cell_volume() for key, struc in strucs.items()}}
-
-
-dict_of_strucs = {
-    f"struc{i}": StructureData(cell=np.random.rand(3, 3)) for i in range(3)
-}
-try:
-    compute_cell_volumes(dict_of_strucs)
-except Exception as err:
-    print(
-        err
-    )  # Oops still the same error, but we now used a dict instead of an orm.Dict?
-
-# %%
-# For a fixed input port, AiiDA assumes each argument of the calcfunction
-# corresponds to a specific AiiDA data node. Even though we passed a set of
-# AiiDA nodes within a dict, AiiDA automatically converts the whole dict into
-# an `orm.Dict`. In order to allow passing a set of AiiDA nodes as inputs, one
-# must use a variable keyword argument, e.g., **kwargs, in the calcfunction
-# signature.
-
-
-@task.calcfunction()
-def compute_cell_volumes(**kwargs):
-    strucs = kwargs["strucs"]
-    return {
-        "result": {key: Float(struc.get_cell_volume()) for key, struc in strucs.items()}
-    }
-
-
-dict_of_strucs = {
-    f"struc{i}": StructureData(cell=np.random.rand(3, 3)) for i in range(3)
-}
-cell_volumes = compute_cell_volumes(strucs=dict_of_strucs)
-
-# %%
-# Plotting the provenance graph for one of the cell volumes
-generate_node_graph(cell_volumes["struc0"].pk)
