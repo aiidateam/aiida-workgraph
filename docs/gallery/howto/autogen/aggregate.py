@@ -58,7 +58,7 @@ some_dict = {f"value{i}": Int(i) for i in range(3)}
 aggregate_sum = aggregate(**some_dict)
 # Note that it is generally not recommended to have nested orm.Data types like in this case orm.Int in an orm.Data
 # This will only work for json serializable types as orm.Int in this case. You will see in the provenance graph later
-# that the information about the orm.Int's is completely lost. 
+# that the information about the orm.Int's is completely lost.
 aggregate_dict_sum = aggregate_dict(Dict(some_dict))
 
 # %%
