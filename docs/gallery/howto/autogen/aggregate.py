@@ -15,8 +15,7 @@ Aggregate data from multiple tasks
 # value. However, for scenarios requiring dynamic input port handling, e.g.,
 # functions with variable keyword arguments, the link limit can be safely
 # expanded to accommodate multiple inputs. An input port can be marked as dynamic
-# by using the double asterisk symbol `**` as it is also done to mark an
-# arbitrary number of keyword arguments. This adjustment is particularly
+# by using a positional argument (`*args`) or a keyword argument (`**kwargs`) in the function. This adjustment is particularly
 # useful in tasks designed to aggregate or process collections of data.
 
 
@@ -57,6 +56,9 @@ def aggregate_dict(
 
 some_dict = {f"value{i}": Int(i) for i in range(3)}
 aggregate_sum = aggregate(**some_dict)
+# Note that it is generally not recommended to have nested orm.Data types like in this case orm.Int in an orm.Data
+# This will only work for json serializable types as orm.Int in this case. You will see in the provenance graph later
+# that the information about the orm.Int's is completely lost. 
 aggregate_dict_sum = aggregate_dict(Dict(some_dict))
 
 # %%
