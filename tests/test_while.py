@@ -95,7 +95,7 @@ def test_while_workgraph(decorated_add, decorated_multiply, decorated_compare):
     wg.workgraph_type = "WHILE"
     wg.conditions = ["compare1.result"]
     wg.context = {"n": 1}
-    wg.max_iteration = 10
+    wg.max_iteration = 5
     wg.add_task(decorated_compare, name="compare1", x="{{n}}", y=20)
     multiply1 = wg.add_task(
         decorated_multiply, name="multiply1", x="{{ n }}", y=orm.Int(2)

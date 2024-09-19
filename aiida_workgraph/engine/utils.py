@@ -33,7 +33,7 @@ def prepare_for_python_task(task: dict, kwargs: dict, var_kwargs: dict) -> dict:
     import os
 
     # get the names kwargs for the PythonJob, which are the inputs before _wait
-    function_kwargs = {}
+    function_kwargs = kwargs.pop("function_kwargs", {})
     # TODO better way to find the function_kwargs
     input_names = [
         name

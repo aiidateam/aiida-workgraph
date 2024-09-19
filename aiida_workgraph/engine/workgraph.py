@@ -639,6 +639,9 @@ class WorkGraphEngine(Process, metaclass=Protect):
                 self.ctx._tasks[name]["execution_count"] = 0
             for child_task in self.ctx._tasks[name]["children"]:
                 self.reset_task(child_task, reset_process=False, recursive=False)
+        elif self.ctx._tasks[name]["metadata"]["node_type"].upper() in ["IF", "ZONE"]:
+            for child_task in self.ctx._tasks[name]["children"]:
+                self.reset_task(child_task, reset_process=False, recursive=False)
         if recursive:
             # reset its child tasks
             names = self.ctx._connectivity["child_node"][name]
@@ -816,8 +819,8 @@ class WorkGraphEngine(Process, metaclass=Protect):
         finished, _ = self.are_childen_finished(name)
         if finished:
             self.set_task_state_info(name, "state", "FINISHED")
-            self.update_parent_task_state(name)
             self.report(f"Task: {name} finished.")
+            self.update_parent_task_state(name)
 
     def should_run_while_task(self, name: str) -> tuple[bool, t.Any]:
         """Check if the while task should run."""
@@ -949,6 +952,7 @@ class WorkGraphEngine(Process, metaclass=Protect):
             task_name, socket_name = c.split(".")
             if "task_name" != "context":
                 condition_tasks.append(task_name)
+                self.reset_task(task_name)
         self.run_tasks(condition_tasks, continue_workgraph=False)
         conditions = []
         for c in self.ctx._workgraph["conditions"]:
@@ -1018,7 +1022,10 @@ class WorkGraphEngine(Process, metaclass=Protect):
                     )
                     continue
             # skip if the task is already executed
-            if name in self.ctx._executed_tasks:
+            # or if the task is in a skippped state
+            if name in self.ctx._executed_tasks or self.get_task_state_info(
+                name, "state"
+            ) in ["SKIPPED"]:
                 continue
             self.ctx._executed_tasks.append(name)
             print("-" * 60)
