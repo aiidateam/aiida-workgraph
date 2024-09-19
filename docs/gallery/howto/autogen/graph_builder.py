@@ -61,7 +61,7 @@ wg = WorkGraph("nested_workgraph")
 add_multiply1 = wg.add_task(add_multiply(x=Int(2), y=Int(3), z=Int(4)))
 add_multiply2 = wg.add_task(add_multiply(x=Int(2), y=Int(3)))
 # link the output of a task to the input of another task
-wg.add_link(add_multiply1.outputs[0], add_multiply2.inputs["multiply.z"])
+wg.add_link(add_multiply1.outputs[0], add_multiply2.inputs["multiply.y"])
 wg.to_html()
 
 # %%
