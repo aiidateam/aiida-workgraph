@@ -215,13 +215,6 @@ print(
 # were performed in parallel
 
 # %%
-# We can also look at the total time and see the overhead costs.
-print(
-    "Time for running parallelized graph builder",
-    parallel_add_task.mtime - parallel_add_task.ctime,
-)
-
-# %%
 # Increasing number of daemon workers
 # -----------------------------------
 # Since each daemon worker can only manage one WorkGraph (handling the results)
@@ -231,29 +224,49 @@ print(
 
 from aiida.engine.daemon.client import get_daemon_client
 
+# %%
+# We run the 10 iterations with one daemon
+
 client = get_daemon_client()
 print(f"Number of current daemon workers {client.get_numprocesses()['numprocesses']}")
+wg = WorkGraph("wg_daemon_worker_2")
+parallel_add_task = wg.add_task(parallel_add, name="parallel_add", nb_iterations=10)
+wg.to_html()
 
 # %%
-# We rerun the last graph builder with 2 damon workers
 
+wg.submit(wait=True)
+
+# %%
+# And look at the total time and see the overhead costs.
+
+print(
+    "Time for running parallelized graph builder",
+    parallel_add_task.mtime - parallel_add_task.ctime,
+)
+
+
+
+# %%
+# We rerun it now with 2 damon workers
 client.increase_workers(1)
 print(f"Number of current daemon workers {client.get_numprocesses()['numprocesses']}")
 wg = WorkGraph("wg_daemon_worker_2")
-parallel_add_task_2 = wg.add_task(parallel_add, name="parallel_add", nb_iterations=2)
+parallel_add_task_2 = wg.add_task(parallel_add, name="parallel_add", nb_iterations=10)
 wg.to_html()
 
 # %%
 wg.submit(wait=True)
+
+# %%
 print(
     "Time for running parallelized graph builder with 2 daemons",
     parallel_add_task_2.mtime - parallel_add_task_2.ctime,
 )
 
 # %%
-# The overhead time has shortens a bit as the handling of the CalcJobs and
-# WorkGraphs could be parallelized. One can increase the number of iterations
-# to see a more significant difference.
+# The time has not change as the handling of the CalcJobs. If one can increase
+# the number of iterations to see a more significant difference.
 
 
 # %%
@@ -270,7 +283,9 @@ client.decrease_workers(1)
 #
 #        verdi config set daemon.worker_process_slots 200
 #        verdi daemon restart
-
+#
+# For more information about improving the performance please refer to the 
+# `"Tuning performance" section in the official AiiDA documentation <https://aiida.readthedocs.io/projects/aiida-core/en/latest/howto/installation.html#tuning-performance>`_
 
 # %%
 # Further reading
