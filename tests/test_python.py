@@ -436,7 +436,7 @@ def test_PythonJob_retrieve_files(fixture_localhost, python_executable_path):
     wg = WorkGraph("test_PythonJob_retrieve_files")
     wg.add_task("PythonJob", function=add, name="add")
     # ------------------------- Submit the calculation -------------------
-    wg.submit(
+    wg.run(
         inputs={
             "add": {
                 "x": 2,
@@ -450,7 +450,6 @@ def test_PythonJob_retrieve_files(fixture_localhost, python_executable_path):
                 },
             },
         },
-        wait=True,
     )
     assert (
         "result.txt" in wg.tasks["add"].outputs["retrieved"].value.list_object_names()
