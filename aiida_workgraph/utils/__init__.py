@@ -454,7 +454,7 @@ def get_or_create_code(
     try:
         return orm.load_code(f"{code_label}@{computer}")
     except NotExistent:
-        description = f"Python code on computer: {computer}"
+        description = f"Code on computer: {computer}"
         computer = orm.load_computer(computer)
         code_path = code_path or code_label
         code = InstalledCode(

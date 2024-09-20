@@ -131,34 +131,22 @@ def prepare_for_python_task(task: dict, kwargs: dict, var_kwargs: dict) -> dict:
 
 def prepare_for_shell_task(task: dict, kwargs: dict) -> dict:
     """Prepare the inputs for ShellJob"""
-    from aiida_shell.launch import prepare_code, convert_nodes_single_file_data
-    from aiida.common import lang
-    from aiida.orm import AbstractCode
+    from aiida_shell.launch import (
+        convert_nodes_single_file_data,
+        prepare_shell_job_inputs,
+    )
 
-    command = kwargs.pop("command", None)
-    resolve_command = kwargs.pop("resolve_command", False)
     metadata = kwargs.pop("metadata", {})
-    # setup code
-    if isinstance(command, str):
-        computer = (metadata or {}).get("options", {}).pop("computer", None)
-        code = prepare_code(command, computer, resolve_command)
-    else:
-        lang.type_check(command, AbstractCode)
-        code = command
-    # update the tasks with links
-    nodes = convert_nodes_single_file_data(kwargs.pop("nodes", {}))
+    metadata.update({"call_link_label": task["name"]})
+
     # find all keys in kwargs start with "nodes."
+    nodes = convert_nodes_single_file_data(kwargs.pop("nodes", {}))
     for key in list(kwargs.keys()):
         if key.startswith("nodes."):
             nodes[key[6:]] = kwargs.pop(key)
-    metadata.update({"call_link_label": task["name"]})
-    inputs = {
-        "code": code,
-        "nodes": nodes,
-        "filenames": kwargs.pop("filenames", {}),
-        "arguments": kwargs.pop("arguments", []),
-        "outputs": kwargs.pop("outputs", []),
-        "parser": kwargs.pop("parser", None),
-        "metadata": metadata or {},
-    }
+
+    kwargs.update({"nodes": nodes, "metadata": metadata})
+
+    inputs = prepare_shell_job_inputs(**kwargs)
+
     return inputs

@@ -31,7 +31,7 @@ dependencies = [
     "node-graph>=0.1.0",
     "aiida-core>=2.3",
     "cloudpickle",
-    "aiida-shell==0.7.3",
+    "aiida-shell~=0.8",
     "fastapi",
     "uvicorn",
     "pydantic_settings",

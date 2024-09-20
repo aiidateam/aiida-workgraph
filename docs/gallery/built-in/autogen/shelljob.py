@@ -34,6 +34,52 @@ wg.submit(wait=True)
 # Print out the result:
 print("\nResult: ", date_task.outputs["stdout"].value.get_content())
 
+# Under the hood, an AiiDA ``Code`` instance ``date`` will be created on the ``localhost`` computer. In addition, it is also
+# possible to specify a different, remote computer. For the sake of this example, we create a mock remote computer (you
+# would usually have this pre-configured already, e.g., your favorite HPC resource):
+
+from aiida import orm
+
+created, mock_remote_computer = orm.Computer.collection.get_or_create(
+    label="my-remote-computer",
+    description="A mock remote computer",
+    hostname="my-remote-computer",
+    workdir="/tmp/aiida",
+    transport_type="core.ssh",
+    scheduler_type="core.direct",
+)
+if created:
+    mock_remote_computer.store()
+
+# We can then specify the remote computer via the ``metadata``:
+
+wg = WorkGraph(name="test_shell_date_remote")
+date_task_remote = wg.add_task(
+    "ShellJob",
+    command="date",
+    metadata={"computer": orm.load_computer("my-remote-computer")},
+)
+
+# In addition, it is possible to pass a pre-configured ``Code``. Let's again create a mock ``Code``:
+
+from aiida_workgraph.utils import get_or_create_code
+
+mock_remote_code = get_or_create_code(
+    code_label="remote-date",
+    computer="my-remote-computer",
+    code_path="/usr/bin/date",
+)
+
+# Which we can now directly pass to the ``command`` argument of ``add_task``:
+
+wg = WorkGraph(name="test_shell_date_preconfigured")
+preconf_task = wg.add_task(
+    "ShellJob", command=orm.load_code("remote-date@my-remote-computer")
+)
+
+# Note, we are not running or submitting the ``WorkGraph`` in the above two examples, as we are using mocked
+# ``Computer`` and ``Code`` entities for demonstration purposes.
+
 # %%
 # Running a shell command with arguments
 # =======================================
@@ -88,7 +134,7 @@ from aiida import load_profile
 load_profile()
 
 
-def parser(self, dirpath):
+def parser(dirpath):
     from aiida.orm import Int
 
     return {"result": Int((dirpath / "stdout").read_text().strip())}
@@ -137,5 +183,6 @@ generate_node_graph(wg.pk)
 # %%
 # What's Next
 # ===========
-# For more examples of ``aiida-shell``, please refer to its `docs <https://aiida-shell.readthedocs.io/en/latest/howto.html#>`_.
+# Overall, WorkGraph's ``ShellJob`` builds on top of ``aiida-shell`` and mirrors its functionality. So features
+# implemented in ``aiida-shell`` should also be available for the ``ShellJob``. For more examples of ``aiida-shell``, please refer to its `docs <https://aiida-shell.readthedocs.io/en/latest/howto.html#>`_.
 #
