@@ -24,7 +24,6 @@ load_profile()
 # Run a shell command without any arguments. Here we run the `date` command to show the date.
 #
 
-
 from aiida_workgraph import WorkGraph
 
 wg = WorkGraph(name="test_shell_date")
@@ -34,6 +33,7 @@ wg.submit(wait=True)
 # Print out the result:
 print("\nResult: ", date_task.outputs["stdout"].value.get_content())
 
+# %%
 # Under the hood, an AiiDA ``Code`` instance ``date`` will be created on the ``localhost`` computer. In addition, it is also
 # possible to specify a different, remote computer. For the sake of this example, we create a mock remote computer (you
 # would usually have this pre-configured already, e.g., your favorite HPC resource):
@@ -60,6 +60,7 @@ date_task_remote = wg.add_task(
     metadata={"computer": orm.load_computer("my-remote-computer")},
 )
 
+#%%
 # In addition, it is possible to pass a pre-configured ``Code``. Let's again create a mock ``Code``:
 
 from aiida_workgraph.utils import get_or_create_code
