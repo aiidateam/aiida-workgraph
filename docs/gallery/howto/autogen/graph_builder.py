@@ -52,7 +52,7 @@ def add_multiply(x=None, y=None, z=None):
     wg = WorkGraph()
     wg.add_task(add, name="add", x=x, y=y)
     wg.add_task(multiply, name="multiply", x=z)
-    wg.add_link(wg.tasks["add"].outputs[0], wg.tasks["multiply"].inputs["y"])
+    wg.add_link(wg.tasks["add"].outputs["result"], wg.tasks["multiply"].inputs["y"])
     return wg
 
 
@@ -61,14 +61,18 @@ wg = WorkGraph("nested_workgraph")
 add_multiply1 = wg.add_task(add_multiply(x=Int(2), y=Int(3), z=Int(4)))
 add_multiply2 = wg.add_task(add_multiply(x=Int(2), y=Int(3)))
 # link the output of a task to the input of another task
-wg.add_link(add_multiply1.outputs[0], add_multiply2.inputs["multiply.y"])
+wg.add_link(
+    add_multiply1.outputs["multiply.result"], add_multiply2.inputs["multiply.x"]
+)
 wg.to_html()
 
 # %%
 # Run the workgraph
 
 wg.submit(wait=True)
-assert add_multiply2.outputs[0].value == 100
+# (2+3)*4 = 20
+# (2+3)*20 = 100
+assert add_multiply2.outputs["multiply.result"].value == 100
 
 # %%
 # Generate node graph from the AiiDA process
