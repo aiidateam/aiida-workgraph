@@ -137,10 +137,12 @@ def prepare_for_shell_task(task: dict, kwargs: dict) -> dict:
     )
 
     metadata = kwargs.pop("metadata", {})
+    monitors = kwargs.pop("monitors", {})
+    nodes = convert_nodes_single_file_data(kwargs.pop("nodes", {}))
+
     metadata.update({"call_link_label": task["name"]})
 
     # find all keys in kwargs start with "nodes."
-    nodes = convert_nodes_single_file_data(kwargs.pop("nodes", {}))
     for key in list(kwargs.keys()):
         if key.startswith("nodes."):
             nodes[key[6:]] = kwargs.pop(key)
@@ -148,5 +150,7 @@ def prepare_for_shell_task(task: dict, kwargs: dict) -> dict:
     kwargs.update({"nodes": nodes, "metadata": metadata})
 
     inputs = prepare_shell_job_inputs(**kwargs)
+
+    inputs["monitors"] = monitors
 
     return inputs
