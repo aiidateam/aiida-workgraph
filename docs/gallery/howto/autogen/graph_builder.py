@@ -79,7 +79,7 @@ assert add_multiply2.outputs["multiply.result"].value == 100
 
 from aiida_workgraph.utils import generate_node_graph
 
-generate_node_graph(wg2.pk)
+generate_node_graph(wg.pk)
 
 
 # %%
@@ -141,9 +141,6 @@ wg.to_html()
 
 # %%
 # Generate node graph from the AiiDA process,and we can see that the `multiply` task is executed.
-
-
-from aiida_workgraph.utils import generate_node_graph
 
 generate_node_graph(wg.pk)
 
