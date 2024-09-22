@@ -1032,6 +1032,13 @@ class WorkGraphEngine(Process, metaclass=Protect):
 
             self.report(f"Run task: {name}, type: {task['metadata']['node_type']}")
             executor, _ = get_executor(task["executor"])
+            # Add the executor to the globals so that it can be used in the task
+            # in the case of recursive workgraph
+            # We also need to rebuild the Task calss and attach it to the executor
+            if task["metadata"]["node_type"].upper() == "GRAPH_BUILDER":
+                task_class = Task.from_dict(self.ctx._tasks[name])
+                executor.node = executor.task = task_class.__class__
+                executor.__globals__[executor.__name__] = executor
             # print("executor: ", executor)
             args, kwargs, var_args, var_kwargs, args_dict = self.get_inputs(name)
             for i, key in enumerate(self.ctx._tasks[name]["args"]):
