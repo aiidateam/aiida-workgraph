@@ -248,7 +248,7 @@ def if_then_else(i: Int):
     return wg
 
 
-wg = WorkGraph("Nested workflow: If)
+wg = WorkGraph("Nested workflow: If")
 task1 = wg.add_task(if_then_else, i=Int(1))
 task2 = wg.add_task(if_then_else, i=task1.outputs["result"])
 wg.to_html()
