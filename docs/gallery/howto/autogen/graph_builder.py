@@ -140,12 +140,13 @@ wg.to_html()
 
 
 # %%
-# Generate node graph from the AiiDA process,and we can see that the `multiply` task is executed.
+# Generate node graph from the AiiDA process,and we can see that the `multiply` task was executed.
 
 generate_node_graph(wg.pk)
 
 # %%
-# Looking at the process list we can also that multiple WorkGraphs have been submitted
+# Looking at the process list we can also that multiple WorkGraphs have been submitted.
+# Please run this now in the terminal:
 #
 # .. code-block:: bash
 #
@@ -162,7 +163,7 @@ wg.submit(wait=True)
 
 
 # %%
-# More usage (like `if` and `while`) of graph builder will be shown in the following tutorials.
+# More usage (like `if` and `while`) of graph builder will be shown in the following how-tos.
 
 # %%
 # Dynamic workflows
@@ -189,7 +190,8 @@ def for_loop(nb_iterations: Int):
         task = wg.add_task(add_one, x=i)
 
     # We cannot refer to a specific task as output in the graph builder decorator
-    # as in the examples below as the name of the last task depends on the input.
+    # as in the examples before since the name of the last task depends on the input.
+    # Remember that each task is always assigned unique name automatically.
     # Therefore we use the context to not directly refer to the name but the last
     # task object that was created. The context can then be referred in the outputs
     # of the graph builder decorator.
@@ -201,7 +203,7 @@ def for_loop(nb_iterations: Int):
     return wg
 
 
-wg = WorkGraph()
+wg = WorkGraph("Nested workflow: For")
 task = wg.add_task(for_loop, nb_iterations=Int(2))
 wg.to_html()
 
@@ -246,7 +248,7 @@ def if_then_else(i: Int):
     return wg
 
 
-wg = WorkGraph()
+wg = WorkGraph("Nested workflow: If)
 task1 = wg.add_task(if_then_else, i=Int(1))
 task2 = wg.add_task(if_then_else, i=task1.outputs["result"])
 wg.to_html()
