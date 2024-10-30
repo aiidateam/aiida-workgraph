@@ -17,7 +17,7 @@ from aiida.common import exceptions
 from aiida.common.extendeddicts import AttributeDict
 from aiida.common.lang import override
 from aiida import orm
-from aiida.orm import load_node, Node, ProcessNode, WorkChainNode
+from aiida.orm import load_node, Node, ProcessNode, WorkChainNode, to_aiida_type
 from aiida.orm.utils.serialize import deserialize_unsafe, serialize
 
 from aiida.engine.processes.exit_code import ExitCode
@@ -33,6 +33,7 @@ from aiida.engine.processes.workchains.workchain import Protect, WorkChainSpec
 from aiida.engine import run_get_node
 from aiida_workgraph.utils import create_and_pause_process
 from aiida_workgraph.task import Task
+from aiida_workgraph.decorator import task
 from aiida_workgraph.utils import get_nested_dict, update_nested_dict
 from aiida_workgraph.executors.monitors import monitor
 
@@ -978,8 +979,20 @@ class WorkGraphEngine(Process, metaclass=Protect):
         if should_run:
             self.reset()
             self.set_tasks_state(condition_tasks, "SKIPPED")
-            self.ctx["i"] = self.ctx._sequence[self.ctx._count]
+            @task.calcfunction()
+            def __getitem__(iter, key):
+                #value = kwargs['iter'][kwargs['key'].value]
+                value = iter[key.value]
+                if isinstance(value, orm.Data):
+                    return value
+                else:
+                    return orm.to_aiida_type(value)
+
+            key = self.ctx._sequence_keys[self.ctx._count]
+            self.ctx["i"] = __getitem__(iter=self.ctx._sequence, key=to_aiida_type(key))
         self.ctx._count += 1
+
+
         return should_run
 
     def remove_executed_task(self, name: str) -> None:
