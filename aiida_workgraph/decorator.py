@@ -64,7 +64,7 @@ def add_input_recursive(
                 {
                     "identifier": "workgraph.namespace",
                     "name": port_name,
-                    "property": {"identifier": "workgraph.any", "default": {}},
+                    "property": {"identifier": "workgraph.any", "default": None},
                 }
             )
         if required:
