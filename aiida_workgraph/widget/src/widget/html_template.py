@@ -162,6 +162,18 @@ html_template = """
           }
         }
 
+        /**
+        * Defines custom padding for a scope layout.
+        * The padding values are used by the ScopesPlugin to avoid node overlapping with the socket of the parent node.
+        */
+        const customScopePadding = () => ({
+          top: 80,
+          left: 30,
+          right: 30,
+          bottom: 50
+        });
+
+
         async function createEditor(container) {
             const socket = new ClassicPreset.Socket("socket");
 
@@ -169,7 +181,7 @@ html_template = """
             const area = new AreaPlugin(container);
             const connection = new ConnectionPlugin();
             const render = new ReactPlugin({ createRoot });
-            const scopes = new ScopesPlugin();
+            const scopes = new ScopesPlugin({padding: customScopePadding});
             const arrange = new AutoArrangePlugin();
 
             const minimap = new MinimapPlugin({

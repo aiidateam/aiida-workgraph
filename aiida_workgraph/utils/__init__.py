@@ -149,20 +149,66 @@ def get_nested_dict(d: Dict, name: str, **kwargs) -> Any:
     return current
 
 
-def update_nested_dict(d: Dict[str, Any], key: str, value: Any) -> None:
+def merge_dicts(existing: Any, new: Any) -> Any:
+    """Recursively merges two dictionaries."""
+    if isinstance(existing, dict) and isinstance(new, dict):
+        for k, v in new.items():
+            if k in existing and isinstance(existing[k], dict) and isinstance(v, dict):
+                merge_dicts(existing[k], v)
+            else:
+                existing[k] = v
+    else:
+        return new
+
+
+def update_nested_dict(d: Optional[Dict[str, Any]], key: str, value: Any) -> None:
     """
-    d = {}
-    key = "base.pw.parameters"
-    value = 2
-    will give:
-    d = {"base": {"pw": {"parameters": 2}}
+    Update or create a nested dictionary structure based on a dotted key path.
+
+    This function allows updating a nested dictionary or creating one if `d` is `None`.
+    Given a dictionary and a key path (e.g., "base.pw.parameters"), it will traverse
+    or create the necessary nested structure to set the provided value at the specified
+    key location. If intermediate dictionaries do not exist, they will be created.
+    If the resulting dictionary is empty, it is set to `None`.
+
+    Args:
+        d (Dict[str, Any] | None): The dictionary to update, which can be `None`.
+                                   If `None`, an empty dictionary will be created.
+        key (str): A dotted key path string representing the nested structure.
+        value (Any): The value to set at the specified key.
+
+    Example:
+        d = None
+        key = "base.pw.parameters"
+        value = 2
+        After running:
+            update_nested_dict(d, key, value)
+        The result will be:
+            d = {"base": {"pw": {"parameters": 2}}}
+
+    Edge Case:
+        If the resulting dictionary is empty after the update, it will be set to `None`.
+
     """
+
     keys = key.split(".")
-    current = d
-    current = {} if current is None else current
+    current = d if d is not None else {}
     for k in keys[:-1]:
         current = current.setdefault(k, {})
-    current[keys[-1]] = value
+    # Handle merging instead of overwriting
+    last_key = keys[-1]
+    if (
+        last_key in current
+        and isinstance(current[last_key], dict)
+        and isinstance(value, dict)
+    ):
+        merge_dicts(current[last_key], value)
+    else:
+        current[last_key] = value
+    # if current is empty, set it to None
+    if not current:
+        current = None
+    return current
 
 
 def is_empty(value: Any) -> bool:
@@ -176,26 +222,27 @@ def is_empty(value: Any) -> bool:
     return False
 
 
-def update_nested_dict_with_special_keys(d: Dict[str, Any]) -> Dict[str, Any]:
+def update_nested_dict_with_special_keys(data: Dict[str, Any]) -> Dict[str, Any]:
     """Remove None and empty value"""
-    d = {k: v for k, v in d.items() if v is not None and not is_empty(v)}
+    # data = {k: v for k, v in data.items() if v is not None and not is_empty(v)}
+    data = {k: v for k, v in data.items() if v is not None}
     #
-    special_keys = [k for k in d.keys() if "." in k]
+    special_keys = [k for k in data.keys() if "." in k]
     for key in special_keys:
-        value = d.pop(key)
-        update_nested_dict(d, key, value)
-    return d
+        value = data.pop(key)
+        update_nested_dict(data, key, value)
+    return data
 
 
 def merge_properties(wgdata: Dict[str, Any]) -> None:
     """Merge sub properties to the root properties.
-    {
-        "base.pw.parameters": 2,
-        "base.pw.code": 1,
-    }
-    after merge:
-    {"base": {"pw": {"parameters": 2,
-                    "code": 1}}
+        {
+            "base.pw.parameters": 2,
+            "base.pw.code": 1,
+        }
+        after merge:
+        {"base": {"pw": {"parameters": 2,
+                        "code": 1}}
     So that no "." in the key name.
     """
     for _, task in wgdata["tasks"].items():
@@ -407,7 +454,7 @@ def get_or_create_code(
     try:
         return orm.load_code(f"{code_label}@{computer}")
     except NotExistent:
-        description = f"Python code on computer: {computer}"
+        description = f"Code on computer: {computer}"
         computer = orm.load_computer(computer)
         code_path = code_path or code_label
         code = InstalledCode(

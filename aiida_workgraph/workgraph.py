@@ -286,7 +286,11 @@ class WorkGraph(node_graph.NodeGraph):
                 if isinstance(node, aiida.orm.ProcessNode) and getattr(
                     node, "process_state", False
                 ):
-                    if self.tasks[name].state == "FINISHED":
+                    # if the node is finished ok, update the output sockets
+                    # note the task.state may not be the same as the node.process_state
+                    # for example, task.state can be `SKIPPED` if it is inside a conditional block,
+                    # even if the node.is_finished_ok is True
+                    if node.is_finished_ok:
                         # update the output sockets
                         i = 0
                         for socket in self.tasks[name].outputs:

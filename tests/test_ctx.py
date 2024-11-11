@@ -18,6 +18,8 @@ def test_workgraph_ctx(decorated_add: Callable) -> None:
         "workgraph.to_context", name="to_ctx1", key="x", value=add1.outputs["result"]
     )
     from_ctx1 = wg.add_task("workgraph.from_context", name="from_ctx1", key="x")
+    # test the task can wait for another task
+    from_ctx1.waiting_on.add(add1)
     add2 = wg.add_task(decorated_add, "add2", x=from_ctx1.outputs["result"], y=1)
     wg.run()
     assert add2.outputs["result"].value == 6

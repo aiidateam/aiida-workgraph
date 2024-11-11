@@ -64,7 +64,7 @@ def add_input_recursive(
                 {
                     "identifier": "workgraph.namespace",
                     "name": port_name,
-                    "property": {"identifier": "workgraph.any", "default": {}},
+                    "property": {"identifier": "workgraph.any", "default": None},
                 }
             )
         if required:
@@ -407,7 +407,12 @@ def build_task_from_workgraph(wg: any) -> Task:
     # add all the inputs/outputs from the tasks in the workgraph
     for task in wg.tasks:
         # inputs
-        inputs.append({"identifier": "workgraph.any", "name": f"{task.name}"})
+        inputs.append(
+            {
+                "identifier": "workgraph.namespace",
+                "name": f"{task.name}",
+            }
+        )
         for socket in task.inputs:
             if socket.name == "_wait":
                 continue
@@ -415,7 +420,12 @@ def build_task_from_workgraph(wg: any) -> Task:
                 {"identifier": socket.identifier, "name": f"{task.name}.{socket.name}"}
             )
         # outputs
-        outputs.append({"identifier": "workgraph.any", "name": f"{task.name}"})
+        outputs.append(
+            {
+                "identifier": "workgraph.namespace",
+                "name": f"{task.name}",
+            }
+        )
         for socket in task.outputs:
             if socket.name in ["_wait", "_outputs"]:
                 continue
@@ -445,9 +455,9 @@ def build_task_from_workgraph(wg: any) -> Task:
         "type": tdata["metadata"]["task_type"],
         "is_pickle": False,
     }
+    tdata["metadata"]["group_outputs"] = group_outputs
     tdata["executor"] = executor
     task = create_task(tdata)
-    task.group_outputs = group_outputs
     return task
 
 
@@ -491,6 +501,8 @@ def generate_tdata(
     properties: List[Tuple[str, str]],
     catalog: str,
     task_type: str,
+    group_inputs: List[Tuple[str, str]] = None,
+    group_outputs: List[Tuple[str, str]] = None,
     additional_data: Optional[Dict[str, Any]] = None,
 ) -> Dict[str, Any]:
     """Generate task data for creating a task."""
@@ -514,6 +526,8 @@ def generate_tdata(
             "task_type": task_type,
             "catalog": catalog,
             "node_class": {"module": "aiida_workgraph.task", "name": "Task"},
+            "group_inputs": group_inputs or [],
+            "group_outputs": group_outputs or [],
         },
         "properties": properties,
         "inputs": _inputs,
@@ -624,10 +638,11 @@ class TaskDecoratorCollection:
                 properties or [],
                 catalog,
                 task_type,
+                group_inputs=inputs,
+                group_outputs=outputs,
             )
+
             task = create_task(tdata)
-            task.group_inputs = inputs
-            task.group_outputs = outputs
             func.task = func.node = task
             return func
 

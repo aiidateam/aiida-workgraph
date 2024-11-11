@@ -19,7 +19,6 @@ from typing import Any
         (orm.Str, "abc", "workgraph.aiida_string"),
         (orm.Bool, True, "workgraph.aiida_bool"),
         (orm.Bool, "{{variable}}", "workgraph.aiida_bool"),
-        # (orm.StructureData, orm.StructureData(), "workgraph.aiida_structuredata"),
     ),
 )
 def test_type_mapping(data_type, data, identifier) -> None:
@@ -33,6 +32,29 @@ def test_type_mapping(data_type, data, identifier) -> None:
     assert add.task().inputs["x"].property.identifier == identifier
     add_task = add.task()
     add_task.set({"x": data})
+    # test set data from context
+    add_task.set({"x": "{{variable}}"})
+
+
+def test_aiida_data_socket() -> None:
+    """Test the mapping of data types to socket types."""
+    from aiida import orm, load_profile
+
+    load_profile()
+
+    datas = [(orm.StructureData, orm.StructureData(), "workgraph.aiida_structuredata")]
+    for data_type, data, identifier in datas:
+
+        @task()
+        def add(x: data_type):
+            pass
+
+        assert add.task().inputs["x"].identifier == identifier
+        assert add.task().inputs["x"].property.identifier == identifier
+        add_task = add.task()
+        add_task.set({"x": data})
+        # test set data from context
+        add_task.set({"x": "{{variable}}"})
 
 
 @pytest.mark.parametrize(
@@ -87,6 +109,7 @@ def test_kwargs() -> None:
     test1 = test.node()
     assert test1.inputs["kwargs"].link_limit == 1e6
     assert test1.inputs["kwargs"].identifier == "workgraph.namespace"
+    assert test1.inputs["kwargs"].property.value == {}
 
 
 @pytest.mark.parametrize(

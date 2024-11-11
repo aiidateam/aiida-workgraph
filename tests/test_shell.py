@@ -75,7 +75,7 @@ def test_shell_graph_builder():
     def add_multiply(x, y):
         """Add two numbers and multiply the result by 2."""
         # define the parser function
-        def parser(self, dirpath):
+        def parser(dirpath):
             from aiida.orm import Int
 
             return {"result": Int((dirpath / "stdout").read_text().strip())}
@@ -99,7 +99,7 @@ def test_shell_graph_builder():
             command="bc",
             arguments=["{expression}"],
             nodes={"expression": job1.outputs["stdout"]},
-            parser=(parser),
+            parser=parser,
             parser_outputs=[
                 {"identifier": "workgraph.any", "name": "result"}
             ],  # add a "result" output socket from the parser
