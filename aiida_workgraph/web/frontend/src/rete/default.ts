@@ -18,10 +18,13 @@ import {
   Presets as ArrangePresets,
   ArrangeAppliers
 } from "rete-auto-arrange-plugin";
+import AtomsItem from './AtomsItem.js'; // Adjust the path as necessary
 
 // May move these interfaces to a separate file
 interface NodeInput {
   name: string;
+  identifier: string;
+  properties: any;
   // Add other properties of NodeInput here if needed
 }
 
@@ -47,6 +50,11 @@ interface NodeMap {
   [key: string]: Node; // Assuming `Node` is the correct type for the nodes in nodeMap
 }
 
+class AtomsControl extends ClassicPreset.Control {
+  constructor(public data: any) {
+    super();
+  }
+}
 
 export async function loadJSON(editor: NodeEditor<any>, area: any, workgraphData: any) {
 
@@ -89,7 +97,17 @@ export async function loadJSON(editor: NodeEditor<any>, area: any, workgraphData
 }
 
 
-class Node extends ClassicPreset.Node {
+class Node extends ClassicPreset.Node <
+{ [key in string]: ClassicPreset.Socket },
+{ [key in string]: ClassicPreset.Socket },
+{
+  [key in string]:
+    | AtomsControl
+    | ClassicPreset.Control
+    | ClassicPreset.InputControl<"number">
+    | ClassicPreset.InputControl<"text">;
+}
+> {
   width = 180;
   height = 100;
   parent?: string;
@@ -100,6 +118,55 @@ type Schemes = GetSchemes<Node, Connection<Node>>;
 type AreaExtra = ReactArea2D<any> | MinimapExtra | ContextMenuExtra;
 
 
+export function addControls(editor: NodeEditor<any>, area: any,
+          workgraphData: any) {
+  // resize the node based on the max length of the input/output names
+  let maxSocketNameLength = 0;
+  const nodes = editor.getNodes();
+  // loop all node and add the input controls
+  nodes.forEach((node) => {
+    const nodeData = workgraphData.nodes[node.label];
+    nodeData.inputs.forEach((input: NodeInput) => {
+        const inp = node.inputs[input.name];
+        // console.log("Adding control for input", input.name, "with identifier", input.identifier);
+        if (input.identifier === "workgraph.int" || input.identifier === "workgraph.float" || input.identifier === "workgraph.aiida_int" || input.identifier === "workgraph.aiida_float") {
+          inp.addControl(
+            new ClassicPreset.InputControl("number", { initial: nodeData.properties[input.name].value, readonly: true })
+          );
+        }
+        if (input.identifier === "workgraph.string" || input.identifier === "workgraph.aiida_string") {
+          inp.addControl(
+            new ClassicPreset.InputControl("text", { initial: nodeData.properties[input.name].value, readonly: true })
+          );
+        }
+        if (input.identifier === "workgraph.aiida_structuredata") {
+          inp.addControl(new AtomsControl(nodeData.properties[input.name].value));
+          node.width += 0;
+          node.height += 150;
+    }
+    area.update('node', node.id);
+  })
+  });
+}
+
+export function removeControls(editor: NodeEditor<any>, area: any, workgraphData: any) {
+  const nodes = editor.getNodes();
+  nodes.forEach((node) => {
+      const nodeData = workgraphData.nodes[node.label];
+      nodeData.inputs.forEach((input: NodeInput) => {
+        const inp = node.inputs[input.name];
+        inp.control = null;
+        const identifier = input.identifier;
+        if (identifier === "workgraph.aiida_structuredata") {
+          node.width -= 0;
+          node.height -= 150;
+        }
+    });
+    area.update('node', node.id);
+  });
+}
+
+
 function createDynamicNode(nodeData: any) {
   const node = new Node(nodeData.label);
   // resize the node based on the max length of the input/output names
@@ -107,7 +174,8 @@ function createDynamicNode(nodeData: any) {
   nodeData.inputs.forEach((input: NodeInput) => {
     let socket = new ClassicPreset.Socket(input.name);
     if (!node.inputs.hasOwnProperty(input.name)) {
-      node.addInput(input.name, new ClassicPreset.Input(socket, input.name));
+      const inp = new ClassicPreset.Input(socket, input.name);
+      node.addInput(input.name, inp);
       maxSocketNameLength = Math.max(maxSocketNameLength, input.name.length);
     }
   });
@@ -152,10 +220,26 @@ export async function createEditor(container: HTMLElement, workgraphData: any) {
   AreaExtensions.selectableNodes(area, AreaExtensions.selector(), {
     accumulating: AreaExtensions.accumulateOnCtrl()
   });
+  AreaExtensions.showInputControl(area);
 
   render.addPreset(Presets.classic.setup());
   render.addPreset(Presets.contextMenu.setup());
   render.addPreset(Presets.minimap.setup({ size: 200 }));
+  render.addPreset(
+    Presets.classic.setup({
+      customize: {
+        control(data) {
+          if (data.payload instanceof AtomsControl) {
+            return AtomsItem;
+          }
+          if (data.payload instanceof ClassicPreset.InputControl) {
+            return Presets.classic.Control;
+          }
+          return null;
+        }
+      }
+    })
+  );
 
   connection.addPreset(ConnectionPresets.classic.setup());
   scopes.addPreset(ScopesPresets.classic.setup());
