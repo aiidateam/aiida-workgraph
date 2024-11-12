@@ -165,7 +165,7 @@ class PropertyAiiDAIntVector(PropertyVector):
 
     identifier: str = "workgraph.aiida_int_vector"
     allowed_types = (list, orm.List, type(None))
-    allowed_item_types = (int, type(None))
+    allowed_item_types = (int, str, type(None))
 
 
 class PropertyAiiDAFloatVector(PropertyVector):
@@ -173,14 +173,14 @@ class PropertyAiiDAFloatVector(PropertyVector):
 
     identifier: str = "workgraph.aiida_float_vector"
     allowed_types = (list, orm.List, type(None))
-    allowed_item_types = (int, float, type(None))
+    allowed_item_types = (int, float, str, type(None))
 
 
 class PropertyStructureData(TaskProperty, SerializePickle):
     """A new class for Any type."""
 
     identifier: str = "workgraph.aiida_structuredata"
-    allowed_types = (orm.StructureData, type(None))
+    allowed_types = (orm.StructureData, str, type(None))
 
 
 __all__ = [

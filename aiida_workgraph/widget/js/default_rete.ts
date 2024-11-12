@@ -172,6 +172,18 @@ export async function removeNode(editor, name) {
   });
 }
 
+/**
+ * Defines custom padding for a scope layout.
+ * The padding values are used by the ScopesPlugin to avoid node overlapping with the socket of the parent node.
+ */
+const customScopePadding = () => ({
+  top: 80,
+  left: 30,
+  right: 30,
+  bottom: 50
+});
+
+
 export async function createEditor(container: HTMLElement, settings: any) {
   container.innerHTML = ''
 
@@ -179,7 +191,7 @@ export async function createEditor(container: HTMLElement, settings: any) {
   const area = new AreaPlugin<Schemes, AreaExtra>(container);
   const connection = new ConnectionPlugin<Schemes, AreaExtra>();
   const render = new ReactPlugin<Schemes, AreaExtra>();
-  const scopes = new ScopesPlugin<Schemes>();
+  const scopes = new ScopesPlugin<Schemes>({padding: customScopePadding});
   const arrange = new AutoArrangePlugin<Schemes>();
   const contextMenu = new ContextMenuPlugin<Schemes>({
     items: ContextMenuPresets.classic.setup([

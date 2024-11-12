@@ -108,7 +108,10 @@ class ToContext(Task):
         self.inputs.clear()
         self.outputs.clear()
         self.inputs.new("workgraph.any", "key")
+        inp = self.inputs.new("workgraph.any", "_wait")
+        inp.link_limit = 100000
         self.inputs.new("workgraph.any", "value")
+        self.outputs.new("workgraph.any", "_wait")
 
 
 class FromContext(Task):
@@ -124,7 +127,10 @@ class FromContext(Task):
         self.inputs.clear()
         self.outputs.clear()
         self.inputs.new("workgraph.any", "key")
+        inp = self.inputs.new("workgraph.any", "_wait")
+        inp.link_limit = 100000
         self.outputs.new("workgraph.any", "result")
+        self.outputs.new("workgraph.any", "_wait")
 
 
 class AiiDAInt(Task):

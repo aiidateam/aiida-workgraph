@@ -33,7 +33,7 @@ def prepare_for_python_task(task: dict, kwargs: dict, var_kwargs: dict) -> dict:
     import os
 
     # get the names kwargs for the PythonJob, which are the inputs before _wait
-    function_kwargs = {}
+    function_kwargs = kwargs.pop("function_kwargs", {})
     # TODO better way to find the function_kwargs
     input_names = [
         name
@@ -129,36 +129,16 @@ def prepare_for_python_task(task: dict, kwargs: dict, var_kwargs: dict) -> dict:
     return inputs
 
 
-def prepare_for_shell_task(task: dict, kwargs: dict) -> dict:
+def prepare_for_shell_task(task: dict, inputs: dict) -> dict:
     """Prepare the inputs for ShellJob"""
-    from aiida_shell.launch import prepare_code, convert_nodes_single_file_data
-    from aiida.common import lang
-    from aiida.orm import AbstractCode
+    from aiida_shell.launch import prepare_shell_job_inputs
+    import inspect
 
-    command = kwargs.pop("command", None)
-    resolve_command = kwargs.pop("resolve_command", False)
-    metadata = kwargs.pop("metadata", {})
-    # setup code
-    if isinstance(command, str):
-        computer = (metadata or {}).get("options", {}).pop("computer", None)
-        code = prepare_code(command, computer, resolve_command)
-    else:
-        lang.type_check(command, AbstractCode)
-        code = command
-    # update the tasks with links
-    nodes = convert_nodes_single_file_data(kwargs.pop("nodes", {}))
-    # find all keys in kwargs start with "nodes."
-    for key in list(kwargs.keys()):
-        if key.startswith("nodes."):
-            nodes[key[6:]] = kwargs.pop(key)
-    metadata.update({"call_link_label": task["name"]})
-    inputs = {
-        "code": code,
-        "nodes": nodes,
-        "filenames": kwargs.pop("filenames", {}),
-        "arguments": kwargs.pop("arguments", []),
-        "outputs": kwargs.pop("outputs", []),
-        "parser": kwargs.pop("parser", None),
-        "metadata": metadata or {},
-    }
+    # Retrieve the signature of `prepare_shell_job_inputs` to determine expected input parameters.
+    signature = inspect.signature(prepare_shell_job_inputs)
+    kwargs = {key: inputs.pop(key, None) for key in signature.parameters.keys()}
+    inputs.update(prepare_shell_job_inputs(**kwargs))
+
+    inputs.setdefault("metadata", {})
+    inputs["metadata"].update({"call_link_label": task["name"]})
     return inputs
