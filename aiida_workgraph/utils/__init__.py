@@ -696,14 +696,20 @@ def process_properties(task: Dict) -> Dict:
     for name, prop in task["properties"].items():
         identifier = prop["identifier"]
         value = prop.get("value")
-        result[name] = get_raw_value(identifier, value)
+        result[name] = {
+            "identifier": identifier,
+            "value": get_raw_value(identifier, value),
+        }
     #
     for name, input in task["inputs"].items():
         if input["property"] is not None:
             prop = input["property"]
             identifier = prop["identifier"]
             value = prop.get("value")
-            result[name] = get_raw_value(identifier, value)
+            result[name] = {
+                "identifier": identifier,
+                "value": get_raw_value(identifier, value),
+            }
 
     return result
 
@@ -722,7 +728,11 @@ def workgraph_to_short_json(
     #
     for name, task in wgdata["tasks"].items():
         # Add required inputs to nodes
-        inputs = [{"name": name} for name in task["inputs"] if name in task["args"]]
+        inputs = [
+            {"name": name, "identifier": input["identifier"]}
+            for name, input in task["inputs"].items()
+            if name in task["args"]
+        ]
         properties = process_properties(task)
         wgdata_short["nodes"][name] = {
             "label": task["name"],

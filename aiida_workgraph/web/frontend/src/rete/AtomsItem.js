@@ -70,6 +70,7 @@ function AtomsItem({ data }) {
     } else if (data.node_type === 'data.workgraph.ase.atoms.Atoms.AtomsData.') {
       atomsData = aseAtomsToAtomsData(data)
     }
+    // console.log("atoms control data: ", atomsData);
     const atoms = new Atoms(atomsData);
 
     if (weasContainerRef.current) {

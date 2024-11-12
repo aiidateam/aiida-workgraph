@@ -128,18 +128,19 @@ export function addControls(editor: NodeEditor<any>, area: any,
     const nodeData = workgraphData.nodes[node.label];
     nodeData.inputs.forEach((input: NodeInput) => {
         const inp = node.inputs[input.name];
+        // console.log("Adding control for input", input.name, "with identifier", input.identifier);
         if (input.identifier === "workgraph.int" || input.identifier === "workgraph.float" || input.identifier === "workgraph.aiida_int" || input.identifier === "workgraph.aiida_float") {
           inp.addControl(
-            new ClassicPreset.InputControl("number", { initial: nodeData.properties[input.name], readonly: true })
+            new ClassicPreset.InputControl("number", { initial: nodeData.properties[input.name].value, readonly: true })
           );
         }
         if (input.identifier === "workgraph.string" || input.identifier === "workgraph.aiida_string") {
           inp.addControl(
-            new ClassicPreset.InputControl("text", { initial: nodeData.properties[input.name], readonly: true })
+            new ClassicPreset.InputControl("text", { initial: nodeData.properties[input.name].value, readonly: true })
           );
         }
-        if (input.identifier === "workgraph.aiida_structure") {
-          inp.addControl(new AtomsControl(nodeData.properties[input.name]));
+        if (input.identifier === "workgraph.aiida_structuredata") {
+          inp.addControl(new AtomsControl(nodeData.properties[input.name].value));
           node.width += 0;
           node.height += 150;
     }
@@ -156,7 +157,7 @@ export function removeControls(editor: NodeEditor<any>, area: any, workgraphData
         const inp = node.inputs[input.name];
         inp.control = null;
         const identifier = input.identifier;
-        if (identifier === "workgraph.aiida_structure") {
+        if (identifier === "workgraph.aiida_structuredata") {
           node.width -= 0;
           node.height -= 150;
         }
