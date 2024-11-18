@@ -64,6 +64,11 @@ def test_calcfunction():
     assert "result" in add1.outputs.keys()
     assert add1.name == "add1"
 
+    AddTask_outputs_list = build_task(add_minus, outputs=["sum", "difference"])
+    assert issubclass(AddTask_outputs_list, Task)
+    assert "sum" in AddTask_outputs_list().outputs.keys()
+    assert "difference" in AddTask_outputs_list().outputs.keys()
+
 
 def test_function():
     """Generate a task for test."""

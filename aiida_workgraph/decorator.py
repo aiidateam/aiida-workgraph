@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from typing import Any, Callable, Dict, List, Optional, Union, Tuple
 from aiida_workgraph.utils import get_executor
 from aiida.engine import calcfunction, workfunction, CalcJob, WorkChain
@@ -6,7 +8,7 @@ from aiida.orm.nodes.process.calculation.calcfunction import CalcFunctionNode
 from aiida.orm.nodes.process.workflow.workfunction import WorkFunctionNode
 from aiida.engine.processes.ports import PortNamespace
 from aiida_workgraph.task import Task
-from aiida_workgraph.utils import build_callable
+from aiida_workgraph.utils import build_callable, validate_task_inout
 import inspect
 
 task_types = {
@@ -122,11 +124,17 @@ def add_output_recursive(
 
 def build_task(
     executor: Union[Callable, str],
-    inputs: Optional[List[str]] = None,
-    outputs: Optional[List[str]] = None,
+    inputs: Optional[List[str | dict]] = None,
+    outputs: Optional[List[str | dict]] = None,
 ) -> Task:
     """Build task from executor."""
     from aiida_workgraph.workgraph import WorkGraph
+
+    if inputs:
+        inputs = validate_task_inout(inputs, "inputs")
+
+    if outputs:
+        outputs = validate_task_inout(outputs, "outputs")
 
     if isinstance(executor, WorkGraph):
         return build_task_from_workgraph(executor)
@@ -142,8 +150,8 @@ def build_task(
 
 def build_task_from_callable(
     executor: Callable,
-    inputs: Optional[List[str]] = None,
-    outputs: Optional[List[str]] = None,
+    inputs: Optional[List[str | dict]] = None,
+    outputs: Optional[List[str | dict]] = None,
 ) -> Task:
     """Build task from a callable object.
     First, check if the executor is already a task.
