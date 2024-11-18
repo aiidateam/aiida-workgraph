@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from typing import Any, Callable, Dict, List, Optional, Union, Tuple
 from aiida_workgraph.utils import get_executor
 from aiida.engine import calcfunction, workfunction, CalcJob, WorkChain
