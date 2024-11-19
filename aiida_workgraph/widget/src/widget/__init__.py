@@ -37,7 +37,7 @@ class NodeGraphWidget(anywidget.AnyWidget):
         wgdata = workgraph_to_short_json(wgdata)
         self.value = wgdata
 
-    def from_node(self, node: Any) -> None:
+    def from_node(self, node: Any, show_metadata: bool = False) -> None:
         tdata = node.to_dict()
         tdata.pop("properties", None)
         tdata.pop("executor", None)
@@ -46,6 +46,14 @@ class NodeGraphWidget(anywidget.AnyWidget):
         tdata["label"] = tdata["identifier"]
         for input in tdata["inputs"].values():
             input.pop("property")
+
+        if not show_metadata:
+            inputs = {}
+            for input_k, input_v in tdata["inputs"].items():
+                if not input_k.startswith("metadata"):
+                    inputs[input_k] = input_v
+            tdata["inputs"] = inputs
+
         tdata["inputs"] = list(tdata["inputs"].values())
         tdata["outputs"] = list(tdata["outputs"].values())
         wgdata = {"name": node.name, "nodes": {node.name: tdata}, "links": []}
