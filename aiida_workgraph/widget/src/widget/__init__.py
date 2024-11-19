@@ -50,7 +50,7 @@ class NodeGraphWidget(anywidget.AnyWidget):
         if not show_metadata:
             inputs = {}
             for input_k, input_v in tdata["inputs"].items():
-                if not input_k.startswith("metadata"):
+                if not input_k.startswith("metadata."):
                     inputs[input_k] = input_v
             tdata["inputs"] = inputs
 
