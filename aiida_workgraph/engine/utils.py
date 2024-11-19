@@ -136,8 +136,26 @@ def prepare_for_shell_task(task: dict, inputs: dict) -> dict:
 
     # Retrieve the signature of `prepare_shell_job_inputs` to determine expected input parameters.
     signature = inspect.signature(prepare_shell_job_inputs)
-    kwargs = {key: inputs.pop(key, None) for key in signature.parameters.keys()}
-    inputs.update(prepare_shell_job_inputs(**kwargs))
+    aiida_shell_input_keys = signature.parameters.keys()
+
+    # Iterate over all WorkGraph `inputs`, and extract the ones which are expected by `prepare_shell_job_inputs`
+    inputs_aiida_shell_subset = {
+        key: inputs[key] for key in inputs.keys() if key in aiida_shell_input_keys
+    }
+
+    try:
+        aiida_shell_inputs = prepare_shell_job_inputs(**inputs_aiida_shell_subset)
+    except ValueError:
+        raise
+
+    # We need to remove the original input-keys, as they might be offending for the call to `launch_shell_job`
+    # E.g., `inputs` originally can contain `command`, which gets, however, transformed to #
+    # `code` by `prepare_shell_job_inputs`
+    for key in inputs_aiida_shell_subset.keys():
+        inputs.pop(key)
+
+    # Finally, we update the original `inputs` with the modified ones from the call to `prepare_shell_job_inputs`
+    inputs = {**inputs, **aiida_shell_inputs}
 
     inputs.setdefault("metadata", {})
     inputs["metadata"].update({"call_link_label": task["name"]})
