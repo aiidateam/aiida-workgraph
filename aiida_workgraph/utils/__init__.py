@@ -771,7 +771,7 @@ def validate_task_inout(inout_list: list[str | dict], list_type: str) -> list[di
     if the former convert them to a list of `dict`s with `name` as the key.
 
     :param inout_list: The input/output list to be validated.
-    :param list_type: "input" or "output" to indicate what is to be validated for better error message.
+    :param list_type: "inputs" or "outputs" to indicate what is to be validated for better error message.
     :raises TypeError: If wrong types are provided to the task
     :return: Processed `inputs`/`outputs` list.
     """
