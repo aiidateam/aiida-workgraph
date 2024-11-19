@@ -261,7 +261,10 @@ def merge_properties(wgdata: Dict[str, Any]) -> None:
             if "." in key and prop["value"] not in [None, {}]:
                 root, key = key.split(".", 1)
                 root_prop = task["inputs"][root]["property"]
-                update_nested_dict(root_prop["value"], key, prop["value"])
+                # update the root property
+                root_prop["value"] = update_nested_dict(
+                    root_prop["value"], key, prop["value"]
+                )
                 prop["value"] = None
 
 

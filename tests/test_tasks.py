@@ -55,3 +55,19 @@ def test_task_wait(decorated_add: Callable) -> None:
     wg.run()
     report = get_workchain_report(wg.process, "REPORT")
     assert "tasks ready to run: add1" in report
+
+
+def test_set_inputs(decorated_add: Callable) -> None:
+    """Test setting inputs of a task."""
+
+    wg = WorkGraph(name="test_set_inputs")
+    add1 = wg.add_task(decorated_add, "add1", x=1)
+    add1.set({"y": 2, "metadata.store_provenance": False})
+    data = wg.prepare_inputs(metadata=None)
+    assert data["wg"]["tasks"]["add1"]["inputs"]["y"]["property"]["value"] == 2
+    assert (
+        data["wg"]["tasks"]["add1"]["inputs"]["metadata"]["property"]["value"][
+            "store_provenance"
+        ]
+        is False
+    )
