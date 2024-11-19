@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from typing import Any, Dict, Optional, Union, Callable, List
 from aiida.engine.processes import Process
 from aiida import orm
@@ -756,3 +758,26 @@ def workgraph_to_short_json(
             }
         )
     return wgdata_short
+
+
+def validate_task_inout(inout_list: list[str | dict], list_type: str) -> list[dict]:
+    """
+    Checks if all the list elements provided as `inputs` or `outputs` of to a task are of type `str` or `dict`, and,
+    if the former convert them to a list of `dict`s with `name` as the key.
+
+    :param inout_list: The input/output list to be validated.
+    :param list_type: "input" or "output" to indicate what is to be validated.
+    :raises TypeError: If a list of mixed or wrong types is provided to the task
+    :return: Processed `inputs`/`outputs` list.
+    """
+
+    if all(isinstance(item, str) for item in inout_list):
+        return [{"name": item} for item in inout_list]
+    elif all(isinstance(item, dict) for item in inout_list):
+        return inout_list
+    elif not all(isinstance(item, dict) for item in inout_list):
+        raise TypeError(
+            f"Provide either a list of `str` or `dict` as `{list_type}`, not mixed types."
+        )
+    else:
+        raise TypeError(f"Wrong type provided in the `{list_type}` list to the task.")
