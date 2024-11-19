@@ -4,6 +4,16 @@ from aiida_shell.launch import prepare_code
 from aiida.orm import SinglefileData, load_computer
 
 
+def test_prepare_for_shell_task_nonexistent():
+    """Check that the `ValueError` raised by `aiida-shell` for a non-extistent executable is captured by WorkGraph."""
+    from aiida_workgraph.engine.utils import prepare_for_shell_task
+
+    task = {"name": "test"}
+    inputs = {"command": "abc42"}
+    with pytest.raises(ValueError, match="failed to determine the absolute path"):
+        prepare_for_shell_task(task=task, inputs=inputs)
+
+
 @pytest.mark.usefixtures("started_daemon_client")
 def test_shell_command(fixture_localhost):
     """Test the ShellJob with command as a string."""
