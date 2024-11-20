@@ -178,12 +178,12 @@ class Task(GraphNode):
         else:
             return self._widget._ipython_display_(*args, **kwargs)
 
-    def to_html(self, output: str = None, **kwargs):
+    def to_html(self, output: str = None, show_socket_depth: int = 0, **kwargs):
         """Write a standalone html file to visualize the task."""
         if self._widget is None:
             print(WIDGET_INSTALLATION_MESSAGE)
             return
-        self._widget.from_node(self)
+        self._widget.from_node(node=self, show_socket_depth=show_socket_depth)
         return self._widget.to_html(output=output, **kwargs)
 
 

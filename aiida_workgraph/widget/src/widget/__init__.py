@@ -5,6 +5,7 @@ import pathlib
 import anywidget
 import traitlets
 from .utils import wait_to_link
+from aiida_workgraph.utils import filter_keys_namespace_depth
 
 try:
     __version__ = importlib.metadata.version("widget")
@@ -37,24 +38,22 @@ class NodeGraphWidget(anywidget.AnyWidget):
         wgdata = workgraph_to_short_json(wgdata)
         self.value = wgdata
 
-    def from_node(self, node: Any, show_metadata: bool = False) -> None:
+    def from_node(self, node: Any, show_socket_depth: int = 0) -> None:
+
         tdata = node.to_dict()
-        tdata.pop("properties", None)
-        tdata.pop("executor", None)
-        tdata.pop("node_class", None)
-        tdata.pop("process", None)
-        tdata["label"] = tdata["identifier"]
+
+        # Remove certain elements of the dict-representation of the Node that we don't want to show
+        for key in ("properties", "executor", "node_class", "process"):
+            tdata.pop(key, None)
         for input in tdata["inputs"].values():
             input.pop("property")
 
-        if not show_metadata:
-            inputs = {}
-            for input_k, input_v in tdata["inputs"].items():
-                if not input_k.startswith("metadata."):
-                    inputs[input_k] = input_v
-            tdata["inputs"] = inputs
+        tdata["label"] = tdata["identifier"]
 
-        tdata["inputs"] = list(tdata["inputs"].values())
+        filtered_inputs = filter_keys_namespace_depth(
+            dict_=tdata["inputs"], max_depth=show_socket_depth
+        )
+        tdata["inputs"] = list(filtered_inputs.values())
         tdata["outputs"] = list(tdata["outputs"].values())
         wgdata = {"name": node.name, "nodes": {node.name: tdata}, "links": []}
         self.value = wgdata
