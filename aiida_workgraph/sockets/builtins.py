@@ -1,9 +1,8 @@
 from typing import Optional, Any
 from aiida_workgraph.socket import TaskSocket
-from node_graph.serializer import SerializeJson, SerializePickle
 
 
-class SocketAny(TaskSocket, SerializePickle):
+class SocketAny(TaskSocket):
     """Any socket."""
 
     identifier: str = "workgraph.any"
@@ -15,7 +14,7 @@ class SocketAny(TaskSocket, SerializePickle):
         self.add_property("workgraph.any", name, **kwargs)
 
 
-class SocketNamespace(TaskSocket, SerializePickle):
+class SocketNamespace(TaskSocket):
     """Namespace socket."""
 
     identifier: str = "workgraph.namespace"
@@ -35,7 +34,7 @@ class SocketNamespace(TaskSocket, SerializePickle):
         self.add_property("workgraph.any", name, **kwargs)
 
 
-class SocketFloat(TaskSocket, SerializeJson):
+class SocketFloat(TaskSocket):
     """Float socket."""
 
     identifier: str = "workgraph.float"
@@ -47,7 +46,7 @@ class SocketFloat(TaskSocket, SerializeJson):
         self.add_property("workgraph.float", name, **kwargs)
 
 
-class SocketInt(TaskSocket, SerializeJson):
+class SocketInt(TaskSocket):
     """Int socket."""
 
     identifier: str = "workgraph.int"
@@ -59,7 +58,7 @@ class SocketInt(TaskSocket, SerializeJson):
         self.add_property("workgraph.int", name, **kwargs)
 
 
-class SocketString(TaskSocket, SerializeJson):
+class SocketString(TaskSocket):
     """String socket."""
 
     identifier: str = "workgraph.string"
@@ -71,7 +70,7 @@ class SocketString(TaskSocket, SerializeJson):
         self.add_property("workgraph.string", name, **kwargs)
 
 
-class SocketBool(TaskSocket, SerializeJson):
+class SocketBool(TaskSocket):
     """Bool socket."""
 
     identifier: str = "workgraph.bool"
@@ -83,7 +82,7 @@ class SocketBool(TaskSocket, SerializeJson):
         self.add_property("workgraph.bool", name, **kwargs)
 
 
-class SocketAiiDAFloat(TaskSocket, SerializeJson):
+class SocketAiiDAFloat(TaskSocket):
     """AiiDAFloat socket."""
 
     identifier: str = "workgraph.aiida_float"
@@ -101,7 +100,7 @@ class SocketAiiDAFloat(TaskSocket, SerializeJson):
         self.add_property("workgraph.aiida_float", name, **kwargs)
 
 
-class SocketAiiDAInt(TaskSocket, SerializeJson):
+class SocketAiiDAInt(TaskSocket):
     """AiiDAInt socket."""
 
     identifier: str = "workgraph.aiida_int"
@@ -119,7 +118,7 @@ class SocketAiiDAInt(TaskSocket, SerializeJson):
         self.add_property("workgraph.aiida_int", name, **kwargs)
 
 
-class SocketAiiDAString(TaskSocket, SerializeJson):
+class SocketAiiDAString(TaskSocket):
     """AiiDAString socket."""
 
     identifier: str = "workgraph.aiida_string"
@@ -137,7 +136,7 @@ class SocketAiiDAString(TaskSocket, SerializeJson):
         self.add_property("workgraph.aiida_string", name, **kwargs)
 
 
-class SocketAiiDABool(TaskSocket, SerializeJson):
+class SocketAiiDABool(TaskSocket):
     """AiiDABool socket."""
 
     identifier: str = "workgraph.aiida_bool"
@@ -155,7 +154,7 @@ class SocketAiiDABool(TaskSocket, SerializeJson):
         self.add_property("workgraph.aiida_bool", name, **kwargs)
 
 
-class SocketAiiDAIntVector(TaskSocket, SerializeJson):
+class SocketAiiDAIntVector(TaskSocket):
     """Socket with a AiiDAIntVector property."""
 
     identifier: str = "workgraph.aiida_int_vector"
@@ -173,7 +172,7 @@ class SocketAiiDAIntVector(TaskSocket, SerializeJson):
         self.add_property("workgraph.aiida_int_vector", name, **kwargs)
 
 
-class SocketAiiDAFloatVector(TaskSocket, SerializeJson):
+class SocketAiiDAFloatVector(TaskSocket):
     """Socket with a FloatVector property."""
 
     identifier: str = "workgraph.aiida_float_vector"
@@ -191,7 +190,7 @@ class SocketAiiDAFloatVector(TaskSocket, SerializeJson):
         self.add_property("workgraph.aiida_float_vector", name, **kwargs)
 
 
-class SocketStructureData(TaskSocket, SerializePickle):
+class SocketStructureData(TaskSocket):
     """Any socket."""
 
     identifier: str = "workgraph.aiida_structuredata"
