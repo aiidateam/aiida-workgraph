@@ -1,10 +1,9 @@
 from typing import List, Union, Any
 from aiida_workgraph.property import TaskProperty
-from node_graph.serializer import SerializeJson, SerializePickle
 from aiida import orm
 
 
-class PropertyAny(TaskProperty, SerializePickle):
+class PropertyAny(TaskProperty):
     """A new class for Any type."""
 
     identifier: str = "workgraph.any"
@@ -13,28 +12,28 @@ class PropertyAny(TaskProperty, SerializePickle):
         """No validation needed."""
 
 
-class PropertyInt(TaskProperty, SerializeJson):
+class PropertyInt(TaskProperty):
     """A new class for integer type."""
 
     identifier: str = "workgraph.int"
     allowed_types = (int, str, type(None))
 
 
-class PropertyFloat(TaskProperty, SerializeJson):
+class PropertyFloat(TaskProperty):
     """A new class for float type."""
 
     identifier: str = "workgraph.float"
     allowed_types = (int, float, str, type(None))
 
 
-class PropertyBool(TaskProperty, SerializeJson):
+class PropertyBool(TaskProperty):
     """A new class for bool type."""
 
     identifier: str = "workgraph.bool"
     allowed_types = (bool, int, str, type(None))
 
 
-class PropertyString(TaskProperty, SerializeJson):
+class PropertyString(TaskProperty):
     """A new class for string type."""
 
     identifier: str = "workgraph.string"
@@ -47,7 +46,7 @@ class PropertyString(TaskProperty, SerializeJson):
             )
 
 
-class PropertyAiiDAInt(TaskProperty, SerializeJson):
+class PropertyAiiDAInt(TaskProperty):
     """A new class for integer type."""
 
     identifier: str = "workgraph.aiida_int"
@@ -59,7 +58,7 @@ class PropertyAiiDAInt(TaskProperty, SerializeJson):
         super().set_value(value)
 
 
-class PropertyAiiDAFloat(TaskProperty, SerializeJson):
+class PropertyAiiDAFloat(TaskProperty):
     """A new class for float type."""
 
     identifier: str = "workgraph.aiida_float"
@@ -73,7 +72,7 @@ class PropertyAiiDAFloat(TaskProperty, SerializeJson):
         super().set_value(value)
 
 
-class PropertyAiiDABool(TaskProperty, SerializeJson):
+class PropertyAiiDABool(TaskProperty):
     """A new class for bool type."""
 
     identifier: str = "workgraph.aiida_bool"
@@ -85,7 +84,7 @@ class PropertyAiiDABool(TaskProperty, SerializeJson):
         super().set_value(value)
 
 
-class PropertyAiiDAString(TaskProperty, SerializeJson):
+class PropertyAiiDAString(TaskProperty):
     """A new class for string type."""
 
     identifier: str = "workgraph.aiida_string"
@@ -103,7 +102,7 @@ class PropertyAiiDAString(TaskProperty, SerializeJson):
             )
 
 
-class PropertyAiiDADict(TaskProperty, SerializeJson):
+class PropertyAiiDADict(TaskProperty):
     """A new class for Dict type."""
 
     identifier: str = "workgraph.aiida_dict"
@@ -116,7 +115,7 @@ class PropertyAiiDADict(TaskProperty, SerializeJson):
 
 
 # ====================================
-class PropertyVector(TaskProperty, SerializePickle):
+class PropertyVector(TaskProperty):
     """Vector property"""
 
     identifier: str = "workgraph.vector"
@@ -176,7 +175,7 @@ class PropertyAiiDAFloatVector(PropertyVector):
     allowed_item_types = (int, float, str, type(None))
 
 
-class PropertyStructureData(TaskProperty, SerializePickle):
+class PropertyStructureData(TaskProperty):
     """A new class for Any type."""
 
     identifier: str = "workgraph.aiida_structuredata"

@@ -379,6 +379,8 @@ def build_shelljob_task(
         tdata["outputs"][output["name"]] = output
     outputs = [] if outputs is None else outputs
     parser_outputs = [] if parser_outputs is None else parser_outputs
+    parser_outputs = validate_task_inout(parser_outputs, "parser_outputs")
+
     outputs = [
         {"identifier": "workgraph.any", "name": ShellParser.format_link_label(output)}
         for output in outputs
