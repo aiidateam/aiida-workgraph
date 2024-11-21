@@ -125,9 +125,32 @@ for output in norm_task.outputs:
     if "." not in output.name:
         print(f"  - {output.name}")
 
+######################################################################
+# For specifying the outputs, the most explicit way is to provide a list of dictionaries, as shown above. In addition,
+# as a shortcut, it is also possible to pass a list of strings. In that case, WorkGraph will internally convert the list
+# of strings into a list of dictionaries in which case, each ``name`` key will be assigned each passed string value.
+# Furthermore, also a mixed list of string and dict elements can be passed, which can be useful in cases where multiple
+# outputs should be specified, but more detailed properties are only required for some of the outputs. The above also
+# applies for the ``outputs`` argument of the ``@task`` decorator introduced earlier, as well as the ``inputs``, given
+# that they are explicitly specified rather than derived from the signature of the ``Callable``.  Finally, all lines
+# below are valid specifiers for the ``outputs`` of the ``build_task`:
+#
+
+NormTask = build_task(norm, outputs=["norm"])
+NormTask = build_task(norm, outputs=["norm", "norm2"])
+NormTask = build_task(
+    norm, outputs=["norm", {"name": "norm2", "identifier": "workgraph.Any"}]
+)
+NormTask = build_task(
+    norm,
+    outputs=[
+        {"name": "norm", "identifier": "workgraph.Any"},
+        {"name": "norm2", "identifier": "workgraph.Any"},
+    ],
+)
 
 ######################################################################
-# One can use these AiiDA component direclty in the WorkGraph. The inputs
+# One can use these AiiDA component directly in the WorkGraph. The inputs
 # and outputs of the task is automatically generated based on the input
 # and output port of the AiiDA component. In case of ``calcfunction``, the
 # default output is ``result``. If there are more than one output task,
