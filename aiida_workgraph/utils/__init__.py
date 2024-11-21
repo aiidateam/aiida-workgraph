@@ -734,7 +734,9 @@ def workgraph_to_short_json(
             {"name": name, "identifier": input["identifier"]}
             for name, input in task["inputs"].items()
             if name in task["args"]
+            or (task["identifier"].upper() == "SHELLJOB" and name.startswith("nodes."))
         ]
+
         properties = process_properties(task)
         wgdata_short["nodes"][name] = {
             "label": task["name"],
