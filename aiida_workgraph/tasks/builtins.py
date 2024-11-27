@@ -23,8 +23,8 @@ class Zone(Task):
         inp.link_limit = 100000
         self.outputs.new("workgraph.any", "_wait")
 
-    def to_dict(self) -> Dict[str, Any]:
-        tdata = super().to_dict()
+    def to_dict(self, short: bool = False) -> Dict[str, Any]:
+        tdata = super().to_dict(short=short)
         tdata["children"] = [task.name for task in self.children]
         return tdata
 
@@ -164,7 +164,9 @@ class AiiDAFloat(Task):
     args = ["value"]
 
     def create_sockets(self) -> None:
-        self.inputs.new("workgraph.aiida_float", "value", default=0.0)
+        self.inputs.new(
+            "workgraph.aiida_float", "value", property_data={"default": 0.0}
+        )
         self.outputs.new("workgraph.aiida_float", "result")
 
 

@@ -109,7 +109,7 @@ def test_kwargs() -> None:
     test1 = test.node()
     assert test1.inputs["kwargs"].link_limit == 1e6
     assert test1.inputs["kwargs"].identifier == "workgraph.namespace"
-    assert test1.inputs["kwargs"].property.value == {}
+    assert test1.inputs["kwargs"].property.value is None
 
 
 @pytest.mark.parametrize(
