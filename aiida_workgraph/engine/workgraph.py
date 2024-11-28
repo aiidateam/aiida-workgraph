@@ -42,7 +42,8 @@ if t.TYPE_CHECKING:
 __all__ = "WorkGraph"
 
 
-MAX_NUMBER_AWAITABLES_MSG = "The maximum number of subprocesses has been reached: {}. Cannot launch the job: {}."
+MAX_NUMBER_AWAITABLES_MSG = "The maximum number of subprocesses has been reached: {}.\
+Waiting for other jobs to finish before launching the {}."
 
 
 @auto_persist("_awaitables")
@@ -303,15 +304,15 @@ class WorkGraphEngine(Process, metaclass=Protect):
         else:
             finished, result = self.is_workgraph_finished()
 
+        if self._awaitables:
+            return Wait(self._do_step, "Waiting before next step")
+
         # If the workgraph is finished or the result is an ExitCode, we exit by returning
         if finished:
             if isinstance(result, ExitCode):
                 return result
             else:
                 return self.finalize()
-
-        if self._awaitables:
-            return Wait(self._do_step, "Waiting before next step")
 
         return Continue(self._do_step)
 
@@ -441,7 +442,10 @@ class WorkGraphEngine(Process, metaclass=Protect):
 
         # node finished, update the task state and result
         # udpate the task state
-        self.update_task_state(awaitable.key)
+        if awaitable.key in self.ctx._tasks:
+            self.update_task_state(awaitable.key)
+        else:
+            self.report(f"Awaitable {awaitable.key} finished.")
         # try to resume the workgraph, if the workgraph is already resumed
         # by other awaitable, this will not work
         try:
@@ -1013,9 +1017,10 @@ class WorkGraphEngine(Process, metaclass=Protect):
                 "WORKGRAPH",
                 "PYTHONJOB",
                 "SHELLJOB",
+                "AWAITABLE_BUILDER",
             ]:
                 if len(self._awaitables) >= self.ctx._max_number_awaitables:
-                    print(
+                    self.report(
                         MAX_NUMBER_AWAITABLES_MSG.format(
                             self.ctx._max_number_awaitables, name
                         )
@@ -1219,6 +1224,32 @@ class WorkGraphEngine(Process, metaclass=Protect):
                 # get the results from the context
                 setattr(self.ctx, kwargs["key"], kwargs["value"])
                 self.set_task_state_info(name, "state", "FINISHED")
+                self.update_parent_task_state(name)
+                self.continue_workgraph()
+            elif task["metadata"]["node_type"].upper() in ["AWAITABLE_BUILDER"]:
+                # create the awaitable
+                for key in self.ctx._tasks[name]["metadata"]["args"]:
+                    kwargs.pop(key, None)
+                results = self.run_executor(
+                    executor, args, kwargs, var_args, var_kwargs
+                )
+                if not isinstance(results, dict):
+
+                    self.logger.error(
+                        "The results of the awaitable builder must be a dict."
+                    )
+                    for key, value in results.items():
+                        if not isinstance(value, ProcessNode):
+                            self.logger.error(
+                                f"The value of key {key} is not an instance of ProcessNode."
+                            )
+                            self.set_task_state_info(name, "state", "Failed")
+                    self.set_task_state_info(name, "state", "Failed")
+                    self.report(f"Task: {name} failed.")
+                else:
+                    self.set_task_state_info(name, "state", "FINISHED")
+                    self.to_context(**results)
+                    self.report(f"Task: {name} finished.")
                 self.update_parent_task_state(name)
                 self.continue_workgraph()
             elif task["metadata"]["node_type"].upper() in ["AWAITABLE"]:
