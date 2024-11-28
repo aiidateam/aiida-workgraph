@@ -1,10 +1,11 @@
-def test_AtomsData():
-    from aiida_workgraph.orm.atoms import AtomsData
-    from ase.build import bulk
+def test_PickledData():
+    from aiida_workgraph.orm.pickled_data import PickledData
 
-    atoms = bulk("Si")
-    data = AtomsData(atoms)
-    data.store()
-    assert data.value == atoms
-    assert data.base.attributes.get("formula") == "Si2"
-    assert data.base.attributes.get("pbc") == [True, True, True]
+    class CustomData:
+        def __init__(self, a):
+            self.a = a
+
+    data = CustomData(a=1)
+    pickled_data = PickledData(data)
+    pickled_data.store()
+    assert pickled_data.value.a == 1

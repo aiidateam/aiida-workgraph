@@ -1,10 +1,10 @@
 import inspect
 import textwrap
 from typing import Callable, Dict, Any, get_type_hints, _SpecialForm
-from .general_data import GeneralData
+from .pickled_data import PickledData
 
 
-class PickledFunction(GeneralData):
+class PickledFunction(PickledData):
     """Data class to represent a pickled Python function."""
 
     def __init__(self, value=None, **kwargs):

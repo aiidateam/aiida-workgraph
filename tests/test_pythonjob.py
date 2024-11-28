@@ -28,7 +28,7 @@ def test_decorator(fixture_localhost, python_executable_path):
         x=1,
         y=2,
         computer="localhost",
-        code_label=python_executable_path,
+        command_info={"label": python_executable_path},
     )
     wg.add_task(
         decorted_multiply,
@@ -36,7 +36,7 @@ def test_decorator(fixture_localhost, python_executable_path):
         x=wg.tasks["add1"].outputs["sum"],
         y=3,
         computer="localhost",
-        code_label=python_executable_path,
+        command_info={"label": python_executable_path},
     )
     # wg.submit(wait=True)
     wg.run()
@@ -59,7 +59,7 @@ def test_importable_function(fixture_localhost, python_executable_path):
         x=1,
         y=2,
         computer="localhost",
-        code_label=python_executable_path,
+        command_info={"label": python_executable_path},
     )
     wg.run()
     assert wg.tasks["add"].outputs["result"].value.value == 3
@@ -83,7 +83,7 @@ def test_PythonJob_kwargs(fixture_localhost, python_executable_path):
                 "y": 2,
                 "kwargs": {"m": 2, "n": 3},
                 "computer": "localhost",
-                "code_label": python_executable_path,
+                "command_info": {"label": python_executable_path},
             },
         },
     )
@@ -151,7 +151,7 @@ def test_PythonJob_outputs(fixture_localhost, python_executable_path):
         y=2,
         #  code=code,
         computer="localhost",
-        code_label=python_executable_path,
+        command_info={"label": python_executable_path},
     )
     wg.run()
     assert wg.tasks["add"].outputs["sum"].value.value == 3
@@ -193,7 +193,7 @@ def test_PythonJob_namespace_output(fixture_localhost, python_executable_path):
                 "x": 1.0,
                 "y": 2.0,
                 "computer": "localhost",
-                "code_label": python_executable_path,
+                "command_info": {"label": python_executable_path},
             }
         },
     )
@@ -251,17 +251,17 @@ def test_PythonJob_namespace_output_input(fixture_localhost, python_executable_p
             "x": 1.0,
             "y": 2.0,
             "computer": "localhost",
-            "code_label": python_executable_path,
+            "command_info": {"label": python_executable_path},
         },
         "myfunc2": {
             "y": 3.0,
             "computer": "localhost",
-            "code_label": python_executable_path,
+            "command_info": {"label": python_executable_path},
         },
         "myfunc3": {
             "y": 4.0,
             "computer": "localhost",
-            "code_label": python_executable_path,
+            "command_info": {"label": python_executable_path},
         },
     }
     wg.run(inputs=inputs)
@@ -301,13 +301,13 @@ def test_PythonJob_parent_folder(fixture_localhost, python_executable_path):
                 "x": 2,
                 "y": 3,
                 "computer": "localhost",
-                "code_label": python_executable_path,
+                "command_info": {"label": python_executable_path},
             },
             "multiply": {
                 "x": 3,
                 "y": 4,
                 "computer": "localhost",
-                "code_label": python_executable_path,
+                "command_info": {"label": python_executable_path},
             },
         },
         wait=True,
@@ -349,7 +349,7 @@ def test_PythonJob_upload_files(fixture_localhost, python_executable_path):
         inputs={
             "add": {
                 "computer": "localhost",
-                "code_label": python_executable_path,
+                "command_info": {"label": python_executable_path},
                 "upload_files": {
                     "input.txt": input_file,
                     "inputs_folder": input_folder,
@@ -404,19 +404,19 @@ def test_PythonJob_copy_files(fixture_localhost, python_executable_path):
                 "x": 2,
                 "y": 3,
                 "computer": "localhost",
-                "code_label": python_executable_path,
+                "command_info": {"label": python_executable_path},
             },
             "add2": {
                 "x": 2,
                 "y": 3,
                 "computer": "localhost",
-                "code_label": python_executable_path,
+                "command_info": {"label": python_executable_path},
             },
             "multiply": {
                 "x_folder_name": "add1_remote_folder",
                 "y_folder_name": "add2_remote_folder",
                 "computer": "localhost",
-                "code_label": python_executable_path,
+                "command_info": {"label": python_executable_path},
             },
         },
         wait=True,
@@ -442,7 +442,7 @@ def test_PythonJob_retrieve_files(fixture_localhost, python_executable_path):
                 "x": 2,
                 "y": 3,
                 "computer": "localhost",
-                "code_label": python_executable_path,
+                "command_info": {"label": python_executable_path},
                 "metadata": {
                     "options": {
                         "additional_retrieve_list": ["result.txt"],
@@ -475,7 +475,7 @@ def test_data_serializer(fixture_localhost, python_executable_path):
         dim=2,
         name="make_supercell",
         computer="localhost",
-        code_label=python_executable_path,
+        command_info={"label": python_executable_path},
     )
     # ------------------------- Submit the calculation -------------------
     wg.submit(wait=True)
@@ -501,7 +501,7 @@ def test_load_pythonjob(fixture_localhost, python_executable_path):
                 "x": "Hello, ",
                 "y": "World!",
                 "computer": "localhost",
-                "code_label": python_executable_path,
+                "command_info": {"label": python_executable_path},
             },
         },
         # wait=True,
@@ -545,7 +545,7 @@ def test_exit_code(fixture_localhost, python_executable_path):
         x=array([1, 1]),
         y=array([1, -2]),
         computer="localhost",
-        code_label=python_executable_path,
+        command_info={"label": python_executable_path},
     )
     wg.run()
     # the first task should have exit status 410
