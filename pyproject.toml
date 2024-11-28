@@ -80,7 +80,7 @@ workgraph = "aiida_workgraph.cli.cmd_workgraph:workgraph"
 "workgraph.engine" = "aiida_workgraph.engine.workgraph:WorkGraphEngine"
 
 [project.entry-points."aiida.data"]
-"workgraph.pickled_data" = "aiida_workgraph.orm.general_data:PickledData"
+"workgraph.pickled_data" = "aiida_workgraph.orm.pickled_data:PickledData"
 "workgraph.pickled_function" = "aiida_workgraph.orm.function_data:PickledFunction"
 "workgraph.pickled_local_function" = "aiida_workgraph.orm.function_data:PickledLocalFunction"
 

@@ -1,7 +1,7 @@
 import inspect
 import textwrap
 from typing import Callable, Dict, Any, get_type_hints, _SpecialForm
-from .general_data import PickledData
+from .pickled_data import PickledData
 
 
 class PickledFunction(PickledData):
