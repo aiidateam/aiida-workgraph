@@ -32,7 +32,7 @@ dependencies = [
     "aiida-core>=2.3",
     "cloudpickle",
     "aiida-shell~=0.8",
-    "aiida-pythonjob==0.1.2",
+    "aiida-pythonjob==0.1.3",
     "fastapi",
     "uvicorn",
     "pydantic_settings",
@@ -80,16 +80,9 @@ workgraph = "aiida_workgraph.cli.cmd_workgraph:workgraph"
 "workgraph.engine" = "aiida_workgraph.engine.workgraph:WorkGraphEngine"
 
 [project.entry-points."aiida.data"]
-"workgraph.general" = "aiida_workgraph.orm.general_data:GeneralData"
+"workgraph.pickled_data" = "aiida_workgraph.orm.general_data:PickledData"
 "workgraph.pickled_function" = "aiida_workgraph.orm.function_data:PickledFunction"
 "workgraph.pickled_local_function" = "aiida_workgraph.orm.function_data:PickledLocalFunction"
-"workgraph.ase.atoms.Atoms" = "aiida_workgraph.orm.atoms:AtomsData"
-"workgraph.builtins.int" = "aiida.orm.nodes.data.int:Int"
-"workgraph.builtins.float" = "aiida.orm.nodes.data.float:Float"
-"workgraph.builtins.str" = "aiida.orm.nodes.data.str:Str"
-"workgraph.builtins.bool" = "aiida.orm.nodes.data.bool:Bool"
-"workgraph.builtins.list"="aiida_workgraph.orm.general_data:List"
-"workgraph.builtins.dict"="aiida_workgraph.orm.general_data:Dict"
 
 
 [project.entry-points."aiida.node"]

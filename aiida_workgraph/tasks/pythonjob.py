@@ -1,6 +1,6 @@
 from typing import Any, Dict, List
 from aiida import orm
-from aiida_workgraph.orm.serializer import general_serializer
+from aiida_pythonjob.data.serializer import general_serializer
 from aiida_workgraph.task import Task
 
 

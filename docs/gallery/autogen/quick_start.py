@@ -195,7 +195,7 @@ wg.to_html()
 #
 # **Data**: Users can (and is recoomaneded) use normal Python data as
 # input. The workgraph will transfer the data to AiiDA data
-# (``GeneralData``) using pickle.
+# (``PickledData``) using pickle.
 #
 # **Python Version**: since pickle is used to store and load data, the
 # Python version on the remote computer should match the one used in the
