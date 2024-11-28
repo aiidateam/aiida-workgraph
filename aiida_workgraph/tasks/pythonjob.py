@@ -17,8 +17,8 @@ class PythonJob(Task):
         self.deserialize_pythonjob_data(data)
         super().update_from_dict(data)
 
-    def to_dict(self) -> Dict[str, Any]:
-        data = super().to_dict()
+    def to_dict(self, short: bool = False) -> Dict[str, Any]:
+        data = super().to_dict(short=short)
         data["function_kwargs"] = self.function_kwargs
         return data
 

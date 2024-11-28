@@ -57,10 +57,10 @@ class Task(GraphNode):
         self.state = "PLANNED"
         self.action = ""
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self, short: bool = False) -> Dict[str, Any]:
         from aiida.orm.utils.serialize import serialize
 
-        tdata = super().to_dict()
+        tdata = super().to_dict(short=short)
         tdata["context_mapping"] = self.context_mapping
         tdata["wait"] = [task.name for task in self.waiting_on]
         tdata["children"] = []
