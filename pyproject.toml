@@ -32,6 +32,7 @@ dependencies = [
     "aiida-core>=2.3",
     "cloudpickle",
     "aiida-shell~=0.8",
+    "aiida-pythonjob==0.1.1",
     "fastapi",
     "uvicorn",
     "pydantic_settings",
@@ -74,12 +75,6 @@ workgraph = "aiida_workgraph.cli.cmd_workgraph:workgraph"
 
 [project.entry-points."aiida.cmdline"]
 "workgraph" = "aiida_workgraph.cli.cmd_workgraph:workgraph"
-
-[project.entry-points."aiida.calculations"]
-"workgraph.python" = "aiida_workgraph.calculations.python:PythonJob"
-
-[project.entry-points."aiida.parsers"]
-"workgraph.python" = "aiida_workgraph.calculations.python_parser:PythonParser"
 
 [project.entry-points.'aiida.workflows']
 "workgraph.engine" = "aiida_workgraph.engine.workgraph:WorkGraphEngine"

@@ -9,24 +9,24 @@ class PythonJob(Task):
 
     identifier = "workgraph.pythonjob"
 
-    function_kwargs: List = None
+    function_inputs: List = None
 
     def update_from_dict(self, data: Dict[str, Any], **kwargs) -> "PythonJob":
         """Overwrite the update_from_dict method to handle the PythonJob data."""
-        self.function_kwargs = data.get("function_kwargs", [])
+        self.function_inputs = data.get("function_inputs", [])
         self.deserialize_pythonjob_data(data)
         super().update_from_dict(data)
 
     def to_dict(self, short: bool = False) -> Dict[str, Any]:
         data = super().to_dict(short=short)
-        data["function_kwargs"] = self.function_kwargs
+        data["function_inputs"] = self.function_inputs
         return data
 
     @classmethod
     def serialize_pythonjob_data(cls, tdata: Dict[str, Any]):
         """Serialize the properties for PythonJob."""
 
-        input_kwargs = tdata.get("function_kwargs", [])
+        input_kwargs = tdata.get("function_inputs", [])
         for name in input_kwargs:
             tdata["inputs"][name]["property"]["value"] = cls.serialize_socket_data(
                 tdata["inputs"][name]
@@ -45,7 +45,7 @@ class PythonJob(Task):
         Returns:
             Dict[str, Any]: The processed data dictionary.
         """
-        input_kwargs = tdata.get("function_kwargs", [])
+        input_kwargs = tdata.get("function_inputs", [])
 
         for name in input_kwargs:
             if name in tdata["inputs"]:

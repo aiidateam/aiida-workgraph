@@ -1124,7 +1124,7 @@ class WorkGraphEngine(Process, metaclass=Protect):
                 self.set_task_state_info(name, "state", "RUNNING")
                 self.to_context(**{name: process})
             elif task["metadata"]["node_type"].upper() in ["PYTHONJOB"]:
-                from aiida_workgraph.calculations.python import PythonJob
+                from aiida_pythonjob import PythonJob
                 from .utils import prepare_for_python_task
 
                 inputs = prepare_for_python_task(task, kwargs, var_kwargs)
