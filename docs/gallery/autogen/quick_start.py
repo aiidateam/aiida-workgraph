@@ -168,14 +168,14 @@ def multiply(x, y):
 
 
 wg = WorkGraph("second_workflow")
-# You might need to adapt the code_label to python3 if you use this as your default python
-wg.add_task("PythonJob", function=add, name="add", code_label="python")
+# You might need to adapt the label to python3 if you use this as your default python
+wg.add_task("PythonJob", function=add, name="add", command_info={"label": "python"})
 wg.add_task(
     "PythonJob",
     function=multiply,
     name="multiply",
     x=wg.tasks["add"].outputs[0],
-    code_label="python",
+    command_info={"label": "python"},
 )
 
 # export the workgraph to html file so that it can be visualized in a browser
@@ -275,14 +275,14 @@ def multiply(x, y):
 
 
 wg = WorkGraph("third_workflow")
-# You might need to adapt the code_label to python3 if you use this as your default python
-wg.add_task("PythonJob", function=add, name="add", code_label="python")
+# You might need to adapt the label to python3 if you use this as your default python
+wg.add_task("PythonJob", function=add, name="add", command_info={"label": "python"})
 wg.add_task(
     "PythonJob",
     function=multiply,
     name="multiply",
     parent_folder=wg.tasks["add"].outputs["remote_folder"],
-    code_label="python",
+    command_info={"label": "python"},
 )
 
 wg.to_html()
