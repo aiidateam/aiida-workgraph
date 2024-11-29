@@ -14,7 +14,7 @@ from typing import Any, List
 import logging
 
 
-class AwaitableHandler:
+class AwaitableManager:
     """Handles awaitable objects and their resolutions."""
 
     def __init__(

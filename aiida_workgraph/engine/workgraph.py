@@ -23,7 +23,7 @@ from aiida.engine.processes.workchains.workchain import Protect, WorkChainSpec
 from aiida_workgraph.task import Task
 from aiida_workgraph.utils import get_nested_dict, update_nested_dict
 from .context_manager import ContextManager
-from .awaitable_manager import AwaitableHandler
+from .awaitable_manager import AwaitableManager
 from .task_manager import TaskManager
 from aiida.engine.processes.workchains.awaitable import Awaitable
 
@@ -64,7 +64,7 @@ class WorkGraphEngine(Process, metaclass=Protect):
         self.ctx_manager = ContextManager(
             self._context, process=self, logger=self.logger
         )
-        self.awaitable_manager = AwaitableHandler(
+        self.awaitable_manager = AwaitableManager(
             self._awaitables, self.runner, self.logger, self, self.ctx_manager
         )
         self.task_manager = TaskManager(
@@ -145,7 +145,7 @@ class WorkGraphEngine(Process, metaclass=Protect):
         self.ctx_manager = ContextManager(
             self._context, process=self, logger=self.logger
         )
-        self.awaitable_manager = AwaitableHandler(
+        self.awaitable_manager = AwaitableManager(
             self._awaitables, self.runner, self.logger, self, self.ctx_manager
         )
         self.task_manager = TaskManager(
@@ -280,14 +280,14 @@ class WorkGraphEngine(Process, metaclass=Protect):
         # while workgraph
         if self.ctx._workgraph["workgraph_type"].upper() == "WHILE":
             self.ctx._max_iteration = self.ctx._workgraph.get("max_iteration", 1000)
-            should_run = self.check_while_conditions()
+            should_run = self.task_manager.check_while_conditions()
             if not should_run:
-                self.set_tasks_state(self.ctx._tasks.keys(), "SKIPPED")
+                self.task_manager.set_tasks_state(self.ctx._tasks.keys(), "SKIPPED")
         # for workgraph
         if self.ctx._workgraph["workgraph_type"].upper() == "FOR":
-            should_run = self.check_for_conditions()
+            should_run = self.task_manager.check_for_conditions()
             if not should_run:
-                self.set_tasks_state(self.ctx._tasks.keys(), "SKIPPED")
+                self.task_manager.set_tasks_state(self.ctx._tasks.keys(), "SKIPPED")
 
     def setup_ctx_workgraph(self, wgdata: t.Dict[str, t.Any]) -> None:
         """setup the workgraph in the context."""
@@ -396,54 +396,6 @@ class WorkGraphEngine(Process, metaclass=Protect):
                 metadata["retry"] += 1
             except Exception as e:
                 self.report(f"Error in running error handler: {e}")
-
-    def check_while_conditions(self) -> bool:
-        """Check while conditions.
-        Run all condition tasks and check if all the conditions are True.
-        """
-        self.report("Check while conditions.")
-        if self.ctx._execution_count >= self.ctx._max_iteration:
-            self.report("Max iteration reached.")
-            return False
-        condition_tasks = []
-        for c in self.ctx._workgraph["conditions"]:
-            task_name, socket_name = c.split(".")
-            if "task_name" != "context":
-                condition_tasks.append(task_name)
-                self.task_manager.reset_task(task_name)
-        self.task_manager.run_tasks(condition_tasks, continue_workgraph=False)
-        conditions = []
-        for c in self.ctx._workgraph["conditions"]:
-            task_name, socket_name = c.split(".")
-            if task_name == "context":
-                conditions.append(self.ctx[socket_name])
-            else:
-                conditions.append(self.ctx._tasks[task_name]["results"][socket_name])
-        should_run = False not in conditions
-        if should_run:
-            self.reset()
-            self.set_tasks_state(condition_tasks, "SKIPPED")
-        return should_run
-
-    def check_for_conditions(self) -> bool:
-        condition_tasks = [c[0] for c in self.ctx._workgraph["conditions"]]
-        self.task_manager.run_tasks(condition_tasks)
-        conditions = [self.ctx._count < len(self.ctx._sequence)] + [
-            self.ctx._tasks[c[0]]["results"][c[1]]
-            for c in self.ctx._workgraph["conditions"]
-        ]
-        should_run = False not in conditions
-        if should_run:
-            self.reset()
-            self.set_tasks_state(condition_tasks, "SKIPPED")
-            self.ctx["i"] = self.ctx._sequence[self.ctx._count]
-        self.ctx._count += 1
-        return should_run
-
-    def reset(self) -> None:
-        self.ctx._execution_count += 1
-        self.set_tasks_state(self.ctx._tasks.keys(), "PLANNED")
-        self.ctx._executed_tasks = []
 
     def message_receive(
         self, _comm: kiwipy.Communicator, msg: t.Dict[str, t.Any]

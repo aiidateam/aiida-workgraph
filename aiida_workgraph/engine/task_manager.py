@@ -324,7 +324,7 @@ class TaskManager:
                 wg = self.run_executor(executor, [], kwargs, var_args, var_kwargs)
                 wg.name = name
                 wg.group_outputs = self.ctx._tasks[name]["metadata"]["group_outputs"]
-                wg.parent_uuid = self.node.uuid
+                wg.parent_uuid = self.process.node.uuid
                 inputs = wg.prepare_inputs(metadata={"call_link_label": name})
                 process = self.process.submit(self.process.__class__, inputs=inputs)
                 self.set_task_state_info(name, "process", process)
@@ -808,3 +808,51 @@ class TaskManager:
                     self.process.report(f"Task {name} action: KILLED.")
                 except Exception as e:
                     self.logger.error(f"Error in killing task {name}: {e}")
+
+    def check_while_conditions(self) -> bool:
+        """Check while conditions.
+        Run all condition tasks and check if all the conditions are True.
+        """
+        self.process.report("Check while conditions.")
+        if self.ctx._execution_count >= self.ctx._max_iteration:
+            self.process.report("Max iteration reached.")
+            return False
+        condition_tasks = []
+        for c in self.ctx._workgraph["conditions"]:
+            task_name, socket_name = c.split(".")
+            if "task_name" != "context":
+                condition_tasks.append(task_name)
+                self.reset_task(task_name)
+        self.run_tasks(condition_tasks, continue_workgraph=False)
+        conditions = []
+        for c in self.ctx._workgraph["conditions"]:
+            task_name, socket_name = c.split(".")
+            if task_name == "context":
+                conditions.append(self.ctx[socket_name])
+            else:
+                conditions.append(self.ctx._tasks[task_name]["results"][socket_name])
+        should_run = False not in conditions
+        if should_run:
+            self.reset()
+            self.set_tasks_state(condition_tasks, "SKIPPED")
+        return should_run
+
+    def check_for_conditions(self) -> bool:
+        condition_tasks = [c[0] for c in self.ctx._workgraph["conditions"]]
+        self.run_tasks(condition_tasks)
+        conditions = [self.ctx._count < len(self.ctx._sequence)] + [
+            self.ctx._tasks[c[0]]["results"][c[1]]
+            for c in self.ctx._workgraph["conditions"]
+        ]
+        should_run = False not in conditions
+        if should_run:
+            self.reset()
+            self.set_tasks_state(condition_tasks, "SKIPPED")
+            self.ctx["i"] = self.ctx._sequence[self.ctx._count]
+        self.ctx._count += 1
+        return should_run
+
+    def reset(self) -> None:
+        self.ctx._execution_count += 1
+        self.set_tasks_state(self.ctx._tasks.keys(), "PLANNED")
+        self.ctx._executed_tasks = []
