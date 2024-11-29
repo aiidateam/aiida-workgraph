@@ -20,11 +20,11 @@ from aiida.orm.utils.serialize import deserialize_unsafe
 from aiida.engine.processes.exit_code import ExitCode
 from aiida.engine.processes.process import Process
 from aiida.engine.processes.workchains.workchain import Protect, WorkChainSpec
-from aiida_workgraph.task import Task
 from aiida_workgraph.utils import get_nested_dict, update_nested_dict
 from .context_manager import ContextManager
 from .awaitable_manager import AwaitableManager
 from .task_manager import TaskManager
+from .error_handler_manager import ErrorHandlerManager
 from aiida.engine.processes.workchains.awaitable import Awaitable
 
 if t.TYPE_CHECKING:
@@ -70,6 +70,9 @@ class WorkGraphEngine(Process, metaclass=Protect):
         self.task_manager = TaskManager(
             self.ctx_manager, self.logger, self.runner, self, self.awaitable_manager
         )
+        self.error_handler_manager = ErrorHandlerManager(
+            self, self.ctx_manager, self.logger
+        )  # New instance
 
     @classmethod
     def define(cls, spec: WorkChainSpec) -> None:
@@ -323,14 +326,6 @@ class WorkGraphEngine(Process, metaclass=Protect):
             task["results"] = self.ctx._tasks[name].get("results")
         self.setup_ctx_workgraph(wgdata)
 
-    def update_task(self, task: Task):
-        """Update task in the context.
-        This is used in error handlers to update the task parameters."""
-        tdata = task.to_dict()
-        self.ctx._tasks[task.name]["properties"] = tdata["properties"]
-        self.ctx._tasks[task.name]["inputs"] = tdata["inputs"]
-        self.task_manager.reset_task(task.name)
-
     def init_ctx(self, wgdata: t.Dict[str, t.Any]) -> None:
         """Init the context from the workgraph data."""
         from aiida_workgraph.utils import update_nested_dict
@@ -352,50 +347,6 @@ class WorkGraphEngine(Process, metaclass=Protect):
             self.task_manager.apply_task_actions(msg)
         else:
             self.report(f"Unknow message type {msg}")
-
-    def run_error_handlers(self, task_name: str) -> None:
-        """Run error handler for a task."""
-
-        node = self.task_manager.get_task_state_info(task_name, "process")
-        if not node or not node.exit_status:
-            return
-        # error_handlers from the task
-        for _, data in self.ctx._tasks[task_name]["error_handlers"].items():
-            if node.exit_status in data.get("exit_codes", []):
-                handler = data["handler"]
-                self.run_error_handler(handler, data, task_name)
-                return
-        # error_handlers from the workgraph
-        for _, data in self.ctx._error_handlers.items():
-            if node.exit_code.status in data["tasks"].get(task_name, {}).get(
-                "exit_codes", []
-            ):
-                handler = data["handler"]
-                metadata = data["tasks"][task_name]
-                self.run_error_handler(handler, metadata, task_name)
-                return
-
-    def run_error_handler(self, handler: dict, metadata: dict, task_name: str) -> None:
-        from inspect import signature
-        from aiida_workgraph.utils import get_executor
-
-        handler, _ = get_executor(handler)
-        handler_sig = signature(handler)
-        metadata.setdefault("retry", 0)
-        self.report(f"Run error handler: {handler.__name__}")
-        if metadata["retry"] < metadata["max_retries"]:
-            task = self.task_manager.get_task(task_name)
-            try:
-                if "engine" in handler_sig.parameters:
-                    msg = handler(task, engine=self, **metadata.get("kwargs", {}))
-                else:
-                    msg = handler(task, **metadata.get("kwargs", {}))
-                self.update_task(task)
-                if msg:
-                    self.report(msg)
-                metadata["retry"] += 1
-            except Exception as e:
-                self.report(f"Error in running error handler: {e}")
 
     def message_receive(
         self, _comm: kiwipy.Communicator, msg: t.Dict[str, t.Any]

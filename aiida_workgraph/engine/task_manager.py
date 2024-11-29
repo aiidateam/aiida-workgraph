@@ -635,7 +635,15 @@ class TaskManager:
         self.set_task_state_info(name, "state", "FAILED")
         self.set_tasks_state(self.ctx._connectivity["child_node"][name], "SKIPPED")
         self.process.report(f"Task: {name} failed.")
-        self.process.run_error_handlers(name)
+        self.process.error_handler_manager.run_error_handlers(name)
+
+    def update_task(self, task: Task):
+        """Update task in the context.
+        This is used in error handlers to update the task parameters."""
+        tdata = task.to_dict()
+        self.ctx._tasks[task.name]["properties"] = tdata["properties"]
+        self.ctx._tasks[task.name]["inputs"] = tdata["inputs"]
+        self.reset_task(task.name)
 
     def update_normal_task_state(self, name, results, success=True):
         """Set the results of a normal task.

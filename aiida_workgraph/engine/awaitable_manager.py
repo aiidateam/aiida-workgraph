@@ -189,7 +189,7 @@ class AwaitableManager:
                     "SKIPPED",
                 )
                 self.process.report(f"Task: {awaitable.key} failed: {e}")
-                self.process.run_error_handlers(awaitable.key)
+                self.process.error_handler_manager.run_error_handlers(awaitable.key)
             value = None
 
         self.resolve_awaitable(awaitable, value)
