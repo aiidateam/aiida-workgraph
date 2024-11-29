@@ -468,7 +468,7 @@ class TaskManager:
                 )
                 self.set_task_state_info(name, "state", "RUNNING")
                 # save the awaitable to the temp, so that we can kill it if needed
-                self.process._temp["awaitables"][name] = awaitable_target
+                self.awaitable_manager.not_persisted_awaitables[name] = awaitable_target
                 self.awaitable_manager.to_context(**{name: awaitable})
             elif task["metadata"]["node_type"].upper() in ["NORMAL"]:
                 # Normal task is created by decoratoring a function with @task()
@@ -803,7 +803,7 @@ class TaskManager:
                 "MONITOR",
             ]:
                 try:
-                    self.process._temp["awaitables"][name].cancel()
+                    self.awaitable_manager.not_persisted_awaitables[name].cancel()
                     self.set_task_state_info(name, "state", "KILLED")
                     self.process.report(f"Task {name} action: KILLED.")
                 except Exception as e:

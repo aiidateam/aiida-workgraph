@@ -25,8 +25,11 @@ class AwaitableHandler:
         self.process = process
         self.ctx_manager = ctx_manager
         self.ctx = ctx_manager.ctx
+        # awaitables that are persisted
         self._awaitables: List[Awaitable] = _awaitables
-        self._temp = {"awaitables": {}}
+        # awaitables that are not persisted, because they are not serializable
+        # but don't worry, because we re-register them when loading the process
+        self.not_persisted_awaitables = {}
         self.ctx._awaitable_actions = []
 
     def insert_awaitable(self, awaitable: Awaitable) -> None:

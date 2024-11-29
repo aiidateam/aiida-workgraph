@@ -139,7 +139,6 @@ class WorkGraphEngine(Process, metaclass=Protect):
         super().load_instance_state(saved_state, load_context)
         # Load the context
         self._context = saved_state[self._CONTEXT]
-        self._temp = {"awaitables": {}}
         self.set_logger(self.node.logger)
         # TODO I don't know why we need to reinitialize the context, awaitables, and task_manager
         # Need to initialize the context, awaitables, and task_manager
@@ -278,8 +277,6 @@ class WorkGraphEngine(Process, metaclass=Protect):
         self.ctx._execution_count = 1
         # init task results
         self.task_manager.set_task_results()
-        # data not to be persisted, because they are not serializable
-        self._temp = {"awaitables": {}}
         # while workgraph
         if self.ctx._workgraph["workgraph_type"].upper() == "WHILE":
             self.ctx._max_iteration = self.ctx._workgraph.get("max_iteration", 1000)
