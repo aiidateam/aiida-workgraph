@@ -13,6 +13,15 @@ from aiida_workgraph.executors.monitors import monitor
 
 MAX_NUMBER_AWAITABLES_MSG = "The maximum number of subprocesses has been reached: {}. Cannot launch the job: {}."
 
+process_task_types = [
+    "CALCJOB",
+    "WORKCHAIN",
+    "GRAPH_BUILDER",
+    "WORKGRAPH",
+    "PYTHONJOB",
+    "SHELLJOB",
+]
+
 
 class TaskManager:
     """Manages task execution, state updates, and error handling."""
@@ -212,21 +221,13 @@ class TaskManager:
         """
         from aiida_workgraph.utils import (
             get_executor,
-            create_data_node,
             update_nested_dict_with_special_keys,
         )
 
         for name in names:
             # skip if the max number of awaitables is reached
             task = self.ctx._tasks[name]
-            if task["metadata"]["node_type"].upper() in [
-                "CALCJOB",
-                "WORKCHAIN",
-                "GRAPH_BUILDER",
-                "WORKGRAPH",
-                "PYTHONJOB",
-                "SHELLJOB",
-            ]:
+            if task["metadata"]["node_type"].upper() in process_task_types:
                 if len(self.process._awaitables) >= self.ctx._max_number_awaitables:
                     print(
                         MAX_NUMBER_AWAITABLES_MSG.format(
@@ -247,249 +248,331 @@ class TaskManager:
                 f"Run task: {name}, type: {task['metadata']['node_type']}"
             )
             executor, _ = get_executor(task["executor"])
-            # print("executor: ", executor)
             args, kwargs, var_args, var_kwargs, args_dict = self.get_inputs(name)
             for i, key in enumerate(self.ctx._tasks[name]["args"]):
                 kwargs[key] = args[i]
             # update the port namespace
             kwargs = update_nested_dict_with_special_keys(kwargs)
-            # print("args: ", args)
-            # print("kwargs: ", kwargs)
-            # print("var_kwargs: ", var_kwargs)
             # kwargs["meta.label"] = name
             # output must be a Data type or a mapping of {string: Data}
             task["results"] = {}
-            if task["metadata"]["node_type"].upper() == "NODE":
-                results = self.run_executor(executor, [], kwargs, var_args, var_kwargs)
-                self.set_task_state_info(name, "process", results)
-                self.update_task_state(name)
-                if continue_workgraph:
-                    self.continue_workgraph()
-            elif task["metadata"]["node_type"].upper() == "DATA":
-                for key in self.ctx._tasks[name]["args"]:
-                    kwargs.pop(key, None)
-                results = create_data_node(executor, args, kwargs)
-                self.set_task_state_info(name, "process", results)
-                self.update_task_state(name)
-                self.ctx._new_data[name] = results
-                if continue_workgraph:
-                    self.continue_workgraph()
-            elif task["metadata"]["node_type"].upper() in [
-                "CALCFUNCTION",
-                "WORKFUNCTION",
-            ]:
-                kwargs.setdefault("metadata", {})
-                kwargs["metadata"].update({"call_link_label": name})
-                try:
-                    # since aiida 2.5.0, we need to use args_dict to pass the args to the run_get_node
-                    if var_kwargs is None:
-                        results, process = run_get_node(executor, **kwargs)
-                    else:
-                        results, process = run_get_node(
-                            executor, **kwargs, **var_kwargs
-                        )
-                    process.label = name
-                    # print("results: ", results)
-                    self.set_task_state_info(name, "process", process)
-                    self.update_task_state(name)
-                except Exception as e:
-                    self.logger.error(f"Error in task {name}: {e}")
-                    self.update_task_state(name, success=False)
-                # exclude the current tasks from the next run
-                if continue_workgraph:
-                    self.continue_workgraph()
-            elif task["metadata"]["node_type"].upper() in ["CALCJOB", "WORKCHAIN"]:
-                # process = run_get_node(executor, *args, **kwargs)
-                kwargs.setdefault("metadata", {})
-                kwargs["metadata"].update({"call_link_label": name})
-                # transfer the args to kwargs
-                if self.get_task_state_info(name, "action").upper() == "PAUSE":
-                    self.set_task_state_info(name, "action", "")
-                    self.process.report(f"Task {name} is created and paused.")
-                    process = create_and_pause_process(
-                        self.runner,
-                        executor,
-                        kwargs,
-                        state_msg="Paused through WorkGraph",
-                    )
-                    self.set_task_state_info(name, "state", "CREATED")
-                    process = process.node
-                else:
-                    process = self.process.submit(executor, **kwargs)
-                    self.set_task_state_info(name, "state", "RUNNING")
-                process.label = name
-                self.set_task_state_info(name, "process", process)
-                self.awaitable_manager.to_context(**{name: process})
-            elif task["metadata"]["node_type"].upper() in ["GRAPH_BUILDER"]:
-                wg = self.run_executor(executor, [], kwargs, var_args, var_kwargs)
-                wg.name = name
-                wg.group_outputs = self.ctx._tasks[name]["metadata"]["group_outputs"]
-                wg.parent_uuid = self.process.node.uuid
-                inputs = wg.prepare_inputs(metadata={"call_link_label": name})
-                process = self.process.submit(self.process.__class__, inputs=inputs)
-                self.set_task_state_info(name, "process", process)
-                self.set_task_state_info(name, "state", "RUNNING")
-                self.awaitable_manager.to_context(**{name: process})
-            elif task["metadata"]["node_type"].upper() in ["WORKGRAPH"]:
-                from .utils import prepare_for_workgraph_task
-
-                inputs, _ = prepare_for_workgraph_task(task, kwargs)
-                process = self.process.submit(self.process.__class__, inputs=inputs)
-                self.set_task_state_info(name, "process", process)
-                self.set_task_state_info(name, "state", "RUNNING")
-                self.awaitable_manager.to_context(**{name: process})
-            elif task["metadata"]["node_type"].upper() in ["PYTHONJOB"]:
-                from aiida_pythonjob import PythonJob
-                from .utils import prepare_for_python_task
-
-                inputs = prepare_for_python_task(task, kwargs, var_kwargs)
-                # since aiida 2.5.0, we can pass inputs directly to the submit, no need to use **inputs
-                if self.get_task_state_info(name, "action").upper() == "PAUSE":
-                    self.set_task_state_info(name, "action", "")
-                    self.process.report(f"Task {name} is created and paused.")
-                    process = create_and_pause_process(
-                        self.runner,
-                        PythonJob,
-                        inputs,
-                        state_msg="Paused through WorkGraph",
-                    )
-                    self.set_task_state_info(name, "state", "CREATED")
-                    process = process.node
-                else:
-                    process = self.process.submit(PythonJob, **inputs)
-                    self.set_task_state_info(name, "state", "RUNNING")
-                process.label = name
-                self.set_task_state_info(name, "process", process)
-                self.awaitable_manager.to_context(**{name: process})
-            elif task["metadata"]["node_type"].upper() in ["SHELLJOB"]:
-                from aiida_shell.calculations.shell import ShellJob
-                from .utils import prepare_for_shell_task
-
-                inputs = prepare_for_shell_task(task, kwargs)
-                if self.get_task_state_info(name, "action").upper() == "PAUSE":
-                    self.set_task_state_info(name, "action", "")
-                    self.process.report(f"Task {name} is created and paused.")
-                    process = create_and_pause_process(
-                        self.runner,
-                        ShellJob,
-                        inputs,
-                        state_msg="Paused through WorkGraph",
-                    )
-                    self.set_task_state_info(name, "state", "CREATED")
-                    process = process.node
-                else:
-                    process = self.process.submit(ShellJob, **inputs)
-                    self.set_task_state_info(name, "state", "RUNNING")
-                process.label = name
-                self.set_task_state_info(name, "process", process)
-                self.awaitable_manager.to_context(**{name: process})
-            elif task["metadata"]["node_type"].upper() in ["WHILE"]:
-                # TODO refactor this for while, if and zone
-                # in case of an empty zone, it will finish immediately
-                if self.are_childen_finished(name)[0]:
-                    self.update_while_task_state(name)
-                else:
-                    # check the conditions of the while task
-                    should_run = self.should_run_while_task(name)
-                    if not should_run:
-                        self.set_task_state_info(name, "state", "FINISHED")
-                        self.set_tasks_state(
-                            self.ctx._tasks[name]["children"], "SKIPPED"
-                        )
-                        self.update_parent_task_state(name)
-                        self.process.report(
-                            f"While Task {name}: Condition not fullilled, task finished. Skip all its children."
-                        )
-                    else:
-                        task["execution_count"] += 1
-                        self.set_task_state_info(name, "state", "RUNNING")
-                self.continue_workgraph()
-            elif task["metadata"]["node_type"].upper() in ["IF"]:
-                # in case of an empty zone, it will finish immediately
-                if self.are_childen_finished(name)[0]:
-                    self.update_zone_task_state(name)
-                else:
-                    should_run = self.should_run_if_task(name)
-                    if should_run:
-                        self.set_task_state_info(name, "state", "RUNNING")
-                    else:
-                        self.set_tasks_state(task["children"], "SKIPPED")
-                        self.update_zone_task_state(name)
-                self.continue_workgraph()
-            elif task["metadata"]["node_type"].upper() in ["ZONE"]:
-                # in case of an empty zone, it will finish immediately
-                if self.are_childen_finished(name)[0]:
-                    self.update_zone_task_state(name)
-                else:
-                    self.set_task_state_info(name, "state", "RUNNING")
-                self.continue_workgraph()
-            elif task["metadata"]["node_type"].upper() in ["FROM_CONTEXT"]:
-                # get the results from the context
-                results = {"result": getattr(self.ctx, kwargs["key"])}
-                task["results"] = results
-                self.set_task_state_info(name, "state", "FINISHED")
-                self.update_parent_task_state(name)
-                self.continue_workgraph()
-            elif task["metadata"]["node_type"].upper() in ["TO_CONTEXT"]:
-                # get the results from the context
-                setattr(self.ctx, kwargs["key"], kwargs["value"])
-                self.set_task_state_info(name, "state", "FINISHED")
-                self.update_parent_task_state(name)
-                self.continue_workgraph()
-            elif task["metadata"]["node_type"].upper() in ["AWAITABLE"]:
-                for key in self.ctx._tasks[name]["args"]:
-                    kwargs.pop(key, None)
-                awaitable_target = asyncio.ensure_future(
-                    self.run_executor(executor, args, kwargs, var_args, var_kwargs),
-                    loop=self.process.loop,
+            task_type = task["metadata"]["node_type"].upper()
+            if task_type == "NODE":
+                self.execute_node_task(
+                    name, executor, kwargs, var_args, var_kwargs, continue_workgraph
                 )
-                awaitable = self.awaitable_manager.construct_awaitable_function(
-                    name, awaitable_target
+            elif task_type == "DATA":
+                self.execute_data_task(name, executor, args, kwargs, continue_workgraph)
+            elif task_type in ["CALCFUNCTION", "WORKFUNCTION"]:
+                self.execute_function_task(
+                    name, executor, kwargs, var_kwargs, continue_workgraph
                 )
-                self.set_task_state_info(name, "state", "RUNNING")
-                self.awaitable_manager.to_context(**{name: awaitable})
-            elif task["metadata"]["node_type"].upper() in ["MONITOR"]:
-
-                for key in self.ctx._tasks[name]["args"]:
-                    kwargs.pop(key, None)
-                # add function and interval to the args
-                args = [
+            elif task_type in ["CALCJOB", "WORKCHAIN"]:
+                self.execute_process_task(name, executor, kwargs)
+            elif task_type == "PYTHONJOB":
+                self.execute_python_job_task(task, kwargs, var_kwargs)
+            elif task_type == "GRAPH_BUILDER":
+                self.execute_graph_builder_task(
+                    task, executor, kwargs, var_args, var_kwargs
+                )
+            elif task_type in ["WORKGRAPH"]:
+                self.execute_workgraph_task(task, kwargs)
+            elif task_type == "SHELLJOB":
+                self.execute_shell_job_task(task, kwargs)
+            elif task_type == "WHILE":
+                self.execute_while_task(task)
+            elif task_type == "IF":
+                self.execute_if_task(task)
+            elif task_type == "ZONE":
+                self.execute_zone_task(task)
+            elif task_type == "FROM_CONTEXT":
+                self.execute_from_context_task(task, kwargs)
+            elif task_type == "TO_CONTEXT":
+                self.execute_to_context_task(task, kwargs)
+            elif task_type == "AWAITABLE":
+                self.execute_awaitable_task(
+                    task, executor, args, kwargs, var_args, var_kwargs
+                )
+            elif task_type == "MONITOR":
+                self.execute_monitor_task(
+                    task, executor, args, kwargs, var_args, var_kwargs
+                )
+            elif task_type == "NORMAL":
+                self.execute_normal_task(
+                    task,
                     executor,
-                    kwargs.pop("interval", 1),
-                    kwargs.pop("timeout", 3600),
-                    *args,
-                ]
-                awaitable_target = asyncio.ensure_future(
-                    self.run_executor(monitor, args, kwargs, var_args, var_kwargs),
-                    loop=self.process.loop,
+                    args,
+                    kwargs,
+                    var_args,
+                    var_kwargs,
+                    continue_workgraph,
                 )
-                awaitable = self.awaitable_manager.construct_awaitable_function(
-                    name, awaitable_target
-                )
-                self.set_task_state_info(name, "state", "RUNNING")
-                # save the awaitable to the temp, so that we can kill it if needed
-                self.awaitable_manager.not_persisted_awaitables[name] = awaitable_target
-                self.awaitable_manager.to_context(**{name: awaitable})
-            elif task["metadata"]["node_type"].upper() in ["NORMAL"]:
-                # Normal task is created by decoratoring a function with @task()
-                if "context" in task["kwargs"]:
-                    self.ctx.task_name = name
-                    kwargs.update({"context": self.ctx})
-                for key in self.ctx._tasks[name]["args"]:
-                    kwargs.pop(key, None)
-                try:
-                    results = self.run_executor(
-                        executor, args, kwargs, var_args, var_kwargs
-                    )
-                    self.update_normal_task_state(name, results)
-                except Exception as e:
-                    self.logger.error(f"Error in task {name}: {e}")
-                    self.update_normal_task_state(name, results=None, success=False)
-                if continue_workgraph:
-                    self.continue_workgraph()
             else:
-                # self.process.report("Unknow task type {}".format(task["metadata"]["node_type"]))
-                return self.exit_codes.UNKNOWN_TASK_TYPE
+                self.process.report(f"Unknown task type {task_type}")
+                return self.process.exit_codes.UNKNOWN_TASK_TYPE
+
+    def execute_node_task(
+        self, name, executor, kwargs, var_args, var_kwargs, continue_workgraph
+    ):
+        """Execute a NODE task."""
+        results = self.run_executor(executor, [], kwargs, var_args, var_kwargs)
+        self.set_task_state_info(name, "process", results)
+        self.update_task_state(name)
+        if continue_workgraph:
+            self.continue_workgraph()
+
+    def execute_data_task(self, name, executor, args, kwargs, continue_workgraph):
+        """Execute a DATA task."""
+        from aiida_workgraph.utils import create_data_node
+
+        for key in self.ctx._tasks[name]["args"]:
+            kwargs.pop(key, None)
+        results = create_data_node(executor, args, kwargs)
+        self.set_task_state_info(name, "process", results)
+        self.update_task_state(name)
+        self.ctx._new_data[name] = results
+        if continue_workgraph:
+            self.continue_workgraph()
+
+    def execute_function_task(
+        self, name, executor, kwargs, var_kwargs, continue_workgraph
+    ):
+        """Execute a CalcFunction or WorkFunction task."""
+        kwargs.setdefault("metadata", {})
+        kwargs["metadata"].update({"call_link_label": name})
+        try:
+            # since aiida 2.5.0, we need to use args_dict to pass the args to the run_get_node
+            if var_kwargs is None:
+                results, process = run_get_node(executor, **kwargs)
+            else:
+                results, process = run_get_node(executor, **kwargs, **var_kwargs)
+            process.label = name
+            self.set_task_state_info(name, "process", process)
+            self.update_task_state(name)
+        except Exception as e:
+            self.logger.error(f"Error in task {name}: {e}")
+            self.update_task_state(name, success=False)
+        # exclude the current tasks from the next run
+        if continue_workgraph:
+            self.continue_workgraph()
+
+    def execute_process_task(self, name, executor, kwargs):
+        """Execute a CalcJob or WorkChain task."""
+        # process = run_get_node(executor, *args, **kwargs)
+        kwargs.setdefault("metadata", {})
+        kwargs["metadata"].update({"call_link_label": name})
+        # transfer the args to kwargs
+        if self.get_task_state_info(name, "action").upper() == "PAUSE":
+            self.set_task_state_info(name, "action", "")
+            self.process.report(f"Task {name} is created and paused.")
+            process = create_and_pause_process(
+                self.runner,
+                executor,
+                kwargs,
+                state_msg="Paused through WorkGraph",
+            )
+            self.set_task_state_info(name, "state", "CREATED")
+            process = process.node
+        else:
+            process = self.process.submit(executor, **kwargs)
+            self.set_task_state_info(name, "state", "RUNNING")
+        process.label = name
+        self.set_task_state_info(name, "process", process)
+        self.awaitable_manager.to_context(**{name: process})
+
+    def execute_graph_builder_task(self, task, executor, kwargs, var_args, var_kwargs):
+        """Execute a GraphBuilder task."""
+        name = task["name"]
+        wg = self.run_executor(executor, [], kwargs, var_args, var_kwargs)
+        wg.name = name
+        wg.group_outputs = self.ctx._tasks[name]["metadata"]["group_outputs"]
+        wg.parent_uuid = self.process.node.uuid
+        inputs = wg.prepare_inputs(metadata={"call_link_label": name})
+        process = self.process.submit(self.process.__class__, inputs=inputs)
+        self.set_task_state_info(name, "process", process)
+        self.set_task_state_info(name, "state", "RUNNING")
+        self.awaitable_manager.to_context(**{name: process})
+
+    def execute_workgraph_task(self, task, kwargs):
+        from .utils import prepare_for_workgraph_task
+
+        name = task["name"]
+        inputs, _ = prepare_for_workgraph_task(task, kwargs)
+        process = self.process.submit(self.process.__class__, inputs=inputs)
+        self.set_task_state_info(name, "process", process)
+        self.set_task_state_info(name, "state", "RUNNING")
+        self.awaitable_manager.to_context(**{name: process})
+
+    def execute_python_job_task(self, task, kwargs, var_kwargs):
+        """Execute a PythonJob task."""
+        from aiida_pythonjob import PythonJob
+        from .utils import prepare_for_python_task
+
+        name = task["name"]
+        inputs = prepare_for_python_task(task, kwargs, var_kwargs)
+        # since aiida 2.5.0, we can pass inputs directly to the submit, no need to use **inputs
+        if self.get_task_state_info(name, "action").upper() == "PAUSE":
+            self.set_task_state_info(name, "action", "")
+            self.process.report(f"Task {name} is created and paused.")
+            process = create_and_pause_process(
+                self.runner,
+                PythonJob,
+                inputs,
+                state_msg="Paused through WorkGraph",
+            )
+            self.set_task_state_info(name, "state", "CREATED")
+            process = process.node
+        else:
+            process = self.process.submit(PythonJob, **inputs)
+            self.set_task_state_info(name, "state", "RUNNING")
+        process.label = name
+        self.set_task_state_info(name, "process", process)
+        self.awaitable_manager.to_context(**{name: process})
+
+    def execute_shell_job_task(self, task, kwargs):
+        """Execute a ShellJob task."""
+        from aiida_shell.calculations.shell import ShellJob
+        from .utils import prepare_for_shell_task
+
+        name = task["name"]
+        inputs = prepare_for_shell_task(task, kwargs)
+        if self.get_task_state_info(name, "action").upper() == "PAUSE":
+            self.set_task_state_info(name, "action", "")
+            self.process.report(f"Task {name} is created and paused.")
+            process = create_and_pause_process(
+                self.runner,
+                ShellJob,
+                inputs,
+                state_msg="Paused through WorkGraph",
+            )
+            self.set_task_state_info(name, "state", "CREATED")
+            process = process.node
+        else:
+            process = self.process.submit(ShellJob, **inputs)
+            self.set_task_state_info(name, "state", "RUNNING")
+        process.label = name
+        self.set_task_state_info(name, "process", process)
+        self.awaitable_manager.to_context(**{name: process})
+
+    def execute_while_task(self, task):
+        """Execute a WHILE task."""
+        # TODO refactor this for while, if and zone
+        # in case of an empty zone, it will finish immediately
+        name = task["name"]
+        if self.are_childen_finished(name)[0]:
+            self.update_while_task_state(name)
+        else:
+            # check the conditions of the while task
+            should_run = self.should_run_while_task(name)
+            if not should_run:
+                self.set_task_state_info(name, "state", "FINISHED")
+                self.set_tasks_state(self.ctx._tasks[name]["children"], "SKIPPED")
+                self.update_parent_task_state(name)
+                self.process.report(
+                    f"While Task {name}: Condition not fullilled, task finished. Skip all its children."
+                )
+            else:
+                task["execution_count"] += 1
+                self.set_task_state_info(name, "state", "RUNNING")
+        self.continue_workgraph()
+
+    def execute_if_task(self, task):
+        # in case of an empty zone, it will finish immediately
+        name = task["name"]
+        if self.are_childen_finished(name)[0]:
+            self.update_zone_task_state(name)
+        else:
+            should_run = self.should_run_if_task(name)
+            if should_run:
+                self.set_task_state_info(name, "state", "RUNNING")
+            else:
+                self.set_tasks_state(task["children"], "SKIPPED")
+                self.update_zone_task_state(name)
+        self.continue_workgraph()
+
+    def execute_zone_task(self, task):
+        # in case of an empty zone, it will finish immediately
+        name = task["name"]
+        if self.are_childen_finished(name)[0]:
+            self.update_zone_task_state(name)
+        else:
+            self.set_task_state_info(name, "state", "RUNNING")
+        self.continue_workgraph()
+
+    def execute_from_context_task(self, task, kwargs):
+        # get the results from the context
+        name = task["name"]
+        results = {"result": getattr(self.ctx, kwargs["key"])}
+        task["results"] = results
+        self.set_task_state_info(name, "state", "FINISHED")
+        self.update_parent_task_state(name)
+        self.continue_workgraph()
+
+    def execute_to_context_task(self, task, kwargs):
+        name = task["name"]
+        # get the results from the context
+        setattr(self.ctx, kwargs["key"], kwargs["value"])
+        self.set_task_state_info(name, "state", "FINISHED")
+        self.update_parent_task_state(name)
+        self.continue_workgraph()
+
+    def execute_awaitable_task(
+        self, task, executor, args, kwargs, var_args, var_kwargs
+    ):
+        name = task["name"]
+        for key in task["args"]:
+            kwargs.pop(key, None)
+        awaitable_target = asyncio.ensure_future(
+            self.run_executor(executor, args, kwargs, var_args, var_kwargs),
+            loop=self.process.loop,
+        )
+        awaitable = self.awaitable_manager.construct_awaitable_function(
+            name, awaitable_target
+        )
+        self.set_task_state_info(name, "state", "RUNNING")
+        self.awaitable_manager.to_context(**{name: awaitable})
+
+    def execute_monitor_task(self, task, executor, args, kwargs, var_args, var_kwargs):
+        name = task["name"]
+        for key in self.ctx._tasks[name]["args"]:
+            kwargs.pop(key, None)
+        # add function and interval to the args
+        args = [
+            executor,
+            kwargs.pop("interval", 1),
+            kwargs.pop("timeout", 3600),
+            *args,
+        ]
+        awaitable_target = asyncio.ensure_future(
+            self.run_executor(monitor, args, kwargs, var_args, var_kwargs),
+            loop=self.process.loop,
+        )
+        awaitable = self.awaitable_manager.construct_awaitable_function(
+            name, awaitable_target
+        )
+        self.set_task_state_info(name, "state", "RUNNING")
+        # save the awaitable to the temp, so that we can kill it if needed
+        self.awaitable_manager.not_persisted_awaitables[name] = awaitable_target
+        self.awaitable_manager.to_context(**{name: awaitable})
+
+    def execute_normal_task(
+        self, task, executor, args, kwargs, var_args, var_kwargs, continue_workgraph
+    ):
+        # Normal task is created by decoratoring a function with @task()
+        name = task["name"]
+        if "context" in task["kwargs"]:
+            self.ctx.task_name = name
+            kwargs.update({"context": self.ctx})
+        for key in self.ctx._tasks[name]["args"]:
+            kwargs.pop(key, None)
+        try:
+            results = self.run_executor(executor, args, kwargs, var_args, var_kwargs)
+            self.update_normal_task_state(name, results)
+        except Exception as e:
+            self.logger.error(f"Error in task {name}: {e}")
+            self.update_normal_task_state(name, results=None, success=False)
+        if continue_workgraph:
+            self.continue_workgraph()
 
     def get_inputs(
         self, name: str

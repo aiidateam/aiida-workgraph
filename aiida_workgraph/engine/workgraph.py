@@ -72,7 +72,7 @@ class WorkGraphEngine(Process, metaclass=Protect):
         )
         self.error_handler_manager = ErrorHandlerManager(
             self, self.ctx_manager, self.logger
-        )  # New instance
+        )
 
     @classmethod
     def define(cls, spec: WorkChainSpec) -> None:
@@ -153,6 +153,9 @@ class WorkGraphEngine(Process, metaclass=Protect):
         )
         self.task_manager = TaskManager(
             self.ctx_manager, self.logger, self.runner, self, self.awaitable_manager
+        )
+        self.error_handler_manager = ErrorHandlerManager(
+            self, self.ctx_manager, self.logger
         )
         # "_awaitables" is auto persisted.
         if self._awaitables:
