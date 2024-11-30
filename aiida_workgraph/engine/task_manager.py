@@ -122,9 +122,9 @@ class TaskManager:
         from aiida_workgraph.utils import update_nested_dict
 
         items = self.ctx._tasks[name]["context_mapping"]
-        for key, value in items.items():
-            result = self.ctx._tasks[name]["results"][key]
-            update_nested_dict(self.ctx, value, result)
+        for key, result_name in items.items():
+            result = self.ctx._tasks[name]["results"][result_name]
+            update_nested_dict(self.ctx, key, result)
 
     def get_task_state_info(self, name: str, key: str) -> str:
         """Get task state info from ctx."""
@@ -213,11 +213,8 @@ class TaskManager:
     def run_tasks(self, names: List[str], continue_workgraph: bool = True) -> None:
         """Run tasks.
         Task type includes: Node, Data, CalcFunction, WorkFunction, CalcJob, WorkChain, GraphBuilder,
-        WorkGraph, PythonJob, ShellJob, While, If, Zone, FromContext, ToContext, Normal.
+        WorkGraph, PythonJob, ShellJob, While, If, Zone, GetContext, SetContext, Normal.
 
-        Here we use ToContext to pass the results of the run to the next step.
-        This will force the engine to wait for all the submitted processes to
-        finish before continuing to the next step.
         """
         from aiida_workgraph.utils import (
             get_executor,
@@ -285,10 +282,10 @@ class TaskManager:
                 self.execute_if_task(task)
             elif task_type == "ZONE":
                 self.execute_zone_task(task)
-            elif task_type == "FROM_CONTEXT":
-                self.execute_from_context_task(task, kwargs)
-            elif task_type == "TO_CONTEXT":
-                self.execute_to_context_task(task, kwargs)
+            elif task_type == "GET_CONTEXT":
+                self.execute_get_context_task(task, kwargs)
+            elif task_type == "SET_CONTEXT":
+                self.execute_set_context_task(task, kwargs)
             elif task_type == "AWAITABLE":
                 self.execute_awaitable_task(
                     task, executor, args, kwargs, var_args, var_kwargs
@@ -499,7 +496,7 @@ class TaskManager:
             self.set_task_state_info(name, "state", "RUNNING")
         self.continue_workgraph()
 
-    def execute_from_context_task(self, task, kwargs):
+    def execute_get_context_task(self, task, kwargs):
         # get the results from the context
         name = task["name"]
         results = {"result": getattr(self.ctx, kwargs["key"])}
@@ -508,7 +505,7 @@ class TaskManager:
         self.update_parent_task_state(name)
         self.continue_workgraph()
 
-    def execute_to_context_task(self, task, kwargs):
+    def execute_set_context_task(self, task, kwargs):
         name = task["name"]
         # get the results from the context
         setattr(self.ctx, kwargs["key"], kwargs["value"])

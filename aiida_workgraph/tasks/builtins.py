@@ -95,12 +95,12 @@ class Gather(Task):
         self.outputs.new("workgraph.any", "result")
 
 
-class ToContext(Task):
-    """ToContext"""
+class SetContext(Task):
+    """SetContext"""
 
-    identifier = "workgraph.to_context"
-    name = "ToContext"
-    node_type = "TO_CONTEXT"
+    identifier = "workgraph.set_context"
+    name = "SetContext"
+    node_type = "SET_CONTEXT"
     catalog = "Control"
     args = ["key", "value"]
 
@@ -114,12 +114,12 @@ class ToContext(Task):
         self.outputs.new("workgraph.any", "_wait")
 
 
-class FromContext(Task):
-    """FromContext"""
+class GetContext(Task):
+    """GetContext"""
 
-    identifier = "workgraph.from_context"
-    name = "FromContext"
-    node_type = "FROM_CONTEXT"
+    identifier = "workgraph.get_context"
+    name = "GetContext"
+    node_type = "GET_CONTEXT"
     catalog = "Control"
     args = ["key"]
 
