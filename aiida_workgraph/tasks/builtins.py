@@ -114,12 +114,12 @@ class SetContext(Task):
         self.outputs.new("workgraph.any", "_wait")
 
 
-class FromContext(Task):
-    """FromContext"""
+class GetContext(Task):
+    """GetContext"""
 
-    identifier = "workgraph.from_context"
-    name = "FromContext"
-    node_type = "FROM_CONTEXT"
+    identifier = "workgraph.get_context"
+    name = "GetContext"
+    node_type = "GET_CONTEXT"
     catalog = "Control"
     args = ["key"]
 

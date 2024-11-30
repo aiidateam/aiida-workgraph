@@ -213,7 +213,7 @@ class TaskManager:
     def run_tasks(self, names: List[str], continue_workgraph: bool = True) -> None:
         """Run tasks.
         Task type includes: Node, Data, CalcFunction, WorkFunction, CalcJob, WorkChain, GraphBuilder,
-        WorkGraph, PythonJob, ShellJob, While, If, Zone, FromContext, SetContext, Normal.
+        WorkGraph, PythonJob, ShellJob, While, If, Zone, GetContext, SetContext, Normal.
 
         """
         from aiida_workgraph.utils import (
@@ -282,8 +282,8 @@ class TaskManager:
                 self.execute_if_task(task)
             elif task_type == "ZONE":
                 self.execute_zone_task(task)
-            elif task_type == "FROM_CONTEXT":
-                self.execute_from_context_task(task, kwargs)
+            elif task_type == "GET_CONTEXT":
+                self.execute_get_context_task(task, kwargs)
             elif task_type == "SET_CONTEXT":
                 self.execute_set_context_task(task, kwargs)
             elif task_type == "AWAITABLE":
@@ -496,7 +496,7 @@ class TaskManager:
             self.set_task_state_info(name, "state", "RUNNING")
         self.continue_workgraph()
 
-    def execute_from_context_task(self, task, kwargs):
+    def execute_get_context_task(self, task, kwargs):
         # get the results from the context
         name = task["name"]
         results = {"result": getattr(self.ctx, kwargs["key"])}
