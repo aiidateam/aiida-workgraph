@@ -212,20 +212,9 @@ def update_nested_dict(d: Optional[Dict[str, Any]], key: str, value: Any) -> Non
     return current
 
 
-def is_empty(value: Any) -> bool:
-    """Check if the provided value is an empty collection."""
-    import numpy as np
-
-    if isinstance(value, np.ndarray):
-        return value.size == 0
-    elif isinstance(value, (dict, list, set, tuple)):
-        return not value
-    return False
-
-
 def update_nested_dict_with_special_keys(data: Dict[str, Any]) -> Dict[str, Any]:
-    """Remove None and empty value"""
-    # data = {k: v for k, v in data.items() if v is not None and not is_empty(v)}
+    """Update the nested dictionary with special keys like "base.pw.parameters"."""
+    # Remove None
     data = {k: v for k, v in data.items() if v is not None}
     #
     special_keys = [k for k in data.keys() if "." in k]
@@ -306,34 +295,6 @@ def generate_node_graph(
     return g
 
 
-def build_task_link(wgdata: Dict[str, Any]) -> None:
-    """Create links for tasks.
-    Create the links for task inputs using:
-    1) workgraph links
-    2) if it is a graph builder graph, expose the group inputs and outputs
-    sockets.
-    """
-    # reset task input links
-    for name, task in wgdata["tasks"].items():
-        for input in task["inputs"]:
-            input["links"] = []
-        for output in task["outputs"]:
-            output["links"] = []
-    for link in wgdata["links"]:
-        to_socket = [
-            socket
-            for socket in wgdata["tasks"][link["to_node"]]["inputs"]
-            if socket["name"] == link["to_socket"]
-        ][0]
-        from_socket = [
-            socket
-            for socket in wgdata["tasks"][link["from_node"]]["outputs"]
-            if socket["name"] == link["from_socket"]
-        ][0]
-        to_socket["links"].append(link)
-        from_socket["links"].append(link)
-
-
 def get_dict_from_builder(builder: Any) -> Dict:
     """Transform builder to pure dict."""
     from aiida.engine.processes.builder import ProcessBuilderNamespace
@@ -342,14 +303,6 @@ def get_dict_from_builder(builder: Any) -> Dict:
         return {k: get_dict_from_builder(v) for k, v in builder.items()}
     else:
         return builder
-
-
-def serialize_workgraph_data(wgdata: Dict[str, Any]) -> Dict[str, Any]:
-    from aiida.orm.utils.serialize import serialize
-
-    for name, task in wgdata["tasks"].items():
-        wgdata["tasks"][name] = serialize(task)
-    wgdata["error_handlers"] = serialize(wgdata["error_handlers"])
 
 
 def get_workgraph_data(process: Union[int, orm.Node]) -> Optional[Dict[str, Any]]:
