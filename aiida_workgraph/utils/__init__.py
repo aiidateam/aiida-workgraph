@@ -43,9 +43,8 @@ def build_callable(obj: Callable) -> Dict[str, Any]:
     return executor
 
 
-def get_sorted_names(data: dict) -> list:
+def get_sorted_names(data: dict) -> list[str]:
     """Get the sorted names from a dictionary."""
-    print("data: ", data)
     sorted_names = [
         name
         for name, _ in sorted(

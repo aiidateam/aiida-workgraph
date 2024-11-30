@@ -734,9 +734,11 @@ class TaskManager:
         if success:
             task = self.ctx._tasks[name]
             if isinstance(results, tuple):
-                if len(task["outputs"]) != len(results):
-                    return self.exit_codes.OUTPUS_NOT_MATCH_RESULTS
-                output_names = get_sorted_names(task["outputs"])
+                # there are two built-in outputs: _wait and _outputs
+                if len(task["outputs"]) - 2 != len(results):
+                    self.on_task_failed(name)
+                    return self.process.exit_codes.OUTPUS_NOT_MATCH_RESULTS
+                output_names = get_sorted_names(task["outputs"])[0:-2]
                 for i, output_name in enumerate(output_names):
                     task["results"][output_name] = results[i]
             elif isinstance(results, dict):
