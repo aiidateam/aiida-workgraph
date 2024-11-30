@@ -122,9 +122,9 @@ class TaskManager:
         from aiida_workgraph.utils import update_nested_dict
 
         items = self.ctx._tasks[name]["context_mapping"]
-        for key, value in items.items():
-            result = self.ctx._tasks[name]["results"][key]
-            update_nested_dict(self.ctx, value, result)
+        for key, result_name in items.items():
+            result = self.ctx._tasks[name]["results"][result_name]
+            update_nested_dict(self.ctx, key, result)
 
     def get_task_state_info(self, name: str, key: str) -> str:
         """Get task state info from ctx."""

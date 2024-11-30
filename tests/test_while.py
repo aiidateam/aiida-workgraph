@@ -43,7 +43,7 @@ def test_while_task(decorated_add, decorated_compare):
         "l": 1,
     }
     add1 = wg.add_task(decorated_add, name="add1", x=1, y=1)
-    add1.set_context({"result": "n"})
+    add1.set_context({"n": "result"})
     # ---------------------------------------------------------------------
     # the `result` of compare1 taskis used as condition
     compare1 = wg.add_task(decorated_compare, name="compare1", x="{{m}}", y=10)
@@ -57,7 +57,7 @@ def test_while_task(decorated_add, decorated_compare):
     )
     add21.waiting_on.add("add1")
     add22 = wg.add_task(decorated_add, name="add22", x=add21.outputs["result"], y=1)
-    add22.set_context({"result": "n"})
+    add22.set_context({"n": "result"})
     while2.children.add(["add21", "add22"])
     # ---------------------------------------------------------------------
     compare3 = wg.add_task(decorated_compare, name="compare3", x="{{l}}", y=5)
@@ -67,13 +67,13 @@ def test_while_task(decorated_add, decorated_compare):
     add31 = wg.add_task(decorated_add, name="add31", x="{{l}}", y=1)
     add31.waiting_on.add("add22")
     add32 = wg.add_task(decorated_add, name="add32", x=add31.outputs["result"], y=1)
-    add32.set_context({"result": "l"})
+    add32.set_context({"l": "result"})
     while3.children.add(["add31", "add32"])
     # ---------------------------------------------------------------------
     add12 = wg.add_task(
         decorated_add, name="add12", x="{{m}}", y=add32.outputs["result"]
     )
-    add12.set_context({"result": "m"})
+    add12.set_context({"m": "result"})
     while1.children.add(["add11", "while2", "while3", "add12", "compare2", "compare3"])
     # ---------------------------------------------------------------------
     add2 = wg.add_task(
@@ -101,7 +101,7 @@ def test_while_workgraph(decorated_add, decorated_multiply, decorated_compare):
         decorated_multiply, name="multiply1", x="{{ n }}", y=orm.Int(2)
     )
     add1 = wg.add_task(decorated_add, name="add1", y=3)
-    add1.set_context({"result": "n"})
+    add1.set_context({"n": "result"})
     wg.add_link(multiply1.outputs["result"], add1.inputs["x"])
     wg.submit(wait=True, timeout=100)
     assert wg.execution_count == 4
@@ -125,7 +125,7 @@ def test_while_graph_builder(decorated_add, decorated_multiply, decorated_compar
             decorated_multiply, name="multiply1", x="{{ n }}", y=orm.Int(2)
         )
         add1 = wg.add_task(decorated_add, name="add1", y=3)
-        add1.set_context({"result": "n"})
+        add1.set_context({"n": "result"})
         wg.add_link(multiply1.outputs["result"], add1.inputs["x"])
         return wg
 
