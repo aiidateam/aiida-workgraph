@@ -114,42 +114,30 @@ def test_extend_workgraph(decorated_add_multiply_group):
     assert wg.tasks["group_multiply1"].node.outputs.result == 45
 
 
+# @pytest.mark.skip(reason="pause task is not stable for the moment.")
 @pytest.mark.usefixtures("started_daemon_client")
-def test_pause_task_before_submit(wg_calcjob):
+def test_pause_play_task(wg_calcjob):
     wg = wg_calcjob
     wg.name = "test_pause_task"
-    wg.pause_tasks(["add2"])
-    wg.submit()
-    # wait for the workgraph to launch add2
-    wg.wait(tasks={"add2": ["CREATED"]}, timeout=20)
-    assert wg.tasks["add2"].node.process_state.value.upper() == "CREATED"
-    assert wg.tasks["add2"].node.process_status == "Paused through WorkGraph"
-    # I disabled the following lines because the test is not stable
-    # Seems the daemon is not responding to the play signal
-    # This should be a problem of AiiDA test fixtures
-    # wg.play_tasks(["add2"])
-    # wg.wait(tasks={"add2": ["FINISHED"]})
-    # assert wg.tasks["add2"].outputs["sum"].value == 9
-
-
-@pytest.mark.skip(reason="pause task is not stable for the moment.")
-def test_pause_task_after_submit(wg_calcjob):
-    wg = wg_calcjob
-    wg.tasks["add1"].set({"metadata.options.sleep": 5})
-    wg.name = "test_pause_task"
+    # pause add1 before submit
+    wg.pause_tasks(["add1"])
     wg.submit()
     # wait for the workgraph to launch add1
-    wg.wait(tasks={"add1": ["CREATED", "WAITING", "RUNNING", "FINISHED"]}, timeout=20)
+    wg.wait(tasks={"add1": ["CREATED"]}, timeout=20)
+    assert wg.tasks["add1"].node.process_state.value.upper() == "CREATED"
+    assert wg.tasks["add1"].node.process_status == "Paused through WorkGraph"
+    # pause add2 after submit
     wg.pause_tasks(["add2"])
+    wg.play_tasks(["add1"])
     # wait for the workgraph to launch add2
     wg.wait(tasks={"add2": ["CREATED"]}, timeout=20)
     assert wg.tasks["add2"].node.process_state.value.upper() == "CREATED"
     assert wg.tasks["add2"].node.process_status == "Paused through WorkGraph"
     # I disabled the following lines because the test is not stable
     # Seems the daemon is not responding to the play signal
-    # wg.play_tasks(["add2"])
-    # wg.wait(tasks={"add2": ["FINISHED"]})
-    # assert wg.tasks["add2"].outputs["sum"].value == 9
+    wg.play_tasks(["add2"])
+    wg.wait()
+    assert wg.tasks["add2"].outputs["sum"].value == 9
 
 
 def test_workgraph_group_outputs(decorated_add):
