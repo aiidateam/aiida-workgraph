@@ -213,11 +213,8 @@ class TaskManager:
     def run_tasks(self, names: List[str], continue_workgraph: bool = True) -> None:
         """Run tasks.
         Task type includes: Node, Data, CalcFunction, WorkFunction, CalcJob, WorkChain, GraphBuilder,
-        WorkGraph, PythonJob, ShellJob, While, If, Zone, FromContext, ToContext, Normal.
+        WorkGraph, PythonJob, ShellJob, While, If, Zone, FromContext, SetContext, Normal.
 
-        Here we use ToContext to pass the results of the run to the next step.
-        This will force the engine to wait for all the submitted processes to
-        finish before continuing to the next step.
         """
         from aiida_workgraph.utils import (
             get_executor,
@@ -287,8 +284,8 @@ class TaskManager:
                 self.execute_zone_task(task)
             elif task_type == "FROM_CONTEXT":
                 self.execute_from_context_task(task, kwargs)
-            elif task_type == "TO_CONTEXT":
-                self.execute_to_context_task(task, kwargs)
+            elif task_type == "SET_CONTEXT":
+                self.execute_set_context_task(task, kwargs)
             elif task_type == "AWAITABLE":
                 self.execute_awaitable_task(
                     task, executor, args, kwargs, var_args, var_kwargs
@@ -508,7 +505,7 @@ class TaskManager:
         self.update_parent_task_state(name)
         self.continue_workgraph()
 
-    def execute_to_context_task(self, task, kwargs):
+    def execute_set_context_task(self, task, kwargs):
         name = task["name"]
         # get the results from the context
         setattr(self.ctx, kwargs["key"], kwargs["value"])

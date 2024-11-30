@@ -74,9 +74,11 @@ class Task(GraphNode):
         return tdata
 
     def set_context(self, context: Dict[str, Any]) -> None:
-        """Update the context mappings for this task."""
-        # all keys should belong to the outputs.keys()
-        remain_keys = set(context.keys()).difference(self.outputs.keys())
+        """Set the output of the task as a value in the context.
+        key is the context key, value is the output key.
+        """
+        # all values should belong to the outputs.keys()
+        remain_keys = set(context.values()).difference(self.outputs.keys())
         if remain_keys:
             msg = f"Keys {remain_keys} are not in the outputs of this task."
             raise ValueError(msg)

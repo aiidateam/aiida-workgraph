@@ -15,7 +15,7 @@ def test_workgraph_ctx(decorated_add: Callable) -> None:
     wg.context = {"x": Float(2), "data.y": Float(3), "array": array}
     add1 = wg.add_task(decorated_add, "add1", x="{{ x }}", y="{{ data.y }}")
     wg.add_task(
-        "workgraph.to_context", name="to_ctx1", key="x", value=add1.outputs["result"]
+        "workgraph.set_context", name="to_ctx1", key="x", value=add1.outputs["result"]
     )
     from_ctx1 = wg.add_task("workgraph.from_context", name="from_ctx1", key="x")
     # test the task can wait for another task

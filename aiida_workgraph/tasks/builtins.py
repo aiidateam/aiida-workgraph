@@ -95,12 +95,12 @@ class Gather(Task):
         self.outputs.new("workgraph.any", "result")
 
 
-class ToContext(Task):
-    """ToContext"""
+class SetContext(Task):
+    """SetContext"""
 
-    identifier = "workgraph.to_context"
-    name = "ToContext"
-    node_type = "TO_CONTEXT"
+    identifier = "workgraph.set_context"
+    name = "SetContext"
+    node_type = "SET_CONTEXT"
     catalog = "Control"
     args = ["key", "value"]
 
