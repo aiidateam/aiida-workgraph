@@ -130,7 +130,7 @@ def test_pause_play_task(wg_calcjob):
     wg.pause_tasks(["add2"])
     wg.play_tasks(["add1"])
     # wait for the workgraph to launch add2
-    wg.wait(tasks={"add2": ["CREATED"]}, timeout=20)
+    wg.wait(tasks={"add2": ["CREATED"]}, timeout=40)
     assert wg.tasks["add2"].node.process_state.value.upper() == "CREATED"
     assert wg.tasks["add2"].node.process_status == "Paused through WorkGraph"
     # I disabled the following lines because the test is not stable

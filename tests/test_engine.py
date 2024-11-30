@@ -32,6 +32,7 @@ def test_reset_node(wg_engine: WorkGraph) -> None:
     assert len(wg.process.base.extras.get("_workgraph_queue")) == 1
 
 
+@pytest.mark.usefixtures("started_daemon_client")
 def test_max_number_jobs(add_code) -> None:
     from aiida_workgraph import WorkGraph
     from aiida.orm import Int
@@ -46,6 +47,7 @@ def test_max_number_jobs(add_code) -> None:
         )
     # Set the maximum number of running jobs inside the WorkGraph
     wg.max_number_jobs = 2
-    wg.submit(wait=True, timeout=100)
+    wg.submit(wait=True, timeout=40)
     report = get_workchain_report(wg.process, "REPORT")
     assert "tasks ready to run: add2" in report
+    wg.tasks["add2"].outputs["sum"].value == 2

@@ -85,8 +85,8 @@ class AwaitableManager:
             raise AssertionError(f"Unsupported awaitable action: {awaitable.action}")
 
         awaitable.resolved = True
-        # remove awaitabble from the list
-        self._awaitables = [a for a in self._awaitables if a.pk != awaitable.pk]
+        # remove awaitabble from the list, and use the same list reference
+        self._awaitables[:] = [a for a in self._awaitables if a.pk != awaitable.pk]
 
         if not self.process.has_terminated():
             # the process may be terminated, for example, if the process was killed or excepted
