@@ -73,3 +73,25 @@ def test_validate_task_inout_dict_with_extra_keys():
     ]
     result = validate_task_inout(input_list, "input")
     assert result == input_list
+
+
+def test_get_or_create_code(fixture_localhost):
+    from aiida_workgraph.utils import get_or_create_code
+    from aiida.orm import Code
+
+    # create a new code
+    code1 = get_or_create_code(
+        computer="localhost",
+        code_label="test_code",
+        code_path="/bin/bash",
+        prepend_text='echo "Hello, World!"',
+    )
+    assert isinstance(code1, Code)
+    # use already created code
+    code2 = get_or_create_code(
+        computer="localhost",
+        code_label="test_code",
+        code_path="/bin/bash",
+        prepend_text='echo "Hello, World!"',
+    )
+    assert code1.uuid == code2.uuid

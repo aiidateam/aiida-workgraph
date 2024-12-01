@@ -30,7 +30,9 @@ def fixture_localhost(aiida_localhost):
 def add_code(fixture_localhost):
     from aiida.orm import InstalledCode
 
-    code = InstalledCode(computer=fixture_localhost, filepath_executable="/bin/bash")
+    code = InstalledCode(
+        label="add", computer=fixture_localhost, filepath_executable="/bin/bash"
+    )
     code.store()
     return code
 
