@@ -68,14 +68,16 @@ class WorkGraph(node_graph.NodeGraph):
         """Add alias to `nodes` for WorkGraph"""
         return self.nodes
 
-    def prepare_inputs(self, metadata: Optional[Dict[str, Any]]) -> Dict[str, Any]:
+    def prepare_inputs(
+        self, metadata: Optional[Dict[str, Any]] = None
+    ) -> Dict[str, Any]:
         from aiida_workgraph.utils import (
-            merge_properties,
+            organize_nested_inputs,
             serialize_properties,
         )
 
         wgdata = self.to_dict()
-        merge_properties(wgdata)
+        organize_nested_inputs(wgdata)
         serialize_properties(wgdata)
         metadata = metadata or {}
         inputs = {"wg": wgdata, "metadata": metadata}

@@ -150,19 +150,21 @@ def get_nested_dict(d: Dict, name: str, **kwargs) -> Any:
     return current
 
 
-def merge_dicts(existing: Any, new: Any) -> Any:
+def merge_dicts(dict1: Any, dict2: Any) -> Any:
     """Recursively merges two dictionaries."""
-    if isinstance(existing, dict) and isinstance(new, dict):
-        for k, v in new.items():
-            if k in existing and isinstance(existing[k], dict) and isinstance(v, dict):
-                merge_dicts(existing[k], v)
-            else:
-                existing[k] = v
-    else:
-        return new
+    for key, value in dict2.items():
+        if key in dict1 and isinstance(dict1[key], dict) and isinstance(value, dict):
+            # Recursively merge dictionaries
+            dict1[key] = merge_dicts(dict1[key], value)
+        else:
+            # Overwrite or add the key
+            dict1[key] = value
+    return dict1
 
 
-def update_nested_dict(d: Optional[Dict[str, Any]], key: str, value: Any) -> None:
+def update_nested_dict(
+    base: Optional[Dict[str, Any]], key_path: str, value: Any
+) -> None:
     """
     Update or create a nested dictionary structure based on a dotted key path.
 
@@ -173,43 +175,44 @@ def update_nested_dict(d: Optional[Dict[str, Any]], key: str, value: Any) -> Non
     If the resulting dictionary is empty, it is set to `None`.
 
     Args:
-        d (Dict[str, Any] | None): The dictionary to update, which can be `None`.
+        base (Dict[str, Any] | None): The dictionary to update, which can be `None`.
                                    If `None`, an empty dictionary will be created.
         key (str): A dotted key path string representing the nested structure.
         value (Any): The value to set at the specified key.
 
     Example:
-        d = None
-        key = "base.pw.parameters"
+        base = None
+        key = "scf.pw.parameters"
         value = 2
         After running:
             update_nested_dict(d, key, value)
         The result will be:
-            d = {"base": {"pw": {"parameters": 2}}}
+            base = {"scf": {"pw": {"parameters": 2}}}
 
     Edge Case:
         If the resulting dictionary is empty after the update, it will be set to `None`.
 
     """
 
-    keys = key.split(".")
-    current = d if d is not None else {}
-    for k in keys[:-1]:
-        current = current.setdefault(k, {})
-    # Handle merging instead of overwriting
-    last_key = keys[-1]
-    if (
-        last_key in current
-        and isinstance(current[last_key], dict)
-        and isinstance(value, dict)
-    ):
-        merge_dicts(current[last_key], value)
+    if base is None:
+        base = {}
+    keys = key_path.split(".")
+    current_key = keys[0]
+    if len(keys) == 1:
+        # Base case: Merge dictionaries or set the value directly.
+        if isinstance(base.get(current_key), dict) and isinstance(value, dict):
+            base[current_key] = merge_dicts(base[current_key], value)
+        else:
+            base[current_key] = value
     else:
-        current[last_key] = value
-    # if current is empty, set it to None
-    if not current:
-        current = None
-    return current
+        # Recursive case: Ensure the key exists and is a dictionary, then recurse.
+        if current_key not in base or not isinstance(base[current_key], dict):
+            base[current_key] = {}
+        base[current_key] = update_nested_dict(
+            base[current_key], ".".join(keys[1:]), value
+        )
+
+    return base
 
 
 def update_nested_dict_with_special_keys(data: Dict[str, Any]) -> Dict[str, Any]:
@@ -224,16 +227,26 @@ def update_nested_dict_with_special_keys(data: Dict[str, Any]) -> Dict[str, Any]
     return data
 
 
-def merge_properties(wgdata: Dict[str, Any]) -> None:
+def organize_nested_inputs(wgdata: Dict[str, Any]) -> None:
     """Merge sub properties to the root properties.
-        {
-            "base.pw.parameters": 2,
-            "base.pw.code": 1,
-        }
-        after merge:
-        {"base": {"pw": {"parameters": 2,
-                        "code": 1}}
-    So that no "." in the key name.
+    The sub properties will be se
+    For example:
+        task["inputs"]["base"]["property"]["value"] = None
+        task["inputs"]["base.pw.parameters"]["property"]["value"] = 2
+        task["inputs"]["base.pw.code"]["property"]["value"] = 1
+        task["inputs"]["metadata"]["property"]["value"] = {"options": {"resources": {"num_cpus": 1}}
+        task["inputs"]["metadata.options"]["property"]["value"] = {"resources": {"num_machine": 1}}
+    After organizing:
+        task["inputs"]["base"]["property"]["value"] = {"base": {"pw": {"parameters": 2,
+                                                                     "code": 1},
+                                                       "metadata": {"options":
+                                                                        {"resources": {"num_cpus": 1,
+                                                                                       "num_machine": 1}}}},
+                                                       }
+        task["inputs"]["base.pw.parameters"]["property"]["value"] = None
+        task["inputs"]["base.pw.code"]["property"]["value"] = None
+        task["inputs"]["metadata"]["property"]["value"] = None
+        task["inputs"]["metadata.options"]["property"]["value"] = None
     """
     for _, task in wgdata["tasks"].items():
         for key, prop in task["properties"].items():

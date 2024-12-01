@@ -40,6 +40,33 @@ def test_save_load(wg_calcfunction):
     assert len(wg.tasks) == len(wg2.tasks)
 
 
+def test_organize_nested_inputs():
+    """Merge sub properties to the root properties."""
+    from .utils.test_workchain import WorkChainWithNestNamespace
+
+    wg = WorkGraph("test_organize_nested_inputs")
+    task1 = wg.add_task(WorkChainWithNestNamespace, name="task1")
+    task1.set(
+        {
+            "add": {"x": "1"},
+            "add.metadata": {
+                "call_link_label": "nest",
+                "options": {"resources": {"num_cpus": 1}},
+            },
+            "add.metadata.options": {"resources": {"num_machines": 1}},
+        }
+    )
+    inputs = wg.prepare_inputs()
+    data = {
+        "metadata": {
+            "call_link_label": "nest",
+            "options": {"resources": {"num_cpus": 1, "num_machines": 1}},
+        },
+        "x": "1",
+    }
+    assert inputs["wg"]["tasks"]["task1"]["inputs"]["add"]["property"]["value"] == data
+
+
 @pytest.mark.usefixtures("started_daemon_client")
 def test_reset_message(wg_calcjob):
     """Modify a node and save the workgraph.
