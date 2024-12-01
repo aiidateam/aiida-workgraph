@@ -345,10 +345,8 @@ def get_parent_workgraphs(pk: int) -> list:
     node = orm.load_node(pk)
     parent_workgraphs = [[node.process_label, node.pk]]
     links = node.base.links.get_incoming(link_type=LinkType.CALL_WORK).all()
-    print(links)
     if len(links) > 0:
         parent_workgraphs.extend(get_parent_workgraphs(links[0].node.pk))
-    print(parent_workgraphs)
     return parent_workgraphs
 
 

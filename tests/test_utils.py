@@ -1,5 +1,5 @@
 import pytest
-
+from aiida import orm
 from aiida_workgraph.utils import validate_task_inout
 
 
@@ -95,3 +95,20 @@ def test_get_or_create_code(fixture_localhost):
         prepend_text='echo "Hello, World!"',
     )
     assert code1.uuid == code2.uuid
+
+
+def test_get_parent_workgraphs():
+    from aiida.common.links import LinkType
+    from aiida_workgraph.utils import get_parent_workgraphs
+
+    wn1 = orm.WorkflowNode()
+    wn2 = orm.WorkflowNode()
+    wn3 = orm.WorkflowNode()
+    wn3.base.links.add_incoming(wn2, link_type=LinkType.CALL_WORK, link_label="link")
+    wn2.base.links.add_incoming(wn1, link_type=LinkType.CALL_WORK, link_label="link")
+    wn1.store()
+    wn2.store()
+    wn3.store()
+
+    parent_workgraphs = get_parent_workgraphs(wn3.pk)
+    assert len(parent_workgraphs) == 3
