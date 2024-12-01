@@ -386,20 +386,17 @@ class WorkGraph(node_graph.NodeGraph):
         print(tabulate(table, headers=["Name", "PK", "State"]))
         print("-" * 80)
 
-    def pause(self) -> None:
-        """Pause the workgraph."""
-        # from aiida.engine.processes import control
-        # try:
-        # control.pause_processes([self.process])
-        import os
-
-        os.system("verdi process pause {}".format(self.process.pk))
+    # def pause(self) -> None:
+    #     """Pause the workgraph."""
+    #     from aiida.engine.processes import control
+    #     try:
+    #         control.pause_processes([self.process])
+    #     except Exception as e:
+    #         print(f"Pause process failed: {e}")
 
     def pause_tasks(self, tasks: List[str]) -> None:
         """Pause the given tasks."""
         from aiida_workgraph.utils.control import pause_tasks
-
-        self.update()
 
         if self.process is None:
             for name in tasks:
