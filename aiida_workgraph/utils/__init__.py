@@ -595,18 +595,44 @@ def validate_task_inout(inout_list: list[str | dict], list_type: str) -> list[di
     if the former convert them to a list of `dict`s with `name` as the key.
 
     :param inout_list: The input/output list to be validated.
-    :param list_type: "input" or "output" to indicate what is to be validated.
-    :raises TypeError: If a list of mixed or wrong types is provided to the task
+    :param list_type: "inputs" or "outputs" to indicate what is to be validated for better error message.
+    :raises TypeError: If wrong types are provided to the task
     :return: Processed `inputs`/`outputs` list.
     """
 
-    if all(isinstance(item, str) for item in inout_list):
-        return [{"name": item} for item in inout_list]
-    elif all(isinstance(item, dict) for item in inout_list):
-        return inout_list
-    elif not all(isinstance(item, dict) for item in inout_list):
+    if not all(isinstance(item, (dict, str)) for item in inout_list):
         raise TypeError(
-            f"Provide either a list of `str` or `dict` as `{list_type}`, not mixed types."
+            f"Wrong type provided in the `{list_type}` list to the task, must be either `str` or `dict`."
         )
-    else:
-        raise TypeError(f"Wrong type provided in the `{list_type}` list to the task.")
+
+    processed_inout_list = []
+
+    for item in inout_list:
+        if isinstance(item, str):
+            processed_inout_list.append({"name": item})
+        elif isinstance(item, dict):
+            processed_inout_list.append(item)
+
+    return processed_inout_list
+
+
+def filter_keys_namespace_depth(
+    dict_: dict[Any, Any], max_depth: int = 0
+) -> dict[Any, Any]:
+    """
+    Filter top-level keys of a dictionary based on the namespace nesting level (number of periods) in the key.
+
+    :param dict dict_: The dictionary to filter.
+    :param int max_depth: Maximum depth of namespaces to retain (number of periods).
+    :return: The filtered dictionary with only keys satisfying the depth condition.
+    :rtype: dict
+    """
+    result: dict[Any, Any] = {}
+
+    for key, value in dict_.items():
+        depth = key.count(".")
+
+        if depth <= max_depth:
+            result[key] = value
+
+    return result
