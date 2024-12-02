@@ -651,3 +651,25 @@ def validate_task_inout(inout_list: list[str | dict], list_type: str) -> list[di
             processed_inout_list.append(item)
 
     return processed_inout_list
+
+
+def filter_keys_namespace_depth(
+    dict_: dict[Any, Any], max_depth: int = 0
+) -> dict[Any, Any]:
+    """
+    Filter top-level keys of a dictionary based on the namespace nesting level (number of periods) in the key.
+
+    :param dict dict_: The dictionary to filter.
+    :param int max_depth: Maximum depth of namespaces to retain (number of periods).
+    :return: The filtered dictionary with only keys satisfying the depth condition.
+    :rtype: dict
+    """
+    result: dict[Any, Any] = {}
+
+    for key, value in dict_.items():
+        depth = key.count(".")
+
+        if depth <= max_depth:
+            result[key] = value
+
+    return result
