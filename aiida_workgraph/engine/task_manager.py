@@ -187,7 +187,6 @@ class TaskManager:
 
     def continue_workgraph(self) -> None:
         self.process.report("Continue workgraph.")
-        # self.update_workgraph_from_base()
         task_to_run = []
         for name, task in self.ctx._tasks.items():
             # update task state
