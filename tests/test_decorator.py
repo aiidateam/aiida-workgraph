@@ -3,6 +3,18 @@ from aiida_workgraph import WorkGraph, task
 from typing import Callable
 
 
+def test_custom_outputs():
+    """Test custom outputs."""
+
+    @task(outputs=["sum", {"name": "product", "identifier": "workgraph.any"}])
+    def add_multiply(x, y):
+        return {"sum": x + y, "product": x * y}
+
+    n = add_multiply.task()
+    assert "sum" in n.outputs.keys()
+    assert "product" in n.outputs.keys()
+
+
 @pytest.fixture(params=["decorator_factory", "decorator"])
 def task_calcfunction(request):
     if request.param == "decorator_factory":
