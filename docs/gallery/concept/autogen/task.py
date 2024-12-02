@@ -54,15 +54,27 @@ print("Outputs:", add1.outputs.keys())
 ######################################################################
 # If you want to change the name of the output ports, or if there are more
 # than one output. You can define the outputs explicitly. For example:
-# ``{"name": "sum", "identifier": "workgraph.Any"}``, where the ``identifier``
-# indicates the data type. The data type tell the code how to display the
-# port in the GUI, validate the data, and serialize data into database. We
-# use ``workgraph.Any`` for any data type. For the moment, the data validation is
+
+
+# define the outputs explicitly
+@task(outputs=["sum", "diff"])
+def add_minus(x, y):
+    return {"sum": x + y, "difference": x - y}
+
+
+print("Inputs:", add_minus.task().inputs.keys())
+print("Outputs:", add_minus.task().outputs.keys())
+
+######################################################################
+# One can also add an ``identifier`` to indicates the data type. The data
+# type tell the code how to display the port in the GUI, validate the data,
+# and serialize data into database.
+# We use ``workgraph.Any`` for any data type. For the moment, the data validation is
 # experimentally supported, and the GUI display is not implemented. Thus,
 # I suggest you to always ``workgraph.Any`` for the port.
 #
 
-# define add calcfunction task
+# define the outputs with identifier
 @task(
     outputs=[
         {"name": "sum", "identifier": "workgraph.Any"},
@@ -71,10 +83,6 @@ print("Outputs:", add1.outputs.keys())
 )
 def add_minus(x, y):
     return {"sum": x + y, "difference": x - y}
-
-
-print("Inputs:", add_minus.task().inputs.keys())
-print("Outputs:", add_minus.task().outputs.keys())
 
 
 ######################################################################
