@@ -281,7 +281,7 @@ def build_task_from_AiiDA(
 
 def build_pythonjob_task(func: Callable) -> Task:
     """Build PythonJob task from function."""
-    from aiida_workgraph.calculations.python import PythonJob
+    from aiida_pythonjob import PythonJob
     from copy import deepcopy
 
     # if the function is not a task, build a task from the function
@@ -297,16 +297,14 @@ def build_pythonjob_task(func: Callable) -> Task:
     }
     _, tdata_py = build_task_from_AiiDA(tdata)
     tdata = deepcopy(func.tdata)
-    function_kwargs = [
+    function_inputs = [
         name for name in tdata["inputs"] if name not in ["_wait", "_outputs"]
     ]
     # merge the inputs and outputs from the PythonJob task to the function task
     # skip the already existed inputs and outputs
     for input in [
         {"identifier": "workgraph.string", "name": "computer"},
-        {"identifier": "workgraph.string", "name": "code_label"},
-        {"identifier": "workgraph.string", "name": "code_path"},
-        {"identifier": "workgraph.string", "name": "prepend_text"},
+        {"identifier": "workgraph.any", "name": "command_info"},
     ]:
         input["list_index"] = len(tdata["inputs"]) + 1
         tdata["inputs"][input["name"]] = input
@@ -325,7 +323,7 @@ def build_pythonjob_task(func: Callable) -> Task:
     tdata["inputs"]["copy_files"]["link_limit"] = 1e6
     # append the kwargs of the PythonJob task to the function task
     kwargs = tdata["kwargs"]
-    kwargs.extend(["computer", "code_label", "code_path", "prepend_text"])
+    kwargs.extend(["computer", "command_info"])
     kwargs.extend(tdata_py["kwargs"])
     tdata["kwargs"] = kwargs
     tdata["metadata"]["task_type"] = "PYTHONJOB"
@@ -336,7 +334,7 @@ def build_pythonjob_task(func: Callable) -> Task:
     }
     task = create_task(tdata)
     task.is_aiida_component = True
-    task.function_kwargs = function_kwargs
+    task.function_inputs = function_inputs
     return task, tdata
 
 
@@ -559,8 +557,8 @@ class TaskDecoratorCollection:
         identifier: Optional[str] = None,
         task_type: str = "Normal",
         properties: Optional[List[Tuple[str, str]]] = None,
-        inputs: Optional[List[Tuple[str, str]]] = None,
-        outputs: Optional[List[Tuple[str, str]]] = None,
+        inputs: Optional[List[str | dict]] = None,
+        outputs: Optional[List[str | dict]] = None,
         error_handlers: Optional[List[Dict[str, Any]]] = None,
         catalog: str = "Others",
     ) -> Callable:
@@ -575,6 +573,12 @@ class TaskDecoratorCollection:
             inputs (list): task inputs
             outputs (list): task outputs
         """
+
+        if inputs:
+            inputs = validate_task_inout(inputs, "inputs")
+
+        if outputs:
+            outputs = validate_task_inout(outputs, "outputs")
 
         def decorator(func):
             nonlocal identifier, task_type
