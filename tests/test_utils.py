@@ -112,3 +112,17 @@ def test_get_parent_workgraphs():
 
     parent_workgraphs = get_parent_workgraphs(wn3.pk)
     assert len(parent_workgraphs) == 3
+
+
+def test_generate_node_graph():
+    from aiida_workgraph.utils import generate_node_graph
+    from IPython.display import IFrame
+    import os
+
+    wn1 = orm.WorkflowNode()
+    wn1.store()
+
+    graph = generate_node_graph(wn1.pk)
+    assert isinstance(graph, IFrame)
+    # check file html/node_graph_{pk}.html is created
+    assert os.path.isfile(f"html/node_graph_{wn1.pk}.html")
