@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from node_graph.node import Node as GraphNode
 from aiida_workgraph import USE_WIDGET
 from aiida_workgraph.properties import property_pool
@@ -56,6 +58,7 @@ class Task(GraphNode):
             self._widget = None
         self.state = "PLANNED"
         self.action = ""
+        self.show_socket_depth = 0
 
     def to_dict(self) -> Dict[str, Any]:
         from aiida.orm.utils.serialize import serialize
@@ -172,14 +175,18 @@ class Task(GraphNode):
             print(WIDGET_INSTALLATION_MESSAGE)
             return
         # if ipywdigets > 8.0.0, use _repr_mimebundle_ instead of _ipython_display_
-        self._widget.from_node(self)
+        self._widget.from_node(self, show_socket_depth=self.show_socket_depth)
         if hasattr(self._widget, "_repr_mimebundle_"):
             return self._widget._repr_mimebundle_(*args, **kwargs)
         else:
             return self._widget._ipython_display_(*args, **kwargs)
 
-    def to_html(self, output: str = None, show_socket_depth: int = 0, **kwargs):
+    def to_html(
+        self, output: str = None, show_socket_depth: Optional[int] = None, **kwargs
+    ):
         """Write a standalone html file to visualize the task."""
+        if show_socket_depth is None:
+            show_socket_depth = self.show_socket_depth
         if self._widget is None:
             print(WIDGET_INSTALLATION_MESSAGE)
             return
