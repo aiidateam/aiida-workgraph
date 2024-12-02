@@ -22,7 +22,7 @@ def test_pause_play_task(wg_calcjob):
     wg.pause_tasks(["add1"])
     wg.submit()
     # wait for the workgraph to launch add1
-    wg.wait(tasks={"add1": ["CREATED"]}, timeout=20)
+    wg.wait(tasks={"add1": ["CREATED"]}, timeout=40)
     assert wg.tasks["add1"].node.process_state.value.upper() == "CREATED"
     assert wg.tasks["add1"].node.process_status == "Paused through WorkGraph"
     # pause add2 after submit

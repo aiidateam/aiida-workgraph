@@ -15,15 +15,6 @@ def add(
 
 
 @calcfunction
-def greater(
-    x: Union[Int, Float], y: Union[Int, Float], t: Union[Int, Float] = 1.0
-) -> Dict[str, bool]:
-    """Compare node."""
-    time.sleep(t.value)
-    return {"result": x > y}
-
-
-@calcfunction
 def sum_diff(
     x: Union[Int, Float], y: Union[Int, Float], t: Union[Int, Float] = 1.0
 ) -> Dict[str, Union[Int, Float]]:
