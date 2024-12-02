@@ -1,4 +1,3 @@
-from aiida_workgraph.orm.serializer import serialize_to_aiida_nodes
 from aiida import orm
 from aiida.common.extendeddicts import AttributeDict
 
@@ -27,105 +26,87 @@ def prepare_for_workgraph_task(task: dict, kwargs: dict) -> tuple:
     return inputs, wgdata
 
 
-def prepare_for_python_task(task: dict, kwargs: dict, var_kwargs: dict) -> dict:
-    """Prepare the inputs for PythonJob"""
-    from aiida_workgraph.utils import get_or_create_code
-    import os
-
-    # get the names kwargs for the PythonJob, which are the inputs before _wait
-    function_kwargs = kwargs.pop("function_kwargs", {})
-    # TODO better way to find the function_kwargs
-    input_names = [
-        name
-        for name, _ in sorted(
-            ((name, input["list_index"]) for name, input in task["inputs"].items()),
+def sort_socket_data(socket_data: dict) -> dict:
+    """Sort the socket data by the list_index"""
+    data = [
+        {"name": data["name"], "identifier": data["identifier"]}
+        for data, _ in sorted(
+            ((data, data["list_index"]) for data in socket_data.values()),
             key=lambda x: x[1],
         )
     ]
-    for name in input_names:
-        if name == "_wait":
+    return data
+
+
+def prepare_for_python_task(task: dict, kwargs: dict, var_kwargs: dict) -> dict:
+    """Prepare the inputs for PythonJob"""
+    from aiida_pythonjob import prepare_pythonjob_inputs
+
+    # get the names kwargs for the PythonJob, which are the inputs before _wait
+    function_inputs = kwargs.pop("function_inputs", {})
+    sorted_inputs = sort_socket_data(task["inputs"])
+    # TODO better way to find the function_inputs
+    for input in sorted_inputs:
+        if input["name"] == "_wait":
             break
-        function_kwargs[name] = kwargs.pop(name, None)
+        function_inputs[input["name"]] = kwargs.pop(input["name"], None)
+
     # if the var_kwargs is not None, we need to pop the var_kwargs from the kwargs
-    # then update the function_kwargs if var_kwargs is not None
+    # then update the function_inputs if var_kwargs is not None
     if task["var_kwargs"] is not None:
-        function_kwargs.pop(task["var_kwargs"], None)
+        function_inputs.pop(task["var_kwargs"], None)
         if var_kwargs:
             # var_kwargs can be AttributeDict if it get data from the previous task output
             if isinstance(var_kwargs, (dict, AttributeDict)):
-                function_kwargs.update(var_kwargs)
+                function_inputs.update(var_kwargs)
             # otherwise, it should be a Data node
             elif isinstance(var_kwargs, orm.Data):
-                function_kwargs.update(var_kwargs.value)
+                function_inputs.update(var_kwargs.value)
             else:
                 raise ValueError(f"Invalid var_kwargs type: {type(var_kwargs)}")
     # setup code
     code = kwargs.pop("code", None)
-    computer = kwargs.pop("computer", None)
-    code_label = kwargs.pop("code_label", None)
-    code_path = kwargs.pop("code_path", None)
-    prepend_text = kwargs.pop("prepend_text", None)
+    computer = kwargs.pop("computer", "localhost")
+    command_info = kwargs.pop("command_info", {})
     upload_files = kwargs.pop("upload_files", {})
-    new_upload_files = {}
-    # change the string in the upload files to SingleFileData, or FolderData
-    for key, source in upload_files.items():
-        # only alphanumeric and underscores are allowed in the key
-        # replace all "." with "_dot_"
-        new_key = key.replace(".", "_dot_")
-        if isinstance(source, str):
-            if os.path.isfile(source):
-                new_upload_files[new_key] = orm.SinglefileData(file=source)
-            elif os.path.isdir(source):
-                new_upload_files[new_key] = orm.FolderData(tree=source)
-        elif isinstance(source, (orm.SinglefileData, orm.FolderData)):
-            new_upload_files[new_key] = source
-        else:
-            raise ValueError(f"Invalid upload file type: {type(source)}, {source}")
-    #
-    if code is None:
-        code = get_or_create_code(
-            computer=computer if computer else "localhost",
-            code_label=code_label if code_label else "python3",
-            code_path=code_path if code_path else None,
-            prepend_text=prepend_text if prepend_text else None,
-        )
+
     metadata = kwargs.pop("metadata", {})
     metadata.update({"call_link_label": task["name"]})
     # get the source code of the function
-    function_name = task["executor"]["name"]
-    if task["executor"].get("is_pickle", False):
-        function_source_code = (
-            task["executor"]["import_statements"]
-            + "\n"
-            + task["executor"]["source_code_without_decorator"]
-        )
-    else:
-        function_source_code = (
-            f"from {task['executor']['module']} import {function_name}"
-        )
+    executor = task["executor"]
 
     # outputs
-    function_outputs = [
-        output
+    outputs = [
+        {"name": output["name"], "identifier": output["identifier"]}
         for output, _ in sorted(
             ((output, output["list_index"]) for output in task["outputs"].values()),
             key=lambda x: x[1],
         )
     ]
-    # serialize the kwargs into AiiDA Data
-    function_kwargs = serialize_to_aiida_nodes(function_kwargs)
-    # transfer the args to kwargs
-    inputs = {
-        "process_label": f"PythonJob<{task['name']}>",
-        "function_source_code": orm.Str(function_source_code),
-        "function_name": orm.Str(function_name),
-        "code": code,
-        "function_kwargs": function_kwargs,
-        "upload_files": new_upload_files,
-        "function_outputs": orm.List(function_outputs),
-        "metadata": metadata,
+    # only the output before _wait is the function_outputs
+    function_outputs = []
+    for output in outputs:
+        if output["name"] == "_wait":
+            break
+        # if the output is WORKGRAPH.NAMESPACE, we need to change it to NAMESPACE
+        if output["identifier"].upper() == "WORKGRAPH.NAMESPACE":
+            function_outputs.append({"name": output["name"], "identifier": "NAMESPACE"})
+        else:
+            function_outputs.append(output)
+
+    inputs = prepare_pythonjob_inputs(
+        pickled_function=executor,
+        function_inputs=function_inputs,
+        function_outputs=function_outputs,
+        code=code,
+        command_info=command_info,
+        computer=computer,
+        metadata=metadata,
+        upload_files=upload_files,
+        process_label=f"PythonJob<{task['name']}>",
         **kwargs,
-    }
+    )
+
     return inputs
 
 

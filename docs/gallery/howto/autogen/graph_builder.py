@@ -197,7 +197,7 @@ def for_loop(nb_iterations: Int):
     # of the graph builder decorator.
 
     # Put result of the task to the context under the name task_out
-    task.set_context({"result": "task_out"})
+    task.set_context({"task_out": "result"})
     # If want to know more about the usage of the context please refer to the
     # context howto in the documentation
     return wg
@@ -244,7 +244,7 @@ def if_then_else(i: Int):
         task = wg.add_task(modulo_two, x=i)
 
     # same concept as before, please read the for loop example for explanation
-    task.set_context({"result": "task_out"})
+    task.set_context({"task_out": "result"})
     return wg
 
 

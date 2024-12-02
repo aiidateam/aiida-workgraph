@@ -6,27 +6,15 @@ import cloudpickle
 from pickle import UnpicklingError
 
 
-class Dict(orm.Dict):
-    @property
-    def value(self):
-        return self.get_dict()
-
-
-class List(orm.List):
-    @property
-    def value(self):
-        return self.get_list()
-
-
-class GeneralData(orm.Data):
+class PickledData(orm.Data):
     """Data to represent a pickled value using cloudpickle."""
 
     FILENAME = "value.pkl"  # Class attribute to store the filename
 
     def __init__(self, value=None, **kwargs):
-        """Initialize a `GeneralData` node instance.
+        """Initialize a `PickledData` node instance.
 
-        :param value: raw Python value to initialize the `GeneralData` node from.
+        :param value: raw Python value to initialize the `PickledData` node from.
         """
         super().__init__(**kwargs)
         self.set_value(value)
