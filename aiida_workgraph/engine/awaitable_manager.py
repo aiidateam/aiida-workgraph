@@ -40,13 +40,9 @@ class AwaitableManager:
         ctx, key = self.ctx_manager.resolve_nested_context(awaitable.key)
 
         # Already assign the awaitable itself to the location in the context container where it is supposed to end up
-        # once it is resolved. This is especially important for the `APPEND` action, since it needs to maintain the
-        # order, but the awaitables will not necessarily be resolved in the order in which they are added. By using the
-        # awaitable as a placeholder, in the `_resolve_awaitable`, it can be found and replaced by the resolved value.
+        # once it is resolved.
         if awaitable.action == AwaitableAction.ASSIGN:
             ctx[key] = awaitable
-        elif awaitable.action == AwaitableAction.APPEND:
-            ctx.setdefault(key, []).append(awaitable)
         else:
             raise AssertionError(f"Unsupported awaitable action: {awaitable.action}")
 
@@ -67,20 +63,6 @@ class AwaitableManager:
 
         if awaitable.action == AwaitableAction.ASSIGN:
             ctx[key] = value
-        elif awaitable.action == AwaitableAction.APPEND:
-            # Find the same awaitable inserted in the context
-            container = ctx[key]
-            for index, placeholder in enumerate(container):
-                if (
-                    isinstance(placeholder, Awaitable)
-                    and placeholder.pk == awaitable.pk
-                ):
-                    container[index] = value
-                    break
-            else:
-                raise AssertionError(
-                    f"Awaitable `{awaitable.pk} was not in `ctx.{awaitable.key}`"
-                )
         else:
             raise AssertionError(f"Unsupported awaitable action: {awaitable.action}")
 

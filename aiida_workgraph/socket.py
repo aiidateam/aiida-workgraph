@@ -50,15 +50,4 @@ def build_socket_from_AiiDA(DataClass: Type[Any]) -> Type[TaskSocket]:
             super().__init__(name, parent, type, index, uuid=uuid)
             self.add_property(DataClass, name, **kwargs)
 
-        def get_serialize(self) -> dict:
-            serialize = {"module": "aiida.orm.utils.serialize", "name": "serialize"}
-            return serialize
-
-        def get_deserialize(self) -> dict:
-            deserialize = {
-                "module": "aiida.orm.utils.serialize",
-                "name": "deserialize_unsafe",
-            }
-            return deserialize
-
     return AiiDATaskSocket
