@@ -557,8 +557,8 @@ class TaskDecoratorCollection:
         identifier: Optional[str] = None,
         task_type: str = "Normal",
         properties: Optional[List[Tuple[str, str]]] = None,
-        inputs: Optional[List[Tuple[str, str]]] = None,
-        outputs: Optional[List[Tuple[str, str]]] = None,
+        inputs: Optional[List[str | dict]] = None,
+        outputs: Optional[List[str | dict]] = None,
         error_handlers: Optional[List[Dict[str, Any]]] = None,
         catalog: str = "Others",
     ) -> Callable:
@@ -573,6 +573,12 @@ class TaskDecoratorCollection:
             inputs (list): task inputs
             outputs (list): task outputs
         """
+
+        if inputs:
+            inputs = validate_task_inout(inputs, "inputs")
+
+        if outputs:
+            outputs = validate_task_inout(outputs, "outputs")
 
         def decorator(func):
             nonlocal identifier, task_type
