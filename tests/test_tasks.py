@@ -1,7 +1,23 @@
 import pytest
-from aiida_workgraph import WorkGraph
+from aiida_workgraph import WorkGraph, task
 from typing import Callable
 from aiida.cmdline.utils.common import get_workchain_report
+
+
+def test_normal_task(decorated_add) -> None:
+    """Test a normal task."""
+
+    @task(outputs=[{"name": "sum"}, {"name": "diff"}])
+    def sum_diff(x, y):
+        return x + y, x - y
+
+    wg = WorkGraph("test_normal_task")
+    task1 = wg.add_task(sum_diff, name="sum_diff", x=2, y=3)
+    task2 = wg.add_task(
+        decorated_add, name="add", x=task1.outputs["sum"], y=task1.outputs["diff"]
+    )
+    wg.run()
+    assert task2.outputs["result"].value == 4
 
 
 def test_task_collection(decorated_add: Callable) -> None:

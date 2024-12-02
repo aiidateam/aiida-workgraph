@@ -28,21 +28,11 @@ def get_task_state_info(node, name: str, key: str) -> str:
     return value
 
 
-def set_task_state_info(node, name: str, key: str, value: any) -> None:
-    """Set task state info to base.extras."""
-    from aiida.orm.utils.serialize import serialize
-
-    if key == "process":
-        node.base.extras.set(f"_task_{key}_{name}", serialize(value))
-    else:
-        node.base.extras.set(f"_task_{key}_{name}", value)
-
-
-def pause_tasks(pk: int, tasks: list, timeout: int = 5, wait: bool = False):
+def pause_tasks(pk: int, tasks: list[str], timeout: int = 5, wait: bool = False):
     """Pause task."""
     node = orm.load_node(pk)
     if node.is_finished:
-        message = "Process is finished. Cannot pause tasks."
+        message = "WorkGraph is finished. Cannot pause tasks."
         print(message)
         return False, message
     elif node.process_state.value.upper() in [
@@ -70,7 +60,7 @@ def pause_tasks(pk: int, tasks: list, timeout: int = 5, wait: bool = False):
 def play_tasks(pk: int, tasks: list, timeout: int = 5, wait: bool = False):
     node = orm.load_node(pk)
     if node.is_finished:
-        message = "Process is finished. Cannot pause tasks."
+        message = "WorkGraph is finished. Cannot kill tasks."
         print(message)
         return False, message
     elif node.process_state.value.upper() in [
@@ -100,7 +90,7 @@ def play_tasks(pk: int, tasks: list, timeout: int = 5, wait: bool = False):
 def kill_tasks(pk: int, tasks: list, timeout: int = 5, wait: bool = False):
     node = orm.load_node(pk)
     if node.is_finished:
-        message = "Process is finished. Cannot pause tasks."
+        message = "WorkGraph is finished. Cannot kill tasks."
         print(message)
         return False, message
     elif node.process_state.value.upper() in [

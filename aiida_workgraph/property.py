@@ -55,15 +55,4 @@ def build_property_from_AiiDA(DataClass: Type[Any]) -> Type[TaskProperty]:
             else:
                 raise Exception("{} is not an {}.".format(value, DataClass.__name__))
 
-        def get_serialize(self) -> Dict[str, str]:
-            serialize = {"module": "aiida.orm.utils.serialize", "name": "serialize"}
-            return serialize
-
-        def get_deserialize(self) -> Dict[str, str]:
-            deserialize = {
-                "module": "aiida.orm.utils.serialize",
-                "name": "deserialize_unsafe",
-            }
-            return deserialize
-
     return AiiDATaskProperty

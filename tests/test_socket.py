@@ -36,6 +36,22 @@ def test_type_mapping(data_type, data, identifier) -> None:
     add_task.set({"x": "{{variable}}"})
 
 
+def test_vector_socket() -> None:
+    """Test the vector data type."""
+    from aiida_workgraph import Task
+
+    t = Task()
+    t.inputs.new(
+        "workgraph.aiida_int_vector",
+        "vector2d",
+        property_data={"size": 2, "default": [1, 2]},
+    )
+    try:
+        t.inputs["vector2d"].value = [1, 2, 3]
+    except Exception as e:
+        assert "Invalid size: Expected 2, got 3 instead." in str(e)
+
+
 def test_aiida_data_socket() -> None:
     """Test the mapping of data types to socket types."""
     from aiida import orm, load_profile

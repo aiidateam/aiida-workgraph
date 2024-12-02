@@ -4,6 +4,7 @@ from aiida.engine import calcfunction, workfunction
 from aiida.orm import Int, StructureData
 from aiida.calculations.arithmetic.add import ArithmeticAddCalculation
 from typing import Callable, Any, Union
+from aiida.orm import WorkflowNode
 import time
 import os
 
@@ -29,7 +30,9 @@ def fixture_localhost(aiida_localhost):
 def add_code(fixture_localhost):
     from aiida.orm import InstalledCode
 
-    code = InstalledCode(computer=fixture_localhost, filepath_executable="/bin/bash")
+    code = InstalledCode(
+        label="add", computer=fixture_localhost, filepath_executable="/bin/bash"
+    )
     code.store()
     return code
 
@@ -233,3 +236,15 @@ def wg_engine(decorated_add, add_code) -> WorkGraph:
     wg.add_link(add2.outputs["sum"], add5.inputs["x"])
     wg.add_link(add4.outputs["sum"], add5.inputs["y"])
     return wg
+
+
+@pytest.fixture
+def finished_process_node():
+    """Return a finished process node."""
+
+    node = WorkflowNode()
+    node.set_process_state("finished")
+    node.set_exit_status(0)
+    node.seal()
+    node.store()
+    return node

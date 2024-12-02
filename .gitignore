@@ -135,4 +135,5 @@ dmypy.json
 tests/work
 /tests/**/*.png
 /tests/**/*txt
-.vscode/
+/tests/**/*html
+.vscode

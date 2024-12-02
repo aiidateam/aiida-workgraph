@@ -28,30 +28,6 @@ class TestAdd(Task):
         self.outputs.new("workgraph.aiida_float", "sum")
 
 
-class TestGreater(Task):
-
-    identifier: str = "workgraph.test_greater"
-    name = "TestGreater"
-    node_type = "CALCFUNCTION"
-    catalog = "Test"
-
-    _executor = {
-        "module": "aiida_workgraph.executors.test",
-        "name": "greater",
-    }
-    kwargs = ["x", "y"]
-
-    def create_properties(self) -> None:
-        pass
-
-    def create_sockets(self) -> None:
-        self.inputs.clear()
-        self.outputs.clear()
-        self.inputs.new("workgraph.aiida_float", "x")
-        self.inputs.new("workgraph.aiida_float", "y")
-        self.outputs.new("workgraph.aiida_bool", "result")
-
-
 class TestSumDiff(Task):
 
     identifier: str = "workgraph.test_sum_diff"

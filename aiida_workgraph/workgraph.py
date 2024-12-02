@@ -68,14 +68,16 @@ class WorkGraph(node_graph.NodeGraph):
         """Add alias to `nodes` for WorkGraph"""
         return self.nodes
 
-    def prepare_inputs(self, metadata: Optional[Dict[str, Any]]) -> Dict[str, Any]:
+    def prepare_inputs(
+        self, metadata: Optional[Dict[str, Any]] = None
+    ) -> Dict[str, Any]:
         from aiida_workgraph.utils import (
-            merge_properties,
+            organize_nested_inputs,
             serialize_properties,
         )
 
         wgdata = self.to_dict()
-        merge_properties(wgdata)
+        organize_nested_inputs(wgdata)
         serialize_properties(wgdata)
         metadata = metadata or {}
         inputs = {"wg": wgdata, "metadata": metadata}
@@ -114,6 +116,7 @@ class WorkGraph(node_graph.NodeGraph):
         inputs: Optional[Dict[str, Any]] = None,
         wait: bool = False,
         timeout: int = 60,
+        interval: int = 1,
         metadata: Optional[Dict[str, Any]] = None,
     ) -> aiida.orm.ProcessNode:
         """Submit the AiiDA workgraph process and optionally wait for it to finish.
@@ -138,7 +141,7 @@ class WorkGraph(node_graph.NodeGraph):
         # as long as we submit the process, it is a new submission, we should set restart_process to None
         self.restart_process = None
         if wait:
-            self.wait(timeout=timeout)
+            self.wait(timeout=timeout, interval=interval)
         return self.process
 
     def save(self, metadata: Optional[Dict[str, Any]] = None) -> None:
@@ -230,7 +233,7 @@ class WorkGraph(node_graph.NodeGraph):
                 task["exit_codes"] = exit_codes
         return error_handlers
 
-    def wait(self, timeout: int = 50, tasks: dict = None) -> None:
+    def wait(self, timeout: int = 50, tasks: dict = None, interval: int = 1) -> None:
         """
         Periodically checks and waits for the AiiDA workgraph process to finish until a given timeout.
         Args:
@@ -257,7 +260,7 @@ class WorkGraph(node_graph.NodeGraph):
                 finished = all(states)
             else:
                 finished = self.state in terminating_states
-            time.sleep(0.5)
+            time.sleep(interval)
             if time.time() - start > timeout:
                 break
 
@@ -386,20 +389,17 @@ class WorkGraph(node_graph.NodeGraph):
         print(tabulate(table, headers=["Name", "PK", "State"]))
         print("-" * 80)
 
-    def pause(self) -> None:
-        """Pause the workgraph."""
-        # from aiida.engine.processes import control
-        # try:
-        # control.pause_processes([self.process])
-        import os
-
-        os.system("verdi process pause {}".format(self.process.pk))
+    # def pause(self) -> None:
+    #     """Pause the workgraph."""
+    #     from aiida.engine.processes import control
+    #     try:
+    #         control.pause_processes([self.process])
+    #     except Exception as e:
+    #         print(f"Pause process failed: {e}")
 
     def pause_tasks(self, tasks: List[str]) -> None:
         """Pause the given tasks."""
         from aiida_workgraph.utils.control import pause_tasks
-
-        self.update()
 
         if self.process is None:
             for name in tasks:

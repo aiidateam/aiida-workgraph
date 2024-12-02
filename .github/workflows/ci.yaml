@@ -79,6 +79,9 @@ jobs:
                 playwright install
                 pip list
 
+        -   name: Install system dependencies
+            run: sudo apt update && sudo apt install --no-install-recommends graphviz
+
         -   name: Create AiiDA profile
             run: verdi setup -n --config .github/config/profile.yaml
 

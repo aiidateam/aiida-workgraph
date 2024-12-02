@@ -4,7 +4,7 @@ from aiida.common.extendeddicts import AttributeDict
 
 def prepare_for_workgraph_task(task: dict, kwargs: dict) -> tuple:
     """Prepare the inputs for WorkGraph task"""
-    from aiida_workgraph.utils import merge_properties, serialize_properties
+    from aiida_workgraph.utils import organize_nested_inputs, serialize_properties
     from aiida.orm.utils.serialize import deserialize_unsafe
 
     wgdata = deserialize_unsafe(task["executor"]["wgdata"])
@@ -19,7 +19,7 @@ def prepare_for_workgraph_task(task: dict, kwargs: dict) -> tuple:
                 "value"
             ] = value
     # merge the properties
-    merge_properties(wgdata)
+    organize_nested_inputs(wgdata)
     serialize_properties(wgdata)
     metadata = {"call_link_label": task["name"]}
     inputs = {"wg": wgdata, "metadata": metadata}

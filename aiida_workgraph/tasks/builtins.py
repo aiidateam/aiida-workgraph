@@ -73,28 +73,6 @@ class If(Zone):
         self.outputs.new("workgraph.any", "_wait")
 
 
-class Gather(Task):
-    """Gather"""
-
-    identifier = "workgraph.aiida_gather"
-    name = "Gather"
-    node_type = "WORKCHAIN"
-    catalog = "Control"
-
-    _executor = {
-        "module": "aiida_workgraph.executors.builtins",
-        "name": "GatherWorkChain",
-    }
-    kwargs = ["datas"]
-
-    def create_sockets(self) -> None:
-        self.inputs.clear()
-        self.outputs.clear()
-        inp = self.inputs.new("workgraph.any", "datas")
-        inp.link_limit = 100000
-        self.outputs.new("workgraph.any", "result")
-
-
 class SetContext(Task):
     """SetContext"""
 

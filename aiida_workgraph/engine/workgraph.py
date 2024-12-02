@@ -322,13 +322,6 @@ class WorkGraphEngine(Process, metaclass=Protect):
         wgdata["context"] = deserialize_unsafe(wgdata["context"])
         return wgdata
 
-    def update_workgraph_from_base(self) -> None:
-        """Update the ctx from base.extras."""
-        wgdata = self.read_wgdata_from_base()
-        for name, task in wgdata["tasks"].items():
-            task["results"] = self.ctx._tasks[name].get("results")
-        self.setup_ctx_workgraph(wgdata)
-
     def init_ctx(self, wgdata: t.Dict[str, t.Any]) -> None:
         """Init the context from the workgraph data."""
         from aiida_workgraph.utils import update_nested_dict

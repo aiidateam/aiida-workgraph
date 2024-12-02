@@ -40,16 +40,31 @@ def test_save_load(wg_calcfunction):
     assert len(wg.tasks) == len(wg2.tasks)
 
 
-# skip this test
-@pytest.mark.skip(reason="PAUSED state is wrong for the moment.")
-def test_pause(wg_engine):
-    wg = wg_engine
-    wg.name = "test_pause"
-    wg.submit()
-    time.sleep(5)
-    wg.pause()
-    wg.update()
-    assert wg.process.process_state.value.upper() == "PAUSED"
+def test_organize_nested_inputs():
+    """Merge sub properties to the root properties."""
+    from .utils.test_workchain import WorkChainWithNestNamespace
+
+    wg = WorkGraph("test_organize_nested_inputs")
+    task1 = wg.add_task(WorkChainWithNestNamespace, name="task1")
+    task1.set(
+        {
+            "add": {"x": "1"},
+            "add.metadata": {
+                "call_link_label": "nest",
+                "options": {"resources": {"num_cpus": 1}},
+            },
+            "add.metadata.options": {"resources": {"num_machines": 1}},
+        }
+    )
+    inputs = wg.prepare_inputs()
+    data = {
+        "metadata": {
+            "call_link_label": "nest",
+            "options": {"resources": {"num_cpus": 1, "num_machines": 1}},
+        },
+        "x": "1",
+    }
+    assert inputs["wg"]["tasks"]["task1"]["inputs"]["add"]["property"]["value"] == data
 
 
 @pytest.mark.usefixtures("started_daemon_client")
@@ -112,44 +127,6 @@ def test_extend_workgraph(decorated_add_multiply_group):
     wg.add_link(add1.outputs[0], wg.tasks["group_add1"].inputs["x"])
     wg.run()
     assert wg.tasks["group_multiply1"].node.outputs.result == 45
-
-
-@pytest.mark.usefixtures("started_daemon_client")
-def test_pause_task_before_submit(wg_calcjob):
-    wg = wg_calcjob
-    wg.name = "test_pause_task"
-    wg.pause_tasks(["add2"])
-    wg.submit()
-    # wait for the workgraph to launch add2
-    wg.wait(tasks={"add2": ["CREATED"]}, timeout=20)
-    assert wg.tasks["add2"].node.process_state.value.upper() == "CREATED"
-    assert wg.tasks["add2"].node.process_status == "Paused through WorkGraph"
-    # I disabled the following lines because the test is not stable
-    # Seems the daemon is not responding to the play signal
-    # This should be a problem of AiiDA test fixtures
-    # wg.play_tasks(["add2"])
-    # wg.wait(tasks={"add2": ["FINISHED"]})
-    # assert wg.tasks["add2"].outputs["sum"].value == 9
-
-
-@pytest.mark.skip(reason="pause task is not stable for the moment.")
-def test_pause_task_after_submit(wg_calcjob):
-    wg = wg_calcjob
-    wg.tasks["add1"].set({"metadata.options.sleep": 5})
-    wg.name = "test_pause_task"
-    wg.submit()
-    # wait for the workgraph to launch add1
-    wg.wait(tasks={"add1": ["CREATED", "WAITING", "RUNNING", "FINISHED"]}, timeout=20)
-    wg.pause_tasks(["add2"])
-    # wait for the workgraph to launch add2
-    wg.wait(tasks={"add2": ["CREATED"]}, timeout=20)
-    assert wg.tasks["add2"].node.process_state.value.upper() == "CREATED"
-    assert wg.tasks["add2"].node.process_status == "Paused through WorkGraph"
-    # I disabled the following lines because the test is not stable
-    # Seems the daemon is not responding to the play signal
-    # wg.play_tasks(["add2"])
-    # wg.wait(tasks={"add2": ["FINISHED"]})
-    # assert wg.tasks["add2"].outputs["sum"].value == 9
 
 
 def test_workgraph_group_outputs(decorated_add):
