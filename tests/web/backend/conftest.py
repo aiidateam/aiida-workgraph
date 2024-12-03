@@ -17,6 +17,6 @@ def set_backend_server_settings(aiida_profile):
 
 @pytest.fixture(scope="module")
 def client(set_backend_server_settings):
-    from aiida_workgraph.web.backend.app.api import app
+    from aiida_workgraph_web.backend.app.api import app
 
     return TestClient(app)

@@ -11,7 +11,7 @@ async def read_datanode_data(
     labelSearch: str = Query(None),
 ) -> List[Dict[str, Any]]:
     from aiida.orm import QueryBuilder, Data
-    from aiida_workgraph.web.backend.app.utils import time_ago
+    from aiida_workgraph_web.backend.app.utils import time_ago
 
     try:
         builder = QueryBuilder()

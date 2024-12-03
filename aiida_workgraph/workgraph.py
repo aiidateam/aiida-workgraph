@@ -18,7 +18,7 @@ from aiida_workgraph.utils.graph import (
 from typing import Any, Dict, List, Optional, Union
 
 if USE_WIDGET:
-    from aiida_workgraph.widget import NodeGraphWidget
+    from aiida_workgraph_widget import NodeGraphWidget
 
 
 class WorkGraph(node_graph.NodeGraph):

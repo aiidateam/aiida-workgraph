@@ -27,11 +27,11 @@ To install the jupyter widget support you need to in addition build the JavaScri
 ```console
 pip install .[widget]
 # build widget
-cd aiida_workgraph/widget/
+cd aiida_workgraph_widget/
 npm install
 npm run build
 # build web frontend
-cd ../../aiida_workgraph/web/frontend/
+cd ../../aiida_workgraph_web/frontend/
 npm install
 npm run build
 ```
@@ -105,10 +105,10 @@ pre-commit install
 ```
 
 ### Widget
-See the [README.md](https://github.com/aiidateam/aiida-workgraph/blob/main/aiida_workgraph/widget/README.md)
+See the [README.md](https://github.com/aiidateam/aiida-workgraph/blob/main/aiida_workgraph_widget/README.md)
 
 ### Web app
-See the [README.md](https://github.com/aiidateam/aiida-workgraph/blob/main/aiida_workgraph/web/README.md)
+See the [README.md](https://github.com/aiidateam/aiida-workgraph/blob/main/aiida_workgraph_web/README.md)
 
 
 ## License

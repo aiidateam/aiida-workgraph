@@ -7,8 +7,8 @@ build:
     nodejs: "20" # maybe need to be also miniconda
   jobs:
     post_create_environment:
-      - npm --prefix aiida_workgraph/widget install
-      - npm --prefix aiida_workgraph/widget run build
+      - npm --prefix aiida_workgraph_widget install
+      - npm --prefix aiida_workgraph_widget run build
       - python -m pip install --no-cache-dir .[docs]
       - python -m pip install --exists-action=w --no-cache-dir -r docs/requirements.txt
       - rabbitmq-server -detached

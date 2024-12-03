@@ -6,7 +6,7 @@ from aiida_workgraph.properties import property_pool
 from aiida_workgraph.sockets import socket_pool
 
 if USE_WIDGET:
-    from aiida_workgraph.widget import NodeGraphWidget
+    from aiida_workgraph_widget import NodeGraphWidget
 from aiida_workgraph.collection import (
     WorkGraphPropertyCollection,
     WorkGraphInputSocketCollection,

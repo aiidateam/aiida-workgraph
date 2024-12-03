@@ -1,9 +1,9 @@
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from aiida.manage import manager
-from aiida_workgraph.web.backend.app.daemon import router as daemon_router
-from aiida_workgraph.web.backend.app.workgraph import router as workgraph_router
-from aiida_workgraph.web.backend.app.datanode import router as datanode_router
+from aiida_workgraph_web.backend.app.daemon import router as daemon_router
+from aiida_workgraph_web.backend.app.workgraph import router as workgraph_router
+from aiida_workgraph_web.backend.app.datanode import router as datanode_router
 from fastapi.staticfiles import StaticFiles
 from pathlib import Path
 import os

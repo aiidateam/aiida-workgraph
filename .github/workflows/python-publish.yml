@@ -31,12 +31,12 @@ jobs:
         python -m pip install --upgrade pip
         pip install build
     - name:  Build widget
-      working-directory: aiida_workgraph/widget/
+      working-directory: aiida_workgraph_widget/
       run: |
         npm install
         npm run build
     - name: Build web frontend package
-      working-directory: aiida_workgraph/web/frontend/
+      working-directory: aiida_workgraph_web/frontend/
       run: |
         npm install
         npm run build
