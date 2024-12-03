@@ -3,8 +3,6 @@ import node_graph
 import aiida
 import node_graph.link
 from aiida_workgraph.socket import NodeSocket
-from aiida_workgraph import USE_WIDGET
-from aiida_workgraph.utils.message import WIDGET_INSTALLATION_MESSAGE
 from aiida_workgraph.tasks import task_pool
 from aiida_workgraph.task import Task
 import time
@@ -17,8 +15,7 @@ from aiida_workgraph.utils.graph import (
 )
 from typing import Any, Dict, List, Optional, Union
 
-if USE_WIDGET:
-    from aiida_workgraph.widget import NodeGraphWidget
+from node_graph_widget import NodeGraphWidget
 
 
 class WorkGraph(node_graph.NodeGraph):
@@ -61,7 +58,7 @@ class WorkGraph(node_graph.NodeGraph):
         self.links.post_creation_hooks = [link_creation_hook]
         self.links.post_deletion_hooks = [link_deletion_hook]
         self._error_handlers = {}
-        self._widget = NodeGraphWidget(parent=self) if USE_WIDGET else None
+        self._widget = NodeGraphWidget(parent=self)
 
     @property
     def tasks(self) -> TaskCollection:
@@ -492,19 +489,6 @@ class WorkGraph(node_graph.NodeGraph):
         """Attach an error handler to the workgraph."""
         self._error_handlers[name] = {"handler": handler, "tasks": tasks}
 
-    def _repr_mimebundle_(self, *args, **kwargs):
-
-        if self._widget is None:
-            print(WIDGET_INSTALLATION_MESSAGE)
-            return
-
-        # if ipywdigets > 8.0.0, use _repr_mimebundle_ instead of _ipython_display_
-        self._widget.from_workgraph(self)
-        if hasattr(self._widget, "_repr_mimebundle_"):
-            return self._widget._repr_mimebundle_(*args, **kwargs)
-        else:
-            return self._widget._ipython_display_(*args, **kwargs)
-
     def add_task(
         self, identifier: Union[str, callable], name: str = None, **kwargs
     ) -> Task:
@@ -519,10 +503,24 @@ class WorkGraph(node_graph.NodeGraph):
         link = self.links.new(source, target)
         return link
 
+    def to_widget_value(self) -> Dict[str, Any]:
+        """Convert the workgraph to a dictionary that can be used by the widget."""
+        from aiida_workgraph.utils import workgraph_to_short_json, wait_to_link
+
+        wgdata = self.to_dict()
+        wait_to_link(wgdata)
+        wgdata = workgraph_to_short_json(wgdata)
+        return wgdata
+
+    def _repr_mimebundle_(self, *args, **kwargs):
+        # if ipywdigets > 8.0.0, use _repr_mimebundle_ instead of _ipython_display_
+        self._widget.value = self.to_widget_value()
+        if hasattr(self._widget, "_repr_mimebundle_"):
+            return self._widget._repr_mimebundle_(*args, **kwargs)
+        else:
+            return self._widget._ipython_display_(*args, **kwargs)
+
     def to_html(self, output: str = None, **kwargs):
         """Write a standalone html file to visualize the workgraph."""
-        if self._widget is None:
-            print(WIDGET_INSTALLATION_MESSAGE)
-            return
-        self._widget.from_workgraph(self)
+        self._widget.value = self.to_widget_value()
         return self._widget.to_html(output=output, **kwargs)

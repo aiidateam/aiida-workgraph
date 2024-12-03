@@ -85,12 +85,6 @@ jobs:
         -   name: Create AiiDA profile
             run: verdi setup -n --config .github/config/profile.yaml
 
-        -   name: Install Dependencies for widget
-            working-directory: aiida_workgraph/widget
-            run: |
-                npm install
-                npm run build
-
         -   name: Install Dependencies, Start React Application
             working-directory: aiida_workgraph/web/frontend
             run: |

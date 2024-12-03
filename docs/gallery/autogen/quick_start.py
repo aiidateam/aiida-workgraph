@@ -14,7 +14,7 @@ Quick Start
 #
 # .. code:: console
 #
-#    pip install aiida-workgraph[widget]
+#    pip install aiida-workgraph
 #
 # Start (or restart) the AiiDA daemon if needed:
 #
