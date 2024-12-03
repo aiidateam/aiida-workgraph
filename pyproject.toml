@@ -146,7 +146,6 @@ workgraph = "aiida_workgraph.cli.cmd_workgraph:workgraph"
 exclude = [
     "docs/",
     "tests/",
-    "aiida_workgraph/web/frontend/node_modules/",
 ]
 
 

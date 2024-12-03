@@ -44,10 +44,6 @@ To install the web app you need to in addition build the JavaScript packages:
 
     $ cd aiida-workgraph
     $ pip install -e .
-    $ # build web frontend
-    $ cd ../../aiida_workgraph/web/frontend/
-    $ npm install
-    $ npm run build
 
 
 .. |pip| replace:: ``pip``
