@@ -95,7 +95,7 @@ def prepare_for_python_task(task: dict, kwargs: dict, var_kwargs: dict) -> dict:
             function_outputs.append(output)
 
     inputs = prepare_pythonjob_inputs(
-        pickled_function=executor,
+        function_data=executor,
         function_inputs=function_inputs,
         function_outputs=function_outputs,
         code=code,
