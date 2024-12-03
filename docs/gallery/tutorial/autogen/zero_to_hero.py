@@ -14,7 +14,7 @@ AiiDA-WorkGraph: From Zero To Hero
 #
 # .. code-block:: console
 #
-#    pip install aiida-workgraph[widget] aiida-quantumespresso
+#    pip install aiida-workgraph aiida-quantumespresso
 #
 # Restart (or start) the AiiDA daemon if needed:
 #

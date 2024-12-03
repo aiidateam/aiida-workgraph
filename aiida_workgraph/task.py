@@ -1,12 +1,10 @@
 from __future__ import annotations
 
 from node_graph.node import Node as GraphNode
-from aiida_workgraph import USE_WIDGET
+
 from aiida_workgraph.properties import property_pool
 from aiida_workgraph.sockets import socket_pool
-
-if USE_WIDGET:
-    from aiida_workgraph.widget import NodeGraphWidget
+from node_graph_widget import NodeGraphWidget
 from aiida_workgraph.collection import (
     WorkGraphPropertyCollection,
     WorkGraphInputSocketCollection,
@@ -14,7 +12,6 @@ from aiida_workgraph.collection import (
 )
 import aiida
 from typing import Any, Dict, Optional, Union, Callable, List, Set, Iterable
-from aiida_workgraph.utils.message import WIDGET_INSTALLATION_MESSAGE
 
 
 class Task(GraphNode):
@@ -49,13 +46,10 @@ class Task(GraphNode):
         self.waiting_on = TaskCollection(parent=self)
         self.process = process
         self.pk = pk
-        if USE_WIDGET:
-            self._widget = NodeGraphWidget(
-                settings={"minmap": False},
-                style={"width": "80%", "height": "600px"},
-            )
-        else:
-            self._widget = None
+        self._widget = NodeGraphWidget(
+            settings={"minmap": False},
+            style={"width": "80%", "height": "600px"},
+        )
         self.state = "PLANNED"
         self.action = ""
         self.show_socket_depth = 0
@@ -171,13 +165,30 @@ class Task(GraphNode):
             handler["exit_codes"] = exit_codes
         return handlers
 
-    def _repr_mimebundle_(self, *args: Any, **kwargs: Any) -> any:
+    def to_widget_value(self):
+        from aiida_workgraph.utils import filter_keys_namespace_depth
 
-        if self._widget is None:
-            print(WIDGET_INSTALLATION_MESSAGE)
-            return
+        tdata = self.to_dict()
+
+        # Remove certain elements of the dict-representation of the Node that we don't want to show
+        for key in ("properties", "executor", "node_class", "process"):
+            tdata.pop(key, None)
+        for input in tdata["inputs"].values():
+            input.pop("property")
+
+        tdata["label"] = tdata["identifier"]
+
+        filtered_inputs = filter_keys_namespace_depth(
+            dict_=tdata["inputs"], max_depth=self.show_socket_depth
+        )
+        tdata["inputs"] = list(filtered_inputs.values())
+        tdata["outputs"] = list(tdata["outputs"].values())
+        wgdata = {"name": self.name, "nodes": {self.name: tdata}, "links": []}
+        return wgdata
+
+    def _repr_mimebundle_(self, *args: Any, **kwargs: Any) -> any:
         # if ipywdigets > 8.0.0, use _repr_mimebundle_ instead of _ipython_display_
-        self._widget.from_node(self, show_socket_depth=self.show_socket_depth)
+        self._widget.value = self.to_widget_value()
         if hasattr(self._widget, "_repr_mimebundle_"):
             return self._widget._repr_mimebundle_(*args, **kwargs)
         else:
@@ -189,10 +200,7 @@ class Task(GraphNode):
         """Write a standalone html file to visualize the task."""
         if show_socket_depth is None:
             show_socket_depth = self.show_socket_depth
-        if self._widget is None:
-            print(WIDGET_INSTALLATION_MESSAGE)
-            return
-        self._widget.from_node(node=self, show_socket_depth=show_socket_depth)
+        self._widget.value = self.to_widget_value()
         return self._widget.to_html(output=output, **kwargs)
 
 
