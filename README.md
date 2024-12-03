@@ -11,7 +11,7 @@ Efficiently design and manage flexible workflows with AiiDA, featuring an intera
 ## Installation
 
 ```console
-    pip install aiida-workgraph
+    pip install aiida-workgraph aiida-workgraph-web-ui
 ```
 
 To install the latest version from source, first clone the repository and then install using `pip`:
