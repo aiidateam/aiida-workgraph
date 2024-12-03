@@ -35,56 +35,6 @@ To change the default python path you can set the environment variable
 PYTEST_PYTHONJOB_PYTHON_EXEC_PATH=/home/user/pyvenv/workgraph-dev/bin/python pytest tests/test_python.py
 ```
 
-#### Running frontend tests in headed mode
-
-To debug the frontend tests you often want to see what happens in the tests.
-By default they are run in headless mode, so no browser is shown.
-To run the frontend tests in headed mode for you have to set an environment variable like this
-```console
-PYTEST_PLAYWRIGHT_HEADLESS=no pytest -m frontend
-```
-
-For the frontend tests we start a web server at port `8000`, please free this address for before running the frontend tests.
-
-### Development on the GUI
-
-For the development on the GUI we use the [REACT](https://react.dev) library
-which can automatically refresh on changes of the JS files. To start the backend
-server please run
-
-```console
-python aiida_workgraph/web/backend/main.py
-```
-
-then start the frontend server with
-```console
-npm --prefix aiida_workgraph/web/frontend start
-```
-
-The frontend server will refresh
-
-#### Tools for writing frontend tests
-
-To determine the right commands for invoking DOM elements playwright offers a
-tool that outputs commands while navigating through the GUI. It requires a
-webserver to be running so it can be started with
-```console
-workgraph web start
-playwright codegen
-```
-
-#### Troubleshooting
-
-##### Tests are not updating after changes in code
-
-You might want to clean your cache
-
-```console
-npm --prefix aiida_workgraph/web/frontend cache clean
-```
-
-and also clear your browsers cache or try to start new private window.
-
 
 ### Building the docs
 

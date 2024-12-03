@@ -11,7 +11,7 @@ Efficiently design and manage flexible workflows with AiiDA, featuring an intera
 ## Installation
 
 ```console
-    pip install aiida-workgraph
+    pip install aiida-workgraph aiida-workgraph-web-ui
 ```
 
 To install the latest version from source, first clone the repository and then install using `pip`:
@@ -22,15 +22,6 @@ cd aiida-workgraph
 pip install -e .
 ```
 
-To install the web app you need to in addition build the JavaScript packages:
-
-```console
-pip install .
-# build web frontend
-cd ../../aiida_workgraph/web/frontend/
-npm install
-npm run build
-```
 
 ## Documentation
 Explore the comprehensive [documentation](https://aiida-workgraph.readthedocs.io/en/latest/) to discover all the features and capabilities of AiiDA Workgraph.
@@ -99,10 +90,6 @@ To contribute to this repository, please enable pre-commit so the code in commit
 pip install -e .[tests,pre-commit]
 pre-commit install
 ```
-
-### Web app
-See the [README.md](https://github.com/aiidateam/aiida-workgraph/blob/main/aiida_workgraph/web/README.md)
-
 
 ## License
 [MIT](http://opensource.org/licenses/MIT)
