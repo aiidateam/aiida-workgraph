@@ -436,7 +436,13 @@ generate_node_graph(wg.pk)
 # ~~~~~~~~~~~~~~~~~~~~
 #
 # WorkGraph also provides a web GUI, where you can view and manage the
-# workgraph. Open a terminal, and run:
+# workgraph. To use the web ui, first install the web ui package:
+#
+# ::
+#
+#    pip install aiida-workgraph-web-ui
+#
+# Open a terminal, and run:
 #
 # ::
 #

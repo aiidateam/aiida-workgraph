@@ -26,6 +26,8 @@ The recommended method of installation is to use the Python package manager |pip
 .. code-block:: console
 
     $ pip install aiida-workgraph
+    $ # install web ui package if you want to use the web ui
+    $ pip install aiida-workgraph-web-ui
 
 This will install the latest stable version that was released to PyPI.
 

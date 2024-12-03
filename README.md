@@ -11,7 +11,7 @@ Efficiently design and manage flexible workflows with AiiDA, featuring an intera
 ## Installation
 
 ```console
-    pip install aiida-workgraph aiida-workgraph-web-ui
+    pip install aiida-workgraph
 ```
 
 To install the latest version from source, first clone the repository and then install using `pip`:
@@ -63,9 +63,14 @@ load_profile()
 wg.submit(inputs = {"add1": {"x": 2, "y": 3}, "multiply1": {"y": 4}}, wait=True)
 print("Result of multiply1 is", wg.tasks["multiply1"].outputs[0].value)
 ```
-
-Start the web app, open a terminal and run:
+## Web ui
+To use the web ui, first install the web ui package:
 ```console
+pip install aiida-workgraph-web-ui
+```
+Then, start the web app with the following command:
+```console
+
 workgraph web start
 ```
 
