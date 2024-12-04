@@ -358,6 +358,22 @@ generate_node_graph(wg.pk)
 
 
 ######################################################################
+# One can also set task inputs from an AiiDA process builder directly.
+#
+
+from aiida.calculations.arithmetic.add import ArithmeticAddCalculation
+
+builder = ArithmeticAddCalculation.get_builder()
+builder.code = code
+builder.x = Int(2)
+builder.y = Int(3)
+
+wg = WorkGraph("test_set_inputs_from_builder")
+add1 = wg.add_task(ArithmeticAddCalculation, name="add1")
+add1.set_from_builder(builder)
+
+
+######################################################################
 # Graph builder
 # -------------
 #
