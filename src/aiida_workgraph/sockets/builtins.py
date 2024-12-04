@@ -71,6 +71,20 @@ class SocketAiiDABool(TaskSocket):
     property_identifier: str = "workgraph.aiida_bool"
 
 
+class SocketAiiDAList(TaskSocket):
+    """AiiDAList socket."""
+
+    identifier: str = "workgraph.aiida_list"
+    property_identifier: str = "workgraph.aiida_list"
+
+
+class SocketAiiDADict(TaskSocket):
+    """AiiDADict socket."""
+
+    identifier: str = "workgraph.aiida_dict"
+    property_identifier: str = "workgraph.aiida_dict"
+
+
 class SocketAiiDAIntVector(TaskSocket):
     """Socket with a AiiDAIntVector property."""
 

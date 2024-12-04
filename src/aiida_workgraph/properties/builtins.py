@@ -102,6 +102,18 @@ class PropertyAiiDAString(TaskProperty):
             )
 
 
+class PropertyAiiDAList(TaskProperty):
+    """A new class for List type."""
+
+    identifier: str = "workgraph.aiida_list"
+    allowed_types = (list, orm.List, str, type(None))
+
+    def set_value(self, value: Union[list, orm.List, str] = None) -> None:
+        if isinstance(value, (list)):
+            value = orm.List(list=value)
+        super().set_value(value)
+
+
 class PropertyAiiDADict(TaskProperty):
     """A new class for Dict type."""
 

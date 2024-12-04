@@ -19,6 +19,8 @@ from typing import Any
         (orm.Str, "abc", "workgraph.aiida_string"),
         (orm.Bool, True, "workgraph.aiida_bool"),
         (orm.Bool, "{{variable}}", "workgraph.aiida_bool"),
+        (orm.List, [1, 2, 3], "workgraph.aiida_list"),
+        (orm.Dict, {"a": 1}, "workgraph.aiida_dict"),
     ),
 )
 def test_type_mapping(data_type, data, identifier) -> None:
