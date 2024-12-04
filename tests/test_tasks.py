@@ -87,3 +87,24 @@ def test_set_inputs(decorated_add: Callable) -> None:
         ]
         is False
     )
+
+
+def test_set_inputs_from_builder(add_code) -> None:
+    """Test setting inputs of a task from a builder function."""
+    from aiida.calculations.arithmetic.add import ArithmeticAddCalculation
+
+    wg = WorkGraph(name="test_set_inputs_from_builder")
+    add1 = wg.add_task(ArithmeticAddCalculation, "add1")
+    # create the builder
+    builder = add_code.get_builder()
+    builder.x = 1
+    builder.y = 2
+    add1.set_from_builder(builder)
+    assert add1.inputs["x"].value == 1
+    assert add1.inputs["y"].value == 2
+    assert add1.inputs["code"].value == add_code
+    with pytest.raises(
+        AttributeError,
+        match=f"Executor {ArithmeticAddCalculation.__name__} does not have the get_builder_from_protocol method.",
+    ):
+        add1.set_from_protocol(code=add_code, protocol="fast")
