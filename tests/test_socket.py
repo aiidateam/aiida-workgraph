@@ -48,10 +48,14 @@ def test_vector_socket() -> None:
         "vector2d",
         property_data={"size": 2, "default": [1, 2]},
     )
-    try:
+    assert t.inputs["vector2d"].property.get_metadata() == {
+        "size": 2,
+        "default": [1, 2],
+    }
+    with pytest.raises(ValueError, match="Invalid size: Expected 2, got 3 instead."):
         t.inputs["vector2d"].value = [1, 2, 3]
-    except Exception as e:
-        assert "Invalid size: Expected 2, got 3 instead." in str(e)
+    with pytest.raises(ValueError, match="Invalid item type: Expected "):
+        t.inputs["vector2d"].value = [1.1, 2.2]
 
 
 def test_aiida_data_socket() -> None:
