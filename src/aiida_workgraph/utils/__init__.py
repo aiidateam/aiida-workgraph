@@ -322,10 +322,11 @@ def get_workgraph_data(process: Union[int, orm.Node]) -> Optional[Dict[str, Any]
     """Get the workgraph data from the process node."""
     from aiida.orm.utils.serialize import deserialize_unsafe
     from aiida.orm import load_node
+    from aiida_workgraph.config import WORKGRAPH_EXTRA_KEY
 
     if isinstance(process, int):
         process = load_node(process)
-    wgdata = process.base.extras.get("_workgraph", None)
+    wgdata = process.base.extras.get(WORKGRAPH_EXTRA_KEY, None)
     if wgdata is None:
         return
     for name, task in wgdata["tasks"].items():

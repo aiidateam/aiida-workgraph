@@ -362,8 +362,7 @@ class WorkGraph(node_graph.NodeGraph):
         process = aiida.orm.load_node(pk)
         wgdata = get_workgraph_data(process)
         if wgdata is None:
-            print("No workgraph data found in the process node.")
-            return
+            raise ValueError(f"WorkGraph data not found for process {pk}.")
         wg = cls.from_dict(wgdata)
         wg.process = process
         wg.update()
