@@ -518,12 +518,15 @@ def generate_tdata(
     """Generate task data for creating a task."""
     from node_graph.decorator import generate_input_sockets
 
-    _inputs = generate_input_sockets(
+    task_inputs = generate_input_sockets(
         func, inputs, properties, type_mapping=type_mapping
     )
+    for input in task_inputs:
+        input.setdefault("metadata", {})
+        input["metadata"]["is_function_input"] = True
     task_outputs = outputs
     # add built-in sockets
-    _inputs.append(
+    task_inputs.append(
         {
             "identifier": "workgraph.any",
             "name": "_wait",
@@ -543,7 +546,7 @@ def generate_tdata(
             "group_outputs": group_outputs or [],
         },
         "properties": properties,
-        "inputs": _inputs,
+        "inputs": task_inputs,
         "outputs": task_outputs,
     }
     tdata["executor"] = build_callable(func)
@@ -593,11 +596,17 @@ class TaskDecoratorCollection:
             task_type = task_type
             if hasattr(func, "node_class"):
                 task_type = task_types.get(func.node_class, task_type)
+            task_outputs = outputs or [
+                {"identifier": "workgraph.any", "name": "result"}
+            ]
+            for output in task_outputs:
+                output.setdefault("metadata", {})
+                output["metadata"]["is_function_output"] = True
             tdata = generate_tdata(
                 func,
                 identifier,
                 inputs or [],
-                outputs or [{"identifier": "workgraph.any", "name": "result"}],
+                task_outputs,
                 properties or [],
                 catalog,
                 task_type,
