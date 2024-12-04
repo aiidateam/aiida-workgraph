@@ -38,6 +38,7 @@ def test_error_handlers(add_code):
             }
         },
     )
+    assert len(wg.error_handlers) == 1
     wg.submit(
         inputs={
             "add1": {"code": add_code, "x": orm.Int(1), "y": orm.Int(-2)},

@@ -1,6 +1,8 @@
 import json
 from aiida.manage.configuration.settings import AIIDA_CONFIG_FOLDER
 
+WORKGRAPH_EXTRA_KEY = "_workgraph"
+
 
 def load_config() -> dict:
     """Load the configuration from the config file."""

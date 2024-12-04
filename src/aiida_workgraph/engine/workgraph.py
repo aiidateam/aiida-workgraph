@@ -308,8 +308,9 @@ class WorkGraphEngine(Process, metaclass=Protect):
     def read_wgdata_from_base(self) -> t.Dict[str, t.Any]:
         """Read workgraph data from base.extras."""
         from aiida_workgraph.orm.function_data import PickledLocalFunction
+        from aiida_workgraph.config import WORKGRAPH_EXTRA_KEY
 
-        wgdata = self.node.base.extras.get("_workgraph")
+        wgdata = self.node.base.extras.get(WORKGRAPH_EXTRA_KEY)
         for name, task in wgdata["tasks"].items():
             wgdata["tasks"][name] = deserialize_unsafe(task)
             for _, input in wgdata["tasks"][name]["inputs"].items():

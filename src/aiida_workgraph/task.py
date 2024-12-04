@@ -81,14 +81,25 @@ class Task(GraphNode):
             raise ValueError(msg)
         self.context_mapping.update(context)
 
-    def set_from_protocol(self, *args: Any, **kwargs: Any) -> None:
-        """Set the task inputs from protocol data."""
-        from aiida_workgraph.utils import get_executor, get_dict_from_builder
+    def set_from_builder(self, builder: Any) -> None:
+        """Set the task inputs from a AiiDA ProcessBuilder."""
+        from aiida_workgraph.utils import get_dict_from_builder
 
-        executor = get_executor(self.get_executor())[0]
-        builder = executor.get_builder_from_protocol(*args, **kwargs)
         data = get_dict_from_builder(builder)
         self.set(data)
+
+    def set_from_protocol(self, *args: Any, **kwargs: Any) -> None:
+        """Set the task inputs from protocol data."""
+        from aiida_workgraph.utils import get_executor
+
+        executor = get_executor(self.get_executor())[0]
+        # check if the executor has the get_builder_from_protocol method
+        if not hasattr(executor, "get_builder_from_protocol"):
+            raise AttributeError(
+                f"Executor {executor.__name__} does not have the get_builder_from_protocol method."
+            )
+        builder = executor.get_builder_from_protocol(*args, **kwargs)
+        self.set_from_builder(builder)
 
     @classmethod
     def new(

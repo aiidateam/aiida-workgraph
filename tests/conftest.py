@@ -31,7 +31,10 @@ def add_code(fixture_localhost):
     from aiida.orm import InstalledCode
 
     code = InstalledCode(
-        label="add", computer=fixture_localhost, filepath_executable="/bin/bash"
+        label="add",
+        computer=fixture_localhost,
+        filepath_executable="/bin/bash",
+        default_calc_job_plugin="arithmetic.add",
     )
     code.store()
     return code

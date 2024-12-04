@@ -14,6 +14,8 @@ def test_workgraph_widget(wg_calcfunction):
     # to_html
     data = wg.to_html()
     assert isinstance(data, IFrame)
+    # check _repr_mimebundle_ is working
+    data = wg._repr_mimebundle_()
 
 
 def test_workgraph_task(wg_calcfunction):
@@ -26,3 +28,5 @@ def test_workgraph_task(wg_calcfunction):
     # to html
     data = wg.tasks["sumdiff2"].to_html()
     assert isinstance(data, IFrame)
+    # check _repr_mimebundle_ is working
+    data = wg.tasks["sumdiff2"]._repr_mimebundle_()

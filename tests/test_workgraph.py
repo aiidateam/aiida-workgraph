@@ -28,8 +28,29 @@ def test_add_task():
     assert len(wg.links) == 1
 
 
+def test_show_state(wg_calcfunction):
+    from io import StringIO
+    import sys
+
+    # Redirect stdout to capture prints
+    captured_output = StringIO()
+    sys.stdout = captured_output
+    # Call the method
+    wg_calcfunction.name = "test_show_state"
+    wg_calcfunction.show()
+    # Reset stdout
+    sys.stdout = sys.__stdout__
+    # Check the output
+    output = captured_output.getvalue()
+    assert "WorkGraph: test_show_state, PK: None, State: CREATED" in output
+    assert "sumdiff1" in output
+    assert "PLANNED" in output
+
+
 def test_save_load(wg_calcfunction):
     """Save the workgraph"""
+    from aiida_workgraph.config import WORKGRAPH_EXTRA_KEY
+
     wg = wg_calcfunction
     wg.name = "test_save_load"
     wg.save()
@@ -38,6 +59,12 @@ def test_save_load(wg_calcfunction):
     assert wg.process.label == "test_save_load"
     wg2 = WorkGraph.load(wg.process.pk)
     assert len(wg.tasks) == len(wg2.tasks)
+    # remove the extra
+    wg.process.base.extras.delete(WORKGRAPH_EXTRA_KEY)
+    with pytest.raises(
+        ValueError, match=f"WorkGraph data not found for process {wg.process.pk}."
+    ):
+        WorkGraph.load(wg.process.pk)
 
 
 def test_organize_nested_inputs():
@@ -86,7 +113,7 @@ def test_reset_message(wg_calcjob):
     assert "Action: reset. {'add2'}" in report
 
 
-def test_restart(wg_calcfunction):
+def test_restart_and_reset(wg_calcfunction):
     """Restart from a finished workgraph.
     Load the workgraph, modify the task, and restart the workgraph.
     Only the modified node and its child tasks will be rerun."""
@@ -109,6 +136,10 @@ def test_restart(wg_calcfunction):
     assert wg1.tasks["sumdiff2"].node.pk != wg.tasks["sumdiff2"].pk
     assert wg1.tasks["sumdiff3"].node.pk != wg.tasks["sumdiff3"].pk
     assert wg1.tasks["sumdiff3"].node.outputs.sum == 19
+    wg1.reset()
+    assert wg1.process is None
+    assert wg1.tasks["sumdiff3"].process is None
+    assert wg1.tasks["sumdiff3"].state == "PLANNED"
 
 
 def test_extend_workgraph(decorated_add_multiply_group):

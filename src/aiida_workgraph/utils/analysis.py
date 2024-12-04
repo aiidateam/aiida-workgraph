@@ -3,6 +3,7 @@ from typing import Optional, Dict, Tuple, List
 # import datetime
 from aiida.orm import ProcessNode
 from aiida.orm.utils.serialize import serialize, deserialize_unsafe
+from aiida_workgraph.config import WORKGRAPH_EXTRA_KEY
 
 
 class WorkGraphSaver:
@@ -223,7 +224,7 @@ class WorkGraphSaver:
         # nodes is a copy of tasks, so we need to pop it out
         self.wgdata["error_handlers"] = serialize(self.wgdata["error_handlers"])
         self.wgdata["context"] = serialize(self.wgdata["context"])
-        self.process.base.extras.set("_workgraph", self.wgdata)
+        self.process.base.extras.set(WORKGRAPH_EXTRA_KEY, self.wgdata)
 
     def save_task_states(self) -> Dict:
         """Get task states."""
@@ -277,7 +278,7 @@ class WorkGraphSaver:
     ) -> Optional[Dict]:
 
         process = self.process if process is None else process
-        wgdata = process.base.extras.get("_workgraph", None)
+        wgdata = process.base.extras.get(WORKGRAPH_EXTRA_KEY, None)
         if wgdata is None:
             print("No workgraph data found in the process node.")
             return
@@ -318,7 +319,7 @@ class WorkGraphSaver:
         Returns:
             bool: _description_
         """
-        if self.process.base.extras.get("_workgraph", None) is not None:
+        if self.process.base.extras.get(WORKGRAPH_EXTRA_KEY, None) is not None:
             return True
         return False
 
