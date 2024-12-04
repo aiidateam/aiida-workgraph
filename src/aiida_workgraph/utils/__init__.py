@@ -111,8 +111,8 @@ def create_data_node(executor: orm.Data, args: list, kwargs: dict) -> orm.Node:
     # print("Create data node: ", executor, args, kwargs)
     extras = kwargs.pop("extras", {})
     repository_metadata = kwargs.pop("repository_metadata", {})
-    if issubclass(executor, (orm.BaseType, orm.Dict)):
-        data_node = executor(*args)
+    if issubclass(executor, (orm.List, orm.Dict)):
+        data_node = executor(**kwargs)
     else:
         data_node = executor(*args)
         data_node.base.attributes.set_many(kwargs)

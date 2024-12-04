@@ -192,15 +192,12 @@ class MyAdd(Task):
         "module": "aiida_workgraph.executors.test",
         "name": "add",
     }
-    kwargs = ["x", "y"]
 
     def create_sockets(self):
         self.inputs.clear()
         self.outputs.clear()
         inp = self.inputs.new("workgraph.Any", "x")
-        inp.add_property("workgraph.Any", "x", default=0.0)
         inp = self.inputs.new("workgraph.Any", "y")
-        inp.add_property("workgraph.Any", "y", default=0.0)
         self.outputs.new("workgraph.Any", "sum")
 
 

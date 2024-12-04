@@ -12,8 +12,6 @@ class TestAdd(Task):
         "module": "aiida_workgraph.executors.test",
         "name": "add",
     }
-    args = ["x", "y"]
-    kwargs = ["t"]
 
     def create_properties(self) -> None:
         self.properties.new("workgraph.aiida_float", "t", default=1.0)
@@ -25,7 +23,9 @@ class TestAdd(Task):
         inp.add_property("workgraph.aiida_float", "x", default=0.0)
         inp = self.inputs.new("workgraph.aiida_float", "y")
         inp.add_property("workgraph.aiida_float", "y", default=0.0)
+        self.inputs.new("workgraph.any", "_wait", arg_type="none", link_limit=100000)
         self.outputs.new("workgraph.aiida_float", "sum")
+        self.outputs.new("workgraph.any", "_wait")
 
 
 class TestSumDiff(Task):
@@ -39,8 +39,6 @@ class TestSumDiff(Task):
         "module": "aiida_workgraph.executors.test",
         "name": "sum_diff",
     }
-    args = ["x", "y"]
-    kwargs = ["t"]
 
     def create_properties(self) -> None:
         self.properties.new("workgraph.aiida_float", "t", default=1.0)
@@ -52,8 +50,10 @@ class TestSumDiff(Task):
         inp.add_property("workgraph.aiida_float", "x", default=0.0)
         inp = self.inputs.new("workgraph.aiida_float", "y")
         inp.add_property("workgraph.aiida_float", "y", default=0.0)
+        self.inputs.new("workgraph.any", "_wait", arg_type="none", link_limit=100000)
         self.outputs.new("workgraph.aiida_float", "sum")
         self.outputs.new("workgraph.aiida_float", "diff")
+        self.outputs.new("workgraph.any", "_wait")
 
 
 class TestArithmeticMultiplyAdd(Task):
@@ -67,7 +67,6 @@ class TestArithmeticMultiplyAdd(Task):
         "name": "core.arithmetic.multiply_add",
         "type": "WorkflowFactory",
     }
-    kwargs = ["code", "x", "y", "z"]
 
     def create_properties(self) -> None:
         pass
@@ -82,4 +81,6 @@ class TestArithmeticMultiplyAdd(Task):
         inp.add_property("workgraph.aiida_int", "y", default=0.0)
         inp = self.inputs.new("workgraph.aiida_int", "z")
         inp.add_property("workgraph.aiida_int", "z", default=0.0)
+        self.inputs.new("workgraph.any", "_wait", arg_type="none", link_limit=100000)
         self.outputs.new("workgraph.aiida_int", "result")
+        self.outputs.new("workgraph.any", "_wait")

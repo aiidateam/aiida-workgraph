@@ -46,13 +46,12 @@ def test_decorators_calcfunction_args(task_calcfunction) -> None:
     kwargs = set(task_calcfunction.process_class.spec().inputs.ports.keys()).union(
         metadata_kwargs
     )
-    kwargs.remove("a")
-    #
     n = task_calcfunction.task()
-    assert n.args == ["a"]
-    assert set(n.kwargs) == set(kwargs)
-    assert n.var_args is None
-    assert n.var_kwargs == "c"
+    tdata = n.to_dict()
+    assert tdata["args"] == []
+    assert set(tdata["kwargs"]) == set(kwargs)
+    assert tdata["var_args"] is None
+    assert tdata["var_kwargs"] == "c"
     assert n.outputs.keys() == ["result", "_outputs", "_wait"]
 
 
@@ -77,9 +76,10 @@ def task_function(request):
 
 def test_decorators_task_args(task_function):
 
-    tdata = task_function.tdata
-    assert tdata["args"] == ["a"]
-    assert tdata["kwargs"] == ["b"]
+    n = task_function.task()
+    tdata = n.to_dict()
+    assert tdata["args"] == []
+    assert tdata["kwargs"] == ["a", "b"]
     assert tdata["var_args"] is None
     assert tdata["var_kwargs"] == "c"
     assert set(tdata["outputs"].keys()) == set(["result", "_outputs", "_wait"])
@@ -116,13 +116,13 @@ def test_decorators_workfunction_args(task_workfunction) -> None:
     kwargs = set(task_workfunction.process_class.spec().inputs.ports.keys()).union(
         metadata_kwargs
     )
-    kwargs.remove("a")
     #
     n = task_workfunction.task()
-    assert n.args == ["a"]
-    assert set(n.kwargs) == set(kwargs)
-    assert n.var_args is None
-    assert n.var_kwargs == "c"
+    tdata = n.to_dict()
+    assert tdata["args"] == []
+    assert set(tdata["kwargs"]) == set(kwargs)
+    assert tdata["var_args"] is None
+    assert tdata["var_kwargs"] == "c"
     assert n.outputs.keys() == ["result", "_outputs", "_wait"]
 
 
@@ -169,10 +169,11 @@ def task_graph_builder(request):
 def test_decorators_graph_builder_args(task_graph_builder) -> None:
     assert task_graph_builder.identifier == "add_multiply_group"
     n = task_graph_builder.task()
-    assert n.args == ["a"]
-    assert n.kwargs == ["b"]
-    assert n.var_args is None
-    assert n.var_kwargs == "c"
+    tdata = n.to_dict()
+    assert tdata["args"] == []
+    assert tdata["kwargs"] == ["a", "b"]
+    assert tdata["var_args"] is None
+    assert tdata["var_kwargs"] == "c"
     assert set(n.outputs.keys()) == set(["_outputs", "_wait"])
 
 
