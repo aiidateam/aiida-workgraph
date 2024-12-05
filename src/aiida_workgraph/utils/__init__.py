@@ -439,7 +439,8 @@ def pickle_callable(data: dict):
     """Pickle the callable."""
     from aiida_workgraph.orm.function_data import PickledFunction
 
-    data["callable"] = PickledFunction(data["callable"]).store()
+    if not isinstance(data["callable"], PickledFunction):
+        data["callable"] = PickledFunction(data["callable"]).store()
 
 
 def serialize_workgraph_inputs(wgdata):
