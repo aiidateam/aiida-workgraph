@@ -42,15 +42,12 @@ def prepare_for_python_task(task: dict, kwargs: dict, var_kwargs: dict) -> dict:
     """Prepare the inputs for PythonJob"""
     from aiida_pythonjob import prepare_pythonjob_inputs
 
-    # get the names kwargs for the PythonJob, which are the inputs before _wait
     function_inputs = kwargs.pop("function_inputs", {})
-    sorted_inputs = sort_socket_data(task["inputs"])
-    # TODO better way to find the function_inputs
-    for input in sorted_inputs:
-        if input["name"] == "_wait":
-            break
-        function_inputs[input["name"]] = kwargs.pop(input["name"], None)
-
+    for _, input in task["inputs"].items():
+        if input["metadata"].get("is_function_input", False):
+            # if the input is not in the function_inputs, we need try to retrieve it from kwargs
+            if input["name"] not in function_inputs:
+                function_inputs[input["name"]] = kwargs.pop(input["name"], None)
     # if the var_kwargs is not None, we need to pop the var_kwargs from the kwargs
     # then update the function_inputs if var_kwargs is not None
     if task["var_kwargs"] is not None:
@@ -74,25 +71,18 @@ def prepare_for_python_task(task: dict, kwargs: dict, var_kwargs: dict) -> dict:
     metadata.update({"call_link_label": task["name"]})
     # get the source code of the function
     executor = task["executor"]
-
-    # outputs
-    outputs = [
-        {"name": output["name"], "identifier": output["identifier"]}
-        for output, _ in sorted(
-            ((output, output["list_index"]) for output in task["outputs"].values()),
-            key=lambda x: x[1],
-        )
-    ]
-    # only the output before _wait is the function_outputs
     function_outputs = []
-    for output in outputs:
-        if output["name"] == "_wait":
-            break
-        # if the output is WORKGRAPH.NAMESPACE, we need to change it to NAMESPACE
-        if output["identifier"].upper() == "WORKGRAPH.NAMESPACE":
-            function_outputs.append({"name": output["name"], "identifier": "NAMESPACE"})
-        else:
-            function_outputs.append(output)
+    for output in task["outputs"].values():
+        if output["metadata"].get("is_function_output", False):
+            # if the output is WORKGRAPH.NAMESPACE, we need to change it to NAMESPACE
+            if output["identifier"].upper() == "WORKGRAPH.NAMESPACE":
+                function_outputs.append(
+                    {"name": output["name"], "identifier": "NAMESPACE"}
+                )
+            else:
+                function_outputs.append(
+                    {"name": output["name"], "identifier": output["identifier"]}
+                )
 
     inputs = prepare_pythonjob_inputs(
         function_data=executor,

@@ -8,23 +8,21 @@ class TimeMonitor(Task):
     name = "TimeMonitor"
     node_type = "MONITOR"
     catalog = "Monitor"
-    args = ["datetime"]
 
     _executor = {
         "module": "aiida_workgraph.executors.monitors",
         "name": "time_monitor",
     }
-    kwargs = ["interval", "timeout"]
 
     def create_sockets(self) -> None:
         self.inputs.clear()
         self.outputs.clear()
-        self.inputs.new("workgraph.any", "datetime")
+        self.inputs.new("workgraph.any", "time")
         inp = self.inputs.new("workgraph.any", "interval")
         inp.add_property("workgraph.any", default=1.0)
         inp = self.inputs.new("workgraph.any", "timeout")
         inp.add_property("workgraph.any", default=86400.0)
-        inp = self.inputs.new("workgraph.any", "_wait")
+        self.inputs.new("workgraph.any", "_wait", arg_type="none", link_limit=100000)
         inp.link_limit = 100000
         self.outputs.new("workgraph.any", "result")
         self.outputs.new("workgraph.any", "_wait")
@@ -37,13 +35,11 @@ class FileMonitor(Task):
     name = "FileMonitor"
     node_type = "MONITOR"
     catalog = "Monitor"
-    args = ["filepath"]
 
     _executor = {
         "module": "aiida_workgraph.executors.monitors",
         "name": "file_monitor",
     }
-    kwargs = ["interval", "timeout"]
 
     def create_sockets(self) -> None:
         self.inputs.clear()
@@ -53,7 +49,7 @@ class FileMonitor(Task):
         inp.add_property("workgraph.any", default=1.0)
         inp = self.inputs.new("workgraph.any", "timeout")
         inp.add_property("workgraph.any", default=86400.0)
-        inp = self.inputs.new("workgraph.any", "_wait")
+        self.inputs.new("workgraph.any", "_wait", arg_type="none", link_limit=100000)
         inp.link_limit = 100000
         self.outputs.new("workgraph.any", "result")
         self.outputs.new("workgraph.any", "_wait")
@@ -66,13 +62,11 @@ class TaskMonitor(Task):
     name = "TaskMonitor"
     node_type = "MONITOR"
     catalog = "Monitor"
-    args = ["task_name"]
 
     _executor = {
         "module": "aiida_workgraph.executors.monitors",
         "name": "task_monitor",
     }
-    kwargs = ["interval", "timeout", "workgraph_pk", "workgraph_name"]
 
     def create_sockets(self) -> None:
         self.inputs.clear()
@@ -84,7 +78,7 @@ class TaskMonitor(Task):
         inp.add_property("workgraph.any", default=1.0)
         inp = self.inputs.new("workgraph.any", "timeout")
         inp.add_property("workgraph.any", default=86400.0)
-        inp = self.inputs.new("workgraph.any", "_wait")
+        self.inputs.new("workgraph.any", "_wait", arg_type="none", link_limit=100000)
         inp.link_limit = 100000
         self.outputs.new("workgraph.any", "result")
         self.outputs.new("workgraph.any", "_wait")

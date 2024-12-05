@@ -13,11 +13,11 @@ async def monitor(function, interval, timeout, *args, **kwargs):
         await asyncio.sleep(interval)
 
 
-def file_monitor(filename: str):
+def file_monitor(filepath: str):
     """Check if the file exists."""
     import os
 
-    return os.path.exists(filename)
+    return os.path.exists(filepath)
 
 
 def time_monitor(time: str):

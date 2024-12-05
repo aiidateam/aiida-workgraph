@@ -111,8 +111,8 @@ def create_data_node(executor: orm.Data, args: list, kwargs: dict) -> orm.Node:
     # print("Create data node: ", executor, args, kwargs)
     extras = kwargs.pop("extras", {})
     repository_metadata = kwargs.pop("repository_metadata", {})
-    if issubclass(executor, (orm.BaseType, orm.Dict)):
-        data_node = executor(*args)
+    if issubclass(executor, (orm.List, orm.Dict)):
+        data_node = executor(**kwargs)
     else:
         data_node = executor(*args)
         data_node.base.attributes.set_many(kwargs)
@@ -558,12 +558,13 @@ def workgraph_to_short_json(
     #
     for name, task in wgdata["tasks"].items():
         # Add required inputs to nodes
-        inputs = [
-            {"name": name, "identifier": input["identifier"]}
-            for name, input in task["inputs"].items()
-            if name in task["args"]
-            or (task["identifier"].upper() == "SHELLJOB" and name.startswith("nodes."))
-        ]
+        inputs = []
+        for input in task["inputs"].values():
+            metadata = input.get("metadata", {}) or {}
+            if metadata.get("required", False):
+                inputs.append(
+                    {"name": input["name"], "identifier": input["identifier"]}
+                )
 
         properties = process_properties(task)
         wgdata_short["nodes"][name] = {

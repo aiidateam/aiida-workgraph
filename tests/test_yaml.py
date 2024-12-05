@@ -7,6 +7,9 @@ cwd = os.path.dirname(os.path.abspath(__file__))
 
 def test_calcfunction():
     wg = WorkGraph.from_yaml(os.path.join(cwd, "datas/test_calcfunction.yaml"))
+    assert wg.tasks["float1"].inputs["value"].value == 3.0
+    assert wg.tasks["sumdiff1"].inputs["x"].value == 2.0
+    assert wg.tasks["sumdiff2"].inputs["x"].value == 4.0
     wg.run()
     assert wg.tasks["sumdiff2"].node.outputs.sum == 9
 

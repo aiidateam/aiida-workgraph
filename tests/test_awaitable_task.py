@@ -30,7 +30,7 @@ def test_time_monitor(decorated_add):
     monitor1 = wg.add_task(
         "workgraph.time_monitor",
         "monitor1",
-        datetime=str(datetime.datetime.now() + datetime.timedelta(seconds=10)),
+        time=str(datetime.datetime.now() + datetime.timedelta(seconds=10)),
     )
     add1 = wg.add_task(decorated_add, "add1", x=1, y=2)
     add1.waiting_on.add(monitor1)
