@@ -205,7 +205,7 @@ class WorkGraphSaver:
         """
         from aiida_workgraph.utils import workgraph_to_short_json
         import inspect
-        from aiida_workgraph.orm.function_data import PickledLocalFunction
+        from aiida_workgraph.orm.pickled_function import PickledLocalFunction
 
         # pprint(self.wgdata)
         # self.wgdata["created"] = datetime.datetime.utcnow()

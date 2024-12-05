@@ -79,8 +79,8 @@ workgraph = "aiida_workgraph.cli.cmd_workgraph:workgraph"
 
 [project.entry-points."aiida.data"]
 "workgraph.pickled_data" = "aiida_workgraph.orm.pickled_data:PickledData"
-"workgraph.pickled_function" = "aiida_workgraph.orm.function_data:PickledFunction"
-"workgraph.pickled_local_function" = "aiida_workgraph.orm.function_data:PickledLocalFunction"
+"workgraph.pickled_function" = "aiida_workgraph.orm.pickled_function:PickledFunction"
+"workgraph.pickled_local_function" = "aiida_workgraph.orm.pickled_function:PickledLocalFunction"
 
 
 [project.entry-points."aiida.node"]

@@ -50,7 +50,7 @@ def test_show_state(wg_calcfunction):
 def test_save_load(wg_calcfunction, decorated_add):
     """Save the workgraph"""
     from aiida_workgraph.config import WORKGRAPH_EXTRA_KEY
-    from aiida_workgraph.orm.function_data import PickledFunction
+    from aiida_workgraph.orm.pickled_function import PickledFunction
 
     wg = wg_calcfunction
     wg.add_task(decorated_add, name="add1", x=2, y=3)

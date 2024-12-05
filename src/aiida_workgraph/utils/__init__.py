@@ -75,7 +75,7 @@ def get_executor(data: Dict[str, Any]) -> Union[Process, Any]:
     """Import executor from path and return the executor and type."""
     import importlib
     from aiida.plugins import CalculationFactory, WorkflowFactory, DataFactory
-    from aiida_workgraph.orm.function_data import PickledFunction
+    from aiida_workgraph.orm.pickled_function import PickledFunction
 
     data = data or {}
     use_module_path = data.get("use_module_path", True)
@@ -437,7 +437,7 @@ def get_or_create_code(
 
 def pickle_callable(data: dict):
     """Pickle the callable."""
-    from aiida_workgraph.orm.function_data import PickledFunction
+    from aiida_workgraph.orm.pickled_function import PickledFunction
 
     if not isinstance(data["callable"], PickledFunction):
         data["callable"] = PickledFunction(data["callable"]).store()
@@ -450,7 +450,7 @@ def serialize_workgraph_inputs(wgdata):
     defined in a scope, e.g., local function in another function.
     So, if a function is used as input, we needt to serialize the function.
     """
-    from aiida_workgraph.orm.function_data import PickledLocalFunction
+    from aiida_workgraph.orm.pickled_function import PickledLocalFunction
     from aiida_workgraph.tasks.pythonjob import PythonJob
     import inspect
 
