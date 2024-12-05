@@ -4,10 +4,8 @@ from aiida.common.extendeddicts import AttributeDict
 
 def prepare_for_workgraph_task(task: dict, kwargs: dict) -> tuple:
     """Prepare the inputs for WorkGraph task"""
-    from aiida_workgraph.utils import organize_nested_inputs, serialize_properties
-    from aiida.orm.utils.serialize import deserialize_unsafe
 
-    wgdata = deserialize_unsafe(task["executor"]["wgdata"])
+    wgdata = task["executor"]["wgdata"]
     wgdata["name"] = task["name"]
     wgdata["metadata"]["group_outputs"] = task["metadata"]["group_outputs"]
     # update the workgraph data by kwargs
@@ -19,8 +17,8 @@ def prepare_for_workgraph_task(task: dict, kwargs: dict) -> tuple:
                 "value"
             ] = value
     # merge the properties
-    organize_nested_inputs(wgdata)
-    serialize_properties(wgdata)
+    # organize_nested_inputs(wgdata)
+    # serialize_workgraph_inputs(wgdata)
     metadata = {"call_link_label": task["name"]}
     inputs = {"wg": wgdata, "metadata": metadata}
     return inputs, wgdata
@@ -41,6 +39,7 @@ def sort_socket_data(socket_data: dict) -> dict:
 def prepare_for_python_task(task: dict, kwargs: dict, var_kwargs: dict) -> dict:
     """Prepare the inputs for PythonJob"""
     from aiida_pythonjob import prepare_pythonjob_inputs
+    from aiida_workgraph.utils import get_executor
 
     function_inputs = kwargs.pop("function_inputs", {})
     for _, input in task["inputs"].items():
@@ -69,8 +68,8 @@ def prepare_for_python_task(task: dict, kwargs: dict, var_kwargs: dict) -> dict:
 
     metadata = kwargs.pop("metadata", {})
     metadata.update({"call_link_label": task["name"]})
-    # get the source code of the function
-    executor = task["executor"]
+    # get the function from executor
+    func, _ = get_executor(task["executor"])
     function_outputs = []
     for output in task["outputs"].values():
         if output["metadata"].get("is_function_output", False):
@@ -85,7 +84,7 @@ def prepare_for_python_task(task: dict, kwargs: dict, var_kwargs: dict) -> dict:
                 )
 
     inputs = prepare_pythonjob_inputs(
-        function_data=executor,
+        function=func,
         function_inputs=function_inputs,
         function_outputs=function_outputs,
         code=code,

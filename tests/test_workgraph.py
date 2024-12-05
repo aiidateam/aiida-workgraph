@@ -47,11 +47,13 @@ def test_show_state(wg_calcfunction):
     assert "PLANNED" in output
 
 
-def test_save_load(wg_calcfunction):
+def test_save_load(wg_calcfunction, decorated_add):
     """Save the workgraph"""
     from aiida_workgraph.config import WORKGRAPH_EXTRA_KEY
+    from aiida_workgraph.orm.pickled_function import PickledFunction
 
     wg = wg_calcfunction
+    wg.add_task(decorated_add, name="add1", x=2, y=3)
     wg.name = "test_save_load"
     wg.save()
     assert wg.process.process_state.value.upper() == "CREATED"
@@ -59,7 +61,14 @@ def test_save_load(wg_calcfunction):
     assert wg.process.label == "test_save_load"
     wg2 = WorkGraph.load(wg.process.pk)
     assert len(wg.tasks) == len(wg2.tasks)
-    # remove the extra
+    # check the executor of the decorated task
+    callable = wg2.tasks["add1"].get_executor()["callable"]
+    assert isinstance(callable, PickledFunction)
+    assert callable.value(1, 2) == 3
+    # TODO, the following code is not working
+    # wg2.save()
+    # assert wg2.tasks["add1"].executor == decorated_add
+    # remove the extra, will raise an error
     wg.process.base.extras.delete(WORKGRAPH_EXTRA_KEY)
     with pytest.raises(
         ValueError, match=f"WorkGraph data not found for process {wg.process.pk}."

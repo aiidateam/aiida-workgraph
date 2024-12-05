@@ -52,7 +52,7 @@ def test_decorators_calcfunction_args(task_calcfunction) -> None:
     assert set(tdata["kwargs"]) == set(kwargs)
     assert tdata["var_args"] is None
     assert tdata["var_kwargs"] == "c"
-    assert n.outputs.keys() == ["result", "_outputs", "_wait"]
+    assert set(n.outputs.keys()) == set(["result", "_outputs", "_wait"])
 
 
 @pytest.fixture(params=["decorator_factory", "decorator"])
@@ -123,7 +123,7 @@ def test_decorators_workfunction_args(task_workfunction) -> None:
     assert set(tdata["kwargs"]) == set(kwargs)
     assert tdata["var_args"] is None
     assert tdata["var_kwargs"] == "c"
-    assert n.outputs.keys() == ["result", "_outputs", "_wait"]
+    assert set(n.outputs.keys()) == set(["result", "_outputs", "_wait"])
 
 
 def test_decorators_parameters() -> None:

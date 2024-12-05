@@ -307,7 +307,7 @@ class WorkGraphEngine(Process, metaclass=Protect):
 
     def read_wgdata_from_base(self) -> t.Dict[str, t.Any]:
         """Read workgraph data from base.extras."""
-        from aiida_workgraph.orm.function_data import PickledLocalFunction
+        from aiida_workgraph.orm.pickled_function import PickledLocalFunction
         from aiida_workgraph.config import WORKGRAPH_EXTRA_KEY
 
         wgdata = self.node.base.extras.get(WORKGRAPH_EXTRA_KEY)

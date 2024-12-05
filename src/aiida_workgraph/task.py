@@ -58,6 +58,9 @@ class Task(GraphNode):
         from aiida.orm.utils.serialize import serialize
 
         tdata = super().to_dict(short=short)
+        # clear unused keys
+        for key in ["ctrl_inputs", "ctrl_outputs"]:
+            tdata.pop(key, None)
         tdata["context_mapping"] = self.context_mapping
         tdata["wait"] = [task.name for task in self.waiting_on]
         tdata["children"] = []
@@ -185,8 +188,9 @@ class Task(GraphNode):
                 handler["handler"] = build_callable(handler["handler"])
         elif isinstance(self._error_handlers, list):
             for handler in self._error_handlers:
+                name = handler.get("name", handler["handler"].__name__)
                 handler["handler"] = build_callable(handler["handler"])
-                handlers[handler["handler"]["name"]] = handler
+                handlers[name] = handler
         # convert exit code label (str) to status (int)
         for handler in handlers.values():
             exit_codes = []
