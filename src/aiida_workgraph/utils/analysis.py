@@ -3,7 +3,7 @@ from typing import Optional, Dict, Tuple, List
 # import datetime
 from aiida.orm import ProcessNode
 from aiida.orm.utils.serialize import serialize, deserialize_unsafe
-from aiida_workgraph.config import WORKGRAPH_EXTRA_KEY
+from aiida_workgraph.config import WORKGRAPH_EXTRA_KEY, WORKGRAPH_SHORT_EXTRA_KEY
 
 
 class WorkGraphSaver:
@@ -211,7 +211,7 @@ class WorkGraphSaver:
         # self.wgdata["created"] = datetime.datetime.utcnow()
         # self.wgdata["lastUpdate"] = datetime.datetime.utcnow()
         short_wgdata = workgraph_to_short_json(self.wgdata)
-        self.process.base.extras.set("_workgraph_short", short_wgdata)
+        self.process.base.extras.set(WORKGRAPH_SHORT_EXTRA_KEY, short_wgdata)
         self.save_task_states()
         for name, task in self.wgdata["tasks"].items():
             for _, input in task["inputs"].items():

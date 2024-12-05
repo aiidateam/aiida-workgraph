@@ -10,6 +10,7 @@ from aiida.engine.processes.ports import PortNamespace
 from aiida_workgraph.task import Task
 from aiida_workgraph.utils import build_callable, validate_task_inout
 import inspect
+from aiida_workgraph.config import builtin_inputs, builtin_outputs
 
 task_types = {
     CalcFunctionNode: "CALCFUNCTION",
@@ -265,16 +266,10 @@ def build_task_from_AiiDA(
             else outputs
         )
     # add built-in sockets
-    outputs.append({"identifier": "workgraph.any", "name": "_outputs"})
-    outputs.append({"identifier": "workgraph.any", "name": "_wait"})
-    inputs.append(
-        {
-            "identifier": "workgraph.any",
-            "name": "_wait",
-            "link_limit": 1e6,
-            "arg_type": "none",
-        }
-    )
+    for output in builtin_outputs:
+        outputs.append(output.copy())
+    for input in builtin_inputs:
+        inputs.append(input.copy())
     tdata["metadata"]["node_class"] = {"module": "aiida_workgraph.task", "name": "Task"}
     tdata["inputs"] = inputs
     tdata["outputs"] = outputs
@@ -301,9 +296,6 @@ def build_pythonjob_task(func: Callable) -> Task:
     }
     _, tdata_py = build_task_from_AiiDA(tdata)
     tdata = deepcopy(func.tdata)
-    function_inputs = [
-        name for name in tdata["inputs"] if name not in ["_wait", "_outputs"]
-    ]
     # merge the inputs and outputs from the PythonJob task to the function task
     # skip the already existed inputs and outputs
     for input in [
@@ -333,7 +325,6 @@ def build_pythonjob_task(func: Callable) -> Task:
     }
     task = create_task(tdata)
     task.is_aiida_component = True
-    task.function_inputs = function_inputs
     return task, tdata
 
 
@@ -390,6 +381,8 @@ def build_task_from_workgraph(wg: any) -> Task:
     outputs = []
     group_outputs = []
     # add all the inputs/outputs from the tasks in the workgraph
+    builtin_input_names = [input["name"] for input in builtin_inputs]
+    builtin_output_names = [output["name"] for output in builtin_outputs]
     for task in wg.tasks:
         # inputs
         inputs.append(
@@ -399,7 +392,7 @@ def build_task_from_workgraph(wg: any) -> Task:
             }
         )
         for socket in task.inputs:
-            if socket.name == "_wait":
+            if socket.name in builtin_input_names:
                 continue
             inputs.append(
                 {"identifier": socket.identifier, "name": f"{task.name}.{socket.name}"}
@@ -412,7 +405,7 @@ def build_task_from_workgraph(wg: any) -> Task:
             }
         )
         for socket in task.outputs:
-            if socket.name in ["_wait", "_outputs"]:
+            if socket.name in builtin_output_names:
                 continue
             outputs.append(
                 {"identifier": socket.identifier, "name": f"{task.name}.{socket.name}"}
@@ -424,16 +417,10 @@ def build_task_from_workgraph(wg: any) -> Task:
                 }
             )
     # add built-in sockets
-    outputs.append({"identifier": "workgraph.any", "name": "_outputs"})
-    outputs.append({"identifier": "workgraph.any", "name": "_wait"})
-    inputs.append(
-        {
-            "identifier": "workgraph.any",
-            "name": "_wait",
-            "link_limit": 1e6,
-            "arg_type": "none",
-        }
-    )
+    for output in builtin_outputs:
+        outputs.append(output.copy())
+    for input in builtin_inputs:
+        inputs.append(input.copy())
     tdata["metadata"]["node_class"] = {"module": "aiida_workgraph.task", "name": "Task"}
     tdata["inputs"] = inputs
     tdata["outputs"] = outputs
@@ -507,16 +494,10 @@ def generate_tdata(
         input["metadata"]["is_function_input"] = True
     task_outputs = outputs
     # add built-in sockets
-    task_inputs.append(
-        {
-            "identifier": "workgraph.any",
-            "name": "_wait",
-            "link_limit": 1e6,
-            "arg_type": "none",
-        }
-    )
-    task_outputs.append({"identifier": "workgraph.any", "name": "_wait"})
-    task_outputs.append({"identifier": "workgraph.any", "name": "_outputs"})
+    for output in builtin_outputs:
+        task_outputs.append(output.copy())
+    for input in builtin_inputs:
+        task_inputs.append(input.copy())
     tdata = {
         "identifier": identifier,
         "metadata": {

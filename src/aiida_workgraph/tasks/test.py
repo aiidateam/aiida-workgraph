@@ -26,6 +26,7 @@ class TestAdd(Task):
         self.inputs.new("workgraph.any", "_wait", arg_type="none", link_limit=100000)
         self.outputs.new("workgraph.aiida_float", "sum")
         self.outputs.new("workgraph.any", "_wait")
+        self.outputs.new("workgraph.any", "_outputs")
 
 
 class TestSumDiff(Task):
@@ -54,6 +55,7 @@ class TestSumDiff(Task):
         self.outputs.new("workgraph.aiida_float", "sum")
         self.outputs.new("workgraph.aiida_float", "diff")
         self.outputs.new("workgraph.any", "_wait")
+        self.outputs.new("workgraph.any", "_outputs")
 
 
 class TestArithmeticMultiplyAdd(Task):
@@ -84,3 +86,4 @@ class TestArithmeticMultiplyAdd(Task):
         self.inputs.new("workgraph.any", "_wait", arg_type="none", link_limit=100000)
         self.outputs.new("workgraph.aiida_int", "result")
         self.outputs.new("workgraph.any", "_wait")
+        self.outputs.new("workgraph.any", "_outputs")
