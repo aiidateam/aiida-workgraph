@@ -356,7 +356,13 @@ def build_shelljob_task(
     nodes = {} if nodes is None else nodes
     keys = list(nodes.keys())
     for key in keys:
-        inputs.append({"identifier": "workgraph.any", "name": f"nodes.{key}"})
+        inputs.append(
+            {
+                "identifier": "workgraph.any",
+                "name": f"nodes.{key}",
+                "metadata": {"required": True},
+            }
+        )
         # input is a output of another task, we make a link
         if isinstance(nodes[key], NodeSocket):
             links[f"nodes.{key}"] = nodes[key]
