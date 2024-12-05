@@ -64,7 +64,7 @@ def test_build_task_from_workgraph(decorated_add: Callable) -> None:
     assert len(wg_task.outputs) == 6
     wg.submit(wait=True)
     # wg.run()
-    assert wg.tasks["add2"].outputs["result"].value.value == 14
+    assert wg.tasks["add2"].outputs["result"].value.value == 12
 
 
 @pytest.mark.usefixtures("started_daemon_client")

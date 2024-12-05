@@ -384,7 +384,6 @@ def build_shelljob_task(outputs: list = None, parser_outputs: list = None) -> Ta
 
 def build_task_from_workgraph(wg: any) -> Task:
     """Build task from workgraph."""
-    from aiida.orm.utils.serialize import serialize
 
     tdata = {"metadata": {"task_type": "workgraph"}}
     inputs = []
@@ -439,10 +438,12 @@ def build_task_from_workgraph(wg: any) -> Task:
     tdata["inputs"] = inputs
     tdata["outputs"] = outputs
     tdata["identifier"] = wg.name
+    # get wgdata from the workgraph
+    wgdata = wg.prepare_inputs()["wg"]
     executor = {
         "module": "aiida_workgraph.engine.workgraph",
         "name": "WorkGraphEngine",
-        "wgdata": serialize(wg.to_dict(store_nodes=True)),
+        "wgdata": wgdata,
         "type": tdata["metadata"]["task_type"],
     }
     tdata["metadata"]["group_outputs"] = group_outputs
