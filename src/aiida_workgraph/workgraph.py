@@ -113,7 +113,7 @@ class WorkGraph(node_graph.NodeGraph):
         inputs: Optional[Dict[str, Any]] = None,
         wait: bool = False,
         timeout: int = 60,
-        interval: int = 1,
+        interval: int = 5,
         metadata: Optional[Dict[str, Any]] = None,
     ) -> aiida.orm.ProcessNode:
         """Submit the AiiDA workgraph process and optionally wait for it to finish.
@@ -230,7 +230,7 @@ class WorkGraph(node_graph.NodeGraph):
                 task["exit_codes"] = exit_codes
         return error_handlers
 
-    def wait(self, timeout: int = 50, tasks: dict = None, interval: int = 1) -> None:
+    def wait(self, timeout: int = 50, tasks: dict = None, interval: int = 5) -> None:
         """
         Periodically checks and waits for the AiiDA workgraph process to finish until a given timeout.
         Args:

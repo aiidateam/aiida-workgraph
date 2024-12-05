@@ -92,11 +92,13 @@ class Task(GraphNode):
                 if isinstance(value, dict):
                     keys = list(value.keys())
                     for sub_key in keys:
-                        self.inputs.new(
-                            "workgraph.any",
-                            name=f"{key}.{sub_key}",
-                            metadata={"required": True},
-                        )
+                        # create a new input socket if it does not exist
+                        if f"{key}.{sub_key}" not in self.inputs.keys():
+                            self.inputs.new(
+                                "workgraph.any",
+                                name=f"{key}.{sub_key}",
+                                metadata={"required": True},
+                            )
                         if isinstance(value[sub_key], NodeSocket):
                             self.parent.links.new(
                                 value[sub_key], self.inputs[f"{key}.{sub_key}"]
