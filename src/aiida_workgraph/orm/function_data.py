@@ -19,9 +19,7 @@ class PickledFunction(PickledData):
         self.set_attribute(value)
 
     def __str__(self):
-        return (
-            f"PickledFunction<{self.base.attributes.get('function_name')}> pk={self.pk}"
-        )
+        return f"PickledFunction<{self.base.attributes.get('name')}> pk={self.pk}"
 
     @property
     def metadata(self):
@@ -34,21 +32,7 @@ class PickledFunction(PickledData):
                 "source_code_without_decorator"
             ),
             "type": "function",
-            "is_pickle": True,
         }
-
-    @classmethod
-    def build_callable(cls, func):
-        """Return the executor for this node."""
-        import cloudpickle as pickle
-
-        executor = {
-            "executor": pickle.dumps(func),
-            "type": "function",
-            "is_pickle": True,
-        }
-        executor.update(cls.inspect_function(func))
-        return executor
 
     def set_attribute(self, value):
         """Set the contents of this node by pickling the provided function.

@@ -444,7 +444,6 @@ def build_task_from_workgraph(wg: any) -> Task:
         "name": "WorkGraphEngine",
         "wgdata": serialize(wg.to_dict(store_nodes=True)),
         "type": tdata["metadata"]["task_type"],
-        "is_pickle": False,
     }
     tdata["metadata"]["group_outputs"] = group_outputs
     tdata["executor"] = executor

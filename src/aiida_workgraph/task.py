@@ -58,6 +58,9 @@ class Task(GraphNode):
         from aiida.orm.utils.serialize import serialize
 
         tdata = super().to_dict(short=short)
+        # clear unused keys
+        for key in ["ctrl_inputs", "ctrl_outputs"]:
+            tdata.pop(key, None)
         tdata["context_mapping"] = self.context_mapping
         tdata["wait"] = [task.name for task in self.waiting_on]
         tdata["children"] = []
