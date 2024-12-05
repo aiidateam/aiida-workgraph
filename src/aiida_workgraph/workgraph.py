@@ -70,12 +70,12 @@ class WorkGraph(node_graph.NodeGraph):
     ) -> Dict[str, Any]:
         from aiida_workgraph.utils import (
             organize_nested_inputs,
-            serialize_properties,
+            serialize_workgraph_inputs,
         )
 
         wgdata = self.to_dict()
         organize_nested_inputs(wgdata)
-        serialize_properties(wgdata)
+        serialize_workgraph_inputs(wgdata)
         metadata = metadata or {}
         inputs = {"wg": wgdata, "metadata": metadata}
         return inputs

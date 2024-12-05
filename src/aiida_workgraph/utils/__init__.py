@@ -435,14 +435,21 @@ def get_or_create_code(
         return code
 
 
-def serialize_properties(wgdata):
-    """Serialize the properties.
+def pickle_callable(data: dict):
+    """Pickle the callable."""
+    from aiida_workgraph.orm.function_data import PickledFunction
+
+    data["callable"] = PickledFunction(data["callable"]).store()
+
+
+def serialize_workgraph_inputs(wgdata):
+    """Serialize the inputs of the workgraph.
     Because we use yaml (aiida's serialize) to serialize the data and
     save it to the node.base.extras. yaml can not handle the function
     defined in a scope, e.g., local function in another function.
     So, if a function is used as input, we needt to serialize the function.
     """
-    from aiida_workgraph.orm.function_data import PickledLocalFunction, PickledFunction
+    from aiida_workgraph.orm.function_data import PickledLocalFunction
     from aiida_workgraph.tasks.pythonjob import PythonJob
     import inspect
 
@@ -450,9 +457,11 @@ def serialize_properties(wgdata):
         # find the pickled executor, create a pickleddata for it
         # then use the pk of the pickleddata as the value of the executor
         if task["executor"] and not task["executor"]["use_module_path"]:
-            executor = task["executor"]["callable"]
-            pickled_obj = PickledFunction(executor).store()
-            task["executor"]["callable"] = pickled_obj
+            pickle_callable(task["executor"])
+        # error_handlers of the task
+        for _, data in task["error_handlers"].items():
+            if not data["handler"]["use_module_path"]:
+                pickle_callable(data["handler"])
         if task["metadata"]["node_type"].upper() == "PYTHONJOB":
             PythonJob.serialize_pythonjob_data(task)
         for _, input in task["inputs"].items():
@@ -461,6 +470,10 @@ def serialize_properties(wgdata):
             prop = input["property"]
             if inspect.isfunction(prop["value"]):
                 prop["value"] = PickledLocalFunction(prop["value"]).store()
+    # error_handlers of the workgraph
+    for _, data in wgdata["error_handlers"].items():
+        if not data["handler"]["use_module_path"]:
+            pickle_callable(data["handler"])
 
 
 def create_and_pause_process(
