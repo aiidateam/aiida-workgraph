@@ -337,41 +337,16 @@ def build_pythonjob_task(func: Callable) -> Task:
     return task, tdata
 
 
-def build_shelljob_task(
-    nodes: dict = None, outputs: list = None, parser_outputs: list = None
-) -> Task:
+def build_shelljob_task(outputs: list = None, parser_outputs: list = None) -> Task:
     """Build ShellJob with custom inputs and outputs."""
     from aiida_shell.calculations.shell import ShellJob
     from aiida_shell.parsers.shell import ShellParser
-    from node_graph.socket import NodeSocket
 
     tdata = {
         "metadata": {"task_type": "SHELLJOB"},
         "executor": ShellJob,
     }
     _, tdata = build_task_from_AiiDA(tdata)
-    # create input sockets for the nodes, if it is linked other sockets
-    links = {}
-    inputs = []
-    nodes = {} if nodes is None else nodes
-    keys = list(nodes.keys())
-    for key in keys:
-        inputs.append(
-            {
-                "identifier": "workgraph.any",
-                "name": f"nodes.{key}",
-                "metadata": {"required": True},
-            }
-        )
-        # input is a output of another task, we make a link
-        if isinstance(nodes[key], NodeSocket):
-            links[f"nodes.{key}"] = nodes[key]
-            # Output socket itself is not a value, so we remove the key from the nodes
-            nodes.pop(key)
-    for input in inputs:
-        if input["name"] not in tdata["inputs"]:
-            input["list_index"] = len(tdata["inputs"]) + 1
-            tdata["inputs"][input["name"]] = input
     # Extend the outputs
     for output in [
         {"identifier": "workgraph.any", "name": "stdout"},
@@ -404,7 +379,7 @@ def build_shelljob_task(
     tdata["metadata"]["task_type"] = "SHELLJOB"
     task = create_task(tdata)
     task.is_aiida_component = True
-    return task, tdata, links
+    return task, tdata
 
 
 def build_task_from_workgraph(wg: any) -> Task:

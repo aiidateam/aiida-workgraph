@@ -1,7 +1,7 @@
 import pytest
 from aiida_workgraph import WorkGraph, task
 from aiida_shell.launch import prepare_code
-from aiida.orm import SinglefileData, load_computer
+from aiida.orm import SinglefileData, load_computer, Int
 
 
 def test_prepare_for_shell_task_nonexistent():
@@ -51,9 +51,9 @@ def test_shell_code():
     assert job1.node.outputs.stdout.get_content() == "string astring b"
 
 
-def test_shell_set():
+def test_dynamic_port():
     """Set the nodes during/after the creation of the task."""
-    wg = WorkGraph(name="test_shell_set")
+    wg = WorkGraph(name="test_dynamic_port")
     echo_task = wg.add_task(
         "ShellJob",
         name="echo",
@@ -68,11 +68,15 @@ def test_shell_set():
         name="cat",
         command="cat",
         arguments=["{input}"],
-        nodes={"input": None},
+        nodes={"input1": None, "input2": Int(2), "input3": echo_task.outputs["_wait"]},
     )
-    wg.add_link(echo_task.outputs["copied_file"], cat_task.inputs["nodes.input"])
-    wg.submit(wait=True)
-    assert cat_task.outputs["stdout"].value.get_content() == "1 5 1"
+    wg.add_link(echo_task.outputs["copied_file"], cat_task.inputs["nodes.input1"])
+    # task will create input for each item in the dynamic port (nodes)
+    assert "nodes.input1" in cat_task.inputs.keys()
+    assert "nodes.input2" in cat_task.inputs.keys()
+    # if the value of the item is a Socket, then it will create a link, and pop the item
+    assert "nodes.input3" in cat_task.inputs.keys()
+    assert cat_task.inputs["nodes"].value == {"input1": None, "input2": Int(2)}
 
 
 @pytest.mark.usefixtures("started_daemon_client")

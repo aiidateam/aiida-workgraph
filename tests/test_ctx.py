@@ -2,6 +2,7 @@ from aiida_workgraph import WorkGraph
 from typing import Callable
 from aiida.orm import Float, ArrayData
 import numpy as np
+import pytest
 
 
 def test_workgraph_ctx(decorated_add: Callable) -> None:
@@ -25,6 +26,7 @@ def test_workgraph_ctx(decorated_add: Callable) -> None:
     assert add2.outputs["result"].value == 6
 
 
+@pytest.mark.usefixtures("started_daemon_client")
 def test_task_set_ctx(decorated_add: Callable) -> None:
     """Set/get data to/from context."""
 

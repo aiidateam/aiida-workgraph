@@ -2,6 +2,7 @@ import pytest
 from aiida_workgraph import WorkGraph, task
 from typing import Callable
 from aiida.cmdline.utils.common import get_workchain_report
+from aiida import orm
 
 
 def test_normal_task(decorated_add) -> None:
@@ -71,6 +72,28 @@ def test_task_wait(decorated_add: Callable) -> None:
     wg.run()
     report = get_workchain_report(wg.process, "REPORT")
     assert "tasks ready to run: add1" in report
+
+
+def test_set_dynamic_port_input(decorated_add) -> None:
+    from .utils.test_workchain import WorkChainWithDynamicNamespace
+
+    wg = WorkGraph(name="test_set_dynamic_port_input")
+    task1 = wg.add_task(decorated_add)
+    task2 = wg.add_task(
+        WorkChainWithDynamicNamespace,
+        dynamic_port={
+            "input1": None,
+            "input2": orm.Int(2),
+            "input3": task1.outputs["result"],
+        },
+    )
+    wg.add_link(task1.outputs["_wait"], task2.inputs["dynamic_port.input1"])
+    # task will create input for each item in the dynamic port (nodes)
+    assert "dynamic_port.input1" in task2.inputs.keys()
+    assert "dynamic_port.input2" in task2.inputs.keys()
+    # if the value of the item is a Socket, then it will create a link, and pop the item
+    assert "dynamic_port.input3" in task2.inputs.keys()
+    assert task2.inputs["dynamic_port"].value == {"input1": None, "input2": orm.Int(2)}
 
 
 def test_set_inputs(decorated_add: Callable) -> None:

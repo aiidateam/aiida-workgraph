@@ -81,6 +81,30 @@ class Task(GraphNode):
             raise ValueError(msg)
         self.context_mapping.update(context)
 
+    def set(self, data: Dict[str, Any]) -> None:
+        from node_graph.socket import NodeSocket
+
+        super().set(data)
+        # create input sockets and links for items inside a dynamic socket
+        # TODO the input value could be nested, but we only support one level for now
+        for key, value in data.items():
+            if self.inputs[key].metadata.get("dynamic", False):
+                if isinstance(value, dict):
+                    keys = list(value.keys())
+                    for sub_key in keys:
+                        # create a new input socket if it does not exist
+                        if f"{key}.{sub_key}" not in self.inputs.keys():
+                            self.inputs.new(
+                                "workgraph.any",
+                                name=f"{key}.{sub_key}",
+                                metadata={"required": True},
+                            )
+                        if isinstance(value[sub_key], NodeSocket):
+                            self.parent.links.new(
+                                value[sub_key], self.inputs[f"{key}.{sub_key}"]
+                            )
+                            self.inputs[key].value.pop(sub_key)
+
     def set_from_builder(self, builder: Any) -> None:
         """Set the task inputs from a AiiDA ProcessBuilder."""
         from aiida_workgraph.utils import get_dict_from_builder
