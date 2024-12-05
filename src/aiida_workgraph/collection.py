@@ -29,14 +29,11 @@ class TaskCollection(NodeCollection):
         if isinstance(identifier, str) and identifier.upper() == "PYTHONJOB":
             identifier, _ = build_pythonjob_task(kwargs.pop("function"))
         if isinstance(identifier, str) and identifier.upper() == "SHELLJOB":
-            identifier, _, links = build_shelljob_task(
-                nodes=kwargs.get("nodes", {}),
+            identifier, _ = build_shelljob_task(
                 outputs=kwargs.get("outputs", None),
                 parser_outputs=kwargs.pop("parser_outputs", None),
             )
             task = super().new(identifier, name, uuid, **kwargs)
-            # make links between the tasks
-            task.set(links)
             return task
         if isinstance(identifier, str) and identifier.upper() == "WHILE":
             task = super().new("workgraph.while", name, uuid, **kwargs)

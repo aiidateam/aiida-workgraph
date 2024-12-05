@@ -53,3 +53,13 @@ class WorkChainWithNestNamespace(WorkChain):
     def result(self):
         """Add the result to the outputs."""
         self.out("result", self.ctx.addition.outputs.sum)
+
+
+class WorkChainWithDynamicNamespace(WorkChain):
+    """WorkChain with dynamic namespace."""
+
+    @classmethod
+    def define(cls, spec):
+        """Specify inputs and outputs."""
+        super().define(spec)
+        spec.input_namespace("dynamic_port", dynamic=True)
