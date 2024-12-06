@@ -56,7 +56,28 @@ def test_task_wait(decorated_add: Callable) -> None:
     assert "tasks ready to run: add1" in report
 
 
+def test_set_namespace_socket(decorated_add) -> None:
+    """Test setting the namespace of a task."""
+    from .utils.test_workchain import WorkChainWithNestNamespace
+
+    wg = WorkGraph(name="test_set_namespace")
+    task1 = wg.add_task(decorated_add)
+    task2 = wg.add_task(WorkChainWithNestNamespace)
+    task2.set(
+        {
+            "add": {"x": task1.outputs["result"], "y": orm.Int(2)},
+        }
+    )
+    assert len(task2.inputs["add.x"].links) == 1
+    assert task2.inputs["add"].value == {"y": orm.Int(2)}
+    assert len(wg.links) == 1
+
+
 def test_set_dynamic_port_input(decorated_add) -> None:
+    """Test setting dynamic port input of a task.
+    Use can pass AiiDA nodes as values of the dynamic port,
+    and the task will create the input for each item in the dynamic port.
+    """
     from .utils.test_workchain import WorkChainWithDynamicNamespace
 
     wg = WorkGraph(name="test_set_dynamic_port_input")
@@ -67,6 +88,7 @@ def test_set_dynamic_port_input(decorated_add) -> None:
             "input1": None,
             "input2": orm.Int(2),
             "input3": task1.outputs["result"],
+            "nested": {"input4": orm.Int(4), "input5": task1.outputs["result"]},
         },
     )
     wg.add_link(task1.outputs["_wait"], task2.inputs["dynamic_port.input1"])
@@ -75,7 +97,14 @@ def test_set_dynamic_port_input(decorated_add) -> None:
     assert "dynamic_port.input2" in task2.inputs.keys()
     # if the value of the item is a Socket, then it will create a link, and pop the item
     assert "dynamic_port.input3" in task2.inputs.keys()
-    assert task2.inputs["dynamic_port"].value == {"input1": None, "input2": orm.Int(2)}
+    assert "dynamic_port.nested.input4" in task2.inputs.keys()
+    assert "dynamic_port.nested.input5" in task2.inputs.keys()
+    assert task2.inputs["dynamic_port"].value == {
+        "input1": None,
+        "input2": orm.Int(2),
+        "nested": {"input4": orm.Int(4)},
+    }
+    assert len(wg.links) == 3
 
 
 def test_set_inputs(decorated_add: Callable) -> None:
