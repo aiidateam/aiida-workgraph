@@ -89,7 +89,9 @@ class Task(GraphNode):
 
         super().set(data)
 
-        def process_nested_inputs(base_key: str, value: Any) -> None:
+        def process_nested_inputs(
+            base_key: str, value: Any, dynamic: bool = False
+        ) -> None:
             """Recursive function to process nested inputs.
             Creates sockets and links dynamically for nested values.
             """
@@ -101,25 +103,28 @@ class Task(GraphNode):
                     full_key = f"{base_key}.{sub_key}" if base_key else sub_key
 
                     # Create a new input socket if it does not exist
-                    if full_key not in self.inputs.keys():
+                    if full_key not in self.inputs.keys() and dynamic:
                         self.inputs.new(
                             "workgraph.any",
                             name=full_key,
                             metadata={"required": True},
                         )
-
                     if isinstance(sub_value, NodeSocket):
                         self.parent.links.new(sub_value, self.inputs[full_key])
                         value.pop(sub_key)
                     else:
                         # Recursively process nested dictionaries
-                        process_nested_inputs(full_key, sub_value)
+                        process_nested_inputs(full_key, sub_value, dynamic)
 
         # create input sockets and links for items inside a dynamic socket
         # TODO the input value could be nested, but we only support one level for now
         for key in data:
-            if self.inputs[key].metadata.get("dynamic", False):
-                process_nested_inputs(key, self.inputs[key].value)
+            if self.inputs[key].identifier == "workgraph.namespace":
+                process_nested_inputs(
+                    key,
+                    self.inputs[key].value,
+                    dynamic=self.inputs[key].metadata.get("dynamic", False),
+                )
 
     def set_from_builder(self, builder: Any) -> None:
         """Set the task inputs from a AiiDA ProcessBuilder."""
