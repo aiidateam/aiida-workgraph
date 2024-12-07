@@ -56,6 +56,23 @@ def test_task_wait(decorated_add: Callable) -> None:
     assert "tasks ready to run: add1" in report
 
 
+def test_set_non_dynamic_namespace_socket(decorated_add) -> None:
+    """Test setting the namespace of a task."""
+    from .utils.test_workchain import WorkChainWithNestNamespace
+
+    wg = WorkGraph(name="test_set_namespace")
+    task1 = wg.add_task(decorated_add)
+    task2 = wg.add_task(WorkChainWithNestNamespace)
+    task2.set(
+        {
+            "non_dynamic_port": {"a": task1.outputs["result"], "b": orm.Int(2)},
+        }
+    )
+    assert len(task2.inputs["non_dynamic_port.a"].links) == 1
+    assert task2.inputs["non_dynamic_port"].value == {"b": orm.Int(2)}
+    assert len(wg.links) == 1
+
+
 def test_set_namespace_socket(decorated_add) -> None:
     """Test setting the namespace of a task."""
     from .utils.test_workchain import WorkChainWithNestNamespace

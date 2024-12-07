@@ -13,6 +13,8 @@ class WorkChainWithNestNamespace(WorkChain):
         """Specify inputs and outputs."""
         super().define(spec)
         spec.input_namespace("non_dynamic_port")
+        spec.input("non_dynamic_port.a", valid_type=Int)
+        spec.input("non_dynamic_port.b", valid_type=Int)
         spec.input("non_dynamic_port.a")
         spec.expose_inputs(
             ArithmeticAddCalculation,
