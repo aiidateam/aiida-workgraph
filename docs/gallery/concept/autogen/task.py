@@ -47,8 +47,8 @@ add.task().to_html()
 #
 
 add1 = add.task()
-print("Inputs:", add1.inputs.keys())
-print("Outputs:", add1.outputs.keys())
+print("Inputs:", add1.get_input_names())
+print("Outputs:", add1.get_output_names())
 
 
 ######################################################################
@@ -62,8 +62,8 @@ def add_minus(x, y):
     return {"sum": x + y, "difference": x - y}
 
 
-print("Inputs:", add_minus.task().inputs.keys())
-print("Outputs:", add_minus.task().outputs.keys())
+print("Inputs:", add_minus.task().get_input_names())
+print("Outputs:", add_minus.task().get_output_names())
 
 ######################################################################
 # One can also add an ``identifier`` to indicates the data type. The data
@@ -194,11 +194,11 @@ class MyAdd(Task):
     }
 
     def create_sockets(self):
-        self.inputs.clear()
-        self.outputs.clear()
-        inp = self.inputs.new("workgraph.Any", "x")
-        inp = self.inputs.new("workgraph.Any", "y")
-        self.outputs.new("workgraph.Any", "sum")
+        self.inputs._clear()
+        self.outputs._clear()
+        inp = self.add_input("workgraph.Any", "x")
+        inp = self.add_input("workgraph.Any", "y")
+        self.add_output("workgraph.Any", "sum")
 
 
 ######################################################################

@@ -14,19 +14,19 @@ class TestAdd(Task):
     }
 
     def create_properties(self) -> None:
-        self.properties.new("workgraph.aiida_float", "t", default=1.0)
+        self.add_property("workgraph.aiida_float", "t", default=1.0)
 
     def create_sockets(self) -> None:
-        self.inputs.clear()
-        self.outputs.clear()
-        inp = self.inputs.new("workgraph.aiida_float", "x")
+        self.inputs._clear()
+        self.outputs._clear()
+        inp = self.add_input("workgraph.aiida_float", "x")
         inp.add_property("workgraph.aiida_float", "x", default=0.0)
-        inp = self.inputs.new("workgraph.aiida_float", "y")
+        inp = self.add_input("workgraph.aiida_float", "y")
         inp.add_property("workgraph.aiida_float", "y", default=0.0)
-        self.inputs.new("workgraph.any", "_wait", arg_type="none", link_limit=100000)
-        self.outputs.new("workgraph.aiida_float", "sum")
-        self.outputs.new("workgraph.any", "_wait")
-        self.outputs.new("workgraph.any", "_outputs")
+        self.add_input("workgraph.any", "_wait", arg_type="none", link_limit=100000)
+        self.add_output("workgraph.aiida_float", "sum")
+        self.add_output("workgraph.any", "_wait")
+        self.add_output("workgraph.any", "_outputs")
 
 
 class TestSumDiff(Task):
@@ -42,20 +42,20 @@ class TestSumDiff(Task):
     }
 
     def create_properties(self) -> None:
-        self.properties.new("workgraph.aiida_float", "t", default=1.0)
+        self.properties._new("workgraph.aiida_float", "t", default=1.0)
 
     def create_sockets(self) -> None:
-        self.inputs.clear()
-        self.outputs.clear()
-        inp = self.inputs.new("workgraph.aiida_float", "x")
+        self.inputs._clear()
+        self.outputs._clear()
+        inp = self.add_input("workgraph.aiida_float", "x")
         inp.add_property("workgraph.aiida_float", "x", default=0.0)
-        inp = self.inputs.new("workgraph.aiida_float", "y")
+        inp = self.add_input("workgraph.aiida_float", "y")
         inp.add_property("workgraph.aiida_float", "y", default=0.0)
-        self.inputs.new("workgraph.any", "_wait", arg_type="none", link_limit=100000)
-        self.outputs.new("workgraph.aiida_float", "sum")
-        self.outputs.new("workgraph.aiida_float", "diff")
-        self.outputs.new("workgraph.any", "_wait")
-        self.outputs.new("workgraph.any", "_outputs")
+        self.add_input("workgraph.any", "_wait", arg_type="none", link_limit=100000)
+        self.add_output("workgraph.aiida_float", "sum")
+        self.add_output("workgraph.aiida_float", "diff")
+        self.add_output("workgraph.any", "_wait")
+        self.add_output("workgraph.any", "_outputs")
 
 
 class TestArithmeticMultiplyAdd(Task):
@@ -74,16 +74,16 @@ class TestArithmeticMultiplyAdd(Task):
         pass
 
     def create_sockets(self) -> None:
-        self.inputs.clear()
-        self.outputs.clear()
-        self.inputs.new("workgraph.any", "code")
-        inp = self.inputs.new("workgraph.aiida_int", "x")
+        self.inputs._clear()
+        self.outputs._clear()
+        self.add_input("workgraph.any", "code")
+        inp = self.add_input("workgraph.aiida_int", "x")
         inp.add_property("workgraph.aiida_int", "x", default=0.0)
-        inp = self.inputs.new("workgraph.aiida_int", "y")
+        inp = self.add_input("workgraph.aiida_int", "y")
         inp.add_property("workgraph.aiida_int", "y", default=0.0)
-        inp = self.inputs.new("workgraph.aiida_int", "z")
+        inp = self.add_input("workgraph.aiida_int", "z")
         inp.add_property("workgraph.aiida_int", "z", default=0.0)
-        self.inputs.new("workgraph.any", "_wait", arg_type="none", link_limit=100000)
-        self.outputs.new("workgraph.aiida_int", "result")
-        self.outputs.new("workgraph.any", "_wait")
-        self.outputs.new("workgraph.any", "_outputs")
+        self.add_input("workgraph.any", "_wait", arg_type="none", link_limit=100000)
+        self.add_output("workgraph.aiida_int", "result")
+        self.add_output("workgraph.any", "_wait")
+        self.add_output("workgraph.any", "_outputs")

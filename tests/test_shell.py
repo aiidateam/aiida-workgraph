@@ -72,10 +72,10 @@ def test_dynamic_port():
     )
     wg.add_link(echo_task.outputs["copied_file"], cat_task.inputs["nodes.input1"])
     # task will create input for each item in the dynamic port (nodes)
-    assert "nodes.input1" in cat_task.inputs.keys()
-    assert "nodes.input2" in cat_task.inputs.keys()
+    assert "nodes.input1" in cat_task.get_input_names()
+    assert "nodes.input2" in cat_task.get_input_names()
     # if the value of the item is a Socket, then it will create a link, and pop the item
-    assert "nodes.input3" in cat_task.inputs.keys()
+    assert "nodes.input3" in cat_task.get_input_names()
     assert cat_task.inputs["nodes"].value == {"input1": None, "input2": Int(2)}
 
 

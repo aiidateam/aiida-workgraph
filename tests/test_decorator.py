@@ -11,8 +11,8 @@ def test_custom_outputs():
         return {"sum": x + y, "product": x * y}
 
     n = add_multiply.task()
-    assert "sum" in n.outputs.keys()
-    assert "product" in n.outputs.keys()
+    assert "sum" in n.outputs
+    assert "product" in n.outputs
 
 
 @pytest.fixture(params=["decorator_factory", "decorator"])
@@ -52,7 +52,7 @@ def test_decorators_calcfunction_args(task_calcfunction) -> None:
     assert set(tdata["kwargs"]) == set(kwargs)
     assert tdata["var_args"] is None
     assert tdata["var_kwargs"] == "c"
-    assert set(n.outputs.keys()) == set(["result", "_outputs", "_wait"])
+    assert set(n.get_output_names()) == set(["result", "_outputs", "_wait"])
 
 
 @pytest.fixture(params=["decorator_factory", "decorator"])
@@ -123,7 +123,7 @@ def test_decorators_workfunction_args(task_workfunction) -> None:
     assert set(tdata["kwargs"]) == set(kwargs)
     assert tdata["var_args"] is None
     assert tdata["var_kwargs"] == "c"
-    assert set(n.outputs.keys()) == set(["result", "_outputs", "_wait"])
+    assert set(n.get_output_names()) == set(["result", "_outputs", "_wait"])
 
 
 def test_decorators_parameters() -> None:
@@ -138,8 +138,8 @@ def test_decorators_parameters() -> None:
 
     test1 = test.task()
     assert test1.inputs["c"].link_limit == 1000
-    assert "sum" in test1.outputs.keys()
-    assert "product" in test1.outputs.keys()
+    assert "sum" in test1.get_output_names()
+    assert "product" in test1.get_output_names()
 
 
 @pytest.fixture(params=["decorator_factory", "decorator"])
@@ -174,7 +174,7 @@ def test_decorators_graph_builder_args(task_graph_builder) -> None:
     assert tdata["kwargs"] == ["a", "b"]
     assert tdata["var_args"] is None
     assert tdata["var_kwargs"] == "c"
-    assert set(n.outputs.keys()) == set(["_outputs", "_wait"])
+    assert set(n.get_output_names()) == set(["_outputs", "_wait"])
 
 
 def test_inputs_outputs_workchain() -> None:
@@ -182,9 +182,9 @@ def test_inputs_outputs_workchain() -> None:
 
     wg = WorkGraph()
     task = wg.add_task(MultiplyAddWorkChain)
-    assert "metadata" in task.inputs.keys()
-    assert "metadata.call_link_label" in task.inputs.keys()
-    assert "result" in task.outputs.keys()
+    assert "metadata" in task.get_input_names()
+    assert "metadata.call_link_label" in task.get_input_names()
+    assert "result" in task.get_output_names()
 
 
 @pytest.mark.usefixtures("started_daemon_client")

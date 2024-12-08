@@ -15,17 +15,17 @@ class TimeMonitor(Task):
     }
 
     def create_sockets(self) -> None:
-        self.inputs.clear()
-        self.outputs.clear()
-        self.inputs.new("workgraph.any", "time")
-        inp = self.inputs.new("workgraph.any", "interval")
+        self.inputs._clear()
+        self.outputs._clear()
+        self.add_input("workgraph.any", "time")
+        inp = self.add_input("workgraph.any", "interval")
         inp.add_property("workgraph.any", default=1.0)
-        inp = self.inputs.new("workgraph.any", "timeout")
+        inp = self.add_input("workgraph.any", "timeout")
         inp.add_property("workgraph.any", default=86400.0)
-        self.inputs.new("workgraph.any", "_wait", arg_type="none", link_limit=100000)
+        self.add_input("workgraph.any", "_wait", arg_type="none", link_limit=100000)
         inp.link_limit = 100000
-        self.outputs.new("workgraph.any", "result")
-        self.outputs.new("workgraph.any", "_wait")
+        self.add_output("workgraph.any", "result")
+        self.add_output("workgraph.any", "_wait")
 
 
 class FileMonitor(Task):
@@ -42,17 +42,17 @@ class FileMonitor(Task):
     }
 
     def create_sockets(self) -> None:
-        self.inputs.clear()
-        self.outputs.clear()
-        self.inputs.new("workgraph.any", "filepath")
-        inp = self.inputs.new("workgraph.any", "interval")
+        self.inputs._clear()
+        self.outputs._clear()
+        self.add_input("workgraph.any", "filepath")
+        inp = self.add_input("workgraph.any", "interval")
         inp.add_property("workgraph.any", default=1.0)
-        inp = self.inputs.new("workgraph.any", "timeout")
+        inp = self.add_input("workgraph.any", "timeout")
         inp.add_property("workgraph.any", default=86400.0)
-        self.inputs.new("workgraph.any", "_wait", arg_type="none", link_limit=100000)
+        self.add_input("workgraph.any", "_wait", arg_type="none", link_limit=100000)
         inp.link_limit = 100000
-        self.outputs.new("workgraph.any", "result")
-        self.outputs.new("workgraph.any", "_wait")
+        self.add_output("workgraph.any", "result")
+        self.add_output("workgraph.any", "_wait")
 
 
 class TaskMonitor(Task):
@@ -69,16 +69,16 @@ class TaskMonitor(Task):
     }
 
     def create_sockets(self) -> None:
-        self.inputs.clear()
-        self.outputs.clear()
-        self.inputs.new("workgraph.any", "workgraph_pk")
-        self.inputs.new("workgraph.any", "workgraph_name")
-        self.inputs.new("workgraph.any", "task_name")
-        inp = self.inputs.new("workgraph.any", "interval")
+        self.inputs._clear()
+        self.outputs._clear()
+        self.add_input("workgraph.any", "workgraph_pk")
+        self.add_input("workgraph.any", "workgraph_name")
+        self.add_input("workgraph.any", "task_name")
+        inp = self.add_input("workgraph.any", "interval")
         inp.add_property("workgraph.any", default=1.0)
-        inp = self.inputs.new("workgraph.any", "timeout")
+        inp = self.add_input("workgraph.any", "timeout")
         inp.add_property("workgraph.any", default=86400.0)
-        self.inputs.new("workgraph.any", "_wait", arg_type="none", link_limit=100000)
+        self.add_input("workgraph.any", "_wait", arg_type="none", link_limit=100000)
         inp.link_limit = 100000
-        self.outputs.new("workgraph.any", "result")
-        self.outputs.new("workgraph.any", "_wait")
+        self.add_output("workgraph.any", "result")
+        self.add_output("workgraph.any", "_wait")

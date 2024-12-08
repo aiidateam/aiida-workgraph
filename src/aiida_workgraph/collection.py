@@ -8,7 +8,7 @@ from typing import Any, Callable, Optional, Union
 
 
 class TaskCollection(NodeCollection):
-    def new(
+    def _new(
         self,
         identifier: Union[Callable, str],
         name: Optional[str] = None,
@@ -33,21 +33,21 @@ class TaskCollection(NodeCollection):
                 outputs=kwargs.get("outputs", None),
                 parser_outputs=kwargs.pop("parser_outputs", None),
             )
-            task = super().new(identifier, name, uuid, **kwargs)
+            task = super()._new(identifier, name, uuid, **kwargs)
             return task
         if isinstance(identifier, str) and identifier.upper() == "WHILE":
-            task = super().new("workgraph.while", name, uuid, **kwargs)
+            task = super()._new("workgraph.while", name, uuid, **kwargs)
             return task
         if isinstance(identifier, str) and identifier.upper() == "IF":
-            task = super().new("workgraph.if", name, uuid, **kwargs)
+            task = super()._new("workgraph.if", name, uuid, **kwargs)
             return task
         if isinstance(identifier, WorkGraph):
             identifier = build_task_from_workgraph(identifier)
-        return super().new(identifier, name, uuid, **kwargs)
+        return super()._new(identifier, name, uuid, **kwargs)
 
 
 class WorkGraphPropertyCollection(PropertyCollection):
-    def new(
+    def _new(
         self,
         identifier: Union[Callable, str],
         name: Optional[str] = None,
@@ -59,11 +59,11 @@ class WorkGraphPropertyCollection(PropertyCollection):
         if callable(identifier):
             identifier = build_property_from_AiiDA(identifier)
         # Call the original new method
-        return super().new(identifier, name, **kwargs)
+        return super()._new(identifier, name, **kwargs)
 
 
 class WorkGraphInputSocketCollection(InputSocketCollection):
-    def new(
+    def _new(
         self,
         identifier: Union[Callable, str],
         name: Optional[str] = None,
@@ -75,11 +75,11 @@ class WorkGraphInputSocketCollection(InputSocketCollection):
         if callable(identifier):
             identifier = build_socket_from_AiiDA(identifier)
         # Call the original new method
-        return super().new(identifier, name, **kwargs)
+        return super()._new(identifier, name, **kwargs)
 
 
 class WorkGraphOutputSocketCollection(OutputSocketCollection):
-    def new(
+    def _new(
         self,
         identifier: Union[Callable, str],
         name: Optional[str] = None,
@@ -91,4 +91,4 @@ class WorkGraphOutputSocketCollection(OutputSocketCollection):
         if callable(identifier):
             identifier = build_socket_from_AiiDA(identifier)
         # Call the original new method
-        return super().new(identifier, name, **kwargs)
+        return super()._new(identifier, name, **kwargs)

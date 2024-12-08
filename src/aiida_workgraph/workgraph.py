@@ -1,8 +1,10 @@
+from __future__ import annotations
+
 import aiida.orm
 import node_graph
 import aiida
-import node_graph.link
-from aiida_workgraph.socket import NodeSocket
+from node_graph.link import NodeLink
+from aiida_workgraph.socket import TaskSocket
 from aiida_workgraph.tasks import task_pool
 from aiida_workgraph.task import Task
 import time
@@ -492,14 +494,14 @@ class WorkGraph(node_graph.NodeGraph):
         self, identifier: Union[str, callable], name: str = None, **kwargs
     ) -> Task:
         """Add a task to the workgraph."""
-        node = self.tasks.new(identifier, name, **kwargs)
+        node = self.tasks._new(identifier, name, **kwargs)
         return node
 
-    def add_link(
-        self, source: NodeSocket, target: NodeSocket
-    ) -> node_graph.link.NodeLink:
-        """Add a link between two nodes."""
-        link = self.links.new(source, target)
+    def add_link(self, source: TaskSocket | Task, target: TaskSocket) -> NodeLink:
+        """Add a link between two tasks."""
+        if isinstance(source, Task):
+            source = source.outputs["_outputs"]
+        link = self.links._new(source, target)
         return link
 
     def to_widget_value(self) -> Dict[str, Any]:

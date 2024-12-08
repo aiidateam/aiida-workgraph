@@ -302,7 +302,7 @@ class WorkGraphSaver:
         # change tasks to nodes for DifferenceAnalysis
         wg1["nodes"] = wg1.pop("tasks")
         self.wgdata["nodes"] = self.wgdata.pop("tasks")
-        dc = DifferenceAnalysis(nt1=wg1, nt2=self.wgdata)
+        dc = DifferenceAnalysis(ng1=wg1, ng2=self.wgdata)
         (
             new_tasks,
             modified_tasks,

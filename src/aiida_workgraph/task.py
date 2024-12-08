@@ -78,7 +78,7 @@ class Task(GraphNode):
         key is the context key, value is the output key.
         """
         # all values should belong to the outputs.keys()
-        remain_keys = set(context.values()).difference(self.outputs.keys())
+        remain_keys = set(context.values()).difference(self.get_output_names())
         if remain_keys:
             msg = f"Keys {remain_keys} are not in the outputs of this task."
             raise ValueError(msg)
@@ -103,8 +103,8 @@ class Task(GraphNode):
                     full_key = f"{base_key}.{sub_key}" if base_key else sub_key
 
                     # Create a new input socket if it does not exist
-                    if full_key not in self.inputs.keys() and dynamic:
-                        self.inputs.new(
+                    if full_key not in self.get_input_names() and dynamic:
+                        self.add_input(
                             "workgraph.any",
                             name=full_key,
                             metadata={"required": True},

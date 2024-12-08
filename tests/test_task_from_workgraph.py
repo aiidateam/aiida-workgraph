@@ -16,8 +16,8 @@ def test_inputs_outptus(wg_calcfunction: WorkGraph) -> None:
         noutput += len(sub_task.outputs) - 2 + 1
     assert len(task1.inputs) == ninput + 1
     assert len(task1.outputs) == noutput + 2
-    assert "sumdiff1.x" in task1.inputs.keys()
-    assert "sumdiff1.sum" in task1.outputs.keys()
+    assert "sumdiff1.x" in task1.get_input_names()
+    assert "sumdiff1.sum" in task1.get_output_names()
 
 
 @pytest.mark.usefixtures("started_daemon_client")

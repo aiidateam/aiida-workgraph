@@ -110,12 +110,12 @@ def test_set_dynamic_port_input(decorated_add) -> None:
     )
     wg.add_link(task1.outputs["_wait"], task2.inputs["dynamic_port.input1"])
     # task will create input for each item in the dynamic port (nodes)
-    assert "dynamic_port.input1" in task2.inputs.keys()
-    assert "dynamic_port.input2" in task2.inputs.keys()
+    assert "dynamic_port.input1" in task2.get_input_names()
+    assert "dynamic_port.input2" in task2.get_input_names()
     # if the value of the item is a Socket, then it will create a link, and pop the item
-    assert "dynamic_port.input3" in task2.inputs.keys()
-    assert "dynamic_port.nested.input4" in task2.inputs.keys()
-    assert "dynamic_port.nested.input5" in task2.inputs.keys()
+    assert "dynamic_port.input3" in task2.get_input_names()
+    assert "dynamic_port.nested.input4" in task2.get_input_names()
+    assert "dynamic_port.nested.input5" in task2.get_input_names()
     assert task2.inputs["dynamic_port"].value == {
         "input1": None,
         "input2": orm.Int(2),
