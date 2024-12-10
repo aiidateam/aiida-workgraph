@@ -69,7 +69,6 @@ def add_input_recursive(
                     "name": port_name,
                     "arg_type": "kwargs",
                     "metadata": {"required": required, "dynamic": port.dynamic},
-                    "property": {"identifier": "workgraph.any", "default": None},
                 }
             )
         for value in port.values():
@@ -248,11 +247,10 @@ def build_task_from_AiiDA(
         if name not in [input["name"] for input in inputs]:
             inputs.append(
                 {
-                    "identifier": "workgraph.any",
+                    "identifier": "workgraph.namespace",
                     "name": name,
                     "arg_type": "var_kwargs",
                     "metadata": {"dynamic": True},
-                    "property": {"identifier": "workgraph.any", "default": {}},
                 }
             )
 

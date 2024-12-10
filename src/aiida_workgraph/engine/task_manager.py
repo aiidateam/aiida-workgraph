@@ -249,6 +249,7 @@ class TaskManager:
                 kwargs[key] = args[i]
             # update the port namespace
             kwargs = update_nested_dict_with_special_keys(kwargs)
+            print("kwargs: ", kwargs)
             # kwargs["meta.label"] = name
             # output must be a Data type or a mapping of {string: Data}
             task["results"] = {}
@@ -592,9 +593,14 @@ class TaskManager:
         for name, input in task["inputs"].items():
             # print(f"input: {input['name']}")
             if len(input["links"]) == 0:
-                inputs[name] = self.ctx_manager.update_context_variable(
-                    input["property"]["value"]
-                )
+                if input["identifier"] == "workgraph.namespace":
+                    inputs[name] = self.ctx_manager.update_context_variable(
+                        input["value"]
+                    )
+                else:
+                    inputs[name] = self.ctx_manager.update_context_variable(
+                        input["property"]["value"]
+                    )
             elif len(input["links"]) == 1:
                 link = input["links"][0]
                 if self.ctx._tasks[link["from_node"]]["results"] is None:

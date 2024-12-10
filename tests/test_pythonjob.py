@@ -71,7 +71,7 @@ def test_PythonJob_kwargs(fixture_localhost, python_executable_path):
         },
     )
     # data inside the kwargs should be serialized separately
-    wg.process.inputs.wg.tasks.add.inputs.kwargs.property.value.m.value == 2
+    wg.process.inputs.wg.tasks.add.inputs.kwargs.socket_property.value.m.value == 2
     assert wg.tasks["add"].outputs["result"].value.value == 8
     # load the workgraph
     wg = WorkGraph.load(wg.pk)

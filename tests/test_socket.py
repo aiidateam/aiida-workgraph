@@ -30,8 +30,8 @@ def test_type_mapping(data_type, data, identifier) -> None:
     def add(x: data_type):
         pass
 
-    assert add.task().inputs["x"].identifier == identifier
-    assert add.task().inputs["x"].property.identifier == identifier
+    assert add.task().inputs["x"]._socket_identifier == identifier
+    assert add.task().inputs["x"].socket_property.identifier == identifier
     add_task = add.task()
     add_task.set({"x": data})
     # test set data from context
@@ -48,14 +48,14 @@ def test_vector_socket() -> None:
         "vector2d",
         property_data={"size": 2, "default": [1, 2]},
     )
-    assert t.inputs["vector2d"].property.get_metadata() == {
+    assert t.inputs["vector2d"].socket_property.get_metadata() == {
         "size": 2,
         "default": [1, 2],
     }
     with pytest.raises(ValueError, match="Invalid size: Expected 2, got 3 instead."):
-        t.inputs["vector2d"].value = [1, 2, 3]
+        t.inputs["vector2d"].socket_value = [1, 2, 3]
     with pytest.raises(ValueError, match="Invalid item type: Expected "):
-        t.inputs["vector2d"].value = [1.1, 2.2]
+        t.inputs["vector2d"].socket_value = [1.1, 2.2]
 
 
 def test_aiida_data_socket() -> None:
@@ -71,8 +71,8 @@ def test_aiida_data_socket() -> None:
         def add(x: data_type):
             pass
 
-        assert add.task().inputs["x"].identifier == identifier
-        assert add.task().inputs["x"].property.identifier == identifier
+        assert add.task().inputs["x"]._socket_identifier == identifier
+        assert add.task().inputs["x"].socket_property.identifier == identifier
         add_task = add.task()
         add_task.set({"x": data})
         # test set data from context
@@ -129,9 +129,8 @@ def test_kwargs() -> None:
         return {"sum": a + b, "product": a * b}
 
     test1 = test.node()
-    assert test1.inputs["kwargs"].link_limit == 1e6
-    assert test1.inputs["kwargs"].identifier == "workgraph.namespace"
-    assert test1.inputs["kwargs"].property.value is None
+    assert test1.inputs["kwargs"].socket_link_limit == 1e6
+    assert test1.inputs["kwargs"]._socket_identifier == "workgraph.namespace"
 
 
 @pytest.mark.parametrize(
