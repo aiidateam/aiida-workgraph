@@ -42,18 +42,6 @@ def build_callable(obj: Callable) -> Dict[str, Any]:
     return executor
 
 
-def get_sorted_names(data: dict) -> list[str]:
-    """Get the sorted names from a dictionary."""
-    sorted_names = [
-        name
-        for name, _ in sorted(
-            ((name, item["list_index"]) for name, item in data.items()),
-            key=lambda x: x[1],
-        )
-    ]
-    return sorted_names
-
-
 def store_nodes_recursely(data: Any) -> None:
     """Recurse through a data structure and store any unstored nodes that are found along the way
     :param data: a data structure potentially containing unstored nodes
@@ -615,7 +603,6 @@ def validate_task_inout(inout_list: list[str | dict], list_type: str) -> list[di
     :raises TypeError: If wrong types are provided to the task
     :return: Processed `inputs`/`outputs` list.
     """
-    from node_graph.utils import list_to_dict
 
     if not all(isinstance(item, (dict, str)) for item in inout_list):
         raise TypeError(
@@ -630,7 +617,7 @@ def validate_task_inout(inout_list: list[str | dict], list_type: str) -> list[di
         elif isinstance(item, dict):
             processed_inout_list.append(item)
 
-    processed_inout_list = list_to_dict(processed_inout_list)
+    processed_inout_list = processed_inout_list
 
     return processed_inout_list
 

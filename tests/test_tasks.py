@@ -18,7 +18,9 @@ def test_normal_task(decorated_add) -> None:
         decorated_add, name="add", x=task1.outputs["sum"], y=task1.outputs["diff"]
     )
     wg.run()
-    assert task2.outputs["result"].value == 4
+    print("node: ", task2.node.outputs.result)
+    wg.update()
+    assert task2.outputs["result"].socket_value == 4
 
 
 def test_task_collection(decorated_add: Callable) -> None:
@@ -68,8 +70,8 @@ def test_set_non_dynamic_namespace_socket(decorated_add) -> None:
             "non_dynamic_port": {"a": task1.outputs["result"], "b": orm.Int(2)},
         }
     )
-    assert len(task2.inputs["non_dynamic_port.a"].links) == 1
-    assert task2.inputs["non_dynamic_port"].value == {"b": orm.Int(2)}
+    assert len(task2.inputs["non_dynamic_port.a"].socket_links) == 1
+    assert task2.inputs["non_dynamic_port"].socket_value == {"b": orm.Int(2)}
     assert len(wg.links) == 1
 
 
@@ -85,8 +87,12 @@ def test_set_namespace_socket(decorated_add) -> None:
             "add": {"x": task1.outputs["result"], "y": orm.Int(2)},
         }
     )
-    assert len(task2.inputs["add.x"].links) == 1
-    assert task2.inputs["add"].value == {"y": orm.Int(2)}
+    assert len(task2.inputs["add.x"].socket_links) == 1
+    assert task2.inputs["add"].socket_value == {
+        "metadata": {"options": {"stash": {}}},
+        "monitors": {},
+        "y": orm.Int(2),
+    }
     assert len(wg.links) == 1
 
 
@@ -110,14 +116,13 @@ def test_set_dynamic_port_input(decorated_add) -> None:
     )
     wg.add_link(task1.outputs["_wait"], task2.inputs["dynamic_port.input1"])
     # task will create input for each item in the dynamic port (nodes)
-    assert "dynamic_port.input1" in task2.get_input_names()
-    assert "dynamic_port.input2" in task2.get_input_names()
+    assert "dynamic_port.input1" in task2.inputs
+    assert "dynamic_port.input2" in task2.inputs
     # if the value of the item is a Socket, then it will create a link, and pop the item
-    assert "dynamic_port.input3" in task2.get_input_names()
-    assert "dynamic_port.nested.input4" in task2.get_input_names()
-    assert "dynamic_port.nested.input5" in task2.get_input_names()
-    assert task2.inputs["dynamic_port"].value == {
-        "input1": None,
+    assert "dynamic_port.input3" in task2.inputs
+    assert "dynamic_port.nested.input4" in task2.inputs
+    assert "dynamic_port.nested.input5" in task2.inputs
+    assert task2.inputs["dynamic_port"].socket_value == {
         "input2": orm.Int(2),
         "nested": {"input4": orm.Int(4)},
     }
@@ -133,9 +138,7 @@ def test_set_inputs(decorated_add: Callable) -> None:
     data = wg.prepare_inputs(metadata=None)
     assert data["wg"]["tasks"]["add1"]["inputs"]["y"]["property"]["value"] == 2
     assert (
-        data["wg"]["tasks"]["add1"]["inputs"]["metadata"]["property"]["value"][
-            "store_provenance"
-        ]
+        data["wg"]["tasks"]["add1"]["inputs"]["metadata"]["value"]["store_provenance"]
         is False
     )
 
@@ -151,9 +154,9 @@ def test_set_inputs_from_builder(add_code) -> None:
     builder.x = 1
     builder.y = 2
     add1.set_from_builder(builder)
-    assert add1.inputs["x"].value == 1
-    assert add1.inputs["y"].value == 2
-    assert add1.inputs["code"].value == add_code
+    assert add1.inputs["x"].socket_value == 1
+    assert add1.inputs["y"].socket_value == 2
+    assert add1.inputs["code"].socket_value == add_code
     with pytest.raises(
         AttributeError,
         match=f"Executor {ArithmeticAddCalculation.__name__} does not have the get_builder_from_protocol method.",

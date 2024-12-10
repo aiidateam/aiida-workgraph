@@ -96,11 +96,12 @@ def test_organize_nested_inputs():
     data = {
         "metadata": {
             "call_link_label": "nest",
-            "options": {"resources": {"num_cpus": 1, "num_machines": 1}},
+            "options": {"resources": {"num_machines": 1}, "stash": {}},
         },
+        "monitors": {},
         "x": "1",
     }
-    assert inputs["wg"]["tasks"]["task1"]["inputs"]["add"]["property"]["value"] == data
+    assert inputs["wg"]["tasks"]["task1"]["inputs"]["add"]["value"] == data
 
 
 @pytest.mark.usefixtures("started_daemon_client")

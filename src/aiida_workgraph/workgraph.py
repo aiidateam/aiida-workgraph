@@ -294,12 +294,10 @@ class WorkGraph(node_graph.NodeGraph):
                     # even if the node.is_finished_ok is True
                     if node.is_finished_ok:
                         # update the output sockets
-                        i = 0
                         for socket in self.tasks[name].outputs:
-                            socket.value = get_nested_dict(
+                            socket.socket_value = get_nested_dict(
                                 node.outputs, socket.socket_name, default=None
                             )
-                            i += 1
                 # read results from the process outputs
                 elif isinstance(node, aiida.orm.Data):
                     self.tasks[name].outputs[0].value = node
@@ -473,13 +471,13 @@ class WorkGraph(node_graph.NodeGraph):
         for task in wg.tasks:
             task.name = prefix + task.name
             task.parent = self
-            self.tasks.append(task)
+            self.tasks._append(task)
         # self.sequence.extend([prefix + task for task in wg.sequence])
         # self.conditions.extend(wg.conditions)
         self.context.update(wg.context)
         # links
         for link in wg.links:
-            self.links.append(link)
+            self.links._append(link)
 
     @property
     def error_handlers(self) -> Dict[str, Any]:

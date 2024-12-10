@@ -3,7 +3,6 @@ from __future__ import annotations
 from typing import Any, Callable, Dict, List, Optional, Union, Tuple
 from aiida_workgraph.utils import get_executor
 from aiida.engine import calcfunction, workfunction, CalcJob, WorkChain
-from aiida import orm
 from aiida.orm.nodes.process.calculation.calcfunction import CalcFunctionNode
 from aiida.orm.nodes.process.workflow.workfunction import WorkFunctionNode
 from aiida.engine.processes.ports import PortNamespace
@@ -11,28 +10,14 @@ from aiida_workgraph.task import Task
 from aiida_workgraph.utils import build_callable, validate_task_inout
 import inspect
 from aiida_workgraph.config import builtin_inputs, builtin_outputs
+from aiida_workgraph.orm.mapping import type_mapping
+
 
 task_types = {
     CalcFunctionNode: "CALCFUNCTION",
     WorkFunctionNode: "WORKFUNCTION",
     CalcJob: "CALCJOB",
     WorkChain: "WORKCHAIN",
-}
-
-type_mapping = {
-    "default": "workgraph.any",
-    "namespace": "workgraph.namespace",
-    int: "workgraph.int",
-    float: "workgraph.float",
-    str: "workgraph.string",
-    bool: "workgraph.bool",
-    orm.Int: "workgraph.aiida_int",
-    orm.Float: "workgraph.aiida_float",
-    orm.Str: "workgraph.aiida_string",
-    orm.Bool: "workgraph.aiida_bool",
-    orm.List: "workgraph.aiida_list",
-    orm.Dict: "workgraph.aiida_dict",
-    orm.StructureData: "workgraph.aiida_structuredata",
 }
 
 

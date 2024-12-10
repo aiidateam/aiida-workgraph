@@ -83,48 +83,6 @@ class Task(GraphNode):
             raise ValueError(msg)
         self.context_mapping.update(context)
 
-    def set(self, data: Dict[str, Any]) -> None:
-        from node_graph.socket import NodeSocket
-
-        super().set(data)
-
-        def process_nested_inputs(
-            base_key: str, value: Any, dynamic: bool = False
-        ) -> None:
-            """Recursive function to process nested inputs.
-            Creates sockets and links dynamically for nested values.
-            """
-            if isinstance(value, dict):
-                keys = list(value.keys())
-                for sub_key in keys:
-                    sub_value = value[sub_key]
-                    # Form the full key for the current nested level
-                    full_key = f"{base_key}.{sub_key}" if base_key else sub_key
-
-                    # Create a new input socket if it does not exist
-                    if full_key not in self.get_input_names() and dynamic:
-                        self.add_input(
-                            "workgraph.any",
-                            name=full_key,
-                            metadata={"required": True},
-                        )
-                    if isinstance(sub_value, NodeSocket):
-                        self.parent.links.new(sub_value, self.inputs[full_key])
-                        value.pop(sub_key)
-                    else:
-                        # Recursively process nested dictionaries
-                        process_nested_inputs(full_key, sub_value, dynamic)
-
-        # create input sockets and links for items inside a dynamic socket
-        # TODO the input value could be nested, but we only support one level for now
-        for key in data:
-            if self.inputs[key]._socket_identifier == "workgraph.namespace":
-                process_nested_inputs(
-                    key,
-                    self.inputs[key].value,
-                    dynamic=self.inputs[key].metadata.get("dynamic", False),
-                )
-
     def set_from_builder(self, builder: Any) -> None:
         """Set the task inputs from a AiiDA ProcessBuilder."""
         from aiida_workgraph.utils import get_dict_from_builder
@@ -230,7 +188,7 @@ class Task(GraphNode):
         for key in ("properties", "executor", "node_class", "process"):
             tdata.pop(key, None)
         for input in tdata["inputs"].values():
-            input.pop("property")
+            input.pop("property", None)
 
         tdata["label"] = tdata["identifier"]
 
@@ -289,9 +247,9 @@ class TaskCollection:
         task_objects = []
         for task in tasks:
             if isinstance(task, str):
-                if task not in self.graph.tasks.keys():
+                if task not in self.graph.tasks:
                     raise ValueError(
-                        f"Task '{task}' is not in the graph. Available tasks: {self.graph.tasks.keys()}"
+                        f"Task '{task}' is not in the graph. Available tasks: {self.graph.tasks}"
                     )
                 task_objects.append(self.graph.tasks[task])
             elif isinstance(task, Task):

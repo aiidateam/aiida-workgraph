@@ -41,7 +41,7 @@ class TaskManager:
         for output in task.outputs:
             output.value = get_nested_dict(
                 self.ctx._tasks[name]["results"],
-                output.name,
+                output.socket_name,
                 default=output.value,
             )
         return task
@@ -734,7 +734,9 @@ class TaskManager:
         """Set the results of a normal task.
         A normal task is created by decorating a function with @task().
         """
-        from aiida_workgraph.utils import get_sorted_names
+        from aiida_workgraph.config import builtin_outputs
+
+        builtin_output_names = [output["name"] for output in builtin_outputs]
 
         if success:
             task = self.ctx._tasks[name]
@@ -743,7 +745,9 @@ class TaskManager:
                 if len(task["outputs"]) - 2 != len(results):
                     self.on_task_failed(name)
                     return self.process.exit_codes.OUTPUS_NOT_MATCH_RESULTS
-                output_names = get_sorted_names(task["outputs"])[0:-2]
+                output_names = [
+                    name for name in task["outputs"] if name not in builtin_output_names
+                ]
                 for i, output_name in enumerate(output_names):
                     task["results"][output_name] = results[i]
             elif isinstance(results, dict):
