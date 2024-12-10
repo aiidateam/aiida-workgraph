@@ -14,10 +14,10 @@ def test_inputs_outptus(wg_calcfunction: WorkGraph) -> None:
     noutput = 0
     for sub_task in wg_calcfunction.tasks:
         noutput += len(sub_task.outputs) - 2 + 1
-    assert len(task1.inputs) == ninput + 1
-    assert len(task1.outputs) == noutput + 2
-    assert "sumdiff1.x" in task1.get_input_names()
-    assert "sumdiff1.sum" in task1.get_output_names()
+    assert len(task1.inputs) == len(wg_calcfunction.tasks) + 1
+    assert len(task1.outputs) == len(wg_calcfunction.tasks) + 2
+    assert "sumdiff1.x" in task1.inputs
+    assert "sumdiff1.sum" in task1.outputs
 
 
 @pytest.mark.usefixtures("started_daemon_client")
@@ -33,7 +33,7 @@ def test_build_task_from_workgraph(decorated_add: Callable) -> None:
     add1_task = wg.add_task(decorated_add, name="add1", x=1, y=3)
     wg_task = wg.add_task(sub_wg, name="sub_wg")
     # the default value of the namespace is None
-    assert wg_task.inputs["add1"].value is None
+    assert wg_task.inputs["add1"].socket_value == {"metadata": {}}
     wg.add_task(decorated_add, name="add2", y=3)
     wg.add_link(add1_task.outputs["result"], wg_task.inputs["add1.x"])
     wg.add_link(wg_task.outputs["add2.result"], wg.tasks["add2"].inputs["x"])
@@ -41,4 +41,4 @@ def test_build_task_from_workgraph(decorated_add: Callable) -> None:
     assert len(wg_task.outputs) == 6
     wg.submit(wait=True)
     # wg.run()
-    assert wg.tasks["add2"].outputs["result"].value.value == 12
+    assert wg.tasks["add2"].outputs["result"].socket_value.value == 12

@@ -96,7 +96,7 @@ class WorkGraph(node_graph.NodeGraph):
         # set task inputs
         if inputs is not None:
             for name, input in inputs.items():
-                if name not in self.tasks.keys():
+                if name not in self.tasks:
                     raise KeyError(f"Task {name} not found in WorkGraph.")
                 self.tasks[name].set(input)
         # One can not run again if the process is alreay created. otherwise, a new process node will
@@ -128,7 +128,7 @@ class WorkGraph(node_graph.NodeGraph):
         # set task inputs
         if inputs is not None:
             for name, input in inputs.items():
-                if name not in self.tasks.keys():
+                if name not in self.tasks:
                     raise KeyError(f"Task {name} not found in WorkGraph.")
                 self.tasks[name].set(input)
 
@@ -300,7 +300,7 @@ class WorkGraph(node_graph.NodeGraph):
                             )
                 # read results from the process outputs
                 elif isinstance(node, aiida.orm.Data):
-                    self.tasks[name].outputs[0].value = node
+                    self.tasks[name].outputs[0].socket_value = node
         execution_count = getattr(self.process.outputs, "execution_count", None)
         self.execution_count = execution_count if execution_count else 0
         if self._widget is not None:

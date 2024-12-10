@@ -36,7 +36,7 @@ def test_pause_play_task(wg_calcjob):
     # Seems the daemon is not responding to the play signal
     wg.play_tasks(["add2"])
     wg.wait(interval=5)
-    assert wg.tasks["add2"].outputs["sum"].value == 9
+    assert wg.tasks["add2"].outputs["sum"].socket_value == 9
 
 
 def test_pause_play_error_handler(wg_calcjob, finished_process_node):

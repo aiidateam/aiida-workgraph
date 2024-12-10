@@ -20,7 +20,8 @@ class PythonJob(Task):
 
         for input in tdata["inputs"].values():
             if input["metadata"].get("is_function_input", False):
-                input["property"]["value"] = cls.serialize_socket_data(input)
+                if input.get("property", {}).get("value") is not None:
+                    input["property"]["value"] = cls.serialize_socket_data(input)
 
     @classmethod
     def deserialize_pythonjob_data(cls, tdata: Dict[str, Any]) -> None:
@@ -43,7 +44,7 @@ class PythonJob(Task):
     @classmethod
     def serialize_socket_data(cls, data: Dict[str, Any]) -> Any:
         if data.get("identifier", "Any").upper() == "WORKGRAPH.NAMESPACE":
-            if data["property"]["value"] is None:
+            if data.get("property", {}).get("value") is None:
                 return None
             if isinstance(data["property"]["value"], dict):
                 serialized_result = {}
@@ -53,14 +54,14 @@ class PythonJob(Task):
             else:
                 raise ValueError("Namespace socket should be a dictionary.")
         else:
-            if isinstance(data["property"]["value"], orm.Data):
+            if isinstance(data.get("property", {}).get("value"), orm.Data):
                 return data["property"]["value"]
             return general_serializer(data["property"]["value"])
 
     @classmethod
     def deserialize_socket_data(cls, data: Dict[str, Any]) -> Any:
         if data.get("identifier", "Any").upper() == "WORKGRAPH.NAMESPACE":
-            if isinstance(data["property"]["value"], dict):
+            if isinstance(data.get("property", {}).get("value"), dict):
                 deserialized_result = {}
                 for key, value in data["property"]["value"].items():
                     if isinstance(value, orm.Data):
@@ -71,6 +72,6 @@ class PythonJob(Task):
             else:
                 raise ValueError("Namespace socket should be a dictionary.")
         else:
-            if isinstance(data["property"]["value"], orm.Data):
+            if isinstance(data.get("property", {}).get("value"), orm.Data):
                 return data["property"]["value"].value
             return data["property"]["value"]

@@ -118,7 +118,6 @@ def test_numpy_array(decorated_normal_add):
     wg.submit(wait=True)
     # wg.run()
     assert wg.state.upper() == "FINISHED"
-    # assert (wg.tasks["add1"].outputs["result"].value == np.array([5, 7, 9])).all()
 
 
 def test_kwargs() -> None:
