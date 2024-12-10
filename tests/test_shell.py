@@ -76,7 +76,7 @@ def test_dynamic_port():
     assert "nodes.input2" in cat_task.inputs
     # if the value of the item is a Socket, then it will create a link, and pop the item
     assert "nodes.input3" in cat_task.inputs
-    assert cat_task.inputs["nodes"].socket_value == {"input2": Int(2)}
+    assert cat_task.inputs["nodes"]._value == {"input2": Int(2)}
 
 
 @pytest.mark.usefixtures("started_daemon_client")
@@ -123,4 +123,4 @@ def test_shell_graph_builder():
     wg = WorkGraph(name="test_shell_graph_builder")
     add_multiply1 = wg.add_task(add_multiply, x=Int(2), y=Int(3))
     wg.submit(wait=True)
-    assert add_multiply1.outputs["result"].socket_value.value == 5
+    assert add_multiply1.outputs["result"].value.value == 5

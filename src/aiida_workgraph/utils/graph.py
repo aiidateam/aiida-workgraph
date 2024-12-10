@@ -45,9 +45,9 @@ def link_creation_hook(self, link: Any) -> None:
                 "type": "add_link",
                 "data": {
                     "from_node": link.from_node.name,
-                    "from_socket": link.from_socket.socket_name,
+                    "from_socket": link.from_socket._name,
                     "to_node": link.to_node.name,
-                    "to_socket": link.to_socket.socket_name,
+                    "to_socket": link.to_socket._name,
                 },
             }
         )
@@ -65,9 +65,9 @@ def link_deletion_hook(self, link: Any) -> None:
                 "type": "delete_link",
                 "data": {
                     "from_node": link.from_node.name,
-                    "from_socket": link.from_socket.socket_name,
+                    "from_socket": link.from_socket._name,
                     "to_node": link.to_node.name,
-                    "to_socket": link.to_socket.socket_name,
+                    "to_socket": link.to_socket._name,
                 },
             }
         )

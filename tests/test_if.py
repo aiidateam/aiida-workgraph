@@ -30,7 +30,7 @@ def test_if_task(decorated_add, decorated_multiply, decorated_compare):
     )
     add3 = wg.add_task(decorated_add, name="add3", x=select1.outputs["result"], y=1)
     wg.run()
-    assert add3.outputs["result"].socket_value == 5
+    assert add3.outputs["result"].value == 5
 
 
 def test_empty_if_task():

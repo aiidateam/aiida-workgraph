@@ -23,7 +23,7 @@ def test_workgraph_ctx(decorated_add: Callable) -> None:
     get_ctx1.waiting_on.add(add1)
     add2 = wg.add_task(decorated_add, "add2", x=get_ctx1.outputs["result"], y=1)
     wg.run()
-    assert add2.outputs["result"].socket_value == 6
+    assert add2.outputs["result"].value == 6
 
 
 @pytest.mark.usefixtures("started_daemon_client")
@@ -40,4 +40,4 @@ def test_task_set_ctx(decorated_add: Callable) -> None:
     add2 = wg.add_task(decorated_add, "add2", y="{{ sum }}")
     wg.add_link(add1.outputs[0], add2.inputs["x"])
     wg.submit(wait=True)
-    assert add2.outputs["result"].socket_value == 10
+    assert add2.outputs["result"].value == 10

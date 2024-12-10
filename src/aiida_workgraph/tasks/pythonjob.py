@@ -11,20 +11,22 @@ class PythonJob(Task):
 
     def update_from_dict(self, data: Dict[str, Any], **kwargs) -> "PythonJob":
         """Overwrite the update_from_dict method to handle the PythonJob data."""
-        self.deserialize_pythonjob_data(data)
+        self.deserialize_pythonjob_data(data["inputs"])
         super().update_from_dict(data)
 
     @classmethod
-    def serialize_pythonjob_data(cls, tdata: Dict[str, Any]):
+    def serialize_pythonjob_data(cls, input_data: Dict[str, Any]):
         """Serialize the properties for PythonJob."""
 
-        for input in tdata["inputs"].values():
+        for input in input_data.values():
             if input["metadata"].get("is_function_input", False):
-                if input.get("property", {}).get("value") is not None:
+                if ["identifier"] == "workgraph.namespace":
+                    cls.serialize_socket_data(input["sockets"])
+                elif input.get("property", {}).get("value") is not None:
                     input["property"]["value"] = cls.serialize_socket_data(input)
 
     @classmethod
-    def deserialize_pythonjob_data(cls, tdata: Dict[str, Any]) -> None:
+    def deserialize_pythonjob_data(cls, input_data: Dict[str, Any]) -> None:
         """
         Process the task data dictionary for a PythonJob.
         It load the orignal Python data from the AiiDA Data node for the
@@ -37,7 +39,7 @@ class PythonJob(Task):
             Dict[str, Any]: The processed data dictionary.
         """
 
-        for input in tdata["inputs"].values():
+        for input in input_data.values():
             if input["metadata"].get("is_function_input", False):
                 input["property"]["value"] = cls.deserialize_socket_data(input)
 

@@ -109,7 +109,7 @@ wg = WorkGraph("aggregate_by_multilinking")
 aggregate_task = wg.add_task(aggregate, name="aggregate_task")
 
 # we have to increase the link limit because by default workgraph only supports one link per input socket
-aggregate_task.inputs["collected_values"].socket_link_limit = 50
+aggregate_task.inputs["collected_values"]._link_limit = 50
 
 for i in range(2):  # this can be chosen as wanted
     generator_task = wg.add_task(generator, name=f"generator{i}", seed=Int(i))
@@ -188,8 +188,8 @@ aggregate_task = wg.add_task(aggregate, name="aggregate_task")
 
 # we have to increase the link limit because by default workgraph only supports
 # one link per input socket.
-aggregate_task.inputs["collected_ints"].socket_link_limit = 50
-aggregate_task.inputs["collected_floats"].socket_link_limit = 50
+aggregate_task.inputs["collected_ints"]._link_limit = 50
+aggregate_task.inputs["collected_floats"]._link_limit = 50
 
 
 for i in range(2):  # this can be chosen as wanted

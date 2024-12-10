@@ -381,12 +381,12 @@ def build_task_from_workgraph(wg: any) -> Task:
             }
         )
         for socket in task.inputs:
-            if socket.socket_name in builtin_input_names:
+            if socket._name in builtin_input_names:
                 continue
             inputs.append(
                 {
-                    "identifier": socket._socket_identifier,
-                    "name": f"{task.name}.{socket.socket_name}",
+                    "identifier": socket._identifier,
+                    "name": f"{task.name}.{socket._name}",
                 }
             )
         # outputs
@@ -397,18 +397,18 @@ def build_task_from_workgraph(wg: any) -> Task:
             }
         )
         for socket in task.outputs:
-            if socket.socket_name in builtin_output_names:
+            if socket._name in builtin_output_names:
                 continue
             outputs.append(
                 {
-                    "identifier": socket._socket_identifier,
-                    "name": f"{task.name}.{socket.socket_name}",
+                    "identifier": socket._identifier,
+                    "name": f"{task.name}.{socket._name}",
                 }
             )
             group_outputs.append(
                 {
-                    "name": f"{task.name}.{socket.socket_name}",
-                    "from": f"{task.name}.{socket.socket_name}",
+                    "name": f"{task.name}.{socket._name}",
+                    "from": f"{task.name}.{socket._name}",
                 }
             )
     # add built-in sockets

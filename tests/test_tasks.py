@@ -20,7 +20,7 @@ def test_normal_task(decorated_add) -> None:
     wg.run()
     print("node: ", task2.node.outputs.result)
     wg.update()
-    assert task2.outputs["result"].socket_value == 4
+    assert task2.outputs["result"].value == 4
 
 
 def test_task_collection(decorated_add: Callable) -> None:
@@ -70,8 +70,8 @@ def test_set_non_dynamic_namespace_socket(decorated_add) -> None:
             "non_dynamic_port": {"a": task1.outputs["result"], "b": orm.Int(2)},
         }
     )
-    assert len(task2.inputs["non_dynamic_port.a"].socket_links) == 1
-    assert task2.inputs["non_dynamic_port"].socket_value == {"b": orm.Int(2)}
+    assert len(task2.inputs["non_dynamic_port.a"]._links) == 1
+    assert task2.inputs["non_dynamic_port"].value == {"b": orm.Int(2)}
     assert len(wg.links) == 1
 
 
@@ -87,8 +87,8 @@ def test_set_namespace_socket(decorated_add) -> None:
             "add": {"x": task1.outputs["result"], "y": orm.Int(2)},
         }
     )
-    assert len(task2.inputs["add.x"].socket_links) == 1
-    assert task2.inputs["add"].socket_value == {
+    assert len(task2.inputs["add.x"]._links) == 1
+    assert task2.inputs["add"].value == {
         "metadata": {"options": {"stash": {}}},
         "monitors": {},
         "y": orm.Int(2),
@@ -122,7 +122,7 @@ def test_set_dynamic_port_input(decorated_add) -> None:
     assert "dynamic_port.input3" in task2.inputs
     assert "dynamic_port.nested.input4" in task2.inputs
     assert "dynamic_port.nested.input5" in task2.inputs
-    assert task2.inputs["dynamic_port"].socket_value == {
+    assert task2.inputs["dynamic_port"].value == {
         "input2": orm.Int(2),
         "nested": {"input4": orm.Int(4)},
     }
@@ -154,9 +154,9 @@ def test_set_inputs_from_builder(add_code) -> None:
     builder.x = 1
     builder.y = 2
     add1.set_from_builder(builder)
-    assert add1.inputs["x"].socket_value == 1
-    assert add1.inputs["y"].socket_value == 2
-    assert add1.inputs["code"].socket_value == add_code
+    assert add1.inputs["x"].value == 1
+    assert add1.inputs["y"].value == 2
+    assert add1.inputs["code"].value == add_code
     with pytest.raises(
         AttributeError,
         match=f"Executor {ArithmeticAddCalculation.__name__} does not have the get_builder_from_protocol method.",

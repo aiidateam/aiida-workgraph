@@ -23,21 +23,21 @@ class TaskSocket(NodeSocket):
 
     def get_node_value(self):
         """Obtain the actual Python `value` of the object attached to the Socket."""
-        if isinstance(self.socket_value, orm.Data):
-            if hasattr(self.socket_value, "value"):
-                return self.socket_value.value
+        if isinstance(self.value, orm.Data):
+            if hasattr(self.value, "value"):
+                return self.value.value
             else:
                 raise ValueError(
                     "Data node does not have a value attribute. We do not know how to extract the raw Python value."
                 )
         else:
-            return self.socket_value
+            return self.value
 
 
 class TaskSocketNamespace(NodeSocketNamespace):
     """Represent a namespace of a Task in the AiiDA WorkGraph."""
 
-    _socket_identifier = "workgraph.namespace"
+    _identifier = "workgraph.namespace"
     _socket_property_class = TaskProperty
     _type_mapping: dict = type_mapping
 

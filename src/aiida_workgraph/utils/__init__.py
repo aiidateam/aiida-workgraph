@@ -451,7 +451,7 @@ def serialize_workgraph_inputs(wgdata):
             if not data["handler"]["use_module_path"]:
                 pickle_callable(data["handler"])
         if task["metadata"]["node_type"].upper() == "PYTHONJOB":
-            PythonJob.serialize_pythonjob_data(task)
+            PythonJob.serialize_pythonjob_data(task["inputs"])
         for _, input in task["inputs"].items():
             if input.get("property"):
                 prop = input["property"]

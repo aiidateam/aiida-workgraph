@@ -295,12 +295,14 @@ class WorkGraph(node_graph.NodeGraph):
                     if node.is_finished_ok:
                         # update the output sockets
                         for socket in self.tasks[name].outputs:
-                            socket.socket_value = get_nested_dict(
-                                node.outputs, socket.socket_name, default=None
+                            if socket._identifier == "workgraph.namespace":
+                                continue
+                            socket.value = get_nested_dict(
+                                node.outputs, socket._name, default=None
                             )
                 # read results from the process outputs
                 elif isinstance(node, aiida.orm.Data):
-                    self.tasks[name].outputs[0].socket_value = node
+                    self.tasks[name].outputs[0].value = node
         execution_count = getattr(self.process.outputs, "execution_count", None)
         self.execution_count = execution_count if execution_count else 0
         if self._widget is not None:

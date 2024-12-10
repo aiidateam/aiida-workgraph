@@ -85,7 +85,7 @@ def test_while_task(decorated_add, decorated_compare):
     for link in wg.process.base.links.get_outgoing().all():
         if isinstance(link.node, orm.ProcessNode):
             print(link.node.label, link.node.outputs.result)
-    assert add2.outputs["result"].socket_value.value == raw_python_code().value
+    assert add2.outputs["result"].value.value == raw_python_code().value
 
 
 @pytest.mark.usefixtures("started_daemon_client")
@@ -105,7 +105,7 @@ def test_while_workgraph(decorated_add, decorated_multiply, decorated_compare):
     wg.add_link(multiply1.outputs["result"], add1.inputs["x"])
     wg.submit(wait=True, timeout=100)
     assert wg.execution_count == 4
-    assert wg.tasks["add1"].outputs["result"].socket_value == 29
+    assert wg.tasks["add1"].outputs["result"].value == 29
 
 
 @pytest.mark.usefixtures("started_daemon_client")
@@ -137,5 +137,5 @@ def test_while_graph_builder(decorated_add, decorated_multiply, decorated_compar
     wg.add_link(add1.outputs["result"], my_while1.inputs["limit"])
     wg.add_link(my_while1.outputs["result"], add2.inputs["x"])
     wg.submit(wait=True, timeout=100)
-    assert add2.outputs["result"].socket_value < 31
+    assert add2.outputs["result"].value < 31
     assert my_while1.node.outputs.execution_count == 2

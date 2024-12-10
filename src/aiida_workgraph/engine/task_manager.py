@@ -39,10 +39,10 @@ class TaskManager:
         task = Task.from_dict(self.ctx._tasks[name])
         # update task results
         for output in task.outputs:
-            output.socket_value = get_nested_dict(
+            output.value = get_nested_dict(
                 self.ctx._tasks[name]["results"],
-                output.socket_name,
-                default=output.socket_value,
+                output._name,
+                default=output.value,
             )
         return task
 

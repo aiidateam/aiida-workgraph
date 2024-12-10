@@ -11,7 +11,7 @@ def test_run(wg_calcfunction: WorkGraph) -> None:
     print("state: ", wg.state)
     # print("results: ", results[])
     assert wg.tasks["sumdiff2"].node.outputs.sum == 9
-    assert wg.tasks["sumdiff2"].outputs["sum"].socket_value == 9
+    assert wg.tasks["sumdiff2"].outputs["sum"].value == 9
 
 
 @pytest.mark.usefixtures("started_daemon_client")
@@ -27,4 +27,4 @@ def test_dynamic_inputs() -> None:
     wg = WorkGraph("test_dynamic_inputs")
     wg.add_task(add, name="add1", x=orm.Int(1), y=orm.Int(2))
     wg.run()
-    assert wg.tasks["add1"].outputs["result"].socket_value == 3
+    assert wg.tasks["add1"].outputs["result"].value == 3

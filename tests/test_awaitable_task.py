@@ -21,7 +21,7 @@ def test_awaitable_decorator(decorated_add):
     wg.run()
     report = get_workchain_report(wg.process, "REPORT")
     assert "Waiting for child processes: awaitable_func1" in report
-    assert add1.outputs["result"].socket_value == 4
+    assert add1.outputs["result"].value == 4
 
 
 def test_monitor_decorator():
@@ -60,7 +60,7 @@ def test_time_monitor(decorated_add):
     wg.run()
     report = get_workchain_report(wg.process, "REPORT")
     assert "Waiting for child processes: monitor1" in report
-    assert add1.outputs["result"].socket_value == 3
+    assert add1.outputs["result"].value == 3
 
 
 def test_file_monitor(decorated_add, tmp_path):
@@ -84,7 +84,7 @@ def test_file_monitor(decorated_add, tmp_path):
     wg.run()
     report = get_workchain_report(wg.process, "REPORT")
     assert "Waiting for child processes: monitor1" in report
-    assert add1.outputs["result"].socket_value == 3
+    assert add1.outputs["result"].value == 3
 
 
 @pytest.mark.usefixtures("started_daemon_client")
