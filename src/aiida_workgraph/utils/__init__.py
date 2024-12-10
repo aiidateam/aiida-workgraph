@@ -252,17 +252,16 @@ def organize_nested_inputs(wgdata: Dict[str, Any]) -> None:
                 update_nested_dict(root_prop["value"], key, prop["value"])
                 prop["value"] = None
         for key, input in task["inputs"].items():
-            if input["property"] is None:
-                continue
-            prop = input["property"]
-            if "." in key and prop["value"] not in [None, {}]:
-                root, key = key.split(".", 1)
-                root_prop = task["inputs"][root]["property"]
-                # update the root property
-                root_prop["value"] = update_nested_dict(
-                    root_prop["value"], key, prop["value"]
-                )
-                prop["value"] = None
+            if input.get("property"):
+                prop = input["property"]
+                if "." in key and prop["value"] not in [None, {}]:
+                    root, key = key.split(".", 1)
+                    root_prop = task["inputs"][root]["property"]
+                    # update the root property
+                    root_prop["value"] = update_nested_dict(
+                        root_prop["value"], key, prop["value"]
+                    )
+                    prop["value"] = None
 
 
 def generate_node_graph(
@@ -466,11 +465,10 @@ def serialize_workgraph_inputs(wgdata):
         if task["metadata"]["node_type"].upper() == "PYTHONJOB":
             PythonJob.serialize_pythonjob_data(task)
         for _, input in task["inputs"].items():
-            if input["property"] is None:
-                continue
-            prop = input["property"]
-            if inspect.isfunction(prop["value"]):
-                prop["value"] = PickledLocalFunction(prop["value"]).store()
+            if input.get("property"):
+                prop = input["property"]
+                if inspect.isfunction(prop["value"]):
+                    prop["value"] = PickledLocalFunction(prop["value"]).store()
     # error_handlers of the workgraph
     for _, data in wgdata["error_handlers"].items():
         if not data["handler"]["use_module_path"]:
@@ -548,7 +546,7 @@ def process_properties(task: Dict) -> Dict:
         }
     #
     for name, input in task["inputs"].items():
-        if input["property"] is not None:
+        if input.get("property"):
             prop = input["property"]
             identifier = prop["identifier"]
             value = prop.get("value")
@@ -617,6 +615,7 @@ def validate_task_inout(inout_list: list[str | dict], list_type: str) -> list[di
     :raises TypeError: If wrong types are provided to the task
     :return: Processed `inputs`/`outputs` list.
     """
+    from node_graph.utils import list_to_dict
 
     if not all(isinstance(item, (dict, str)) for item in inout_list):
         raise TypeError(
@@ -630,6 +629,8 @@ def validate_task_inout(inout_list: list[str | dict], list_type: str) -> list[di
             processed_inout_list.append({"name": item})
         elif isinstance(item, dict):
             processed_inout_list.append(item)
+
+    processed_inout_list = list_to_dict(processed_inout_list)
 
     return processed_inout_list
 

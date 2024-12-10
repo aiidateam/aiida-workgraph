@@ -297,7 +297,7 @@ class WorkGraph(node_graph.NodeGraph):
                         i = 0
                         for socket in self.tasks[name].outputs:
                             socket.value = get_nested_dict(
-                                node.outputs, socket.name, default=None
+                                node.outputs, socket.socket_name, default=None
                             )
                             i += 1
                 # read results from the process outputs

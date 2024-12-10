@@ -215,11 +215,10 @@ class WorkGraphSaver:
         self.save_task_states()
         for name, task in self.wgdata["tasks"].items():
             for _, input in task["inputs"].items():
-                if input["property"] is None:
-                    continue
-                prop = input["property"]
-                if inspect.isfunction(prop["value"]):
-                    prop["value"] = PickledLocalFunction(prop["value"]).store()
+                if input.get("property"):
+                    prop = input["property"]
+                    if inspect.isfunction(prop["value"]):
+                        prop["value"] = PickledLocalFunction(prop["value"]).store()
             self.wgdata["tasks"][name] = serialize(task)
         # nodes is a copy of tasks, so we need to pop it out
         self.wgdata["error_handlers"] = serialize(self.wgdata["error_handlers"])

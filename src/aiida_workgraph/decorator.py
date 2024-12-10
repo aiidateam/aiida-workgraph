@@ -39,9 +39,14 @@ type_mapping = {
 def create_task(tdata):
     """Wrap create_node from node_graph to create a Task."""
     from node_graph.decorator import create_node
+    from node_graph.utils import list_to_dict
 
     tdata["type_mapping"] = type_mapping
     tdata["metadata"]["node_type"] = tdata["metadata"].pop("task_type")
+    tdata["properties"] = list_to_dict(tdata.get("properties", {}))
+    tdata["inputs"] = list_to_dict(tdata.get("inputs", {}))
+    tdata["outputs"] = list_to_dict(tdata.get("outputs", {}))
+
     return create_node(tdata)
 
 
@@ -67,8 +72,11 @@ def add_input_recursive(
                 {
                     "identifier": "workgraph.namespace",
                     "name": port_name,
-                    "arg_type": "kwargs",
-                    "metadata": {"required": required, "dynamic": port.dynamic},
+                    "metadata": {
+                        "arg_type": "kwargs",
+                        "required": required,
+                        "dynamic": port.dynamic,
+                    },
                 }
             )
         for value in port.values():
@@ -87,8 +95,7 @@ def add_input_recursive(
                 {
                     "identifier": socket_type,
                     "name": port_name,
-                    "arg_type": "kwargs",
-                    "metadata": {"required": required},
+                    "metadata": {"arg_type": "kwargs", "required": required},
                 }
             )
     return inputs
@@ -249,8 +256,7 @@ def build_task_from_AiiDA(
                 {
                     "identifier": "workgraph.namespace",
                     "name": name,
-                    "arg_type": "var_kwargs",
-                    "metadata": {"dynamic": True},
+                    "metadata": {"arg_type": "var_kwargs", "dynamic": True},
                 }
             )
 

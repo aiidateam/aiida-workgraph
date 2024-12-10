@@ -118,7 +118,7 @@ class Task(GraphNode):
         # create input sockets and links for items inside a dynamic socket
         # TODO the input value could be nested, but we only support one level for now
         for key in data:
-            if self.inputs[key].identifier == "workgraph.namespace":
+            if self.inputs[key]._socket_identifier == "workgraph.namespace":
                 process_nested_inputs(
                     key,
                     self.inputs[key].value,

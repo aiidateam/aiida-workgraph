@@ -314,11 +314,10 @@ class WorkGraphEngine(Process, metaclass=Protect):
         for name, task in wgdata["tasks"].items():
             wgdata["tasks"][name] = deserialize_unsafe(task)
             for _, input in wgdata["tasks"][name]["inputs"].items():
-                if input["property"] is None:
-                    continue
-                prop = input["property"]
-                if isinstance(prop["value"], PickledLocalFunction):
-                    prop["value"] = prop["value"].value
+                if input.get("property"):
+                    prop = input["property"]
+                    if isinstance(prop["value"], PickledLocalFunction):
+                        prop["value"] = prop["value"].value
         wgdata["error_handlers"] = deserialize_unsafe(wgdata["error_handlers"])
         wgdata["context"] = deserialize_unsafe(wgdata["context"])
         return wgdata

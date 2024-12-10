@@ -22,7 +22,9 @@ class TimeMonitor(Task):
         inp.add_property("workgraph.any", default=1.0)
         inp = self.add_input("workgraph.any", "timeout")
         inp.add_property("workgraph.any", default=86400.0)
-        self.add_input("workgraph.any", "_wait", arg_type="none", link_limit=100000)
+        self.add_input(
+            "workgraph.any", "_wait", metadata={"arg_type": "none"}, link_limit=100000
+        )
         inp.socket_link_limit = 100000
         self.add_output("workgraph.any", "result")
         self.add_output("workgraph.any", "_wait")
@@ -49,7 +51,9 @@ class FileMonitor(Task):
         inp.add_property("workgraph.any", default=1.0)
         inp = self.add_input("workgraph.any", "timeout")
         inp.add_property("workgraph.any", default=86400.0)
-        self.add_input("workgraph.any", "_wait", arg_type="none", link_limit=100000)
+        self.add_input(
+            "workgraph.any", "_wait", metadata={"arg_type": "none"}, link_limit=100000
+        )
         inp.socket_link_limit = 100000
         self.add_output("workgraph.any", "result")
         self.add_output("workgraph.any", "_wait")
@@ -78,7 +82,9 @@ class TaskMonitor(Task):
         inp.add_property("workgraph.any", default=1.0)
         inp = self.add_input("workgraph.any", "timeout")
         inp.add_property("workgraph.any", default=86400.0)
-        self.add_input("workgraph.any", "_wait", arg_type="none", link_limit=100000)
+        self.add_input(
+            "workgraph.any", "_wait", metadata={"arg_type": "none"}, link_limit=100000
+        )
         inp.socket_link_limit = 100000
         self.add_output("workgraph.any", "result")
         self.add_output("workgraph.any", "_wait")

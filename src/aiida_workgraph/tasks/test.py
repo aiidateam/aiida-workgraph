@@ -23,7 +23,9 @@ class TestAdd(Task):
         inp.add_property("workgraph.aiida_float", "x", default=0.0)
         inp = self.add_input("workgraph.aiida_float", "y")
         inp.add_property("workgraph.aiida_float", "y", default=0.0)
-        self.add_input("workgraph.any", "_wait", arg_type="none", link_limit=100000)
+        self.add_input(
+            "workgraph.any", "_wait", metadata={"arg_type": "none"}, link_limit=100000
+        )
         self.add_output("workgraph.aiida_float", "sum")
         self.add_output("workgraph.any", "_wait")
         self.add_output("workgraph.any", "_outputs")
@@ -51,7 +53,9 @@ class TestSumDiff(Task):
         inp.add_property("workgraph.aiida_float", "x", default=0.0)
         inp = self.add_input("workgraph.aiida_float", "y")
         inp.add_property("workgraph.aiida_float", "y", default=0.0)
-        self.add_input("workgraph.any", "_wait", arg_type="none", link_limit=100000)
+        self.add_input(
+            "workgraph.any", "_wait", metadata={"arg_type": "none"}, link_limit=100000
+        )
         self.add_output("workgraph.aiida_float", "sum")
         self.add_output("workgraph.aiida_float", "diff")
         self.add_output("workgraph.any", "_wait")
@@ -83,7 +87,9 @@ class TestArithmeticMultiplyAdd(Task):
         inp.add_property("workgraph.aiida_int", "y", default=0.0)
         inp = self.add_input("workgraph.aiida_int", "z")
         inp.add_property("workgraph.aiida_int", "z", default=0.0)
-        self.add_input("workgraph.any", "_wait", arg_type="none", link_limit=100000)
+        self.add_input(
+            "workgraph.any", "_wait", metadata={"arg_type": "none"}, link_limit=100000
+        )
         self.add_output("workgraph.aiida_int", "result")
         self.add_output("workgraph.any", "_wait")
         self.add_output("workgraph.any", "_outputs")
