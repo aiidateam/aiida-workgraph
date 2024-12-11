@@ -89,8 +89,6 @@ def test_set_namespace_socket(decorated_add) -> None:
     )
     assert len(task2.inputs["add.x"]._links) == 1
     assert task2.inputs["add"]._value == {
-        "metadata": {"options": {"stash": {}}},
-        "monitors": {},
         "y": orm.Int(2),
     }
     assert len(wg.links) == 1
