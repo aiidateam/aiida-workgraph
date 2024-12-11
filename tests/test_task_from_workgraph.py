@@ -25,9 +25,7 @@ def test_build_task_from_workgraph(decorated_add: Callable) -> None:
     # create a sub workgraph
     sub_wg = WorkGraph("build_task_from_workgraph")
     sub_wg.add_task(decorated_add, name="add1", x=1, y=3)
-    sub_wg.add_task(
-        decorated_add, name="add2", x=2, y=sub_wg.tasks["add1"].outputs["result"]
-    )
+    sub_wg.add_task(decorated_add, name="add2", x=2, y=sub_wg.tasks.add1.outputs.result)
     #
     wg = WorkGraph("build_task_from_workgraph")
     add1_task = wg.add_task(decorated_add, name="add1", x=1, y=3)
@@ -35,8 +33,8 @@ def test_build_task_from_workgraph(decorated_add: Callable) -> None:
     # the default value of the namespace is None
     assert wg_task.inputs["add1"]._value == {}
     wg.add_task(decorated_add, name="add2", y=3)
-    wg.add_link(add1_task.outputs["result"], wg_task.inputs["add1.x"])
-    wg.add_link(wg_task.outputs["add2.result"], wg.tasks["add2"].inputs["x"])
+    wg.add_link(add1_task.outputs.result, wg_task.inputs["add1.x"])
+    wg.add_link(wg_task.outputs["add2.result"], wg.tasks.add2.inputs.x)
     assert len(wg_task.inputs) == 3
     assert len(wg_task.outputs) == 4
     # wg.submit(wait=True)

@@ -11,7 +11,7 @@ def test_failed_node(decorated_sqrt: Callable, decorated_add: Callable) -> None:
     wg = WorkGraph(name="test_failed_node")
     wg.add_task(decorated_add, "add1", x=Float(1), y=Float(2))
     sqrt1 = wg.add_task(decorated_sqrt, "sqrt1", x=Float(-1))
-    wg.add_task(decorated_sqrt, "sqrt2", x=sqrt1.outputs["result"])
+    wg.add_task(decorated_sqrt, "sqrt2", x=sqrt1.outputs.result)
     wg.submit(wait=True)
     # print("results: ", results[])
     assert wg.process.exit_status == 302

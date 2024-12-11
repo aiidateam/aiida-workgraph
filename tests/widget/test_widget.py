@@ -14,7 +14,7 @@ def test_workgraph_widget(wg_calcfunction, decorated_add):
     assert len(value["links"]) == 2
     # check required sockets
     # there are more than 2 inputs, but only 2 are required
-    assert len(wg.tasks["add1"].inputs) > 2
+    assert len(wg.tasks.add1.inputs) > 2
     assert len(value["nodes"]["add1"]["inputs"]) == 2
     # to_html
     data = wg.to_html()

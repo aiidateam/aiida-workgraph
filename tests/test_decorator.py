@@ -192,7 +192,7 @@ def test_decorator_calcfunction(decorated_add: Callable) -> None:
     wg = WorkGraph(name="test_decorator_calcfunction")
     wg.add_task(decorated_add, "add1", x=2, y=3)
     wg.submit(wait=True, timeout=100)
-    assert wg.tasks["add1"].outputs["result"].value == 5
+    assert wg.tasks.add1.outputs.result.value == 5
 
 
 def test_decorator_workfunction(decorated_add_multiply: Callable) -> None:
@@ -201,7 +201,7 @@ def test_decorator_workfunction(decorated_add_multiply: Callable) -> None:
     wg = WorkGraph(name="test_decorator_workfunction")
     wg.add_task(decorated_add_multiply, "add_multiply1", x=2, y=3, z=4)
     wg.submit(wait=True, timeout=100)
-    assert wg.tasks["add_multiply1"].outputs["result"].value == 20
+    assert wg.tasks["add_multiply1"].outputs.result.value == 20
 
 
 @pytest.mark.usefixtures("started_daemon_client")
@@ -211,10 +211,10 @@ def test_decorator_graph_builder(decorated_add_multiply_group: Callable) -> None
     add1 = wg.add_task("workgraph.test_add", "add1", x=2, y=3)
     add_multiply1 = wg.add_task(decorated_add_multiply_group, "add_multiply1", y=3, z=4)
     sum_diff1 = wg.add_task("workgraph.test_sum_diff", "sum_diff1")
-    wg.add_link(add1.outputs[0], add_multiply1.inputs["x"])
-    wg.add_link(add_multiply1.outputs["result"], sum_diff1.inputs["x"])
+    wg.add_link(add1.outputs[0], add_multiply1.inputs.x)
+    wg.add_link(add_multiply1.outputs.result, sum_diff1.inputs.x)
     # use run to check if graph builder workgraph can be submit inside the engine
     wg.run()
     assert wg.tasks["add_multiply1"].process.outputs.result.value == 32
-    assert wg.tasks["add_multiply1"].outputs["result"].value == 32
-    assert wg.tasks["sum_diff1"].outputs["sum"].value == 32
+    assert wg.tasks["add_multiply1"].outputs.result.value == 32
+    assert wg.tasks["sum_diff1"].outputs.sum.value == 32

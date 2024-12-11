@@ -114,7 +114,7 @@ aggregate_task.inputs["collected_values"]._link_limit = 50
 for i in range(2):  # this can be chosen as wanted
     generator_task = wg.add_task(generator, name=f"generator{i}", seed=Int(i))
     wg.add_link(
-        generator_task.outputs["result"],
+        generator_task.outputs.result,
         aggregate_task.inputs["collected_values"],
     )
 
@@ -128,7 +128,7 @@ wg.submit(wait=True)
 
 # %%
 # Print the output
-print("aggregate_task result", aggregate_task.outputs["sum"].value)
+print("aggregate_task result", aggregate_task.outputs.sum.value)
 
 
 # %%
@@ -200,12 +200,12 @@ for i in range(2):  # this can be chosen as wanted
     )
 
     wg.add_link(
-        generator_int_task.outputs["result"],
+        generator_int_task.outputs.result,
         aggregate_task.inputs["collected_ints"],
     )
 
     wg.add_link(
-        generator_float_task.outputs["result"],
+        generator_float_task.outputs.result,
         aggregate_task.inputs["collected_floats"],
     )
 wg.to_html()
@@ -269,7 +269,7 @@ generator_loop_task = wg.add_task(
 aggregate_task = wg.add_task(
     aggregate,
     name="aggregate_task",
-    collected_values=generator_loop_task.outputs["result"],
+    collected_values=generator_loop_task.outputs.result,
 )
 
 wg.to_html()
@@ -283,7 +283,7 @@ wg.submit(wait=True)
 # %%
 # Print the output
 
-print("aggregate_task result", aggregate_task.outputs["result"].value)
+print("aggregate_task result", aggregate_task.outputs.result.value)
 
 
 # %%

@@ -22,7 +22,7 @@ def test_for(decorated_add: Callable, decorated_multiply: Callable) -> None:
         add1 = wg.add_task(decorated_add, name="add1", x="{{ total }}")
         # update the context variable
         add1.set_context({"total": "result"})
-        wg.add_link(multiply1.outputs["result"], add1.inputs["y"])
+        wg.add_link(multiply1.outputs.result, add1.inputs["y"])
         # don't forget to return the workgraph
         return wg
 
@@ -30,6 +30,6 @@ def test_for(decorated_add: Callable, decorated_multiply: Callable) -> None:
     wg = WorkGraph("test_for")
     for1 = wg.add_task(add_multiply_for, sequence=range(5))
     add1 = wg.add_task(decorated_add, name="add1", y=orm.Int(1))
-    wg.add_link(for1.outputs["result"], add1.inputs["x"])
+    wg.add_link(for1.outputs.result, add1.inputs.x)
     wg.submit(wait=True, timeout=200)
     assert add1.node.outputs.result.value == 21

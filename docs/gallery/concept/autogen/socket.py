@@ -85,8 +85,7 @@ def add(x: int, y: float) -> float:
     return x + y
 
 
-for input in add.task().inputs:
-    print("{:30s}: {:20s}".format(input.name, input.identifier))
+print("inputs: ", add.task().inputs)
 
 
 ######################################################################

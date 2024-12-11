@@ -30,8 +30,8 @@ def test_type_mapping(data_type, data, identifier) -> None:
     def add(x: data_type):
         pass
 
-    assert add.task().inputs["x"]._identifier == identifier
-    assert add.task().inputs["x"].property.identifier == identifier
+    assert add.task().inputs.x._identifier == identifier
+    assert add.task().inputs.x.property.identifier == identifier
     add_task = add.task()
     add_task.set({"x": data})
     # test set data from context
@@ -71,8 +71,8 @@ def test_aiida_data_socket() -> None:
         def add(x: data_type):
             pass
 
-        assert add.task().inputs["x"]._identifier == identifier
-        assert add.task().inputs["x"].property.identifier == identifier
+        assert add.task().inputs.x._identifier == identifier
+        assert add.task().inputs.x.property.identifier == identifier
         add_task = add.task()
         add_task.set({"x": data})
         # test set data from context
@@ -156,7 +156,7 @@ def test_node_value(data_type, socket_value, node_value):
         pass
 
     my_task1 = wg.add_task(my_task, name="my_task", x=socket_value)
-    socket = my_task1.inputs["x"]
+    socket = my_task1.inputs.x
 
     socket_node_value = socket.get_node_value()
     assert isinstance(socket_node_value, type(node_value))

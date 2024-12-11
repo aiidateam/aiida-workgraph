@@ -14,7 +14,7 @@ def test_error_handlers(add_code):
         # modify task inputs
         task.set(
             {
-                "x": orm.Int(abs(task.inputs["x"].value)),
+                "x": orm.Int(abs(task.inputs.x.value)),
                 "y": orm.Int(abs(task.inputs["y"].value)),
             }
         )
@@ -44,4 +44,4 @@ def test_error_handlers(add_code):
     )
     report = get_workchain_report(wg.process, "REPORT")
     assert "Run error handler: handle_negative_sum." in report
-    assert wg.tasks["add1"].outputs["sum"].value == 3
+    assert wg.tasks.add1.outputs.sum.value == 3

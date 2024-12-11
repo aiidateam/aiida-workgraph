@@ -112,7 +112,7 @@ def test_shell_graph_builder():
             name="job2",
             command="bc",
             arguments=["{expression}"],
-            nodes={"expression": job1.outputs["stdout"]},
+            nodes={"expression": job1.outputs.stdout},
             parser=parser,
             parser_outputs=[
                 {"identifier": "workgraph.any", "name": "result"}
@@ -123,4 +123,4 @@ def test_shell_graph_builder():
     wg = WorkGraph(name="test_shell_graph_builder")
     add_multiply1 = wg.add_task(add_multiply, x=Int(2), y=Int(3))
     wg.submit(wait=True)
-    assert add_multiply1.outputs["result"].value.value == 5
+    assert add_multiply1.outputs.result.value.value == 5

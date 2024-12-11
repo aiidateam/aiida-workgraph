@@ -50,4 +50,4 @@ def test_max_number_jobs(add_code) -> None:
     wg.submit(wait=True, timeout=40)
     report = get_workchain_report(wg.process, "REPORT")
     assert "tasks ready to run: add2" in report
-    wg.tasks["add2"].outputs["sum"].value == 2
+    wg.tasks.add2.outputs.sum.value == 2
