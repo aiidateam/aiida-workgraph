@@ -49,19 +49,19 @@ def multiply(x, y):
 wg = WorkGraph("test_add_multiply")
 wg.add_task(add, name="add1")
 wg.add_task(multiply, name="multiply1")
-wg.add_link(wg.tasks["add1"].outputs["result"], wg.tasks["multiply1"].inputs["x"])
+wg.add_link(wg.tasks.add1.outputs.result, wg.tasks.multiply1.inputs.x)
 
 ```
 
-Prepare inputs and submit the workflow:
+Prepare inputs and run the workflow:
 
 ```python
 from aiida import load_profile
 
 load_profile()
 
-wg.submit(inputs = {"add1": {"x": 2, "y": 3}, "multiply1": {"y": 4}}, wait=True)
-print("Result of multiply1 is", wg.tasks["multiply1"].outputs[0].value)
+wg.run(inputs = {"add1": {"x": 2, "y": 3}, "multiply1": {"y": 4}})
+print("Result of multiply1 is", wg.tasks.multiply1.outputs.result.value)
 ```
 ## Web ui
 To use the web ui, first install the web ui package:

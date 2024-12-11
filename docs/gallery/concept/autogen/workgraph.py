@@ -33,7 +33,7 @@ add2 = wg.add_task(add, name="add2")
 # %%
 # Add a link between tasks:
 
-wg.add_link(add1.outputs["result"], add2.inputs["x"])
+wg.add_link(add1.outputs.result, add2.inputs.x)
 wg.to_html()
 
 # %%

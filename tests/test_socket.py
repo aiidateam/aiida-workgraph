@@ -30,8 +30,8 @@ def test_type_mapping(data_type, data, identifier) -> None:
     def add(x: data_type):
         pass
 
-    assert add.task().inputs["x"].identifier == identifier
-    assert add.task().inputs["x"].property.identifier == identifier
+    assert add.task().inputs.x._identifier == identifier
+    assert add.task().inputs.x.property.identifier == identifier
     add_task = add.task()
     add_task.set({"x": data})
     # test set data from context
@@ -43,7 +43,7 @@ def test_vector_socket() -> None:
     from aiida_workgraph import Task
 
     t = Task()
-    t.inputs.new(
+    t.add_input(
         "workgraph.aiida_int_vector",
         "vector2d",
         property_data={"size": 2, "default": [1, 2]},
@@ -71,8 +71,8 @@ def test_aiida_data_socket() -> None:
         def add(x: data_type):
             pass
 
-        assert add.task().inputs["x"].identifier == identifier
-        assert add.task().inputs["x"].property.identifier == identifier
+        assert add.task().inputs.x._identifier == identifier
+        assert add.task().inputs.x.property.identifier == identifier
         add_task = add.task()
         add_task.set({"x": data})
         # test set data from context
@@ -118,7 +118,6 @@ def test_numpy_array(decorated_normal_add):
     wg.submit(wait=True)
     # wg.run()
     assert wg.state.upper() == "FINISHED"
-    # assert (wg.tasks["add1"].outputs["result"].value == np.array([5, 7, 9])).all()
 
 
 def test_kwargs() -> None:
@@ -129,9 +128,8 @@ def test_kwargs() -> None:
         return {"sum": a + b, "product": a * b}
 
     test1 = test.node()
-    assert test1.inputs["kwargs"].link_limit == 1e6
-    assert test1.inputs["kwargs"].identifier == "workgraph.namespace"
-    assert test1.inputs["kwargs"].property.value is None
+    assert test1.inputs["kwargs"]._link_limit == 1e6
+    assert test1.inputs["kwargs"]._identifier == "workgraph.namespace"
 
 
 @pytest.mark.parametrize(
@@ -158,7 +156,7 @@ def test_node_value(data_type, socket_value, node_value):
         pass
 
     my_task1 = wg.add_task(my_task, name="my_task", x=socket_value)
-    socket = my_task1.inputs["x"]
+    socket = my_task1.inputs.x
 
     socket_node_value = socket.get_node_value()
     assert isinstance(socket_node_value, type(node_value))

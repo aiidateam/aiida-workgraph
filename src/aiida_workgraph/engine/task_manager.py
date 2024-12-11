@@ -41,7 +41,7 @@ class TaskManager:
         for output in task.outputs:
             output.value = get_nested_dict(
                 self.ctx._tasks[name]["results"],
-                output.name,
+                output._name,
                 default=output.value,
             )
         return task
@@ -249,6 +249,7 @@ class TaskManager:
                 kwargs[key] = args[i]
             # update the port namespace
             kwargs = update_nested_dict_with_special_keys(kwargs)
+            print("kwargs: ", kwargs)
             # kwargs["meta.label"] = name
             # output must be a Data type or a mapping of {string: Data}
             task["results"] = {}
@@ -580,6 +581,7 @@ class TaskManager:
         Dict[str, Any],
     ]:
         """Get input based on the links."""
+        from node_graph.utils import collect_values_inside_namespace
 
         args = []
         args_dict = {}
@@ -587,16 +589,25 @@ class TaskManager:
         var_args = None
         var_kwargs = None
         task = self.ctx._tasks[name]
-        properties = task.get("properties", {})
         inputs = {}
+        for name, prop in task.get("properties", {}).items():
+            inputs[name] = self.ctx_manager.update_context_variable(prop["value"])
         for name, input in task["inputs"].items():
             # print(f"input: {input['name']}")
-            if len(input["links"]) == 0:
-                inputs[name] = self.ctx_manager.update_context_variable(
+            if input["identifier"] == "workgraph.namespace":
+                # inputs[name] = self.ctx_manager.update_context_variable(input["value"])
+                value = collect_values_inside_namespace(input)
+                if value:
+                    inputs[name] = value
+            else:
+                value = self.ctx_manager.update_context_variable(
                     input["property"]["value"]
                 )
-            elif len(input["links"]) == 1:
-                link = input["links"][0]
+                if value is not None:
+                    inputs[name] = value
+        for name, links in task["input_links"].items():
+            if len(links) == 1:
+                link = links[0]
                 if self.ctx._tasks[link["from_node"]]["results"] is None:
                     inputs[name] = None
                 else:
@@ -611,9 +622,9 @@ class TaskManager:
                             link["from_socket"],
                         )
             # handle the case of multiple outputs
-            elif len(input["links"]) > 1:
+            elif len(links) > 1:
                 value = {}
-                for link in input["links"]:
+                for link in links:
                     item_name = f'{link["from_node"]}_{link["from_socket"]}'
                     # handle the special socket _wait, _outputs
                     if link["from_socket"] == "_wait":
@@ -625,42 +636,18 @@ class TaskManager:
                             "results"
                         ][link["from_socket"]]
                 inputs[name] = value
-        for name in task.get("args", []):
-            if name in inputs:
-                args.append(inputs[name])
-                args_dict[name] = inputs[name]
-            else:
-                value = self.ctx_manager.update_context_variable(
-                    properties[name]["value"]
-                )
-                args.append(value)
-                args_dict[name] = value
-        for name in task.get("kwargs", []):
-            if name in inputs:
-                kwargs[name] = inputs[name]
-            else:
-                value = self.ctx_manager.update_context_variable(
-                    properties[name]["value"]
-                )
-                kwargs[name] = value
-        if task["var_args"] is not None:
-            name = task["var_args"]
-            if name in inputs:
-                var_args = inputs[name]
-            else:
-                value = self.ctx_manager.update_context_variable(
-                    properties[name]["value"]
-                )
-                var_args = value
-        if task["var_kwargs"] is not None:
-            name = task["var_kwargs"]
-            if name in inputs:
-                var_kwargs = inputs[name]
-            else:
-                value = self.ctx_manager.update_context_variable(
-                    properties[name]["value"]
-                )
-                var_kwargs = value
+        for name, input in inputs.items():
+            # only need to check the top level key
+            key = name.split(".")[0]
+            if key in task["args"]:
+                args.append(input)
+                args_dict[name] = input
+            elif key in task["kwargs"]:
+                kwargs[name] = input
+            elif key == task["var_args"]:
+                var_args = input
+            elif key == task["var_kwargs"]:
+                var_kwargs = input
         return args, kwargs, var_args, var_kwargs, args_dict
 
     def update_task_state(self, name: str, success=True) -> None:
@@ -728,7 +715,9 @@ class TaskManager:
         """Set the results of a normal task.
         A normal task is created by decorating a function with @task().
         """
-        from aiida_workgraph.utils import get_sorted_names
+        from aiida_workgraph.config import builtin_outputs
+
+        builtin_output_names = [output["name"] for output in builtin_outputs]
 
         if success:
             task = self.ctx._tasks[name]
@@ -737,7 +726,9 @@ class TaskManager:
                 if len(task["outputs"]) - 2 != len(results):
                     self.on_task_failed(name)
                     return self.process.exit_codes.OUTPUS_NOT_MATCH_RESULTS
-                output_names = get_sorted_names(task["outputs"])[0:-2]
+                output_names = [
+                    name for name in task["outputs"] if name not in builtin_output_names
+                ]
                 for i, output_name in enumerate(output_names):
                     task["results"][output_name] = results[i]
             elif isinstance(results, dict):

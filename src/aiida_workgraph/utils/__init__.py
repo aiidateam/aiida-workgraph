@@ -42,18 +42,6 @@ def build_callable(obj: Callable) -> Dict[str, Any]:
     return executor
 
 
-def get_sorted_names(data: dict) -> list[str]:
-    """Get the sorted names from a dictionary."""
-    sorted_names = [
-        name
-        for name, _ in sorted(
-            ((name, item["list_index"]) for name, item in data.items()),
-            key=lambda x: x[1],
-        )
-    ]
-    return sorted_names
-
-
 def store_nodes_recursely(data: Any) -> None:
     """Recurse through a data structure and store any unstored nodes that are found along the way
     :param data: a data structure potentially containing unstored nodes
@@ -221,48 +209,6 @@ def update_nested_dict_with_special_keys(data: Dict[str, Any]) -> Dict[str, Any]
         value = data.pop(key)
         update_nested_dict(data, key, value)
     return data
-
-
-def organize_nested_inputs(wgdata: Dict[str, Any]) -> None:
-    """Merge sub properties to the root properties.
-    The sub properties will be se
-    For example:
-        task["inputs"]["base"]["property"]["value"] = None
-        task["inputs"]["base.pw.parameters"]["property"]["value"] = 2
-        task["inputs"]["base.pw.code"]["property"]["value"] = 1
-        task["inputs"]["metadata"]["property"]["value"] = {"options": {"resources": {"num_cpus": 1}}
-        task["inputs"]["metadata.options"]["property"]["value"] = {"resources": {"num_machine": 1}}
-    After organizing:
-        task["inputs"]["base"]["property"]["value"] = {"base": {"pw": {"parameters": 2,
-                                                                     "code": 1},
-                                                       "metadata": {"options":
-                                                                        {"resources": {"num_cpus": 1,
-                                                                                       "num_machine": 1}}}},
-                                                       }
-        task["inputs"]["base.pw.parameters"]["property"]["value"] = None
-        task["inputs"]["base.pw.code"]["property"]["value"] = None
-        task["inputs"]["metadata"]["property"]["value"] = None
-        task["inputs"]["metadata.options"]["property"]["value"] = None
-    """
-    for _, task in wgdata["tasks"].items():
-        for key, prop in task["properties"].items():
-            if "." in key and prop["value"] not in [None, {}]:
-                root, key = key.split(".", 1)
-                root_prop = task["properties"][root]
-                update_nested_dict(root_prop["value"], key, prop["value"])
-                prop["value"] = None
-        for key, input in task["inputs"].items():
-            if input["property"] is None:
-                continue
-            prop = input["property"]
-            if "." in key and prop["value"] not in [None, {}]:
-                root, key = key.split(".", 1)
-                root_prop = task["inputs"][root]["property"]
-                # update the root property
-                root_prop["value"] = update_nested_dict(
-                    root_prop["value"], key, prop["value"]
-                )
-                prop["value"] = None
 
 
 def generate_node_graph(
@@ -464,13 +410,12 @@ def serialize_workgraph_inputs(wgdata):
             if not data["handler"]["use_module_path"]:
                 pickle_callable(data["handler"])
         if task["metadata"]["node_type"].upper() == "PYTHONJOB":
-            PythonJob.serialize_pythonjob_data(task)
+            PythonJob.serialize_pythonjob_data(task["inputs"])
         for _, input in task["inputs"].items():
-            if input["property"] is None:
-                continue
-            prop = input["property"]
-            if inspect.isfunction(prop["value"]):
-                prop["value"] = PickledLocalFunction(prop["value"]).store()
+            if input.get("property"):
+                prop = input["property"]
+                if inspect.isfunction(prop["value"]):
+                    prop["value"] = PickledLocalFunction(prop["value"]).store()
     # error_handlers of the workgraph
     for _, data in wgdata["error_handlers"].items():
         if not data["handler"]["use_module_path"]:
@@ -548,7 +493,7 @@ def process_properties(task: Dict) -> Dict:
         }
     #
     for name, input in task["inputs"].items():
-        if input["property"] is not None:
+        if input.get("property"):
             prop = input["property"]
             identifier = prop["identifier"]
             value = prop.get("value")
@@ -630,6 +575,8 @@ def validate_task_inout(inout_list: list[str | dict], list_type: str) -> list[di
             processed_inout_list.append({"name": item})
         elif isinstance(item, dict):
             processed_inout_list.append(item)
+
+    processed_inout_list = processed_inout_list
 
     return processed_inout_list
 

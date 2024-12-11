@@ -28,7 +28,7 @@ dependencies = [
     "numpy~=1.21",
     "scipy",
     "ase",
-    "node-graph==0.1.7",
+    "node-graph==0.1.9",
     "node-graph-widget",
     "aiida-core>=2.3",
     "cloudpickle",
@@ -127,7 +127,7 @@ workgraph = "aiida_workgraph.cli.cmd_workgraph:workgraph"
 
 [project.entry-points."aiida_workgraph.socket"]
 "workgraph.any" = "aiida_workgraph.sockets.builtins:SocketAny"
-"workgraph.namespace" = "aiida_workgraph.sockets.builtins:SocketNamespace"
+"workgraph.namespace" = "aiida_workgraph.socket:TaskSocketNamespace"
 "workgraph.int" = "aiida_workgraph.sockets.builtins:SocketInt"
 "workgraph.float" = "aiida_workgraph.sockets.builtins:SocketFloat"
 "workgraph.string" = "aiida_workgraph.sockets.builtins:SocketString"

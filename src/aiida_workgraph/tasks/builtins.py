@@ -17,10 +17,12 @@ class Zone(Task):
         self.children = TaskCollection(parent=self)
 
     def create_sockets(self) -> None:
-        self.inputs.clear()
-        self.outputs.clear()
-        self.inputs.new("workgraph.any", "_wait", arg_type="none", link_limit=100000)
-        self.outputs.new("workgraph.any", "_wait")
+        self.inputs._clear()
+        self.outputs._clear()
+        self.add_input(
+            "workgraph.any", "_wait", link_limit=100000, metadata={"arg_type": "none"}
+        )
+        self.add_output("workgraph.any", "_wait")
 
     def to_dict(self, short: bool = False) -> Dict[str, Any]:
         tdata = super().to_dict(short=short)
@@ -41,14 +43,16 @@ class While(Zone):
     catalog = "Control"
 
     def create_sockets(self) -> None:
-        self.inputs.clear()
-        self.outputs.clear()
-        self.inputs.new("workgraph.any", "_wait", arg_type="none", link_limit=100000)
-        self.inputs.new(
+        self.inputs._clear()
+        self.outputs._clear()
+        self.add_input(
+            "workgraph.any", "_wait", link_limit=100000, metadata={"arg_type": "none"}
+        )
+        self.add_input(
             "node_graph.int", "max_iterations", property_data={"default": 10000}
         )
-        self.inputs.new("workgraph.any", "conditions", link_limit=100000)
-        self.outputs.new("workgraph.any", "_wait")
+        self.add_input("workgraph.any", "conditions", link_limit=100000)
+        self.add_output("workgraph.any", "_wait")
 
 
 class If(Zone):
@@ -60,12 +64,16 @@ class If(Zone):
     catalog = "Control"
 
     def create_sockets(self) -> None:
-        self.inputs.clear()
-        self.outputs.clear()
-        self.inputs.new("workgraph.any", "_wait", arg_type="none", link_limit=100000)
-        self.inputs.new("workgraph.any", "conditions")
-        self.inputs.new("workgraph.any", "invert_condition")
-        self.outputs.new("workgraph.any", "_wait")
+        self.inputs._clear()
+        self.outputs._clear()
+        self.add_input(
+            "workgraph.any", "_wait", link_limit=100000, metadata={"arg_type": "none"}
+        )
+        self.add_input("workgraph.any", "conditions")
+        self.add_input(
+            "workgraph.bool", "invert_condition", property_data={"default": False}
+        )
+        self.add_output("workgraph.any", "_wait")
 
 
 class SetContext(Task):
@@ -77,12 +85,14 @@ class SetContext(Task):
     catalog = "Control"
 
     def create_sockets(self) -> None:
-        self.inputs.clear()
-        self.outputs.clear()
-        self.inputs.new("workgraph.any", "key")
-        self.inputs.new("workgraph.any", "value")
-        self.inputs.new("workgraph.any", "_wait", arg_type="none", link_limit=100000)
-        self.outputs.new("workgraph.any", "_wait")
+        self.inputs._clear()
+        self.outputs._clear()
+        self.add_input("workgraph.any", "key")
+        self.add_input("workgraph.any", "value")
+        self.add_input(
+            "workgraph.any", "_wait", link_limit=100000, metadata={"arg_type": "none"}
+        )
+        self.add_output("workgraph.any", "_wait")
 
 
 class GetContext(Task):
@@ -94,12 +104,14 @@ class GetContext(Task):
     catalog = "Control"
 
     def create_sockets(self) -> None:
-        self.inputs.clear()
-        self.outputs.clear()
-        self.inputs.new("workgraph.any", "key")
-        self.inputs.new("workgraph.any", "_wait", arg_type="none", link_limit=100000)
-        self.outputs.new("workgraph.any", "result")
-        self.outputs.new("workgraph.any", "_wait")
+        self.inputs._clear()
+        self.outputs._clear()
+        self.add_input("workgraph.any", "key")
+        self.add_input(
+            "workgraph.any", "_wait", link_limit=100000, metadata={"arg_type": "none"}
+        )
+        self.add_output("workgraph.any", "result")
+        self.add_output("workgraph.any", "_wait")
 
 
 class AiiDAInt(Task):
@@ -114,10 +126,12 @@ class AiiDAInt(Task):
     }
 
     def create_sockets(self) -> None:
-        self.inputs.new("workgraph.any", "value", property_data={"default": 0.0})
-        self.inputs.new("workgraph.any", "_wait", arg_type="none", link_limit=100000)
-        self.outputs.new("workgraph.aiida_int", "result")
-        self.outputs.new("workgraph.any", "_wait")
+        self.add_input("workgraph.any", "value", property_data={"default": 0.0})
+        self.add_input(
+            "workgraph.any", "_wait", link_limit=100000, metadata={"arg_type": "none"}
+        )
+        self.add_output("workgraph.aiida_int", "result")
+        self.add_output("workgraph.any", "_wait")
 
 
 class AiiDAFloat(Task):
@@ -132,12 +146,14 @@ class AiiDAFloat(Task):
     }
 
     def create_sockets(self) -> None:
-        self.inputs.clear()
-        self.outputs.clear()
-        self.inputs.new("workgraph.float", "value", property_data={"default": 0.0})
-        self.inputs.new("workgraph.any", "_wait", arg_type="none", link_limit=100000)
-        self.outputs.new("workgraph.aiida_float", "result")
-        self.outputs.new("workgraph.any", "_wait")
+        self.inputs._clear()
+        self.outputs._clear()
+        self.add_input("workgraph.float", "value", property_data={"default": 0.0})
+        self.add_input(
+            "workgraph.any", "_wait", link_limit=100000, metadata={"arg_type": "none"}
+        )
+        self.add_output("workgraph.aiida_float", "result")
+        self.add_output("workgraph.any", "_wait")
 
 
 class AiiDAString(Task):
@@ -152,12 +168,14 @@ class AiiDAString(Task):
     }
 
     def create_sockets(self) -> None:
-        self.inputs.clear()
-        self.outputs.clear()
-        self.inputs.new("workgraph.string", "value", property_data={"default": ""})
-        self.inputs.new("workgraph.any", "_wait", arg_type="none", link_limit=100000)
-        self.outputs.new("workgraph.aiida_string", "result")
-        self.outputs.new("workgraph.any", "_wait")
+        self.inputs._clear()
+        self.outputs._clear()
+        self.add_input("workgraph.string", "value", property_data={"default": ""})
+        self.add_input(
+            "workgraph.any", "_wait", link_limit=100000, metadata={"arg_type": "none"}
+        )
+        self.add_output("workgraph.aiida_string", "result")
+        self.add_output("workgraph.any", "_wait")
 
 
 class AiiDAList(Task):
@@ -172,12 +190,14 @@ class AiiDAList(Task):
     }
 
     def create_sockets(self) -> None:
-        self.inputs.clear()
-        self.outputs.clear()
-        self.inputs.new("workgraph.any", "value", property_data={"default": []})
-        self.inputs.new("workgraph.any", "_wait", arg_type="none", link_limit=100000)
-        self.outputs.new("workgraph.aiida_list", "result")
-        self.outputs.new("workgraph.any", "_wait")
+        self.inputs._clear()
+        self.outputs._clear()
+        self.add_input("workgraph.any", "value", property_data={"default": []})
+        self.add_input(
+            "workgraph.any", "_wait", link_limit=100000, metadata={"arg_type": "none"}
+        )
+        self.add_output("workgraph.aiida_list", "result")
+        self.add_output("workgraph.any", "_wait")
 
 
 class AiiDADict(Task):
@@ -192,12 +212,14 @@ class AiiDADict(Task):
     }
 
     def create_sockets(self) -> None:
-        self.inputs.clear()
-        self.outputs.clear()
-        self.inputs.new("workgraph.any", "value", property_data={"default": {}})
-        self.inputs.new("workgraph.any", "_wait", arg_type="none", link_limit=100000)
-        self.outputs.new("workgraph.aiida_dict", "result")
-        self.outputs.new("workgraph.any", "_wait")
+        self.inputs._clear()
+        self.outputs._clear()
+        self.add_input("workgraph.any", "value", property_data={"default": {}})
+        self.add_input(
+            "workgraph.any", "_wait", link_limit=100000, metadata={"arg_type": "none"}
+        )
+        self.add_output("workgraph.aiida_dict", "result")
+        self.add_output("workgraph.any", "_wait")
 
 
 class AiiDANode(Task):
@@ -217,15 +239,17 @@ class AiiDANode(Task):
         pass
 
     def create_sockets(self) -> None:
-        self.inputs.clear()
-        self.outputs.clear()
-        self.inputs.new("workgraph.any", "identifier")
-        self.inputs.new("workgraph.any", "pk")
-        self.inputs.new("workgraph.any", "uuid")
-        self.inputs.new("workgraph.any", "label")
-        self.inputs.new("workgraph.any", "_wait", arg_type="none", link_limit=100000)
-        self.outputs.new("workgraph.any", "node")
-        self.outputs.new("workgraph.any", "_wait")
+        self.inputs._clear()
+        self.outputs._clear()
+        self.add_input("workgraph.any", "identifier")
+        self.add_input("workgraph.any", "pk")
+        self.add_input("workgraph.any", "uuid")
+        self.add_input("workgraph.any", "label")
+        self.add_input(
+            "workgraph.any", "_wait", link_limit=100000, metadata={"arg_type": "none"}
+        )
+        self.add_output("workgraph.any", "node")
+        self.add_output("workgraph.any", "_wait")
 
 
 class AiiDACode(Task):
@@ -242,15 +266,17 @@ class AiiDACode(Task):
     }
 
     def create_sockets(self) -> None:
-        self.inputs.clear()
-        self.outputs.clear()
-        self.inputs.new("workgraph.any", "identifier")
-        self.inputs.new("workgraph.any", "pk")
-        self.inputs.new("workgraph.any", "uuid")
-        self.inputs.new("workgraph.any", "label")
-        self.inputs.new("workgraph.any", "_wait", arg_type="none", link_limit=100000)
-        self.outputs.new("workgraph.any", "Code")
-        self.outputs.new("workgraph.any", "_wait")
+        self.inputs._clear()
+        self.outputs._clear()
+        self.add_input("workgraph.any", "identifier")
+        self.add_input("workgraph.any", "pk")
+        self.add_input("workgraph.any", "uuid")
+        self.add_input("workgraph.any", "label")
+        self.add_input(
+            "workgraph.any", "_wait", link_limit=100000, metadata={"arg_type": "none"}
+        )
+        self.add_output("workgraph.any", "Code")
+        self.add_output("workgraph.any", "_wait")
 
 
 class Select(Task):
@@ -267,11 +293,13 @@ class Select(Task):
     }
 
     def create_sockets(self) -> None:
-        self.inputs.clear()
-        self.outputs.clear()
-        self.inputs.new("workgraph.any", "condition")
-        self.inputs.new("workgraph.any", "true")
-        self.inputs.new("workgraph.any", "false")
-        self.inputs.new("workgraph.any", "_wait", arg_type="none", link_limit=100000)
-        self.outputs.new("workgraph.any", "result")
-        self.outputs.new("workgraph.any", "_wait")
+        self.inputs._clear()
+        self.outputs._clear()
+        self.add_input("workgraph.any", "condition")
+        self.add_input("workgraph.any", "true")
+        self.add_input("workgraph.any", "false")
+        self.add_input(
+            "workgraph.any", "_wait", link_limit=100000, metadata={"arg_type": "none"}
+        )
+        self.add_output("workgraph.any", "result")
+        self.add_output("workgraph.any", "_wait")

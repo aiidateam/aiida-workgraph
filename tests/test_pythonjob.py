@@ -33,19 +33,19 @@ def test_decorator(fixture_localhost, python_executable_path):
     wg.add_task(
         decorted_multiply,
         name="multiply1",
-        x=wg.tasks["add1"].outputs["sum"],
+        x=wg.tasks.add1.outputs.sum,
         y=3,
         computer="localhost",
         command_info={"label": python_executable_path},
     )
     # wg.submit(wait=True)
     wg.run()
-    assert wg.tasks["add1"].outputs["sum"].value.value == 3
-    assert wg.tasks["add1"].outputs["diff"].value.value == -1
-    assert wg.tasks["multiply1"].outputs["result"].value.value == 9
+    assert wg.tasks.add1.outputs.sum.value.value == 3
+    assert wg.tasks.add1.outputs["diff"].value.value == -1
+    assert wg.tasks.multiply1.outputs.result.value.value == 9
     # process_label and label
-    assert wg.tasks["add1"].node.process_label == "PythonJob<add1>"
-    assert wg.tasks["add1"].node.label == "add1"
+    assert wg.tasks.add1.node.process_label == "PythonJob<add1>"
+    assert wg.tasks.add1.node.label == "add1"
 
 
 def test_PythonJob_kwargs(fixture_localhost, python_executable_path):
@@ -58,10 +58,10 @@ def test_PythonJob_kwargs(fixture_localhost, python_executable_path):
         return x
 
     wg = WorkGraph("test_PythonJob")
-    wg.add_task("PythonJob", function=add, name="add")
+    wg.add_task("PythonJob", function=add, name="add1")
     wg.run(
         inputs={
-            "add": {
+            "add1": {
                 "x": 1,
                 "y": 2,
                 "kwargs": {"m": 2, "n": 3},
@@ -71,11 +71,11 @@ def test_PythonJob_kwargs(fixture_localhost, python_executable_path):
         },
     )
     # data inside the kwargs should be serialized separately
-    wg.process.inputs.wg.tasks.add.inputs.kwargs.property.value.m.value == 2
-    assert wg.tasks["add"].outputs["result"].value.value == 8
+    wg.process.inputs.wg.tasks.add1.inputs.kwargs.sockets.m.property.value == 2
+    assert wg.tasks.add1.outputs.result.value.value == 8
     # load the workgraph
     wg = WorkGraph.load(wg.pk)
-    assert wg.tasks["add"].inputs["kwargs"].value == {"m": 2, "n": 3}
+    assert wg.tasks.add1.inputs["kwargs"]._value == {"m": 2, "n": 3}
 
 
 def test_PythonJob_namespace_output_input(fixture_localhost, python_executable_path):
@@ -141,10 +141,10 @@ def test_PythonJob_namespace_output_input(fixture_localhost, python_executable_p
         },
     }
     wg.run(inputs=inputs)
-    assert wg.tasks["myfunc"].outputs["add_multiply"].value.add.value == 3
-    assert wg.tasks["myfunc"].outputs["add_multiply"].value.multiply.value == 2
-    assert wg.tasks["myfunc2"].outputs["result"].value.value == 8
-    assert wg.tasks["myfunc3"].outputs["result"].value.value == 7
+    assert wg.tasks.myfunc.outputs.add_multiply.add.value == 3
+    assert wg.tasks.myfunc.outputs.add_multiply.multiply.value == 2
+    assert wg.tasks.myfunc2.outputs.result.value == 8
+    assert wg.tasks.myfunc3.outputs.result.value == 7
 
 
 def test_PythonJob_copy_files(fixture_localhost, python_executable_path):
@@ -176,15 +176,15 @@ def test_PythonJob_copy_files(fixture_localhost, python_executable_path):
         name="multiply",
     )
     wg.add_link(
-        wg.tasks["add1"].outputs["remote_folder"],
+        wg.tasks.add1.outputs.remote_folder,
         wg.tasks["multiply"].inputs["copy_files"],
     )
     wg.add_link(
-        wg.tasks["add2"].outputs["remote_folder"],
+        wg.tasks.add2.outputs.remote_folder,
         wg.tasks["multiply"].inputs["copy_files"],
     )
     # ------------------------- Submit the calculation -------------------
-    wg.submit(
+    wg.run(
         inputs={
             "add1": {
                 "x": 2,
@@ -205,9 +205,8 @@ def test_PythonJob_copy_files(fixture_localhost, python_executable_path):
                 "command_info": {"label": python_executable_path},
             },
         },
-        wait=True,
     )
-    assert wg.tasks["multiply"].outputs["result"].value.value == 25
+    assert wg.tasks["multiply"].outputs.result.value.value == 25
 
 
 def test_load_pythonjob(fixture_localhost, python_executable_path):
@@ -231,10 +230,10 @@ def test_load_pythonjob(fixture_localhost, python_executable_path):
         },
         # wait=True,
     )
-    assert wg.tasks["add"].outputs["result"].value.value == "Hello, World!"
+    assert wg.tasks.add.outputs.result.value.value == "Hello, World!"
     wg = WorkGraph.load(wg.pk)
-    wg.tasks["add"].inputs["x"].value = "Hello, "
-    wg.tasks["add"].inputs["y"].value = "World!"
+    wg.tasks.add.inputs.x.value = "Hello, "
+    wg.tasks.add.inputs["y"].value = "World!"
 
 
 def test_exit_code(fixture_localhost, python_executable_path):
@@ -246,7 +245,12 @@ def test_exit_code(fixture_localhost, python_executable_path):
         Simply make the inputs positive by taking the absolute value.
         """
 
-        task.set({"x": abs(task.inputs["x"].value), "y": abs(task.inputs["y"].value)})
+        task.set(
+            {
+                "x": abs(task.inputs.x.value),
+                "y": abs(task.inputs["y"].value),
+            }
+        )
 
         return "Run error handler: handle_negative_sum."
 
@@ -280,5 +284,5 @@ def test_exit_code(fixture_localhost, python_executable_path):
         == "Some elements are negative"
     )
     # the final task should have exit status 0
-    assert wg.tasks["add1"].node.exit_status == 0
-    assert (wg.tasks["add1"].outputs["sum"].value.value == array([2, 3])).all()
+    assert wg.tasks.add1.node.exit_status == 0
+    assert (wg.tasks.add1.outputs.sum.value.value == array([2, 3])).all()

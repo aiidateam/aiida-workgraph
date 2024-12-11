@@ -132,7 +132,7 @@ wg.submit(wait=True)
 #
 
 print("State of WorkGraph:   {}".format(wg.state))
-print("Result of task add1: {}".format(wg.tasks["sum1"].outputs["result"].value))
+print("Result of task add1: {}".format(wg.tasks.sum1.outputs.result.value))
 
 
 # %%

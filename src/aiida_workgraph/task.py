@@ -4,11 +4,10 @@ from node_graph.node import Node as GraphNode
 
 from aiida_workgraph.properties import property_pool
 from aiida_workgraph.sockets import socket_pool
+from aiida_workgraph.socket import NodeSocketNamespace
 from node_graph_widget import NodeGraphWidget
 from aiida_workgraph.collection import (
     WorkGraphPropertyCollection,
-    WorkGraphInputSocketCollection,
-    WorkGraphOutputSocketCollection,
 )
 import aiida
 from typing import Any, Dict, Optional, Union, Callable, List, Set, Iterable
@@ -38,8 +37,8 @@ class Task(GraphNode):
         """
         super().__init__(
             property_collection_class=WorkGraphPropertyCollection,
-            input_collection_class=WorkGraphInputSocketCollection,
-            output_collection_class=WorkGraphOutputSocketCollection,
+            input_collection_class=NodeSocketNamespace,
+            output_collection_class=NodeSocketNamespace,
             **kwargs,
         )
         self.context_mapping = {} if context_mapping is None else context_mapping
@@ -78,53 +77,11 @@ class Task(GraphNode):
         key is the context key, value is the output key.
         """
         # all values should belong to the outputs.keys()
-        remain_keys = set(context.values()).difference(self.outputs.keys())
+        remain_keys = set(context.values()).difference(self.get_output_names())
         if remain_keys:
             msg = f"Keys {remain_keys} are not in the outputs of this task."
             raise ValueError(msg)
         self.context_mapping.update(context)
-
-    def set(self, data: Dict[str, Any]) -> None:
-        from node_graph.socket import NodeSocket
-
-        super().set(data)
-
-        def process_nested_inputs(
-            base_key: str, value: Any, dynamic: bool = False
-        ) -> None:
-            """Recursive function to process nested inputs.
-            Creates sockets and links dynamically for nested values.
-            """
-            if isinstance(value, dict):
-                keys = list(value.keys())
-                for sub_key in keys:
-                    sub_value = value[sub_key]
-                    # Form the full key for the current nested level
-                    full_key = f"{base_key}.{sub_key}" if base_key else sub_key
-
-                    # Create a new input socket if it does not exist
-                    if full_key not in self.inputs.keys() and dynamic:
-                        self.inputs.new(
-                            "workgraph.any",
-                            name=full_key,
-                            metadata={"required": True},
-                        )
-                    if isinstance(sub_value, NodeSocket):
-                        self.parent.links.new(sub_value, self.inputs[full_key])
-                        value.pop(sub_key)
-                    else:
-                        # Recursively process nested dictionaries
-                        process_nested_inputs(full_key, sub_value, dynamic)
-
-        # create input sockets and links for items inside a dynamic socket
-        # TODO the input value could be nested, but we only support one level for now
-        for key in data:
-            if self.inputs[key].identifier == "workgraph.namespace":
-                process_nested_inputs(
-                    key,
-                    self.inputs[key].value,
-                    dynamic=self.inputs[key].metadata.get("dynamic", False),
-                )
 
     def set_from_builder(self, builder: Any) -> None:
         """Set the task inputs from a AiiDA ProcessBuilder."""
@@ -231,7 +188,7 @@ class Task(GraphNode):
         for key in ("properties", "executor", "node_class", "process"):
             tdata.pop(key, None)
         for input in tdata["inputs"].values():
-            input.pop("property")
+            input.pop("property", None)
 
         tdata["label"] = tdata["identifier"]
 
@@ -290,9 +247,9 @@ class TaskCollection:
         task_objects = []
         for task in tasks:
             if isinstance(task, str):
-                if task not in self.graph.tasks.keys():
+                if task not in self.graph.tasks:
                     raise ValueError(
-                        f"Task '{task}' is not in the graph. Available tasks: {self.graph.tasks.keys()}"
+                        f"Task '{task}' is not in the graph. Available tasks: {self.graph.tasks}"
                     )
                 task_objects.append(self.graph.tasks[task])
             elif isinstance(task, Task):

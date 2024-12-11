@@ -57,17 +57,17 @@ def test_calcfunction():
         ],
     )
     assert issubclass(AddTask, Task)
-    assert "sum" in AddTask().outputs.keys()
+    assert "sum" in AddTask().get_output_names()
     # use the class directly
     wg = WorkGraph()
     add1 = wg.add_task(add, name="add1")
-    assert "result" in add1.outputs.keys()
+    assert "result" in add1.get_output_names()
     assert add1.name == "add1"
 
     AddTask_outputs_list = build_task(add_minus, outputs=["sum", "difference"])
     assert issubclass(AddTask_outputs_list, Task)
-    assert "sum" in AddTask_outputs_list().outputs.keys()
-    assert "difference" in AddTask_outputs_list().outputs.keys()
+    assert "sum" in AddTask_outputs_list().get_output_names()
+    assert "difference" in AddTask_outputs_list().get_output_names()
 
 
 def test_function():

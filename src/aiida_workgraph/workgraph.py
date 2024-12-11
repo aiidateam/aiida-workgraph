@@ -1,8 +1,10 @@
+from __future__ import annotations
+
 import aiida.orm
 import node_graph
 import aiida
-import node_graph.link
-from aiida_workgraph.socket import NodeSocket
+from node_graph.link import NodeLink
+from aiida_workgraph.socket import TaskSocket
 from aiida_workgraph.tasks import task_pool
 from aiida_workgraph.task import Task
 import time
@@ -68,13 +70,9 @@ class WorkGraph(node_graph.NodeGraph):
     def prepare_inputs(
         self, metadata: Optional[Dict[str, Any]] = None
     ) -> Dict[str, Any]:
-        from aiida_workgraph.utils import (
-            organize_nested_inputs,
-            serialize_workgraph_inputs,
-        )
+        from aiida_workgraph.utils import serialize_workgraph_inputs
 
         wgdata = self.to_dict()
-        organize_nested_inputs(wgdata)
         serialize_workgraph_inputs(wgdata)
         metadata = metadata or {}
         inputs = {"wg": wgdata, "metadata": metadata}
@@ -94,7 +92,7 @@ class WorkGraph(node_graph.NodeGraph):
         # set task inputs
         if inputs is not None:
             for name, input in inputs.items():
-                if name not in self.tasks.keys():
+                if name not in self.tasks:
                     raise KeyError(f"Task {name} not found in WorkGraph.")
                 self.tasks[name].set(input)
         # One can not run again if the process is alreay created. otherwise, a new process node will
@@ -126,7 +124,7 @@ class WorkGraph(node_graph.NodeGraph):
         # set task inputs
         if inputs is not None:
             for name, input in inputs.items():
-                if name not in self.tasks.keys():
+                if name not in self.tasks:
                     raise KeyError(f"Task {name} not found in WorkGraph.")
                 self.tasks[name].set(input)
 
@@ -292,12 +290,15 @@ class WorkGraph(node_graph.NodeGraph):
                     # even if the node.is_finished_ok is True
                     if node.is_finished_ok:
                         # update the output sockets
-                        i = 0
                         for socket in self.tasks[name].outputs:
-                            socket.value = get_nested_dict(
-                                node.outputs, socket.name, default=None
-                            )
-                            i += 1
+                            if socket._identifier == "workgraph.namespace":
+                                socket._value = get_nested_dict(
+                                    node.outputs, socket._name, default=None
+                                )
+                            else:
+                                socket.value = get_nested_dict(
+                                    node.outputs, socket._name, default=None
+                                )
                 # read results from the process outputs
                 elif isinstance(node, aiida.orm.Data):
                     self.tasks[name].outputs[0].value = node
@@ -471,13 +472,13 @@ class WorkGraph(node_graph.NodeGraph):
         for task in wg.tasks:
             task.name = prefix + task.name
             task.parent = self
-            self.tasks.append(task)
+            self.tasks._append(task)
         # self.sequence.extend([prefix + task for task in wg.sequence])
         # self.conditions.extend(wg.conditions)
         self.context.update(wg.context)
         # links
         for link in wg.links:
-            self.links.append(link)
+            self.links._append(link)
 
     @property
     def error_handlers(self) -> Dict[str, Any]:
@@ -492,14 +493,14 @@ class WorkGraph(node_graph.NodeGraph):
         self, identifier: Union[str, callable], name: str = None, **kwargs
     ) -> Task:
         """Add a task to the workgraph."""
-        node = self.tasks.new(identifier, name, **kwargs)
+        node = self.tasks._new(identifier, name, **kwargs)
         return node
 
-    def add_link(
-        self, source: NodeSocket, target: NodeSocket
-    ) -> node_graph.link.NodeLink:
-        """Add a link between two nodes."""
-        link = self.links.new(source, target)
+    def add_link(self, source: TaskSocket | Task, target: TaskSocket) -> NodeLink:
+        """Add a link between two tasks."""
+        if isinstance(source, Task):
+            source = source.outputs["_outputs"]
+        link = self.links._new(source, target)
         return link
 
     def to_widget_value(self) -> Dict[str, Any]:

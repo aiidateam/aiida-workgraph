@@ -9,9 +9,7 @@ def test_from_dict(decorated_add):
     """Export NodeGraph to dict."""
     wg = WorkGraph("test_from_dict")
     task1 = wg.add_task(decorated_add, x=2, y=3)
-    wg.add_task(
-        "workgraph.test_sum_diff", name="sumdiff2", x=4, y=task1.outputs["result"]
-    )
+    wg.add_task("workgraph.test_sum_diff", name="sumdiff2", x=4, y=task1.outputs.result)
     wgdata = wg.to_dict()
     wg1 = WorkGraph.from_dict(wgdata)
     assert len(wg.tasks) == len(wg1.tasks)
@@ -23,7 +21,7 @@ def test_add_task():
     wg = WorkGraph("test_add_task")
     add1 = wg.add_task(ArithmeticAddCalculation, name="add1")
     add2 = wg.add_task(ArithmeticAddCalculation, name="add2")
-    wg.add_link(add1.outputs["sum"], add2.inputs["x"])
+    wg.add_link(add1.outputs.sum, add2.inputs.x)
     assert len(wg.tasks) == 2
     assert len(wg.links) == 1
 
@@ -62,12 +60,12 @@ def test_save_load(wg_calcfunction, decorated_add):
     wg2 = WorkGraph.load(wg.process.pk)
     assert len(wg.tasks) == len(wg2.tasks)
     # check the executor of the decorated task
-    callable = wg2.tasks["add1"].get_executor()["callable"]
+    callable = wg2.tasks.add1.get_executor()["callable"]
     assert isinstance(callable, PickledFunction)
     assert callable.value(1, 2) == 3
     # TODO, the following code is not working
     # wg2.save()
-    # assert wg2.tasks["add1"].executor == decorated_add
+    # assert wg2.tasks.add1.executor == decorated_add
     # remove the extra, will raise an error
     wg.process.base.extras.delete(WORKGRAPH_EXTRA_KEY)
     with pytest.raises(
@@ -79,6 +77,7 @@ def test_save_load(wg_calcfunction, decorated_add):
 def test_organize_nested_inputs():
     """Merge sub properties to the root properties."""
     from .utils.test_workchain import WorkChainWithNestNamespace
+    from node_graph.utils import collect_values_inside_namespace
 
     wg = WorkGraph("test_organize_nested_inputs")
     task1 = wg.add_task(WorkChainWithNestNamespace, name="task1")
@@ -96,11 +95,14 @@ def test_organize_nested_inputs():
     data = {
         "metadata": {
             "call_link_label": "nest",
-            "options": {"resources": {"num_cpus": 1, "num_machines": 1}},
+            "options": {"resources": {"num_machines": 1}},
         },
         "x": "1",
     }
-    assert inputs["wg"]["tasks"]["task1"]["inputs"]["add"]["property"]["value"] == data
+    collected_data = collect_values_inside_namespace(
+        inputs["wg"]["tasks"]["task1"]["inputs"]["add"]
+    )
+    assert collected_data == data
 
 
 @pytest.mark.usefixtures("started_daemon_client")
@@ -114,7 +116,7 @@ def test_reset_message(wg_calcjob):
     # wait for the daemon to start the workgraph
     time.sleep(3)
     wg = WorkGraph.load(wg.process.pk)
-    wg.tasks["add2"].set({"y": orm.Int(10).store()})
+    wg.tasks.add2.set({"y": orm.Int(10).store()})
     wg.save()
     wg.wait()
     report = get_workchain_report(wg.process, "REPORT")
@@ -131,7 +133,7 @@ def test_restart_and_reset(wg_calcfunction):
         "workgraph.test_sum_diff",
         "sumdiff3",
         x=4,
-        y=wg.tasks["sumdiff2"].outputs["sum"],
+        y=wg.tasks["sumdiff2"].outputs.sum,
     )
     wg.name = "test_restart_0"
     wg.submit(wait=True)
@@ -164,7 +166,7 @@ def test_extend_workgraph(decorated_add_multiply_group):
     assert "group_add1" in [
         task.name for task in wg.tasks["group_multiply1"].waiting_on
     ]
-    wg.add_link(add1.outputs[0], wg.tasks["group_add1"].inputs["x"])
+    wg.add_link(add1.outputs[0], wg.tasks["group_add1"].inputs.x)
     wg.run()
     assert wg.tasks["group_multiply1"].node.outputs.result == 45
 

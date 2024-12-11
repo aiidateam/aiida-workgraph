@@ -3,7 +3,6 @@ from __future__ import annotations
 from typing import Any, Callable, Dict, List, Optional, Union, Tuple
 from aiida_workgraph.utils import get_executor
 from aiida.engine import calcfunction, workfunction, CalcJob, WorkChain
-from aiida import orm
 from aiida.orm.nodes.process.calculation.calcfunction import CalcFunctionNode
 from aiida.orm.nodes.process.workflow.workfunction import WorkFunctionNode
 from aiida.engine.processes.ports import PortNamespace
@@ -11,6 +10,8 @@ from aiida_workgraph.task import Task
 from aiida_workgraph.utils import build_callable, validate_task_inout
 import inspect
 from aiida_workgraph.config import builtin_inputs, builtin_outputs
+from aiida_workgraph.orm.mapping import type_mapping
+
 
 task_types = {
     CalcFunctionNode: "CALCFUNCTION",
@@ -19,29 +20,18 @@ task_types = {
     WorkChain: "WORKCHAIN",
 }
 
-type_mapping = {
-    "default": "workgraph.any",
-    "namespace": "workgraph.namespace",
-    int: "workgraph.int",
-    float: "workgraph.float",
-    str: "workgraph.string",
-    bool: "workgraph.bool",
-    orm.Int: "workgraph.aiida_int",
-    orm.Float: "workgraph.aiida_float",
-    orm.Str: "workgraph.aiida_string",
-    orm.Bool: "workgraph.aiida_bool",
-    orm.List: "workgraph.aiida_list",
-    orm.Dict: "workgraph.aiida_dict",
-    orm.StructureData: "workgraph.aiida_structuredata",
-}
-
 
 def create_task(tdata):
     """Wrap create_node from node_graph to create a Task."""
     from node_graph.decorator import create_node
+    from node_graph.utils import list_to_dict
 
     tdata["type_mapping"] = type_mapping
     tdata["metadata"]["node_type"] = tdata["metadata"].pop("task_type")
+    tdata["properties"] = list_to_dict(tdata.get("properties", {}))
+    tdata["inputs"] = list_to_dict(tdata.get("inputs", {}))
+    tdata["outputs"] = list_to_dict(tdata.get("outputs", {}))
+
     return create_node(tdata)
 
 
@@ -67,9 +57,11 @@ def add_input_recursive(
                 {
                     "identifier": "workgraph.namespace",
                     "name": port_name,
-                    "arg_type": "kwargs",
-                    "metadata": {"required": required, "dynamic": port.dynamic},
-                    "property": {"identifier": "workgraph.any", "default": None},
+                    "metadata": {
+                        "arg_type": "kwargs",
+                        "required": required,
+                        "dynamic": port.dynamic,
+                    },
                 }
             )
         for value in port.values():
@@ -88,8 +80,7 @@ def add_input_recursive(
                 {
                     "identifier": socket_type,
                     "name": port_name,
-                    "arg_type": "kwargs",
-                    "metadata": {"required": required},
+                    "metadata": {"arg_type": "kwargs", "required": required},
                 }
             )
     return inputs
@@ -222,7 +213,7 @@ def build_task_from_AiiDA(
     tdata: Dict[str, Any],
     inputs: Optional[List[str]] = None,
     outputs: Optional[List[str]] = None,
-) -> Task:
+) -> Tuple[Task, Dict[str, Any]]:
     """Register a task from a AiiDA component.
     For example: CalcJob, WorkChain, CalcFunction, WorkFunction."""
 
@@ -248,11 +239,9 @@ def build_task_from_AiiDA(
         if name not in [input["name"] for input in inputs]:
             inputs.append(
                 {
-                    "identifier": "workgraph.any",
+                    "identifier": "workgraph.namespace",
                     "name": name,
-                    "arg_type": "var_kwargs",
-                    "metadata": {"dynamic": True},
-                    "property": {"identifier": "workgraph.any", "default": {}},
+                    "metadata": {"arg_type": "var_kwargs", "dynamic": True},
                 }
             )
 
@@ -392,10 +381,13 @@ def build_task_from_workgraph(wg: any) -> Task:
             }
         )
         for socket in task.inputs:
-            if socket.name in builtin_input_names:
+            if socket._name in builtin_input_names:
                 continue
             inputs.append(
-                {"identifier": socket.identifier, "name": f"{task.name}.{socket.name}"}
+                {
+                    "identifier": socket._identifier,
+                    "name": f"{task.name}.{socket._name}",
+                }
             )
         # outputs
         outputs.append(
@@ -405,15 +397,18 @@ def build_task_from_workgraph(wg: any) -> Task:
             }
         )
         for socket in task.outputs:
-            if socket.name in builtin_output_names:
+            if socket._name in builtin_output_names:
                 continue
             outputs.append(
-                {"identifier": socket.identifier, "name": f"{task.name}.{socket.name}"}
+                {
+                    "identifier": socket._identifier,
+                    "name": f"{task.name}.{socket._name}",
+                }
             )
             group_outputs.append(
                 {
-                    "name": f"{task.name}.{socket.name}",
-                    "from": f"{task.name}.{socket.name}",
+                    "name": f"{task.name}.{socket._name}",
+                    "from": f"{task.name}.{socket._name}",
                 }
             )
     # add built-in sockets

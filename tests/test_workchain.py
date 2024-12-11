@@ -19,7 +19,7 @@ def test_build_workchain_inputs_outputs():
     node = build_task(MultiplyAddWorkChain)()
     inputs = MultiplyAddWorkChain.spec().inputs
     # inputs + metadata + _wait
-    ninput = len(inputs.ports) + len(inputs.ports["metadata"].ports) + 1
+    ninput = len(inputs.ports) + 1
     assert len(node.inputs) == ninput
     assert len(node.outputs) == 3
 

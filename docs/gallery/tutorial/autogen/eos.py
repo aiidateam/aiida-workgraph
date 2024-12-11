@@ -102,8 +102,8 @@ wg = WorkGraph("eos")
 scale_structure1 = wg.add_task(scale_structure, name="scale_structure1")
 all_scf1 = wg.add_task(all_scf, name="all_scf1")
 eos1 = wg.add_task(eos, name="eos1")
-wg.add_link(scale_structure1.outputs["structures"], all_scf1.inputs["structures"])
-wg.add_link(all_scf1.outputs["result"], eos1.inputs["datas"])
+wg.add_link(scale_structure1.outputs.structures, all_scf1.inputs.structures)
+wg.add_link(all_scf1.outputs.result, eos1.inputs.datas)
 wg.to_html()
 # visualize the workgraph in jupyter-notebook
 # wg
@@ -183,8 +183,8 @@ scf_inputs = {
 }
 # -------------------------------------------------------
 # set the input parameters for each task
-wg.tasks["scale_structure1"].set({"structure": si, "scales": [0.95, 1.0, 1.05]})
-wg.tasks["all_scf1"].set({"scf_inputs": scf_inputs})
+wg.tasks.scale_structure1.set({"structure": si, "scales": [0.95, 1.0, 1.05]})
+wg.tasks.all_scf1.set({"scf_inputs": scf_inputs})
 print("Waiting for the workgraph to finish...")
 wg.submit(wait=True, timeout=300)
 # one can also run the workgraph directly
@@ -196,7 +196,7 @@ wg.submit(wait=True, timeout=300)
 #
 
 
-data = wg.tasks["eos1"].outputs["result"].value.get_dict()
+data = wg.tasks["eos1"].outputs.result.value.get_dict()
 print("B: {B}\nv0: {v0}\ne0: {e0}\nv0: {v0}".format(**data))
 
 # %%
@@ -216,8 +216,8 @@ def eos_workgraph(structure=None, scales=None, scf_inputs=None):
     )
     all_scf1 = wg.add_task(all_scf, name="all_scf1", scf_inputs=scf_inputs)
     eos1 = wg.add_task(eos, name="eos1")
-    wg.add_link(scale_structure1.outputs["structures"], all_scf1.inputs["structures"])
-    wg.add_link(all_scf1.outputs["result"], eos1.inputs["datas"])
+    wg.add_link(scale_structure1.outputs.structures, all_scf1.inputs.structures)
+    wg.add_link(all_scf1.outputs.result, eos1.inputs.datas)
     return wg
 
 
@@ -268,7 +268,7 @@ relax_task.set(relax_inputs)
 eos_wg_task = wg.add_task(
     eos_workgraph, name="eos1", scales=[0.95, 1.0, 1.05], scf_inputs=scf_inputs
 )
-wg.add_link(relax_task.outputs["output_structure"], eos_wg_task.inputs["structure"])
+wg.add_link(relax_task.outputs.output_structure, eos_wg_task.inputs["structure"])
 # -------------------------------------------------------
 # One can submit the workgraph directly
 # wg.submit(wait=True, timeout=300)

@@ -88,7 +88,7 @@ def wg_calcjob(add_code) -> WorkGraph:
     wg = WorkGraph(name="test_debug_math")
     add1 = wg.add_task(ArithmeticAddCalculation, "add1", x=2, y=3, code=add_code)
     add2 = wg.add_task(ArithmeticAddCalculation, "add2", x=4, code=add_code)
-    wg.add_link(add1.outputs["sum"], add2.inputs["y"])
+    wg.add_link(add1.outputs.sum, add2.inputs["y"])
     return wg
 
 
@@ -233,11 +233,11 @@ def wg_engine(decorated_add, add_code) -> WorkGraph:
     add3 = wg.add_task(decorated_add, "add3", x=2, y=3)
     add4 = wg.add_task(ArithmeticAddCalculation, "add4", x=2, y=4, code=code)
     add5 = wg.add_task(decorated_add, "add5", x=2, y=5)
-    wg.add_link(add0.outputs["sum"], add2.inputs["x"])
-    wg.add_link(add1.outputs[0], add3.inputs["x"])
-    wg.add_link(add3.outputs[0], add4.inputs["x"])
-    wg.add_link(add2.outputs["sum"], add5.inputs["x"])
-    wg.add_link(add4.outputs["sum"], add5.inputs["y"])
+    wg.add_link(add0.outputs.sum, add2.inputs.x)
+    wg.add_link(add1.outputs[0], add3.inputs.x)
+    wg.add_link(add3.outputs[0], add4.inputs.x)
+    wg.add_link(add2.outputs.sum, add5.inputs.x)
+    wg.add_link(add4.outputs.sum, add5.inputs["y"])
     return wg
 
 

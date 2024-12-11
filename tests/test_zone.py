@@ -9,9 +9,9 @@ def test_zone_task(decorated_add):
     wg.context = {}
     add1 = wg.add_task(decorated_add, name="add1", x=1, y=1)
     wg.add_task(decorated_add, name="add2", x=1, y=1)
-    add3 = wg.add_task(decorated_add, name="add3", x=1, y=add1.outputs["result"])
-    wg.add_task(decorated_add, name="add4", x=1, y=add3.outputs["result"])
-    wg.add_task(decorated_add, name="add5", x=1, y=add3.outputs["result"])
+    add3 = wg.add_task(decorated_add, name="add3", x=1, y=add1.outputs.result)
+    wg.add_task(decorated_add, name="add4", x=1, y=add3.outputs.result)
+    wg.add_task(decorated_add, name="add5", x=1, y=add3.outputs.result)
     zone1 = wg.add_task("workgraph.zone", name="Zone1")
     zone1.children.add(["add2", "add3"])
     wg.run()
