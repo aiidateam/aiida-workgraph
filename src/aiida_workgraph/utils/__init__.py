@@ -211,47 +211,6 @@ def update_nested_dict_with_special_keys(data: Dict[str, Any]) -> Dict[str, Any]
     return data
 
 
-def organize_nested_inputs(wgdata: Dict[str, Any]) -> None:
-    """Merge sub properties to the root properties.
-    The sub properties will be se
-    For example:
-        task["inputs"]["base"]["property"]["value"] = None
-        task["inputs"]["base.pw.parameters"]["property"]["value"] = 2
-        task["inputs"]["base.pw.code"]["property"]["value"] = 1
-        task["inputs"]["metadata"]["property"]["value"] = {"options": {"resources": {"num_cpus": 1}}
-        task["inputs"]["metadata.options"]["property"]["value"] = {"resources": {"num_machine": 1}}
-    After organizing:
-        task["inputs"]["base"]["property"]["value"] = {"base": {"pw": {"parameters": 2,
-                                                                     "code": 1},
-                                                       "metadata": {"options":
-                                                                        {"resources": {"num_cpus": 1,
-                                                                                       "num_machine": 1}}}},
-                                                       }
-        task["inputs"]["base.pw.parameters"]["property"]["value"] = None
-        task["inputs"]["base.pw.code"]["property"]["value"] = None
-        task["inputs"]["metadata"]["property"]["value"] = None
-        task["inputs"]["metadata.options"]["property"]["value"] = None
-    """
-    for _, task in wgdata["tasks"].items():
-        for key, prop in task["properties"].items():
-            if "." in key and prop["value"] not in [None, {}]:
-                root, key = key.split(".", 1)
-                root_prop = task["properties"][root]
-                update_nested_dict(root_prop["value"], key, prop["value"])
-                prop["value"] = None
-        for key, input in task["inputs"].items():
-            if input.get("property"):
-                prop = input["property"]
-                if "." in key and prop["value"] not in [None, {}]:
-                    root, key = key.split(".", 1)
-                    root_prop = task["inputs"][root]["property"]
-                    # update the root property
-                    root_prop["value"] = update_nested_dict(
-                        root_prop["value"], key, prop["value"]
-                    )
-                    prop["value"] = None
-
-
 def generate_node_graph(
     pk: int, output: str = None, width: str = "100%", height: str = "600px"
 ) -> Any:

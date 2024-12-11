@@ -31,7 +31,7 @@ def test_type_mapping(data_type, data, identifier) -> None:
         pass
 
     assert add.task().inputs["x"]._identifier == identifier
-    assert add.task().inputs["x"].socket_property.identifier == identifier
+    assert add.task().inputs["x"].property.identifier == identifier
     add_task = add.task()
     add_task.set({"x": data})
     # test set data from context
@@ -48,7 +48,7 @@ def test_vector_socket() -> None:
         "vector2d",
         property_data={"size": 2, "default": [1, 2]},
     )
-    assert t.inputs["vector2d"].socket_property.get_metadata() == {
+    assert t.inputs["vector2d"].property.get_metadata() == {
         "size": 2,
         "default": [1, 2],
     }
@@ -72,7 +72,7 @@ def test_aiida_data_socket() -> None:
             pass
 
         assert add.task().inputs["x"]._identifier == identifier
-        assert add.task().inputs["x"].socket_property.identifier == identifier
+        assert add.task().inputs["x"].property.identifier == identifier
         add_task = add.task()
         add_task.set({"x": data})
         # test set data from context

@@ -58,10 +58,10 @@ def test_PythonJob_kwargs(fixture_localhost, python_executable_path):
         return x
 
     wg = WorkGraph("test_PythonJob")
-    wg.add_task("PythonJob", function=add, name="add")
+    wg.add_task("PythonJob", function=add, name="add1")
     wg.run(
         inputs={
-            "add": {
+            "add1": {
                 "x": 1,
                 "y": 2,
                 "kwargs": {"m": 2, "n": 3},
@@ -71,11 +71,11 @@ def test_PythonJob_kwargs(fixture_localhost, python_executable_path):
         },
     )
     # data inside the kwargs should be serialized separately
-    wg.process.inputs.wg.tasks.add.inputs.kwargs.socket_property.value.m.value == 2
-    assert wg.tasks["add"].outputs["result"].value.value == 8
+    wg.process.inputs.wg.tasks.add1.inputs.kwargs.sockets.m.property.value == 2
+    assert wg.tasks["add1"].outputs["result"].value.value == 8
     # load the workgraph
     wg = WorkGraph.load(wg.pk)
-    assert wg.tasks["add"].inputs["kwargs"].value == {"m": 2, "n": 3}
+    assert wg.tasks["add1"].inputs["kwargs"]._value == {"m": 2, "n": 3}
 
 
 def test_PythonJob_namespace_output_input(fixture_localhost, python_executable_path):

@@ -213,7 +213,7 @@ def build_task_from_AiiDA(
     tdata: Dict[str, Any],
     inputs: Optional[List[str]] = None,
     outputs: Optional[List[str]] = None,
-) -> Task:
+) -> Tuple[Task, Dict[str, Any]]:
     """Register a task from a AiiDA component.
     For example: CalcJob, WorkChain, CalcFunction, WorkFunction."""
 

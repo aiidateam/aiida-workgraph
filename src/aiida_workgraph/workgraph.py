@@ -70,13 +70,9 @@ class WorkGraph(node_graph.NodeGraph):
     def prepare_inputs(
         self, metadata: Optional[Dict[str, Any]] = None
     ) -> Dict[str, Any]:
-        from aiida_workgraph.utils import (
-            organize_nested_inputs,
-            serialize_workgraph_inputs,
-        )
+        from aiida_workgraph.utils import serialize_workgraph_inputs
 
         wgdata = self.to_dict()
-        organize_nested_inputs(wgdata)
         serialize_workgraph_inputs(wgdata)
         metadata = metadata or {}
         inputs = {"wg": wgdata, "metadata": metadata}
@@ -296,10 +292,13 @@ class WorkGraph(node_graph.NodeGraph):
                         # update the output sockets
                         for socket in self.tasks[name].outputs:
                             if socket._identifier == "workgraph.namespace":
-                                continue
-                            socket.value = get_nested_dict(
-                                node.outputs, socket._name, default=None
-                            )
+                                socket._value = get_nested_dict(
+                                    node.outputs, socket._name, default=None
+                                )
+                            else:
+                                socket.value = get_nested_dict(
+                                    node.outputs, socket._name, default=None
+                                )
                 # read results from the process outputs
                 elif isinstance(node, aiida.orm.Data):
                     self.tasks[name].outputs[0].value = node

@@ -71,7 +71,7 @@ def test_set_non_dynamic_namespace_socket(decorated_add) -> None:
         }
     )
     assert len(task2.inputs["non_dynamic_port.a"]._links) == 1
-    assert task2.inputs["non_dynamic_port"].value == {"b": orm.Int(2)}
+    assert task2.inputs["non_dynamic_port"]._value == {"b": orm.Int(2)}
     assert len(wg.links) == 1
 
 
@@ -88,7 +88,7 @@ def test_set_namespace_socket(decorated_add) -> None:
         }
     )
     assert len(task2.inputs["add.x"]._links) == 1
-    assert task2.inputs["add"].value == {
+    assert task2.inputs["add"]._value == {
         "metadata": {"options": {"stash": {}}},
         "monitors": {},
         "y": orm.Int(2),
@@ -122,7 +122,7 @@ def test_set_dynamic_port_input(decorated_add) -> None:
     assert "dynamic_port.input3" in task2.inputs
     assert "dynamic_port.nested.input4" in task2.inputs
     assert "dynamic_port.nested.input5" in task2.inputs
-    assert task2.inputs["dynamic_port"].value == {
+    assert task2.inputs.dynamic_port._value == {
         "input2": orm.Int(2),
         "nested": {"input4": orm.Int(4)},
     }
@@ -138,7 +138,9 @@ def test_set_inputs(decorated_add: Callable) -> None:
     data = wg.prepare_inputs(metadata=None)
     assert data["wg"]["tasks"]["add1"]["inputs"]["y"]["property"]["value"] == 2
     assert (
-        data["wg"]["tasks"]["add1"]["inputs"]["metadata"]["value"]["store_provenance"]
+        data["wg"]["tasks"]["add1"]["inputs"]["metadata"]["sockets"][
+            "store_provenance"
+        ]["property"]["value"]
         is False
     )
 
@@ -162,3 +164,26 @@ def test_set_inputs_from_builder(add_code) -> None:
         match=f"Executor {ArithmeticAddCalculation.__name__} does not have the get_builder_from_protocol method.",
     ):
         add1.set_from_protocol(code=add_code, protocol="fast")
+
+
+def test_namespace_outputs():
+    @task.calcfunction(
+        outputs=[
+            {"identifier": "workgraph.namespace", "name": "add_multiply"},
+            {"name": "add_multiply.add"},
+            {"name": "add_multiply.multiply"},
+            {"name": "minus"},
+        ]
+    )
+    def myfunc(x, y):
+        return {
+            "add_multiply": {"add": orm.Float(x + y), "multiply": orm.Float(x * y)},
+            "minus": orm.Float(x - y),
+        }
+
+    wg = WorkGraph("test_namespace_outputs")
+    wg.add_task(myfunc, name="myfunc", x=1.0, y=2.0)
+    wg.run()
+    assert wg.tasks.myfunc.outputs.minus.value == -1
+    assert wg.tasks.myfunc.outputs.add_multiply.add.value == 3
+    assert wg.tasks.myfunc.outputs.add_multiply.multiply.value == 2

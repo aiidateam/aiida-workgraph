@@ -581,6 +581,7 @@ class TaskManager:
         Dict[str, Any],
     ]:
         """Get input based on the links."""
+        from node_graph.utils import collect_values_inside_namespace
 
         args = []
         args_dict = {}
@@ -594,7 +595,8 @@ class TaskManager:
         for name, input in task["inputs"].items():
             # print(f"input: {input['name']}")
             if input["identifier"] == "workgraph.namespace":
-                inputs[name] = self.ctx_manager.update_context_variable(input["value"])
+                # inputs[name] = self.ctx_manager.update_context_variable(input["value"])
+                inputs[name] = collect_values_inside_namespace(input)
             else:
                 inputs[name] = self.ctx_manager.update_context_variable(
                     input["property"]["value"]

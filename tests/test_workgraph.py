@@ -79,6 +79,7 @@ def test_save_load(wg_calcfunction, decorated_add):
 def test_organize_nested_inputs():
     """Merge sub properties to the root properties."""
     from .utils.test_workchain import WorkChainWithNestNamespace
+    from node_graph.utils import collect_values_inside_namespace
 
     wg = WorkGraph("test_organize_nested_inputs")
     task1 = wg.add_task(WorkChainWithNestNamespace, name="task1")
@@ -96,12 +97,14 @@ def test_organize_nested_inputs():
     data = {
         "metadata": {
             "call_link_label": "nest",
-            "options": {"resources": {"num_machines": 1}, "stash": {}},
+            "options": {"resources": {"num_machines": 1}},
         },
-        "monitors": {},
         "x": "1",
     }
-    assert inputs["wg"]["tasks"]["task1"]["inputs"]["add"]["value"] == data
+    collected_data = collect_values_inside_namespace(
+        inputs["wg"]["tasks"]["task1"]["inputs"]["add"]
+    )
+    assert collected_data == data
 
 
 @pytest.mark.usefixtures("started_daemon_client")
