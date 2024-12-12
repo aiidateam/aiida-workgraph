@@ -3,6 +3,8 @@ from node_graph.collection import (
     PropertyCollection,
 )
 from typing import Any, Callable, Optional, Union
+from aiida.engine import CalcJob, WorkChain
+from aiida_workgraph.utils import build_callable
 
 
 class TaskCollection(NodeCollection):
@@ -23,6 +25,17 @@ class TaskCollection(NodeCollection):
 
         # build the task on the fly if the identifier is a callable
         if callable(identifier):
+            if isinstance(identifier, type):
+                if issubclass(identifier, (CalcJob, WorkChain)):
+                    executor = build_callable(identifier)
+                    task = super()._new(
+                        "workgraph.aiida_process",
+                        name,
+                        uuid,
+                        _executor=executor,
+                        **kwargs
+                    )
+                    return task
             identifier = build_task_from_callable(identifier)
         if isinstance(identifier, str) and identifier.upper() == "PYTHONJOB":
             identifier, _ = build_pythonjob_task(kwargs.pop("function"))

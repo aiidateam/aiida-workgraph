@@ -120,11 +120,6 @@ class AiiDAInt(Task):
     node_type = "data"
     catalog = "Test"
 
-    _executor = {
-        "module": "aiida.orm",
-        "name": "Int",
-    }
-
     def create_sockets(self) -> None:
         self.add_input("workgraph.any", "value", property_data={"default": 0.0})
         self.add_input(
@@ -133,17 +128,19 @@ class AiiDAInt(Task):
         self.add_output("workgraph.aiida_int", "result")
         self.add_output("workgraph.any", "_wait")
 
+    def get_executor(self):
+        executor = {
+            "module_path": "aiida.orm",
+            "callable_name": "Int",
+        }
+        return executor
+
 
 class AiiDAFloat(Task):
     identifier = "workgraph.aiida_float"
     name = "AiiDAFloat"
     node_type = "data"
     catalog = "Test"
-
-    _executor = {
-        "module": "aiida.orm",
-        "name": "Float",
-    }
 
     def create_sockets(self) -> None:
         self.inputs._clear()
@@ -155,17 +152,19 @@ class AiiDAFloat(Task):
         self.add_output("workgraph.aiida_float", "result")
         self.add_output("workgraph.any", "_wait")
 
+    def get_executor(self):
+        executor = {
+            "module_path": "aiida.orm",
+            "callable_name": "Float",
+        }
+        return executor
+
 
 class AiiDAString(Task):
     identifier = "workgraph.aiida_string"
     name = "AiiDAString"
     node_type = "data"
     catalog = "Test"
-
-    _executor = {
-        "module": "aiida.orm",
-        "name": "Str",
-    }
 
     def create_sockets(self) -> None:
         self.inputs._clear()
@@ -177,17 +176,19 @@ class AiiDAString(Task):
         self.add_output("workgraph.aiida_string", "result")
         self.add_output("workgraph.any", "_wait")
 
+    def get_executor(self):
+        executor = {
+            "module_path": "aiida.orm",
+            "callable_name": "Str",
+        }
+        return executor
+
 
 class AiiDAList(Task):
     identifier = "workgraph.aiida_list"
     name = "AiiDAList"
     node_type = "data"
     catalog = "Test"
-
-    _executor = {
-        "module": "aiida.orm",
-        "name": "List",
-    }
 
     def create_sockets(self) -> None:
         self.inputs._clear()
@@ -199,17 +200,19 @@ class AiiDAList(Task):
         self.add_output("workgraph.aiida_list", "result")
         self.add_output("workgraph.any", "_wait")
 
+    def get_executor(self):
+        executor = {
+            "module_path": "aiida.orm",
+            "callable_name": "List",
+        }
+        return executor
+
 
 class AiiDADict(Task):
     identifier = "workgraph.aiida_dict"
     name = "AiiDADict"
     node_type = "data"
     catalog = "Test"
-
-    _executor = {
-        "module": "aiida.orm",
-        "name": "Dict",
-    }
 
     def create_sockets(self) -> None:
         self.inputs._clear()
@@ -221,6 +224,13 @@ class AiiDADict(Task):
         self.add_output("workgraph.aiida_dict", "result")
         self.add_output("workgraph.any", "_wait")
 
+    def get_executor(self):
+        executor = {
+            "module_path": "aiida.orm",
+            "callable_name": "Dict",
+        }
+        return executor
+
 
 class AiiDANode(Task):
     """AiiDANode"""
@@ -229,11 +239,6 @@ class AiiDANode(Task):
     name = "AiiDANode"
     node_type = "node"
     catalog = "Test"
-
-    _executor = {
-        "module": "aiida.orm",
-        "name": "load_node",
-    }
 
     def create_properties(self) -> None:
         pass
@@ -251,6 +256,13 @@ class AiiDANode(Task):
         self.add_output("workgraph.any", "node")
         self.add_output("workgraph.any", "_wait")
 
+    def get_executor(self):
+        executor = {
+            "module_path": "aiida.orm",
+            "callable_name": "load_node",
+        }
+        return executor
+
 
 class AiiDACode(Task):
     """AiiDACode"""
@@ -259,11 +271,6 @@ class AiiDACode(Task):
     name = "AiiDACode"
     node_type = "node"
     catalog = "Test"
-
-    _executor = {
-        "module": "aiida.orm",
-        "name": "load_code",
-    }
 
     def create_sockets(self) -> None:
         self.inputs._clear()
@@ -278,6 +285,13 @@ class AiiDACode(Task):
         self.add_output("workgraph.any", "Code")
         self.add_output("workgraph.any", "_wait")
 
+    def get_executor(self):
+        executor = {
+            "module_path": "aiida.orm",
+            "callable_name": "load_code",
+        }
+        return executor
+
 
 class Select(Task):
     """Select"""
@@ -286,11 +300,6 @@ class Select(Task):
     name = "Select"
     node_type = "Normal"
     catalog = "Control"
-
-    _executor = {
-        "module": "aiida_workgraph.executors.builtins",
-        "name": "select",
-    }
 
     def create_sockets(self) -> None:
         self.inputs._clear()
@@ -303,3 +312,10 @@ class Select(Task):
         )
         self.add_output("workgraph.any", "result")
         self.add_output("workgraph.any", "_wait")
+
+    def get_executor(self):
+        executor = {
+            "module_path": "aiida_workgraph.executors.builtins",
+            "callable_name": "select",
+        }
+        return executor

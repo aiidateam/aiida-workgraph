@@ -1,10 +1,19 @@
 import json
 from aiida.manage import get_config
 from pathlib import Path
+from aiida.orm.nodes.process.calculation.calcfunction import CalcFunctionNode
+from aiida.orm.nodes.process.workflow.workfunction import WorkFunctionNode
+from aiida.engine import CalcJob, WorkChain
 
 WORKGRAPH_EXTRA_KEY = "_workgraph"
 WORKGRAPH_SHORT_EXTRA_KEY = "_workgraph_short"
 
+task_types = {
+    CalcFunctionNode: "CALCFUNCTION",
+    WorkFunctionNode: "WORKFUNCTION",
+    CalcJob: "CALCJOB",
+    WorkChain: "WORKCHAIN",
+}
 
 builtin_inputs = [
     {"name": "_wait", "link_limit": 1e6, "metadata": {"arg_type": "none"}}
