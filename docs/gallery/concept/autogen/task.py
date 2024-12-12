@@ -183,8 +183,8 @@ class MyAdd(Task):
     catalog = "Test"
 
     _executor = {
-        "module": "aiida_workgraph.executors.test",
-        "name": "add",
+        "module_path": "aiida_workgraph.executors.test",
+        "callable_name": "add",
     }
 
     def create_sockets(self):

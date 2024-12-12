@@ -12,10 +12,10 @@ class WorkChainWithNestNamespace(WorkChain):
     def define(cls, spec):
         """Specify inputs and outputs."""
         super().define(spec)
-        spec.input_namespace("non_dynamic_port")
+        spec.input_namespace("non_dynamic_port", required=False)
         spec.input("non_dynamic_port.a", valid_type=Int)
         spec.input("non_dynamic_port.b", valid_type=Int)
-        spec.input("non_dynamic_port.a")
+        spec.input_namespace("dynamic_port", dynamic=True)
         spec.expose_inputs(
             ArithmeticAddCalculation,
             namespace="add",
@@ -29,6 +29,7 @@ class WorkChainWithNestNamespace(WorkChain):
         )
         spec.output("result", valid_type=Int)
         spec.expose_outputs(MultiplyAddWorkChain, namespace="multiply_add")
+        spec.output_namespace("dynamic_port", dynamic=True)
         spec.exit_code(
             400, "ERROR_NEGATIVE_NUMBER", message="The result is a negative number."
         )
@@ -57,13 +58,10 @@ class WorkChainWithNestNamespace(WorkChain):
     def result(self):
         """Add the result to the outputs."""
         self.out("result", self.ctx.addition.outputs.sum)
-
-
-class WorkChainWithDynamicNamespace(WorkChain):
-    """WorkChain with dynamic namespace."""
-
-    @classmethod
-    def define(cls, spec):
-        """Specify inputs and outputs."""
-        super().define(spec)
-        spec.input_namespace("dynamic_port", dynamic=True)
+        self.out("dynamic_port.result1", self.ctx.multiply_add.outputs.result)
+        self.out("dynamic_port.result2", self.ctx.multiply_add.outputs.result)
+        self.out_many(
+            self.exposed_outputs(
+                self.ctx.multiply_add, MultiplyAddWorkChain, namespace="multiply_add"
+            )
+        )

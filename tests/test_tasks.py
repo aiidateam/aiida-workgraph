@@ -99,12 +99,12 @@ def test_set_dynamic_port_input(decorated_add) -> None:
     Use can pass AiiDA nodes as values of the dynamic port,
     and the task will create the input for each item in the dynamic port.
     """
-    from .utils.test_workchain import WorkChainWithDynamicNamespace
+    from .utils.test_workchain import WorkChainWithNestNamespace
 
     wg = WorkGraph(name="test_set_dynamic_port_input")
     task1 = wg.add_task(decorated_add)
     task2 = wg.add_task(
-        WorkChainWithDynamicNamespace,
+        WorkChainWithNestNamespace,
         dynamic_port={
             "input1": None,
             "input2": orm.Int(2),
@@ -125,6 +125,30 @@ def test_set_dynamic_port_input(decorated_add) -> None:
         "nested": {"input4": orm.Int(4)},
     }
     assert len(wg.links) == 3
+
+
+def test_set_dynamic_port_output(add_code) -> None:
+    """Test setting dynamic port input of a task.
+    Use can pass AiiDA nodes as values of the dynamic port,
+    and the task will create the input for each item in the dynamic port.
+    """
+    from .utils.test_workchain import WorkChainWithNestNamespace
+
+    wg = WorkGraph(name="test_set_dynamic_port_input")
+    task1 = wg.add_task(WorkChainWithNestNamespace, name="task1")
+    task1.set(
+        {
+            "add": {"x": orm.Int(1), "y": orm.Int(2), "code": add_code},
+            "multiply_add": {
+                "x": orm.Int(1),
+                "y": orm.Int(2),
+                "z": orm.Int(3),
+                "code": add_code,
+            },
+        }
+    )
+    wg.run()
+    assert wg.tasks.task1.outputs.dynamic_port.result1.value == 5
 
 
 def test_set_inputs(decorated_add: Callable) -> None:

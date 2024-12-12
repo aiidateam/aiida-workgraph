@@ -5,7 +5,7 @@ from aiida.common.extendeddicts import AttributeDict
 def prepare_for_workgraph_task(task: dict, kwargs: dict) -> tuple:
     """Prepare the inputs for WorkGraph task"""
 
-    wgdata = task["executor"]["wgdata"]
+    wgdata = task["executor"]["graph_data"]
     wgdata["name"] = task["name"]
     wgdata["metadata"]["group_outputs"] = task["metadata"]["group_outputs"]
     # update the workgraph data by kwargs
