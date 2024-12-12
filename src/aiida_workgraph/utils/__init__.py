@@ -5,6 +5,22 @@ from aiida.engine.processes import Process
 from aiida import orm
 from aiida.common.exceptions import NotExistent
 from aiida.engine.runners import Runner
+from aiida_workgraph.config import task_types
+from aiida.engine import CalcJob, WorkChain
+import inspect
+
+
+def inspect_aiida_component_type(executor: Callable) -> str:
+    task_type = None
+    if isinstance(executor, type):
+        if issubclass(executor, CalcJob):
+            task_type = task_types[CalcJob]
+        elif issubclass(executor, WorkChain):
+            task_type = task_types[WorkChain]
+    elif inspect.isfunction(executor):
+        if getattr(executor, "node_class", False):
+            task_type = task_types[executor.node_class]
+    return task_type
 
 
 def build_callable(obj: Callable) -> Dict[str, Any]:
@@ -31,8 +47,8 @@ def build_callable(obj: Callable) -> Dict[str, Any]:
         else:
             # Global callable (function/class), store its module and name for reference
             executor = {
-                "module": obj.__module__,
-                "name": obj.__name__,
+                "module_path": obj.__module__,
+                "callable_name": obj.__name__,
                 "use_module_path": True,
             }
     elif isinstance(obj, dict):
@@ -70,16 +86,16 @@ def get_executor(data: Dict[str, Any]) -> Union[Process, Any]:
     type = data.get("type", "function")
     if use_module_path:
         if type == "WorkflowFactory":
-            executor = WorkflowFactory(data["name"])
+            executor = WorkflowFactory(data["callable_name"])
         elif type == "CalculationFactory":
-            executor = CalculationFactory(data["name"])
+            executor = CalculationFactory(data["callable_name"])
         elif type == "DataFactory":
-            executor = DataFactory(data["name"])
-        elif not data.get("name", None) and not data.get("module", None):
+            executor = DataFactory(data["callable_name"])
+        elif not data.get("name", None) and not data.get("module_path", None):
             executor = None
         else:
-            module = importlib.import_module("{}".format(data.get("module", "")))
-            executor = getattr(module, data["name"])
+            module = importlib.import_module("{}".format(data.get("module_path", "")))
+            executor = getattr(module, data["callable_name"])
     else:
         if not isinstance(data["callable"], PickledFunction):
             raise ValueError("The callable should be PickledFunction.")
@@ -403,7 +419,7 @@ def serialize_workgraph_inputs(wgdata):
     for _, task in wgdata["tasks"].items():
         # find the pickled executor, create a pickleddata for it
         # then use the pk of the pickleddata as the value of the executor
-        if task["executor"] and not task["executor"]["use_module_path"]:
+        if task["executor"] and not task["executor"].get("use_module_path", False):
             pickle_callable(task["executor"])
         # error_handlers of the task
         for _, data in task["error_handlers"].items():

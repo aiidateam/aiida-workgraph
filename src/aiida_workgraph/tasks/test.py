@@ -8,11 +8,6 @@ class TestAdd(Task):
     node_type = "CALCFUNCTION"
     catalog = "Test"
 
-    _executor = {
-        "module": "aiida_workgraph.executors.test",
-        "name": "add",
-    }
-
     def create_properties(self) -> None:
         self.add_property("workgraph.aiida_float", "t", default=1.0)
 
@@ -30,6 +25,13 @@ class TestAdd(Task):
         self.add_output("workgraph.any", "_wait")
         self.add_output("workgraph.any", "_outputs")
 
+    def get_executor(self):
+        executor = {
+            "module_path": "aiida_workgraph.executors.test",
+            "callable_name": "add",
+        }
+        return executor
+
 
 class TestSumDiff(Task):
 
@@ -37,11 +39,6 @@ class TestSumDiff(Task):
     name = "TestSumDiff"
     node_type = "CALCFUNCTION"
     catalog = "Test"
-
-    _executor = {
-        "module": "aiida_workgraph.executors.test",
-        "name": "sum_diff",
-    }
 
     def create_properties(self) -> None:
         self.properties._new("workgraph.aiida_float", "t", default=1.0)
@@ -61,6 +58,13 @@ class TestSumDiff(Task):
         self.add_output("workgraph.any", "_wait")
         self.add_output("workgraph.any", "_outputs")
 
+    def get_executor(self):
+        executor = {
+            "module_path": "aiida_workgraph.executors.test",
+            "callable_name": "sum_diff",
+        }
+        return executor
+
 
 class TestArithmeticMultiplyAdd(Task):
 
@@ -68,11 +72,6 @@ class TestArithmeticMultiplyAdd(Task):
     name = "TestArithmeticMultiplyAdd"
     node_type = "WORKCHAIN"
     catalog = "Test"
-
-    _executor = {
-        "name": "core.arithmetic.multiply_add",
-        "type": "WorkflowFactory",
-    }
 
     def create_properties(self) -> None:
         pass
@@ -93,3 +92,11 @@ class TestArithmeticMultiplyAdd(Task):
         self.add_output("workgraph.aiida_int", "result")
         self.add_output("workgraph.any", "_wait")
         self.add_output("workgraph.any", "_outputs")
+
+    def get_executor(self):
+        executor = {
+            "use_module_path": True,
+            "callable_name": "core.arithmetic.multiply_add",
+            "type": "WorkflowFactory",
+        }
+        return executor

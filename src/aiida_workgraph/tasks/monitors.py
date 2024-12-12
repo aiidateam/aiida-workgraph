@@ -9,11 +9,6 @@ class TimeMonitor(Task):
     node_type = "MONITOR"
     catalog = "Monitor"
 
-    _executor = {
-        "module": "aiida_workgraph.executors.monitors",
-        "name": "time_monitor",
-    }
-
     def create_sockets(self) -> None:
         self.inputs._clear()
         self.outputs._clear()
@@ -29,6 +24,13 @@ class TimeMonitor(Task):
         self.add_output("workgraph.any", "result")
         self.add_output("workgraph.any", "_wait")
 
+    def get_executor(self):
+        executor = {
+            "module_path": "aiida_workgraph.executors.monitors",
+            "callable_name": "time_monitor",
+        }
+        return executor
+
 
 class FileMonitor(Task):
     """Monitor the file"""
@@ -37,11 +39,6 @@ class FileMonitor(Task):
     name = "FileMonitor"
     node_type = "MONITOR"
     catalog = "Monitor"
-
-    _executor = {
-        "module": "aiida_workgraph.executors.monitors",
-        "name": "file_monitor",
-    }
 
     def create_sockets(self) -> None:
         self.inputs._clear()
@@ -58,6 +55,13 @@ class FileMonitor(Task):
         self.add_output("workgraph.any", "result")
         self.add_output("workgraph.any", "_wait")
 
+    def get_executor(self):
+        executor = {
+            "module_path": "aiida_workgraph.executors.monitors",
+            "callable_name": "file_monitor",
+        }
+        return executor
+
 
 class TaskMonitor(Task):
     """Monitor the file"""
@@ -66,11 +70,6 @@ class TaskMonitor(Task):
     name = "TaskMonitor"
     node_type = "MONITOR"
     catalog = "Monitor"
-
-    _executor = {
-        "module": "aiida_workgraph.executors.monitors",
-        "name": "task_monitor",
-    }
 
     def create_sockets(self) -> None:
         self.inputs._clear()
@@ -88,3 +87,10 @@ class TaskMonitor(Task):
         inp._link_limit = 100000
         self.add_output("workgraph.any", "result")
         self.add_output("workgraph.any", "_wait")
+
+    def get_executor(self):
+        executor = {
+            "module_path": "aiida_workgraph.executors.monitors",
+            "callable_name": "task_monitor",
+        }
+        return executor
