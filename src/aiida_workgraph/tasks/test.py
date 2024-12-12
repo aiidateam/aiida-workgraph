@@ -96,7 +96,7 @@ class TestArithmeticMultiplyAdd(Task):
     def get_executor(self):
         executor = {
             "use_module_path": True,
-            "callable_name": "core.arithmetic.multiply_add",
+            "module_path": "core.arithmetic.multiply_add",
             "type": "WorkflowFactory",
         }
         return executor

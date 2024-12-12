@@ -288,9 +288,9 @@ def build_task_from_workgraph(wg: any) -> Task:
     # get wgdata from the workgraph
     wgdata = wg.prepare_inputs()["wg"]
     executor = {
-        "module": "aiida_workgraph.engine.workgraph",
-        "name": "WorkGraphEngine",
-        "wgdata": wgdata,
+        "module_path": "aiida_workgraph.engine.workgraph",
+        "callable_name": "WorkGraphEngine",
+        "graph_data": wgdata,
         "type": tdata["metadata"]["task_type"],
     }
     tdata["metadata"]["group_outputs"] = group_outputs
