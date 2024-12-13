@@ -270,13 +270,7 @@ def create_workgraph_process_node():
             inputs={
                 "wg": {
                     "name": "test",
-                    "uuid": "",
-                    "tasks": {},
-                    "links": [],
-                    "ctrl_links": [],
                     "state": "",
-                    "error_handlers": {},
-                    "context": {},
                 }
             }
         )
