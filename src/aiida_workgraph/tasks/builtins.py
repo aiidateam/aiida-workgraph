@@ -16,6 +16,12 @@ class Zone(Task):
         super().__init__(*args, **kwargs)
         self.children = TaskCollection(parent=self)
 
+    def add_task(self, *args, **kwargs):
+        """Syntactic sugar to add a task to the zone."""
+        task = self.parent.add_task(*args, **kwargs)
+        self.children.add(task)
+        return task
+
     def create_sockets(self) -> None:
         self.inputs._clear()
         self.outputs._clear()
