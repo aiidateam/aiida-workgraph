@@ -181,3 +181,14 @@ def test_workgraph_group_outputs(decorated_add):
     wg.run()
     assert wg.process.outputs.sum.value == 5
     # assert wg.process.outputs.add1.result.value == 5
+
+
+@pytest.mark.usefixtures("started_daemon_client")
+def test_wait_timeout(create_workgraph_process_node):
+    wg = WorkGraph()
+    wg.process = create_workgraph_process_node(state="running")
+    with pytest.raises(
+        TimeoutError,
+        match="Timeout reached after 1 seconds while waiting for the WorkGraph:",
+    ):
+        wg.wait(timeout=1, interval=1)

@@ -39,10 +39,10 @@ def test_pause_play_task(wg_calcjob):
     assert wg.tasks.add2.outputs.sum.value == 9
 
 
-def test_pause_play_error_handler(wg_calcjob, finished_process_node):
+def test_pause_play_error_handler(wg_calcjob, create_process_node):
     wg = wg_calcjob
     wg.name = "test_pause_play_error_handler"
-    wg.process = finished_process_node
+    wg.process = create_process_node(state="finished", exit_status=0)
     try:
         wg.pause_tasks(["add1"])
     except Exception as e:
