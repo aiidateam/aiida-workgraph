@@ -7,9 +7,8 @@ def test_if_task(decorated_add, decorated_multiply, decorated_compare):
     wg = WorkGraph("test_if")
     add1 = wg.add_task(decorated_add, name="add1", x=1, y=1)
     condition1 = wg.add_task(decorated_compare, name="condition1", x=1, y=0)
-    add2 = wg.add_task(decorated_add, name="add2", x=add1.outputs.result, y=2)
-    if1 = wg.add_task("If", name="if_true", conditions=condition1.outputs.result)
-    if1.children.add("add2")
+    if_zone = wg.add_task("If", name="if_true", conditions=condition1.outputs.result)
+    add2 = if_zone.add_task(decorated_add, name="add2", x=add1.outputs.result, y=2)
     multiply1 = wg.add_task(
         decorated_multiply, name="multiply1", x=add1.outputs.result, y=2
     )
