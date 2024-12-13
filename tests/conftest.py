@@ -242,12 +242,43 @@ def wg_engine(decorated_add, add_code) -> WorkGraph:
 
 
 @pytest.fixture
-def finished_process_node():
-    """Return a finished process node."""
+def create_process_node():
+    """Return a process node."""
 
-    node = WorkflowNode()
-    node.set_process_state("finished")
-    node.set_exit_status(0)
-    node.seal()
-    node.store()
-    return node
+    def process_node(state="finished", exit_status=0):
+        """Return a finished process node."""
+
+        node = WorkflowNode()
+        node.set_process_state(state)
+        node.set_exit_status(exit_status)
+        node.seal()
+        node.store()
+        return node
+
+    return process_node
+
+
+@pytest.fixture
+def create_workgraph_process_node():
+    """Return a process node."""
+
+    def process_node(state="finished", exit_status=0):
+        """Return a finished process node."""
+        from aiida_workgraph.engine.workgraph import WorkGraphEngine
+
+        process = WorkGraphEngine(
+            inputs={
+                "wg": {
+                    "name": "test",
+                    "state": "",
+                }
+            }
+        )
+        node = process.node
+        node.set_process_state(state)
+        node.set_exit_status(exit_status)
+        node.seal()
+        node.store()
+        return node
+
+    return process_node

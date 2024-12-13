@@ -22,8 +22,13 @@ class WorkGraphSaver:
         """
         self.process = process
         self.restart_process = restart_process
+        wgdata.setdefault("uuid", "")
+        wgdata.setdefault("tasks", {})
+        wgdata.setdefault("links", [])
+        wgdata.setdefault("ctrl_links", [])
+        wgdata.setdefault("error_handlers", {})
+        wgdata.setdefault("context", {})
         self.wgdata = wgdata
-        self.uuid = wgdata["uuid"]
         self.name = wgdata["name"]
         self.wait_to_link()
         self.clean_hanging_links()

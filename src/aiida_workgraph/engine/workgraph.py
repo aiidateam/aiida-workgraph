@@ -301,7 +301,6 @@ class WorkGraphEngine(Process, metaclass=Protect):
         self.ctx._tasks = wgdata["tasks"]
         self.ctx._links = wgdata["links"]
         self.ctx._connectivity = wgdata["connectivity"]
-        self.ctx._ctrl_links = wgdata["ctrl_links"]
         self.ctx._workgraph = wgdata
         self.ctx._error_handlers = wgdata["error_handlers"]
 
