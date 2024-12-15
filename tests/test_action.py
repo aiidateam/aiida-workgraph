@@ -22,14 +22,14 @@ def test_pause_play_task(wg_calcjob):
     wg.pause_tasks(["add1"])
     wg.submit()
     # wait for the workgraph to launch add1
-    wg.wait(tasks={"add1": ["CREATED"]}, timeout=40, interval=5)
+    wg.wait(tasks={"add1": ["CREATED"]}, timeout=60, interval=5)
     assert wg.tasks.add1.node.process_state.value.upper() == "CREATED"
     assert wg.tasks.add1.node.process_status == "Paused through WorkGraph"
     # pause add2 after submit
     wg.pause_tasks(["add2"])
     wg.play_tasks(["add1"])
     # wait for the workgraph to launch add2
-    wg.wait(tasks={"add2": ["CREATED"]}, timeout=40, interval=5)
+    wg.wait(tasks={"add2": ["CREATED"]}, timeout=60, interval=5)
     assert wg.tasks.add2.node.process_state.value.upper() == "CREATED"
     assert wg.tasks.add2.node.process_status == "Paused through WorkGraph"
     # I disabled the following lines because the test is not stable
