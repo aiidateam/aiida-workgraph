@@ -14,7 +14,7 @@ AiiDA-WorkGraph: From Zero To Hero
 #
 # .. code-block:: console
 #
-#    pip install aiida-workgraph[widget] aiida-quantumespresso
+#    pip install aiida-workgraph aiida-quantumespresso
 #
 # Restart (or start) the AiiDA daemon if needed:
 #
@@ -70,7 +70,7 @@ from aiida_workgraph import WorkGraph
 #
 wg = WorkGraph("add_multiply_workflow")
 wg.add_task(add, name="add1")
-wg.add_task(multiply, name="multiply1", x=wg.tasks["add1"].outputs["result"])
+wg.add_task(multiply, name="multiply1", x=wg.tasks.add1.outputs.result)
 # export the workgraph to html file so that it can be visualized in a browser
 wg.to_html()
 # visualize the workgraph in jupyter-notebook
@@ -92,11 +92,9 @@ wg.submit(
     inputs={"add1": {"x": Int(2), "y": Int(3)}, "multiply1": {"y": Int(4)}}, wait=True
 )
 # ------------------------- Print the output -------------------------
-assert wg.tasks["multiply1"].outputs["result"].value == 20
+assert wg.tasks.multiply1.outputs.result.value == 20
 print(
-    "\nResult of multiply1 is {} \n\n".format(
-        wg.tasks["multiply1"].outputs["result"].value
-    )
+    "\nResult of multiply1 is {} \n\n".format(wg.tasks.multiply1.outputs.result.value)
 )
 # ------------------------- Generate node graph -------------------
 generate_node_graph(wg.pk)
@@ -118,7 +116,7 @@ from aiida.calculations.arithmetic.add import ArithmeticAddCalculation
 wg = WorkGraph("test_calcjob")
 new = wg.add_task
 new(ArithmeticAddCalculation, name="add1")
-wg.add_task(ArithmeticAddCalculation, name="add2", x=wg.tasks["add1"].outputs["sum"])
+wg.add_task(ArithmeticAddCalculation, name="add2", x=wg.tasks.add1.outputs.sum)
 wg.to_html()
 #
 
@@ -134,7 +132,7 @@ wg.to_html()
 
 
 # visualize the task
-wg.tasks["add1"].to_html()
+wg.tasks.add1.to_html()
 #
 
 # %%
@@ -183,8 +181,8 @@ pw_mol = wg.add_task(PwCalculation, name="pw_mol")
 wg.add_task(
     atomization_energy,
     name="atomization_energy",
-    output_atom=pw_atom.outputs["output_parameters"],
-    output_mol=pw_mol.outputs["output_parameters"],
+    output_atom=pw_atom.outputs.output_parameters,
+    output_mol=pw_mol.outputs.output_parameters,
 )
 # export the workgraph to html file so that it can be visualized in a browser
 wg.to_html()
@@ -265,7 +263,7 @@ metadata = {
 }
 #
 # ------------------------- Set the inputs -------------------------
-wg.tasks["pw_atom"].set(
+wg.tasks.pw_atom.set(
     {
         "code": pw_code,
         "structure": structure_n,
@@ -275,7 +273,7 @@ wg.tasks["pw_atom"].set(
         "metadata": metadata,
     }
 )
-wg.tasks["pw_mol"].set(
+wg.tasks.pw_mol.set(
     {
         "code": pw_code,
         "structure": structure_n2,
@@ -290,17 +288,17 @@ wg.submit(wait=True, timeout=200)
 # ------------------------- Print the output -------------------------
 print(
     "Energy of a N atom:                  {:0.3f}".format(
-        wg.tasks["pw_atom"].outputs["output_parameters"].value.get_dict()["energy"]
+        wg.tasks.pw_atom.outputs.output_parameters.value.get_dict()["energy"]
     )
 )
 print(
     "Energy of an un-relaxed N2 molecule: {:0.3f}".format(
-        wg.tasks["pw_mol"].outputs["output_parameters"].value.get_dict()["energy"]
+        wg.tasks.pw_mol.outputs.output_parameters.value.get_dict()["energy"]
     )
 )
 print(
     "Atomization energy:                  {:0.3f} eV".format(
-        wg.tasks["atomization_energy"].outputs["result"].value.value
+        wg.tasks.atomization_energy.outputs.result.value.value
     )
 )
 #
@@ -364,9 +362,9 @@ wg.add_task(add, name="add1")
 wg.add_task(
     add_multiply_if_generator,
     name="add_multiply_if1",
-    x=wg.tasks["add1"].outputs["result"],
+    x=wg.tasks.add1.outputs.result,
 )
-wg.add_task(add, name="add2", x=wg.tasks["add_multiply_if1"].outputs["result"])
+wg.add_task(add, name="add2", x=wg.tasks.add_multiply_if1.outputs.result)
 wg.to_html()
 #
 
@@ -383,8 +381,8 @@ wg.submit(
     wait=True,
 )
 # ------------------------- Print the output -------------------------
-assert wg.tasks["add2"].outputs["result"].value == 7
-print("\nResult of add2 is {} \n\n".format(wg.tasks["add2"].outputs["result"].value))
+assert wg.tasks.add2.outputs.result.value == 7
+print("\nResult of add2 is {} \n\n".format(wg.tasks.add2.outputs.result.value))
 #
 # %%
 # Note: one can not see the detail of the `add_multiply_if1` before you running it.
@@ -426,7 +424,7 @@ def all_scf(structures, scf_inputs):
         pw1 = wg.add_task(PwCalculation, name=f"pw1_{key}", structure=structure)
         pw1.set(scf_inputs)
         # save the output parameters to the context
-        pw1.set_context({"output_parameters": f"result.{key}"})
+        pw1.set_context({f"result.{key}": "output_parameters"})
     return wg
 
 
@@ -465,9 +463,9 @@ from aiida_workgraph import WorkGraph
 wg = WorkGraph("eos")
 scale_structure1 = wg.add_task(scale_structure, name="scale_structure1")
 all_scf1 = wg.add_task(
-    all_scf, name="all_scf1", structures=scale_structure1.outputs["structures"]
+    all_scf, name="all_scf1", structures=scale_structure1.outputs.structures
 )
-eos1 = wg.add_task(eos, name="eos1", datas=all_scf1.outputs["result"])
+eos1 = wg.add_task(eos, name="eos1", datas=all_scf1.outputs.result)
 wg.to_html()
 #
 
@@ -489,8 +487,8 @@ def eos_workgraph(structure=None, scales=None, scf_inputs=None):
     )
     all_scf1 = wg.add_task(all_scf, name="all_scf1", scf_inputs=scf_inputs)
     eos1 = wg.add_task(eos, name="eos1")
-    wg.add_link(scale_structure1.outputs["structures"], all_scf1.inputs["structures"])
-    wg.add_link(all_scf1.outputs["result"], eos1.inputs["datas"])
+    wg.add_link(scale_structure1.outputs.structures, all_scf1.inputs.structures)
+    wg.add_link(all_scf1.outputs.result, eos1.inputs.datas)
     return wg
 
 
@@ -500,7 +498,7 @@ def eos_workgraph(structure=None, scales=None, scf_inputs=None):
 wg = WorkGraph("relax_eos")
 relax_task = wg.add_task(PwCalculation, name="relax1")
 eos_wg_task = wg.add_task(
-    eos_workgraph, name="eos1", structure=relax_task.outputs["output_structure"]
+    eos_workgraph, name="eos1", structure=relax_task.outputs.output_structure
 )
 wg.to_html()
 

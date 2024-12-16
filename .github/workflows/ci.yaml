@@ -1,6 +1,6 @@
 name: ci
 
-on: [pull_request]
+on: [push, pull_request]
 
 jobs:
 
@@ -79,29 +79,17 @@ jobs:
                 playwright install
                 pip list
 
+        -   name: Install system dependencies
+            run: sudo apt update && sudo apt install --no-install-recommends graphviz
+
         -   name: Create AiiDA profile
             run: verdi setup -n --config .github/config/profile.yaml
-
-        -   name: Install Dependencies for widget
-            working-directory: aiida_workgraph/widget
-            run: |
-                npm install
-                npm run build
-
-        -   name: Install Dependencies, Start React Application
-            working-directory: aiida_workgraph/web/frontend
-            run: |
-                npm install
-                npm run build
 
         -   name: Run pytest
             env:
                 AIIDA_WARN_v3: 1
             run: |
-                # Have to split tests into see issue #225
-                pytest -m "not frontend and not backend" -v --cov --durations=0
-                pytest -m backend -v --cov-append --durations=0
-                pytest -m frontend -v --cov-append --durations=0
+                pytest -v --cov --durations=0
 
         -   name: Upload coverage reports to Codecov
             uses: codecov/codecov-action@v4.0.1

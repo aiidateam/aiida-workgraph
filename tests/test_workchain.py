@@ -19,7 +19,7 @@ def test_build_workchain_inputs_outputs():
     node = build_task(MultiplyAddWorkChain)()
     inputs = MultiplyAddWorkChain.spec().inputs
     # inputs + metadata + _wait
-    ninput = len(inputs.ports) + len(inputs.ports["metadata"].ports) + 1
+    ninput = len(inputs.ports) + 1
     assert len(node.inputs) == ninput
     assert len(node.outputs) == 3
 
@@ -35,15 +35,15 @@ def test_build_workchain(add_code):
     multiply_add1 = wg.add_task(
         MultiplyAddWorkChain,
         "multiply_add1",
-        x=Int(4).store(),
-        y=Int(2).store(),
-        z=Int(3).store(),
+        x=Int(4),
+        y=Int(2),
+        z=Int(3),
     )
     multiply_add2 = wg.add_task(
         MultiplyAddWorkChain,
         "multiply_add2",
-        x=Int(2).store(),
-        y=Int(3).store(),
+        x=Int(2),
+        y=Int(3),
     )
     wg.add_link(code1.outputs[0], multiply_add1.inputs["code"])
     wg.add_link(code1.outputs[0], multiply_add2.inputs["code"])

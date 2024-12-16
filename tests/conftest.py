@@ -4,6 +4,7 @@ from aiida.engine import calcfunction, workfunction
 from aiida.orm import Int, StructureData
 from aiida.calculations.arithmetic.add import ArithmeticAddCalculation
 from typing import Callable, Any, Union
+from aiida.orm import WorkflowNode
 import time
 import os
 
@@ -29,7 +30,12 @@ def fixture_localhost(aiida_localhost):
 def add_code(fixture_localhost):
     from aiida.orm import InstalledCode
 
-    code = InstalledCode(computer=fixture_localhost, filepath_executable="/bin/bash")
+    code = InstalledCode(
+        label="add",
+        computer=fixture_localhost,
+        filepath_executable="/bin/bash",
+        default_calc_job_plugin="arithmetic.add",
+    )
     code.store()
     return code
 
@@ -82,7 +88,7 @@ def wg_calcjob(add_code) -> WorkGraph:
     wg = WorkGraph(name="test_debug_math")
     add1 = wg.add_task(ArithmeticAddCalculation, "add1", x=2, y=3, code=add_code)
     add2 = wg.add_task(ArithmeticAddCalculation, "add2", x=4, code=add_code)
-    wg.add_link(add1.outputs["sum"], add2.inputs["y"])
+    wg.add_link(add1.outputs.sum, add2.inputs["y"])
     return wg
 
 
@@ -227,9 +233,52 @@ def wg_engine(decorated_add, add_code) -> WorkGraph:
     add3 = wg.add_task(decorated_add, "add3", x=2, y=3)
     add4 = wg.add_task(ArithmeticAddCalculation, "add4", x=2, y=4, code=code)
     add5 = wg.add_task(decorated_add, "add5", x=2, y=5)
-    wg.add_link(add0.outputs["sum"], add2.inputs["x"])
-    wg.add_link(add1.outputs[0], add3.inputs["x"])
-    wg.add_link(add3.outputs[0], add4.inputs["x"])
-    wg.add_link(add2.outputs["sum"], add5.inputs["x"])
-    wg.add_link(add4.outputs["sum"], add5.inputs["y"])
+    wg.add_link(add0.outputs.sum, add2.inputs.x)
+    wg.add_link(add1.outputs[0], add3.inputs.x)
+    wg.add_link(add3.outputs[0], add4.inputs.x)
+    wg.add_link(add2.outputs.sum, add5.inputs.x)
+    wg.add_link(add4.outputs.sum, add5.inputs["y"])
     return wg
+
+
+@pytest.fixture
+def create_process_node():
+    """Return a process node."""
+
+    def process_node(state="finished", exit_status=0):
+        """Return a finished process node."""
+
+        node = WorkflowNode()
+        node.set_process_state(state)
+        node.set_exit_status(exit_status)
+        node.seal()
+        node.store()
+        return node
+
+    return process_node
+
+
+@pytest.fixture
+def create_workgraph_process_node():
+    """Return a process node."""
+
+    def process_node(state="finished", exit_status=0):
+        """Return a finished process node."""
+        from aiida_workgraph.engine.workgraph import WorkGraphEngine
+
+        process = WorkGraphEngine(
+            inputs={
+                "wg": {
+                    "name": "test",
+                    "state": "",
+                }
+            }
+        )
+        node = process.node
+        node.set_process_state(state)
+        node.set_exit_status(exit_status)
+        node.seal()
+        node.store()
+        return node
+
+    return process_node

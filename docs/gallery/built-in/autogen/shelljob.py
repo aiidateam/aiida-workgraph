@@ -31,7 +31,7 @@ date_task = wg.add_task("ShellJob", command="date")
 wg.submit(wait=True)
 
 # Print out the result:
-print("\nResult: ", date_task.outputs["stdout"].value.get_content())
+print("\nResult: ", date_task.outputs.stdout.value.get_content())
 
 # %%
 # Under the hood, an AiiDA ``Code`` instance ``date`` will be created on the ``localhost`` computer. In addition, it is also
@@ -93,7 +93,7 @@ date_task = wg.add_task("ShellJob", command="date", arguments=["--iso-8601"])
 wg.submit(wait=True)
 
 # Print out the result:
-print("\nResult: ", date_task.outputs["stdout"].value.get_content())
+print("\nResult: ", date_task.outputs.stdout.value.get_content())
 
 # %%
 # Running a shell command with files as arguments
@@ -117,7 +117,7 @@ cat_task = wg.add_task(
 wg.submit(wait=True)
 
 # Print out the result:
-print("\nResult: ", cat_task.outputs["stdout"].value.get_content())
+print("\nResult: ", cat_task.outputs.stdout.value.get_content())
 
 # %%
 # Create a workflow
@@ -157,7 +157,7 @@ expr_2 = wg.add_task(
     name="expr_2",
     command="expr",
     arguments=["{result}", "*", "{z}"],
-    nodes={"z": Int(4), "result": expr_1.outputs["result"]},
+    nodes={"z": Int(4), "result": expr_1.outputs.result},
     parser=PickledData(parser),
     parser_outputs=[{"name": "result"}],
 )

@@ -6,7 +6,7 @@ import pytest
 import time
 
 
-def test_awaitable_task(decorated_add):
+def test_awaitable_decorator(decorated_add):
     @task.awaitable()
     async def awaitable_func(x, y):
         n = 2
@@ -15,13 +15,36 @@ def test_awaitable_task(decorated_add):
             await asyncio.sleep(0.5)
         return x + y
 
-    wg = WorkGraph(name="test_awaitable")
+    wg = WorkGraph(name="test_awaitable_decorator")
     awaitable_func1 = wg.add_task(awaitable_func, "awaitable_func1", x=1, y=2)
-    add1 = wg.add_task(decorated_add, "add1", x=1, y=awaitable_func1.outputs["result"])
+    add1 = wg.add_task(decorated_add, "add1", x=1, y=awaitable_func1.outputs.result)
     wg.run()
     report = get_workchain_report(wg.process, "REPORT")
     assert "Waiting for child processes: awaitable_func1" in report
-    assert add1.outputs["result"].value == 4
+    assert add1.outputs.result.value == 4
+
+
+def test_monitor_decorator():
+    @task.monitor()
+    def time_monitor(time: str):
+        """Return True if the current time is greater than the given time."""
+        import datetime
+
+        # load the time string
+        time = datetime.datetime.strptime(time, "%Y-%m-%d %H:%M:%S.%f")
+
+        return datetime.datetime.now() > time
+
+    wg = WorkGraph(name="test_monitor_decorator")
+    wg.add_task(
+        time_monitor,
+        "time_monitor1",
+        time=str(datetime.datetime.now() + datetime.timedelta(seconds=5)),
+    )
+    wg.run()
+    report = get_workchain_report(wg.process, "REPORT")
+    assert "Waiting for child processes: time_monitor1" in report
+    assert wg.process.is_finished_ok is True
 
 
 def test_time_monitor(decorated_add):
@@ -30,14 +53,14 @@ def test_time_monitor(decorated_add):
     monitor1 = wg.add_task(
         "workgraph.time_monitor",
         "monitor1",
-        datetime=str(datetime.datetime.now() + datetime.timedelta(seconds=10)),
+        time=str(datetime.datetime.now() + datetime.timedelta(seconds=5)),
     )
     add1 = wg.add_task(decorated_add, "add1", x=1, y=2)
     add1.waiting_on.add(monitor1)
     wg.run()
     report = get_workchain_report(wg.process, "REPORT")
     assert "Waiting for child processes: monitor1" in report
-    assert add1.outputs["result"].value == 3
+    assert add1.outputs.result.value == 3
 
 
 def test_file_monitor(decorated_add, tmp_path):
@@ -61,7 +84,7 @@ def test_file_monitor(decorated_add, tmp_path):
     wg.run()
     report = get_workchain_report(wg.process, "REPORT")
     assert "Waiting for child processes: monitor1" in report
-    assert add1.outputs["result"].value == 3
+    assert add1.outputs.result.value == 3
 
 
 @pytest.mark.usefixtures("started_daemon_client")
@@ -82,7 +105,7 @@ def test_task_monitor(decorated_add):
     wg1.add_task(decorated_add, "add1", x=1, y=2, t=5)
     wg1.submit(wait=True)
     wg2.wait()
-    assert wg2.tasks["add1"].node.ctime > wg1.tasks["add1"].node.ctime
+    assert wg2.tasks.add1.node.ctime > wg1.tasks.add1.node.ctime
 
 
 @pytest.mark.usefixtures("started_daemon_client")

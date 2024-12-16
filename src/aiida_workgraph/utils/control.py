@@ -1,0 +1,129 @@
+from aiida.manage import get_manager
+from aiida import orm
+from aiida.engine.processes import control
+
+
+def create_task_action(
+    pk: int,
+    tasks: list,
+    action: str = "pause",
+    timeout: int = 5,
+    wait: bool = False,
+):
+    """Send task action to Process."""
+
+    controller = get_manager().get_process_controller()
+    message = {"intent": "custom", "catalog": "task", "action": action, "tasks": tasks}
+    controller._communicator.rpc_send(pk, message)
+
+
+def get_task_state_info(node, name: str, key: str) -> str:
+    """Get task state info from base.extras."""
+    from aiida.orm.utils.serialize import deserialize_unsafe
+
+    if key == "process":
+        value = deserialize_unsafe(node.base.extras.get(f"_task_{key}_{name}", ""))
+    else:
+        value = node.base.extras.get(f"_task_{key}_{name}", "")
+    return value
+
+
+def pause_tasks(pk: int, tasks: list[str], timeout: int = 5, wait: bool = False):
+    """Pause task."""
+    node = orm.load_node(pk)
+    if node.is_finished:
+        message = "WorkGraph is finished. Cannot pause tasks."
+        print(message)
+        return False, message
+    elif node.process_state.value.upper() in [
+        "CREATED",
+        "RUNNING",
+        "WAITING",
+        "PAUSED",
+    ]:
+        for name in tasks:
+            if get_task_state_info(node, name, "state") == "PLANNED":
+                create_task_action(pk, tasks, action="pause")
+            elif get_task_state_info(node, name, "state") == "RUNNING":
+                try:
+                    control.pause_processes(
+                        [get_task_state_info(node, name, "process")],
+                        all_entries=None,
+                        timeout=5,
+                        wait=False,
+                    )
+                except Exception as e:
+                    print(f"Pause task {name} failed: {e}")
+    return True, ""
+
+
+def play_tasks(pk: int, tasks: list, timeout: int = 5, wait: bool = False):
+    node = orm.load_node(pk)
+    if node.is_finished:
+        message = "WorkGraph is finished. Cannot kill tasks."
+        print(message)
+        return False, message
+    elif node.process_state.value.upper() in [
+        "CREATED",
+        "RUNNING",
+        "WAITING",
+        "PAUSED",
+    ]:
+        for name in tasks:
+            if get_task_state_info(node, name, "state") == "PLANNED":
+                create_task_action(pk, tasks, action="play")
+            elif get_task_state_info(node, name, "state") in ["CREATED", "PAUSED"]:
+                try:
+                    control.play_processes(
+                        [get_task_state_info(node, name, "process")],
+                        all_entries=None,
+                        timeout=5,
+                        wait=False,
+                    )
+                except Exception as e:
+                    print(f"Play task {name} failed: {e}")
+            elif get_task_state_info(node, name, "process").is_finished:
+                raise ValueError(f"Task {name} is already finished.")
+    return True, ""
+
+
+def kill_tasks(pk: int, tasks: list, timeout: int = 5, wait: bool = False):
+    node = orm.load_node(pk)
+    if node.is_finished:
+        message = "WorkGraph is finished. Cannot kill tasks."
+        print(message)
+        return False, message
+    elif node.process_state.value.upper() in [
+        "CREATED",
+        "RUNNING",
+        "WAITING",
+        "PAUSED",
+    ]:
+        print("tasks", tasks)
+        for name in tasks:
+            state = get_task_state_info(node, name, "state")
+            process = get_task_state_info(node, name, "process")
+            print("state", state)
+            print("process", process)
+            if state == "PLANNED":
+                create_task_action(pk, tasks, action="skip")
+            elif state in [
+                "CREATED",
+                "RUNNING",
+                "WAITING",
+                "PAUSED",
+            ]:
+                if get_task_state_info(node, name, "process") is None:
+                    print(f"Task {name} is not a AiiDA process.")
+                    create_task_action(pk, tasks, action="kill")
+                else:
+                    try:
+                        control.kill_processes(
+                            [get_task_state_info(node, name, "process")],
+                            all_entries=None,
+                            timeout=5,
+                            wait=False,
+                        )
+                    except Exception as e:
+                        print(f"Kill task {name} failed: {e}")
+    return True, ""

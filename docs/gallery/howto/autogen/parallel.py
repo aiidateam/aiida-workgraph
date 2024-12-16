@@ -94,7 +94,7 @@ def multiply_parallel_gather(X, y):
         multiply1 = wg.add_task(multiply, x=value, y=y)
         # add result of multiply1 to `self.context.mul`
         # self.context.mul is a dict {"a": value1, "b": value2, "c": value3}
-        multiply1.set_context({"result": f"mul.{key}"})
+        multiply1.set_context({f"mul.{key}": "result"})
     return wg
 
 
@@ -132,7 +132,7 @@ wg.submit(wait=True)
 #
 
 print("State of WorkGraph:   {}".format(wg.state))
-print("Result of task add1: {}".format(wg.tasks["sum1"].outputs["result"].value))
+print("Result of task add1: {}".format(wg.tasks.sum1.outputs.result.value))
 
 
 # %%

@@ -52,7 +52,7 @@ def add_multiply(x=None, y=None, z=None):
     wg = WorkGraph()
     wg.add_task(add, name="add", x=x, y=y)
     wg.add_task(multiply, name="multiply", x=z)
-    wg.add_link(wg.tasks["add"].outputs["result"], wg.tasks["multiply"].inputs["y"])
+    wg.add_link(wg.tasks.add.outputs.result, wg.tasks.multiply.inputs.y)
     return wg
 
 
@@ -61,9 +61,7 @@ wg = WorkGraph("nested_workgraph")
 add_multiply1 = wg.add_task(add_multiply(x=Int(2), y=Int(3), z=Int(4)))
 add_multiply2 = wg.add_task(add_multiply(x=Int(2), y=Int(3)))
 # link the output of a task to the input of another task
-wg.add_link(
-    add_multiply1.outputs["multiply.result"], add_multiply2.inputs["multiply.x"]
-)
+wg.add_link(add_multiply1.outputs.multiply.result, add_multiply2.inputs.multiply.x)
 wg.to_html()
 
 # %%
@@ -72,7 +70,7 @@ wg.to_html()
 wg.submit(wait=True)
 # (2+3)*4 = 20
 # (2+3)*20 = 100
-assert add_multiply2.outputs["multiply.result"].value == 100
+assert add_multiply2.outputs.multiply.result.value == 100
 
 # %%
 # Generate node graph from the AiiDA process
@@ -115,7 +113,7 @@ def add_multiply(x, y, z):
     wg = WorkGraph()
     wg.add_task(add, name="add", x=x, y=y)
     wg.add_task(multiply, name="multiply", x=z)
-    wg.add_link(wg.tasks["add"].outputs[0], wg.tasks["multiply"].inputs["y"])
+    wg.add_link(wg.tasks.add.outputs[0], wg.tasks.multiply.inputs.y)
     # Don't forget to return the `wg`
     return wg
 
@@ -133,7 +131,7 @@ wg = WorkGraph("test_graph_build")
 add_multiply1 = wg.add_task(add_multiply, x=Int(2), y=Int(3), z=Int(4))
 add_multiply2 = wg.add_task(add_multiply, x=Int(2), y=Int(3))
 # link the output of a task to the input of another task
-wg.add_link(add_multiply1.outputs[0], add_multiply2.inputs["z"])
+wg.add_link(add_multiply1.outputs[0], add_multiply2.inputs.z)
 wg.submit(wait=True)
 assert add_multiply2.outputs[0].value == 100
 wg.to_html()
@@ -197,7 +195,7 @@ def for_loop(nb_iterations: Int):
     # of the graph builder decorator.
 
     # Put result of the task to the context under the name task_out
-    task.set_context({"result": "task_out"})
+    task.set_context({"task_out": "result"})
     # If want to know more about the usage of the context please refer to the
     # context howto in the documentation
     return wg
@@ -211,7 +209,7 @@ wg.to_html()
 # Running the workgraph.
 
 wg.submit(wait=True)
-print("Output of last task", task.outputs["result"].value)  # 1 + 1 result
+print("Output of last task", task.outputs.result.value)  # 1 + 1 result
 
 # %%
 # Plotting provenance
@@ -244,21 +242,21 @@ def if_then_else(i: Int):
         task = wg.add_task(modulo_two, x=i)
 
     # same concept as before, please read the for loop example for explanation
-    task.set_context({"result": "task_out"})
+    task.set_context({"task_out": "result"})
     return wg
 
 
 wg = WorkGraph("Nested workflow: If")
 task1 = wg.add_task(if_then_else, i=Int(1))
-task2 = wg.add_task(if_then_else, i=task1.outputs["result"])
+task2 = wg.add_task(if_then_else, i=task1.outputs.result)
 wg.to_html()
 
 # %%
 # Running the workgraph.
 
 wg.submit(wait=True)
-print("Output of first task", task1.outputs["result"].value)  # 1 + 1 result
-print("Output of second task", task2.outputs["result"].value)  # 2 % 2 result
+print("Output of first task", task1.outputs.result.value)  # 1 + 1 result
+print("Output of second task", task2.outputs.result.value)  # 2 % 2 result
 
 # %%
 # Plotting provenance

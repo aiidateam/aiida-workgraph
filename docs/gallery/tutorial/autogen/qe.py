@@ -147,7 +147,7 @@ wg.submit(wait=True, timeout=200)
 # ------------------------- Print the output -------------------------
 print(
     "Energy of an un-relaxed N2 molecule: {:0.3f}".format(
-        pw1.outputs["output_parameters"].value.get_dict()["energy"]
+        pw1.outputs.output_parameters.value.get_dict()["energy"]
     )
 )
 #
@@ -238,8 +238,8 @@ pw_n2.set(
 )
 # create the task to calculate the atomization energy
 atomization = wg.add_task(atomization_energy, name="atomization_energy")
-wg.add_link(pw_n.outputs["output_parameters"], atomization.inputs["output_atom"])
-wg.add_link(pw_n2.outputs["output_parameters"], atomization.inputs["output_mol"])
+wg.add_link(pw_n.outputs.output_parameters, atomization.inputs.output_atom)
+wg.add_link(pw_n2.outputs.output_parameters, atomization.inputs.output_mol)
 wg.to_html()
 
 
@@ -249,9 +249,7 @@ wg.to_html()
 
 
 wg.submit(wait=True, timeout=300)
-print(
-    "Atomization energy: {:0.3f} eV".format(atomization.outputs["result"].value.value)
-)
+print("Atomization energy: {:0.3f} eV".format(atomization.outputs.result.value.value))
 
 
 # %%
@@ -305,7 +303,7 @@ pw_relax1.set(
     },
 )
 paras_task = wg.add_task(pw_parameters, "parameters", paras=paras, relax_type="relax")
-wg.add_link(paras_task.outputs[0], pw_relax1.inputs["base.pw.parameters"])
+wg.add_link(paras_task.outputs[0], pw_relax1.inputs.base.pw.parameters)
 # One can submit the workgraph directly
 # wg.submit(wait=True, timeout=200)
 # print(
@@ -341,10 +339,10 @@ pw_relax1.set_from_protocol(
 # we can now inspect the inputs of the workchain
 print("The inputs for the PwBaseWorkchain are:")
 print("-" * 80)
-pprint(pw_relax1.inputs["base"].value)
+pprint(pw_relax1.inputs.base._value)
 print("\nThe input parameters for pw are:")
 print("-" * 80)
-pprint(pw_relax1.inputs["base"].value["pw"]["parameters"].get_dict())
+pprint(pw_relax1.inputs.base.pw.parameters.value.get_dict())
 
 
 # %%

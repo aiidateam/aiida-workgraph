@@ -1,7 +1,7 @@
 # AiiDA-WorkGraph
 [![PyPI version](https://badge.fury.io/py/aiida-workgraph.svg)](https://badge.fury.io/py/aiida-workgraph)
 [![Unit test](https://github.com/aiidateam/aiida-workgraph/actions/workflows/ci.yaml/badge.svg)](https://github.com/aiidateam/aiida-workgraph/actions/workflows/ci.yaml)
-[![codecov](https://codecov.io/gh/superstar54/aiida-workgraph/branch/main/graph/badge.svg)](https://codecov.io/gh/superstar54/aiida-workgraph)
+[![codecov](https://codecov.io/gh/aiidateam/aiida-workgraph/branch/main/graph/badge.svg)](https://codecov.io/gh/aiidateam/aiida-workgraph)
 [![Docs status](https://readthedocs.org/projects/aiida-workgraph/badge)](http://aiida-workgraph.readthedocs.io/)
 
 Efficiently design and manage flexible workflows with AiiDA, featuring an interactive GUI, checkpoints, provenance tracking, error-resistant, and remote execution capabilities.
@@ -11,7 +11,7 @@ Efficiently design and manage flexible workflows with AiiDA, featuring an intera
 ## Installation
 
 ```console
-    pip install aiida-workgraph[widget]
+    pip install aiida-workgraph
 ```
 
 To install the latest version from source, first clone the repository and then install using `pip`:
@@ -22,19 +22,6 @@ cd aiida-workgraph
 pip install -e .
 ```
 
-To install the jupyter widget support you need to in addition build the JavaScript packages:
-
-```console
-pip install .[widget]
-# build widget
-cd aiida_workgraph/widget/
-npm install
-npm run build
-# build web frontend
-cd ../../aiida_workgraph/web/frontend/
-npm install
-npm run build
-```
 
 ## Documentation
 Explore the comprehensive [documentation](https://aiida-workgraph.readthedocs.io/en/latest/) to discover all the features and capabilities of AiiDA Workgraph.
@@ -62,23 +49,28 @@ def multiply(x, y):
 wg = WorkGraph("test_add_multiply")
 wg.add_task(add, name="add1")
 wg.add_task(multiply, name="multiply1")
-wg.add_link(wg.tasks["add1"].outputs["result"], wg.tasks["multiply1"].inputs["x"])
+wg.add_link(wg.tasks.add1.outputs.result, wg.tasks.multiply1.inputs.x)
 
 ```
 
-Prepare inputs and submit the workflow:
+Prepare inputs and run the workflow:
 
 ```python
 from aiida import load_profile
 
 load_profile()
 
-wg.submit(inputs = {"add1": {"x": 2, "y": 3}, "multiply1": {"y": 4}}, wait=True)
-print("Result of multiply1 is", wg.tasks["multiply1"].outputs[0].value)
+wg.run(inputs = {"add1": {"x": 2, "y": 3}, "multiply1": {"y": 4}})
+print("Result of multiply1 is", wg.tasks.multiply1.outputs.result.value)
 ```
-
-Start the web app, open a terminal and run:
+## Web ui
+To use the web ui, first install the web ui package:
 ```console
+pip install aiida-workgraph-web-ui
+```
+Then, start the web app with the following command:
+```console
+
 workgraph web start
 ```
 
@@ -103,13 +95,6 @@ To contribute to this repository, please enable pre-commit so the code in commit
 pip install -e .[tests,pre-commit]
 pre-commit install
 ```
-
-### Widget
-See the [README.md](https://github.com/aiidateam/aiida-workgraph/blob/main/aiida_workgraph/widget/README.md)
-
-### Web app
-See the [README.md](https://github.com/aiidateam/aiida-workgraph/blob/main/aiida_workgraph/web/README.md)
-
 
 ## License
 [MIT](http://opensource.org/licenses/MIT)

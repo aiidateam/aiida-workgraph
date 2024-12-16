@@ -25,8 +25,8 @@ def multiply(x, y):
     return x * y
 
 
-print("Input ports: ", multiply.task().inputs.keys())
-print("Output ports: ", multiply.task().outputs.keys())
+print("Input ports: ", multiply.task().get_input_names())
+print("Output ports: ", multiply.task().get_output_names())
 
 multiply.task().to_html()
 
@@ -49,8 +49,8 @@ def add_minus(x, y):
     return {"sum": x + y, "difference": x - y}
 
 
-print("Input ports: ", add_minus.task().inputs.keys())
-print("Ouput ports: ", add_minus.task().outputs.keys())
+print("Input ports: ", add_minus.task().get_input_names())
+print("Ouput ports: ", add_minus.task().get_output_names())
 add_minus.task().to_html()
 
 
@@ -85,8 +85,7 @@ def add(x: int, y: float) -> float:
     return x + y
 
 
-for input in add.task().inputs:
-    print("{:30s}: {:20s}".format(input.name, input.identifier))
+print("inputs: ", add.task().inputs)
 
 
 ######################################################################
@@ -140,7 +139,7 @@ def add(x, y):
 
 def create_sockets(self):
     # create a General port.
-    inp = self.inputs.new("workgraph.Any", "symbols")
+    inp = self.add_input("workgraph.Any", "symbols")
     # add a string property to the port with default value "H".
     inp.add_property("String", "default", default="H")
 
