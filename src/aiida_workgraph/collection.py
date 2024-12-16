@@ -4,6 +4,8 @@ from node_graph.collection import (
 )
 from typing import Any, Callable, Optional, Union
 
+from aiida.engine import ProcessBuilder
+
 
 class TaskCollection(NodeCollection):
     def _new(
@@ -18,6 +20,7 @@ class TaskCollection(NodeCollection):
             build_pythonjob_task,
             build_shelljob_task,
             build_task_from_workgraph,
+            build_task_from_builder,
         )
         from aiida_workgraph.workgraph import WorkGraph
 
@@ -41,6 +44,9 @@ class TaskCollection(NodeCollection):
             return task
         if isinstance(identifier, WorkGraph):
             identifier = build_task_from_workgraph(identifier)
+        if isinstance(identifier, ProcessBuilder):
+            task = build_task_from_builder(identifier)
+            return task
         return super()._new(identifier, name, uuid, **kwargs)
 
 
