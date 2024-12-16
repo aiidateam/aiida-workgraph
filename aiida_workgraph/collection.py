@@ -1,3 +1,4 @@
+from aiida.engine import ProcessBuilder
 from node_graph.collection import (
     NodeCollection,
     PropertyCollection,
@@ -20,10 +21,13 @@ class TaskCollection(NodeCollection):
             build_pythonjob_task,
             build_shelljob_task,
             build_task_from_workgraph,
+            build_task_from_builder,
         )
         from aiida_workgraph.workgraph import WorkGraph
 
         # build the task on the fly if the identifier is a callable
+        self.id_type = type(identifier)
+
         if callable(identifier):
             identifier = build_task_from_callable(identifier)
         if isinstance(identifier, str) and identifier.upper() == "PYTHONJOB":
@@ -46,6 +50,9 @@ class TaskCollection(NodeCollection):
             return task
         if isinstance(identifier, WorkGraph):
             identifier = build_task_from_workgraph(identifier)
+        if isinstance(identifier, ProcessBuilder):
+            task = build_task_from_builder(identifier)
+            return task
         return super().new(identifier, name, uuid, **kwargs)
 
 
