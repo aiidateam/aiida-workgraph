@@ -44,7 +44,7 @@ class TaskCollection(NodeCollection):
             identifier = build_task_from_workgraph(identifier)
         if isinstance(identifier, ProcessBuilder):
             from aiida_workgraph.utils import get_dict_from_builder
-            kwargs = get_dict_from_builder(identifier)
+            kwargs = {**kwargs, **get_dict_from_builder(identifier)}
             identifier = build_task_from_callable(identifier.process_class)
         return super()._new(identifier, name, uuid, **kwargs)
 
