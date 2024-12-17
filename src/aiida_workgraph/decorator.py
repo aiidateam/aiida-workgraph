@@ -299,95 +299,6 @@ def build_task_from_workgraph(wg: any) -> Task:
     return task
 
 
-def build_task_from_builder(builder: ProcessBuilder) -> Task:
-    """Build task from an aiida-core ProcessBuilder."""
-    from aiida.orm.utils.serialize import serialize
-
-    tdata = {"metadata": {"task_type": "builder"}}
-    inputs = []
-    outputs = []
-    group_outputs = []
-
-    process_class = builder._process_class
-
-    # executor = get_executor(self.get_executor())[0]
-    # builder = executor.get_builder_from_protocol(*args, **kwargs)
-    # TODO: Instantiate AiiDA object from the builder, and pass that, rather than having to manually construct the tdata
-    # TODO: here again
-    # data = get_dict_from_builder(builder)
-
-    # # data.pop('identifier')
-    # data = {**data, **tdata}
-
-    # data['identifier'] = 'a'
-    # # tdata["identifier"] = wg.name
-    # task = Task.from_dict(data=data)
-    return task
-
-    #     def add_task(
-    #     self, identifier: Union[str, callable], name: str = None, **kwargs
-    # ) -> Task:
-
-    # self.set(data)
-
-    # add all the inputs/outputs from the tasks in the workgraph
-
-    # for task in wg.tasks:
-    #     # inputs
-    #     inputs.append(
-    #         {
-    #             "identifier": "workgraph.namespace",
-    #             "name": f"{task.name}",
-    #         }
-    #     )
-    #     for socket in task.inputs:
-    #         if socket.name == "_wait":
-    #             continue
-    #         inputs.append(
-    #             {"identifier": socket.identifier, "name": f"{task.name}.{socket.name}"}
-    #         )
-    #     # outputs
-    #     outputs.append(
-    #         {
-    #             "identifier": "workgraph.namespace",
-    #             "name": f"{task.name}",
-    #         }
-    #     )
-    #     for socket in task.outputs:
-    #         if socket.name in ["_wait", "_outputs"]:
-    #             continue
-    #         outputs.append(
-    #             {"identifier": socket.identifier, "name": f"{task.name}.{socket.name}"}
-    #         )
-    #         group_outputs.append(
-    #             {
-    #                 "name": f"{task.name}.{socket.name}",
-    #                 "from": f"{task.name}.{socket.name}",
-    #             }
-    #         )
-    # kwargs = [input["name"] for input in inputs]
-    # # add built-in sockets
-    # outputs.append({"identifier": "workgraph.any", "name": "_outputs"})
-    # outputs.append({"identifier": "workgraph.any", "name": "_wait"})
-    # inputs.append({"identifier": "workgraph.any", "name": "_wait", "link_limit": 1e6})
-    # tdata["metadata"]["node_class"] = {"module": "aiida_workgraph.task", "name": "Task"}
-    # tdata["kwargs"] = kwargs
-    # tdata["inputs"] = inputs
-    # tdata["outputs"] = outputs
-    # tdata["identifier"] = wg.name
-    # executor = {
-    #     "module": "aiida_workgraph.engine.workgraph",
-    #     "name": "WorkGraphEngine",
-    #     "wgdata": serialize(wg.to_dict(store_nodes=True)),
-    #     "type": tdata["metadata"]["task_type"],
-    #     "is_pickle": False,
-    # }
-    # tdata["metadata"]["group_outputs"] = group_outputs
-    # tdata["executor"] = executor
-    # task = create_task(tdata)
-    # return task
-
-
 def nonfunctional_usage(callable: Callable):
     """
     This is a decorator for a decorator factory (a function that returns a decorator).
@@ -697,3 +608,109 @@ class TaskDecoratorCollection:
 
 
 task = TaskDecoratorCollection()
+
+# Backup
+# def build_task_from_builder(
+#     builder: ProcessBuilder,
+#     # tdata: Dict[str, Any],
+#     inputs: Optional[List[str]] = None,
+#     outputs: Optional[List[str]] = None,
+#     ) -> Task:
+#     # ) -> Tuple[Task, Dict[str, Any]]:
+
+#     """Build task from an aiida-core ProcessBuilder."""
+#     from aiida.orm.utils.serialize import serialize
+#     from aiida_workgraph.utils.inspect_aiida_components import (
+#         get_task_data_from_aiida_component,
+#     )
+#     from aiida.engine.utils import instantiate_process
+#     from aiida.manage import get_manager
+#     from aiida.plugins import CalculationFactory
+
+#     process_class = builder.process_class
+#     builder_inputs = builder._inputs()
+#     # metadata = builder_inputs.pop('metadata')
+#     # monitors = builder_inputs.pop('monitors')
+#     # code = builder_inputs.pop('code')
+
+#     # process_node = process_class(**builder_inputs)
+
+
+#     # def build_task_from_callable(
+#     #     executor: Callable,
+#     #     inputs: Optional[List[str | dict]] = None,
+#     #     outputs: Optional[List[str | dict]] = None,
+#     # inputs = inputs or {}
+#     # breakpoint()
+#     task = build_task_from_callable(
+#         executor=process_class,
+#         inputs=inputs,
+#         outputs=outputs,
+#     )
+#     print(f"EXECUTOR: {process_class}")
+#     print(f"INPUTS: {inputs}")
+#     print(f"OUTPUTS: {outputs}")
+#     print(f"TASK: {task}")
+
+#     # manager = get_manager()
+#     # runner = manager.get_runner()
+#     # breakpoint()
+
+#     # process_class = CalculationFactory(entry_point_name)
+#     # process = instantiate_process(runner, process_class, **builder_inputs)
+#     # print(issubclass(process_class, CalcJob))
+#     # raise SystemExit
+#     # breakpoint()
+
+#     # tdata = {
+#     #     "metadata": {"task_type": "builder"},  # Or maybe use node_class, node_type
+#     #     "callable": process_class,
+#     # }
+#     # _, tdata = build_task_from_AiiDA(tdata)
+
+#     # breakpoint()
+#     # elif is_process_function(process):
+#     #     process_class = process.process_class  # type: ignore[attr-defined]
+#     # elif inspect.isclass(process) and issubclass(process, Process):
+#     #     process_class = process
+#     # else:
+#     #     raise ValueError(f'invalid process {type(process)}, needs to be Process or ProcessBuilder')
+
+#     # process = process_class(runner=runner, inputs=inputs)
+
+#     # tdata = {"metadata": {"task_type": ""}}
+#     # inputs = []
+#     # outputs = []
+#     # group_outputs = []
+
+#     # process_class = builder._process_class
+
+#     # builder_dict = get_dict_from_builder(builder)
+
+#     # tdata = get_task_data_from_aiida_component(
+#     #     tdata=tdata, inputs=inputs, outputs=outputs
+#     # )
+
+
+#     # task_decorated = build_task_from_callable(
+#     #     func_decorated,
+#     #     inputs=kwargs.get("inputs", []),
+#     #     outputs=kwargs.get("outputs", []),
+#     # )
+
+#     # executor = get_executor(self.get_executor())[0]
+#     # builder = executor.get_builder_from_protocol(*args, **kwargs)
+#     # TODO: Instantiate AiiDA object from the builder, and pass that, rather than having to manually construct the tdata
+#     # TODO: here again
+#     # data = get_dict_from_builder(builder)
+
+#     # # data.pop('identifier')
+#     # data = {**data, **tdata}
+
+#     # data['identifier'] = 'a'
+#     # # tdata["identifier"] = wg.name
+#     # task = Task.from_dict(data=data)
+#     return task
+            # print(f"TDATA: {tdata}")
+            # print(f"INPUTS: {inputs}")
+            # print(f"OUTPTUS: {outputs}")

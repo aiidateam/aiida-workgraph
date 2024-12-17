@@ -1,10 +1,10 @@
+from typing import Any, Callable, Optional, Union
+
+from aiida.engine import ProcessBuilder
 from node_graph.collection import (
     NodeCollection,
     PropertyCollection,
 )
-from typing import Any, Callable, Optional, Union
-
-from aiida.engine import ProcessBuilder
 
 
 class TaskCollection(NodeCollection):
@@ -16,15 +16,13 @@ class TaskCollection(NodeCollection):
         **kwargs: Any
     ) -> Any:
         from aiida_workgraph.decorator import (
-            build_task_from_callable,
             build_pythonjob_task,
             build_shelljob_task,
+            build_task_from_callable,
             build_task_from_workgraph,
-            build_task_from_builder,
         )
         from aiida_workgraph.workgraph import WorkGraph
 
-        # build the task on the fly if the identifier is a callable
         if callable(identifier):
             identifier = build_task_from_callable(identifier)
         if isinstance(identifier, str) and identifier.upper() == "PYTHONJOB":
@@ -45,8 +43,9 @@ class TaskCollection(NodeCollection):
         if isinstance(identifier, WorkGraph):
             identifier = build_task_from_workgraph(identifier)
         if isinstance(identifier, ProcessBuilder):
-            task = build_task_from_builder(identifier)
-            return task
+            from aiida_workgraph.utils import get_dict_from_builder
+            kwargs = get_dict_from_builder(identifier)
+            identifier = build_task_from_callable(identifier.process_class)
         return super()._new(identifier, name, uuid, **kwargs)
 
 
@@ -64,3 +63,17 @@ class WorkGraphPropertyCollection(PropertyCollection):
             identifier = build_property_from_AiiDA(identifier)
         # Call the original new method
         return super()._new(identifier, name, **kwargs)
+
+
+# Backup
+        # print(identifier, type(identifier))
+        # name = name or ''
+        # breakpoint()
+        # return super()._new(, name, **builder_dict)
+        #     print("ProcessBuilder passed")
+        #     task = build_task_from_builder(identifier)
+        #     return task
+        # print(f"identifier: {identifier} ({type(identifier)})")
+        # print(f"name: {name}")
+        # print(f"uuid: {uuid}")
+        # print(f"kwargs: {kwargs}")
