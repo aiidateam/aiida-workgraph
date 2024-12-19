@@ -63,17 +63,3 @@ class WorkGraphPropertyCollection(PropertyCollection):
             identifier = build_property_from_AiiDA(identifier)
         # Call the original new method
         return super()._new(identifier, name, **kwargs)
-
-
-# Backup
-        # print(identifier, type(identifier))
-        # name = name or ''
-        # breakpoint()
-        # return super()._new(, name, **builder_dict)
-        #     print("ProcessBuilder passed")
-        #     task = build_task_from_builder(identifier)
-        #     return task
-        # print(f"identifier: {identifier} ({type(identifier)})")
-        # print(f"name: {name}")
-        # print(f"uuid: {uuid}")
-        # print(f"kwargs: {kwargs}")
