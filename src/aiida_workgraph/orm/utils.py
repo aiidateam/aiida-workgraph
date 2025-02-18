@@ -1,7 +1,15 @@
-from aiida.orm.utils.serialize import _NODE_TAG, _COMPUTER_TAG
+from aiida.orm.utils.serialize import (
+    _NODE_TAG,
+    _COMPUTER_TAG,
+    _NODE_LINKS_MANAGER_TAG,
+    _GROUP_TAG,
+    node_constructor,
+    computer_constructor,
+    group_constructor,
+    node_links_manager_constructor,
+)
 from typing import Any
 import yaml
-from aiida import orm
 
 
 class AiiDASafeLoader(yaml.SafeLoader):
@@ -16,22 +24,11 @@ class AiiDASafeLoader(yaml.SafeLoader):
     pass
 
 
-def node_constructor(loader: yaml.SafeLoader, node: yaml.Node) -> orm.Node:
-    """
-    Load a node from the yaml representation.
-    """
-    yaml_node = loader.construct_scalar(node)  # type: ignore[arg-type]
-    return orm.load_node(uuid=yaml_node)
-
-
-def computer_constructor(loader: yaml.SafeLoader, computer: yaml.Node) -> orm.Computer:
-    """Load a computer from the yaml representation."""
-    yaml_node = loader.construct_scalar(computer)  # type: ignore[arg-type]
-    return orm.Computer.collection.get(uuid=yaml_node)
-
-
 AiiDASafeLoader.add_constructor(_NODE_TAG, node_constructor)
 AiiDASafeLoader.add_constructor(_COMPUTER_TAG, computer_constructor)
+AiiDASafeLoader.add_constructor(_NODE_LINKS_MANAGER_TAG, node_links_manager_constructor)
+AiiDASafeLoader.add_constructor(_GROUP_TAG, group_constructor)
+AiiDASafeLoader.add_constructor(_NODE_LINKS_MANAGER_TAG, node_links_manager_constructor)
 
 
 def deserialize_safe(serialized: str) -> Any:
