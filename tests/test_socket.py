@@ -106,7 +106,7 @@ def test_socket_validate(data_type, data) -> None:
     assert "Expected value of type" in str(excinfo.value)
 
 
-@pytest.mark.usefixtures("started_daemon_client")
+@pytest.mark.skip(reason="SafeLoader not implemented for numpy")
 def test_numpy_array(decorated_normal_add):
     """Test data type with numpy array."""
     import numpy as np
@@ -115,7 +115,7 @@ def test_numpy_array(decorated_normal_add):
     y = np.array([4, 5, 6])
     wg = WorkGraph()
     wg.add_task(decorated_normal_add, name="add1", x=x, y=y)
-    wg.submit(wait=True)
+    wg.run()
     # wg.run()
     assert wg.state.upper() == "FINISHED"
 

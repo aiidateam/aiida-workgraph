@@ -6,7 +6,8 @@ from typing import Any, Dict, List, Optional, Tuple, Callable, Union, Sequence
 from aiida_workgraph.utils import create_and_pause_process
 from aiida_workgraph.task import Task
 from aiida_workgraph.utils import get_nested_dict
-from aiida.orm.utils.serialize import deserialize_unsafe, serialize
+from aiida.orm.utils.serialize import serialize
+from aiida_workgraph.orm.utils import deserialize_safe
 import asyncio
 from aiida.engine.processes.exit_code import ExitCode
 from aiida_workgraph.executors.monitors import monitor
@@ -131,7 +132,7 @@ class TaskManager:
 
         value = self.ctx._tasks[name].get(key, None)
         if key == "process" and value is not None:
-            value = deserialize_unsafe(value)
+            value = deserialize_safe(value)
         return value
 
     def set_task_state_info(self, name: str, key: str, value: any) -> None:
