@@ -2,7 +2,7 @@ from aiida_workgraph.socket import TaskSocket
 
 
 def if_(condition):
-    """Helper function to create an If object."""
+    """Helper function to create an If_ object."""
     return If_(condition)
 
 
@@ -43,4 +43,38 @@ class If_:
         )
         self.false_zone.children.add([*tasks])
 
+        return self
+
+
+def while_(condition, max_iterations: int = 10000):
+    """Helper function to create an While_ object."""
+    return While_(condition, max_iterations=max_iterations)
+
+
+class While_:
+    def __init__(self, condition: TaskSocket, max_iterations: int = 10000):
+        self.condition = condition
+        self.wg = condition._parent._node.parent
+        self.zone = self.wg.add_task(
+            "While",
+            name=self._generate_name(),
+            conditions=condition,
+            max_iterations=max_iterations,
+        )
+
+    def _generate_name(self, prefix: str = "while") -> str:
+        n = (
+            len(
+                [task for task in self.wg.tasks if task.identifier == "workgraph.while"]
+            )
+            + 1
+        )
+        return f"{prefix}_{n}"
+
+    def __call__(self, *tasks):
+        """
+        Called when the user does:
+            while_(condition)(<tasks-for-loop>)
+        """
+        self.zone.children.add([*tasks])
         return self
