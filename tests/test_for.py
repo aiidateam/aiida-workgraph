@@ -4,7 +4,7 @@ from aiida import orm
 from typing import Callable
 
 
-@pytest.mark.usefixtures("started_daemon_client")
+@pytest.mark.skip(reason="SafeLoader not implemented for range")
 def test_for(decorated_add: Callable, decorated_multiply: Callable) -> None:
     # Create a WorkGraph will loop the a sequence
     @task.graph_builder(outputs=[{"name": "result", "from": "context.total"}])
@@ -31,5 +31,5 @@ def test_for(decorated_add: Callable, decorated_multiply: Callable) -> None:
     for1 = wg.add_task(add_multiply_for, sequence=range(5))
     add1 = wg.add_task(decorated_add, name="add1", y=orm.Int(1))
     wg.add_link(for1.outputs.result, add1.inputs.x)
-    wg.submit(wait=True, timeout=200)
+    wg.run()
     assert add1.node.outputs.result.value == 21

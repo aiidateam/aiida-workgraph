@@ -278,7 +278,7 @@ def get_dict_from_builder(builder: Any) -> Dict:
 
 def get_workgraph_data(process: Union[int, orm.Node]) -> Optional[Dict[str, Any]]:
     """Get the workgraph data from the process node."""
-    from aiida.orm.utils.serialize import deserialize_unsafe
+    from aiida_workgraph.orm.utils import deserialize_safe
     from aiida.orm import load_node
     from aiida_workgraph.config import WORKGRAPH_EXTRA_KEY
 
@@ -288,8 +288,8 @@ def get_workgraph_data(process: Union[int, orm.Node]) -> Optional[Dict[str, Any]
     if wgdata is None:
         return
     for name, task in wgdata["tasks"].items():
-        wgdata["tasks"][name] = deserialize_unsafe(task)
-    wgdata["error_handlers"] = deserialize_unsafe(wgdata["error_handlers"])
+        wgdata["tasks"][name] = deserialize_safe(task)
+    wgdata["error_handlers"] = deserialize_safe(wgdata["error_handlers"])
     return wgdata
 
 
@@ -314,7 +314,7 @@ def get_processes_latest(
 ) -> Dict[str, Dict[str, Union[int, str]]]:
     """Get the latest info of all tasks from the process."""
     import aiida
-    from aiida.orm.utils.serialize import deserialize_unsafe
+    from aiida_workgraph.orm.utils import deserialize_safe
     from aiida.orm import QueryBuilder
     from aiida_workgraph.engine.workgraph import WorkGraphEngine
 
@@ -357,7 +357,7 @@ def get_processes_latest(
         # print("results: ", results)
         for name in node_names:
             state = results[f"extras._task_state_{name}"]
-            task_process = deserialize_unsafe(results[f"extras._task_process_{name}"])
+            task_process = deserialize_safe(results[f"extras._task_process_{name}"])
             tasks[name] = {
                 "pk": task_process.pk if task_process else None,
                 "process_type": task_process.process_type if task_process else "",

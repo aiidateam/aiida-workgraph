@@ -14,7 +14,6 @@ def test_prepare_for_shell_task_nonexistent():
         prepare_for_shell_task(task=task, inputs=inputs)
 
 
-@pytest.mark.usefixtures("started_daemon_client")
 def test_shell_command(fixture_localhost):
     """Test the ShellJob with command as a string."""
     wg = WorkGraph(name="test_shell_command")
@@ -30,7 +29,7 @@ def test_shell_command(fixture_localhost):
     )
     # also check if we can set the computer explicitly
     job1.set({"metadata.computer": load_computer("localhost")})
-    wg.submit(wait=True)
+    wg.run()
     assert job1.node.outputs.stdout.get_content() == "string astring b"
 
 

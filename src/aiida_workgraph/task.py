@@ -126,7 +126,7 @@ class Task(GraphNode):
         Returns:
             Node: An instance of Node initialized with the provided data."""
         from aiida_workgraph.tasks import task_pool as workgraph_task_pool
-        from aiida.orm.utils.serialize import deserialize_unsafe
+        from aiida_workgraph.orm.utils import deserialize_safe
 
         if task_pool is None:
             task_pool = workgraph_task_pool
@@ -135,7 +135,7 @@ class Task(GraphNode):
         task.waiting_on.add(data.get("wait", []))
         process = data.get("process", None)
         if process and isinstance(process, str):
-            process = deserialize_unsafe(process)
+            process = deserialize_safe(process)
         task.process = process
         task._error_handlers = data.get("error_handlers", [])
 
