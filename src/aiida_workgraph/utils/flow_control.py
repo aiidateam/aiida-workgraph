@@ -27,8 +27,14 @@ class If_:
         Called when the user does:
             if_(condition)(<tasks-for-true>)
         """
-        self.true_zone.children.add([*tasks])
+        from aiida_workgraph.task import Task
+
+        tasks = [task for task in tasks if isinstance(task, Task)]
+        self.true_zone.children.add(tasks)
         return self
+
+    def elif_(self):
+        """Not implemented."""
 
     def else_(self, *tasks):
         """
@@ -41,7 +47,10 @@ class If_:
             conditions=self.condition,
             invert_condition=True,
         )
-        self.false_zone.children.add([*tasks])
+        from aiida_workgraph.task import Task
+
+        tasks = [task for task in tasks if isinstance(task, Task)]
+        self.false_zone.children.add(tasks)
 
         return self
 
@@ -76,5 +85,8 @@ class While_:
         Called when the user does:
             while_(condition)(<tasks-for-loop>)
         """
-        self.zone.children.add([*tasks])
+        from aiida_workgraph.task import Task
+
+        tasks = [task for task in tasks if isinstance(task, Task)]
+        self.zone.children.add(tasks)
         return self
