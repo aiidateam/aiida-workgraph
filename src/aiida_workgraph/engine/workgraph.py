@@ -14,8 +14,9 @@ import kiwipy
 from aiida.common.extendeddicts import AttributeDict
 from aiida.common.lang import override
 from aiida import orm
-from aiida.orm import Node, WorkChainNode
+from aiida.orm import Node
 from aiida_workgraph.orm.utils import deserialize_safe
+from aiida_workgraph.orm.workgraph import WorkGraphNode
 
 from aiida.engine.processes.exit_code import ExitCode
 from aiida.engine.processes.process import Process
@@ -33,13 +34,17 @@ if t.TYPE_CHECKING:
 __all__ = "WorkGraph"
 
 
+class WorkGraphSpec(WorkChainSpec):
+    workgraph_data_key = "workgraph_data"
+
+
 @auto_persist("_awaitables")
 class WorkGraphEngine(Process, metaclass=Protect):
     """The `WorkGraph` class is used to construct workflows in AiiDA."""
 
     # used to create a process node that represents what happened in this process.
-    _node_class = WorkChainNode
-    _spec_class = WorkChainSpec
+    _node_class = WorkGraphNode
+    _spec_class = WorkGraphSpec
     _CONTEXT = "CONTEXT"
 
     def __init__(
@@ -75,11 +80,13 @@ class WorkGraphEngine(Process, metaclass=Protect):
         )
 
     @classmethod
-    def define(cls, spec: WorkChainSpec) -> None:
+    def define(cls, spec: WorkGraphSpec) -> None:
         super().define(spec)
         spec.input("input_file", valid_type=orm.SinglefileData, required=False)
         spec.input_namespace(
-            "wg", dynamic=True, required=False, help="WorkGraph inputs"
+            f"{spec.metadata_key}.{spec.workgraph_data_key}",
+            dynamic=True,
+            required=True,
         )
         spec.input_namespace("input_tasks", dynamic=True, required=False)
         spec.exit_code(2, "ERROR_SUBPROCESS", message="A subprocess has failed.")
@@ -252,22 +259,22 @@ class WorkGraphEngine(Process, metaclass=Protect):
 
     def _build_process_label(self) -> str:
         """Use the workgraph name as the process label."""
-        return f"WorkGraph<{self.inputs.wg['name']}>"
+        return f"WorkGraph<{self.inputs.metadata.workgraph_data['name']}>"
+
+    def _setup_metadata(self, metadata: dict) -> None:
+        """Store the metadata on the ProcessNode."""
+
+        workgraph_data = metadata.pop("workgraph_data", {})
+        self.node.set_workgraph_data(workgraph_data)
+        # todo set_task_state_info
+
+        super()._setup_metadata(metadata)
 
     def on_create(self) -> None:
         """Called when a Process is created."""
-        from aiida_workgraph.utils.analysis import WorkGraphSaver
 
         super().on_create()
-        wgdata = self.inputs.wg._dict
-        restart_process = (
-            orm.load_node(wgdata["restart_process"].value)
-            if wgdata.get("restart_process")
-            else None
-        )
-        saver = WorkGraphSaver(self.node, wgdata, restart_process=restart_process)
-        saver.save()
-        self.node.label = wgdata["name"]
+        self.node.label = self.node.workgraph_data["name"]
 
     def setup(self) -> None:
         """Setup the variables in the context."""
@@ -307,9 +314,8 @@ class WorkGraphEngine(Process, metaclass=Protect):
     def read_wgdata_from_base(self) -> t.Dict[str, t.Any]:
         """Read workgraph data from base.extras."""
         from aiida_workgraph.orm.pickled_function import PickledLocalFunction
-        from aiida_workgraph.config import WORKGRAPH_EXTRA_KEY
 
-        wgdata = self.node.base.extras.get(WORKGRAPH_EXTRA_KEY)
+        wgdata = self.node.workgraph_data
         for name, task in wgdata["tasks"].items():
             wgdata["tasks"][name] = deserialize_safe(task)
             for _, input in wgdata["tasks"][name]["inputs"].items():

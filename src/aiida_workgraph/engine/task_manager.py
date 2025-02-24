@@ -130,9 +130,14 @@ class TaskManager:
     def get_task_state_info(self, name: str, key: str) -> str:
         """Get task state info from ctx."""
 
-        value = self.ctx._tasks[name].get(key, None)
-        if key == "process" and value is not None:
-            value = deserialize_safe(value)
+        if key == "process":
+            value = self.process.node.get_task_process(name)
+            if value is not None:
+                value = deserialize_safe(value)
+        elif key == "state":
+            value = self.process.node.get_task_state(name)
+        elif key == "action":
+            value = self.process.node.get_task_action(name)
         return value
 
     def set_task_state_info(self, name: str, key: str, value: any) -> None:
@@ -141,10 +146,11 @@ class TaskManager:
 
         if key == "process":
             value = serialize(value)
-            self.process.node.base.extras.set(f"_task_{key}_{name}", value)
-        else:
-            self.process.node.base.extras.set(f"_task_{key}_{name}", value)
-        self.ctx._tasks[name][key] = value
+            self.process.node.set_task_process(name, value)
+        elif key == "state":
+            self.process.node.set_task_state(name, value)
+        elif key == "action":
+            self.process.node.set_task_action(name, value)
 
     def set_tasks_state(
         self, tasks: Union[List[str], Sequence[str]], value: str

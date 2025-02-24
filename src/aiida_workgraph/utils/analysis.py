@@ -61,7 +61,7 @@ class WorkGraphSaver:
             ):
                 self.wgdata["links"].remove(link)
 
-    def save(self) -> None:
+    def analyze(self) -> None:
         """Save workgraph.
 
         - Update uuid for links. Build compressed tasks for workgraph.
@@ -80,6 +80,10 @@ class WorkGraphSaver:
             )
             print("modified_tasks: {}".format(modified_tasks))
             self.reset_tasks(modified_tasks)
+
+    def save(self) -> None:
+        """Save workgraph."""
+        self.analyze()
         self.insert_workgraph_to_db()
 
     def build_task_link(self) -> None:
@@ -194,6 +198,16 @@ class WorkGraphSaver:
         - workgraph
         - all tasks
         """
+        self.serialize_workgraph_data()
+        self.process.base.extras.set(WORKGRAPH_SHORT_EXTRA_KEY, self.short_wgdata)
+        self.process.base.extras.set(WORKGRAPH_EXTRA_KEY, self.wgdata)
+
+    def serialize_workgraph_data(self) -> None:
+        """Save a new workgraph in the database.
+
+        - workgraph
+        - all tasks
+        """
         from aiida_workgraph.utils import workgraph_to_short_json
         import inspect
         from aiida_workgraph.orm.pickled_function import PickledLocalFunction
@@ -201,9 +215,8 @@ class WorkGraphSaver:
         # pprint(self.wgdata)
         # self.wgdata["created"] = datetime.datetime.utcnow()
         # self.wgdata["lastUpdate"] = datetime.datetime.utcnow()
-        short_wgdata = workgraph_to_short_json(self.wgdata)
-        self.process.base.extras.set(WORKGRAPH_SHORT_EXTRA_KEY, short_wgdata)
-        self.save_task_states()
+        self.short_wgdata = workgraph_to_short_json(self.wgdata)
+        # self.save_task_states()
         for name, task in self.wgdata["tasks"].items():
             for _, input in task["inputs"].items():
                 if input.get("property"):
@@ -214,7 +227,6 @@ class WorkGraphSaver:
         # nodes is a copy of tasks, so we need to pop it out
         self.wgdata["error_handlers"] = serialize(self.wgdata["error_handlers"])
         self.wgdata["context"] = serialize(self.wgdata["context"])
-        self.process.base.extras.set(WORKGRAPH_EXTRA_KEY, self.wgdata)
 
     def save_task_states(self) -> Dict:
         """Get task states."""
@@ -309,7 +321,10 @@ class WorkGraphSaver:
         Returns:
             bool: _description_
         """
-        if self.process.base.extras.get(WORKGRAPH_EXTRA_KEY, None) is not None:
+        if (
+            self.process
+            and self.process.base.extras.get(WORKGRAPH_EXTRA_KEY, None) is not None
+        ):
             return True
         return False
 
