@@ -1,3 +1,4 @@
+# import ipdb
 from node_graph.collection import (
     NodeCollection,
     PropertyCollection,
@@ -40,7 +41,12 @@ class TaskCollection(NodeCollection):
             task = super()._new("workgraph.if", name, uuid, **kwargs)
             return task
         if isinstance(identifier, WorkGraph):
+            # tasks_data = identifier.to_dict().get("tasks", {})
+            # kwargs['tasks'] = tasks_data
             identifier = build_task_from_workgraph(identifier)
+            # ipdb.set_trace()
+            # return super()._new(identifier, name, uuid, **kwargs)
+
         return super()._new(identifier, name, uuid, **kwargs)
 
 

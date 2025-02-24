@@ -325,3 +325,26 @@ class Select(Task):
             "callable_name": "select",
         }
         return executor
+
+
+class WorkGraphTask(Task):
+
+    identifier = "workgraph.workgraph"
+    name = "AiiDAWorkGraph"
+    node_type = ""
+    catalog = ""
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        # import ipdb; ipdb.set_trace()
+        self.tasks = TaskCollection(parent=self)
+
+    # def create_sockets(self) -> None: ...
+
+    def get_executor(self):
+        executor = {
+            "module_path": "aiida_workgraph.workgraph",
+            "callable_name": "WorkGraph",
+        }
+        return executor

@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+# import ipdb
+# import traceback
+
 from typing import Any, Callable, Dict, List, Optional, Union, Tuple
 from aiida_workgraph.utils import get_executor
 from aiida.engine import calcfunction, workfunction, CalcJob, WorkChain
@@ -8,6 +11,10 @@ from aiida_workgraph.utils import build_callable, validate_task_inout
 import inspect
 from aiida_workgraph.config import builtin_inputs, builtin_outputs, task_types
 from aiida_workgraph.orm.mapping import type_mapping
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from aiida_workgraph import WorkGraph
+    from aiida_workgraph.tasks.builtins import WorkGraphTask
 
 
 def create_task(tdata):
@@ -20,6 +27,13 @@ def create_task(tdata):
     tdata["properties"] = list_to_dict(tdata.get("properties", {}))
     tdata["inputs"] = list_to_dict(tdata.get("inputs", {}))
     tdata["outputs"] = list_to_dict(tdata.get("outputs", {}))
+
+    # if 'tasks' in tdata.keys():
+    #     traceback.print_stack()
+    #     ipdb.set_trace()
+
+
+    # traceback.print_list
 
     return create_node(tdata)
 
@@ -224,7 +238,8 @@ def build_shelljob_task(outputs: list = None, parser_outputs: list = None) -> Ta
     return task, tdata
 
 
-def build_task_from_workgraph(wg: any) -> Task:
+def build_task_from_workgraph(wg: 'WorkGraph') -> WorkGraphTask:
+    # NOTE: This actually returns a `DecoratedNode` object
     """Build task from workgraph."""
 
     tdata = {"metadata": {"task_type": "workgraph"}}
@@ -234,6 +249,9 @@ def build_task_from_workgraph(wg: any) -> Task:
     # add all the inputs/outputs from the tasks in the workgraph
     builtin_input_names = [input["name"] for input in builtin_inputs]
     builtin_output_names = [output["name"] for output in builtin_outputs]
+
+    # import ipdb; ipdb.set_trace()
+
     for task in wg.tasks:
         # inputs
         inputs.append(
@@ -279,14 +297,15 @@ def build_task_from_workgraph(wg: any) -> Task:
     for input in builtin_inputs:
         inputs.append(input.copy())
     tdata["metadata"]["node_class"] = {
-        "module_path": "aiida_workgraph.task",
-        "callable_name": "Task",
+        "module_path": "aiida_workgraph.tasks.builtins",
+        "callable_name": "WorkGraphTask",
     }
     tdata["inputs"] = inputs
     tdata["outputs"] = outputs
     tdata["identifier"] = wg.name
     # get wgdata from the workgraph
     wgdata = wg.prepare_inputs()["wg"]
+    # import ipdb; ipdb.set_trace()
     executor = {
         "module_path": "aiida_workgraph.engine.workgraph",
         "callable_name": "WorkGraphEngine",
@@ -295,7 +314,12 @@ def build_task_from_workgraph(wg: any) -> Task:
     }
     tdata["metadata"]["group_outputs"] = group_outputs
     tdata["executor"] = executor
+    # TODO: Add check if existing, empty, etc.
+    tdata["tasks"] = wgdata['tasks']
+
     task = create_task(tdata)
+    # import ipdb; ipdb.set_trace()
+
     return task
 
 
