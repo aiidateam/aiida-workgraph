@@ -84,9 +84,7 @@ class WorkGraphEngine(Process, metaclass=Protect):
         super().define(spec)
         spec.input("input_file", valid_type=orm.SinglefileData, required=False)
         spec.input_namespace(
-            f"{spec.metadata_key}.{spec.workgraph_data_key}",
-            dynamic=True,
-            required=True,
+            "workgraph_data", dynamic=True, required=False, help="WorkGraph inputs"
         )
         spec.input_namespace("input_tasks", dynamic=True, required=False)
         spec.exit_code(2, "ERROR_SUBPROCESS", message="A subprocess has failed.")
@@ -259,7 +257,7 @@ class WorkGraphEngine(Process, metaclass=Protect):
 
     def _build_process_label(self) -> str:
         """Use the workgraph name as the process label."""
-        return f"WorkGraph<{self.inputs.metadata.workgraph_data['name']}>"
+        return f"WorkGraph<{self.inputs.workgraph_data['name']}>"
 
     def _setup_metadata(self, metadata: dict) -> None:
         """Store the metadata on the ProcessNode."""

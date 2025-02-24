@@ -71,19 +71,13 @@ class WorkGraph(node_graph.NodeGraph):
         self, metadata: Optional[Dict[str, Any]] = None
     ) -> Dict[str, Any]:
         from aiida_workgraph.utils import serialize_workgraph_inputs
-        from aiida_workgraph.utils.analysis import WorkGraphSaver
 
         metadata = metadata or {}
 
         wgdata = self.to_dict()
         serialize_workgraph_inputs(wgdata)
-        saver = WorkGraphSaver(
-            self.process, wgdata, restart_process=self.restart_process
-        )
-        saver.analyze()
-        saver.serialize_workgraph_data()
-        metadata["workgraph_data"] = saver.wgdata
-        inputs = {"metadata": metadata}
+        metadata = metadata or {}
+        inputs = {"workgraph_data": wgdata, "metadata": metadata}
         return inputs
 
     def run(
