@@ -144,10 +144,18 @@ class WorkGraphEngine(Process, metaclass=Protect):
     def load_instance_state(
         self, saved_state: t.Dict[str, t.Any], load_context: t.Any
     ) -> None:
+        from aiida.orm.utils.log import create_logger_adapter
+
         super().load_instance_state(saved_state, load_context)
         # Load the context
         self._context = saved_state[self._CONTEXT]
-        self.set_logger(self.node.logger)
+        # TODO: avoid hardcoding the logger
+        self.node._logger = logging.getLogger(
+            "aiida.orm.nodes.process.workflow.workchain.WorkChainNode"
+        )
+        # First time the property is called after the node is stored, create the logger adapter
+        self.node._logger_adapter = create_logger_adapter(self.node._logger, self.node)
+        self.set_logger(self.node._logger_adapter)
         # TODO I don't know why we need to reinitialize the context, awaitables, and task_manager
         # Need to initialize the context, awaitables, and task_manager
         self.ctx_manager = ContextManager(
@@ -259,20 +267,18 @@ class WorkGraphEngine(Process, metaclass=Protect):
         """Use the workgraph name as the process label."""
         return f"WorkGraph<{self.inputs.workgraph_data['name']}>"
 
-    def _setup_metadata(self, metadata: dict) -> None:
-        """Store the metadata on the ProcessNode."""
-
-        workgraph_data = metadata.pop("workgraph_data", {})
-        self.node.set_workgraph_data(workgraph_data)
-        # todo set_task_state_info
-
-        super()._setup_metadata(metadata)
-
     def on_create(self) -> None:
         """Called when a Process is created."""
+        from aiida_workgraph.utils.analysis import WorkGraphSaver
 
         super().on_create()
-        self.node.label = self.node.workgraph_data["name"]
+        self.node.label = self._raw_inputs["workgraph_data"]["name"]
+        saver = WorkGraphSaver(
+            self.node, self._raw_inputs["workgraph_data"], restart_process=None
+        )
+        saver.analyze()
+        saver.serialize_workgraph_data()
+        self.node.set_workgraph_data(saver.wgdata)
 
     def setup(self) -> None:
         """Setup the variables in the context."""

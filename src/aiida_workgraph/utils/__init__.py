@@ -280,11 +280,10 @@ def get_workgraph_data(process: Union[int, orm.Node]) -> Optional[Dict[str, Any]
     """Get the workgraph data from the process node."""
     from aiida_workgraph.orm.utils import deserialize_safe
     from aiida.orm import load_node
-    from aiida_workgraph.config import WORKGRAPH_EXTRA_KEY
 
     if isinstance(process, int):
         process = load_node(process)
-    wgdata = process.base.extras.get(WORKGRAPH_EXTRA_KEY, None)
+    wgdata = process.workgraph_data
     if wgdata is None:
         return
     for name, task in wgdata["tasks"].items():
@@ -315,13 +314,11 @@ def get_processes_latest(
     """Get the latest info of all tasks from the process."""
     import aiida
     from aiida_workgraph.orm.utils import deserialize_safe
-    from aiida.orm import QueryBuilder
-    from aiida_workgraph.engine.workgraph import WorkGraphEngine
 
     tasks = {}
+    node = aiida.orm.load_node(pk)
     if item_type == "called_process":
         # fetch the process that called by the workgraph
-        node = aiida.orm.load_node(pk)
         for link in node.base.links.get_outgoing().all():
             if isinstance(link.node, aiida.orm.ProcessNode):
                 tasks[f"{link.node.process_label}_{link.node.pk}"] = {
@@ -332,24 +329,12 @@ def get_processes_latest(
                     "mtime": link.node.mtime,
                 }
     elif item_type == "task":
-        projections = [
-            "attributes.task_states",
-            "attributes.task_processes",
-        ]
-
-        qb = QueryBuilder()
-        qb.append(WorkGraphEngine, filters={"id": pk}, project=projections)
-        # print("projections: ", projections)
-        results = qb.all()
-        # change results to dict
-        results = dict(zip(projections, results[0]))
-        # print("results: ", results)
-        task_names = (
-            [task_name] if task_name else results["attributes.task_states"].keys()
-        )
+        task_states = node.task_states
+        task_processes = node.task_processes
+        task_names = [task_name] if task_name else task_states.keys()
         for name in task_names:
-            state = results["attributes.task_states"][name]
-            task_process = deserialize_safe(results["attributes.task_processes"][name])
+            state = task_states[name]
+            task_process = deserialize_safe(task_processes.get(name, ""))
             tasks[name] = {
                 "pk": task_process.pk if task_process else None,
                 "process_type": task_process.process_type if task_process else "",

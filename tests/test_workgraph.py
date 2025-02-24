@@ -47,7 +47,6 @@ def test_show_state(wg_calcfunction):
 
 def test_save_load(wg_calcfunction, decorated_add):
     """Save the workgraph"""
-    from aiida_workgraph.config import WORKGRAPH_EXTRA_KEY
     from aiida_workgraph.orm.pickled_function import PickledFunction
 
     wg = wg_calcfunction
@@ -67,11 +66,12 @@ def test_save_load(wg_calcfunction, decorated_add):
     # wg2.save()
     # assert wg2.tasks.add1.executor == decorated_add
     # remove the extra, will raise an error
-    wg.process.base.extras.delete(WORKGRAPH_EXTRA_KEY)
-    with pytest.raises(
-        ValueError, match=f"WorkGraph data not found for process {wg.process.pk}."
-    ):
-        WorkGraph.load(wg.process.pk)
+
+
+def test_load(create_process_node):
+    node = create_process_node()
+    with pytest.raises(ValueError, match=f"Process {node.pk} is not a WorkGraph."):
+        WorkGraph.load(node.pk)
 
 
 def test_organize_nested_inputs():

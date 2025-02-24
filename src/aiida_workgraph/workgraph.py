@@ -366,11 +366,12 @@ class WorkGraph(node_graph.NodeGraph):
             pk (int): The primary key of the process node.
         """
         from aiida_workgraph.utils import get_workgraph_data
+        from aiida_workgraph.orm.workgraph import WorkGraphNode
 
         process = aiida.orm.load_node(pk)
+        if not isinstance(process, WorkGraphNode):
+            raise ValueError(f"Process {pk} is not a WorkGraph")
         wgdata = get_workgraph_data(process)
-        if wgdata is None:
-            raise ValueError(f"WorkGraph data not found for process {pk}.")
         wg = cls.from_dict(wgdata)
         wg.process = process
         wg.update()

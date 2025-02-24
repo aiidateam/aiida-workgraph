@@ -1,6 +1,6 @@
 """Module with `Node` sub class for work processes."""
 from typing import Optional, Tuple
-
+import logging
 from aiida.common.lang import classproperty
 
 from aiida.orm.nodes.process.workflow.workchain import WorkChainNode
@@ -16,10 +16,18 @@ class WorkGraphNode(WorkChainNode):
     TASK_ACTIONS_KEY = "task_actions"
     WORKGRAPH_DATA_KEY = "workgraph_data"
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Use the same logger as WorkChainNode, this ensures the log level is set correctly
+        self._logger = logging.getLogger(
+            "aiida.orm.nodes.process.workflow.workchain.WorkChainNode"
+        )
+
     @classproperty
     def _updatable_attributes(cls) -> Tuple[str, ...]:  # type: ignore
         # pylint: disable=no-self-argument
         return super()._updatable_attributes + (
+            cls.WORKGRAPH_DATA_KEY,
             cls.TASK_STATES_KEY,
             cls.TASK_PROCESSES_KEY,
             cls.TASK_ACTIONS_KEY,
