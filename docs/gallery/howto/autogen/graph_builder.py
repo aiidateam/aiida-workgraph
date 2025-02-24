@@ -202,14 +202,14 @@ def for_loop(nb_iterations: Int):
 
 
 wg = WorkGraph("Nested workflow: For")
-task = wg.add_task(for_loop, nb_iterations=Int(2))
+loop_task = wg.add_task(for_loop, nb_iterations=Int(2))
 wg.to_html()
 
 # %%
 # Running the workgraph.
 
 wg.submit(wait=True)
-print("Output of last task", task.outputs.result.value)  # 1 + 1 result
+print("Output of last task", loop_task.outputs.result.value)  # 1 + 1 result
 
 # %%
 # Plotting provenance

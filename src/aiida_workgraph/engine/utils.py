@@ -84,7 +84,10 @@ def prepare_for_python_task(task: dict, kwargs: dict, var_kwargs: dict) -> dict:
                 function_outputs.append(
                     {"name": output["name"], "identifier": output["identifier"]}
                 )
-
+    # delete workgraph related attributes of the func if exist
+    for attr in ["task", "tdata", "node"]:
+        if hasattr(func, attr):
+            delattr(func, attr)
     inputs = prepare_pythonjob_inputs(
         function=func,
         function_inputs=function_inputs,

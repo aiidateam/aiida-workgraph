@@ -15,7 +15,7 @@ from aiida.common.extendeddicts import AttributeDict
 from aiida.common.lang import override
 from aiida import orm
 from aiida.orm import Node, WorkChainNode
-from aiida.orm.utils.serialize import deserialize_unsafe
+from aiida_workgraph.orm.utils import deserialize_safe
 
 from aiida.engine.processes.exit_code import ExitCode
 from aiida.engine.processes.process import Process
@@ -311,14 +311,14 @@ class WorkGraphEngine(Process, metaclass=Protect):
 
         wgdata = self.node.base.extras.get(WORKGRAPH_EXTRA_KEY)
         for name, task in wgdata["tasks"].items():
-            wgdata["tasks"][name] = deserialize_unsafe(task)
+            wgdata["tasks"][name] = deserialize_safe(task)
             for _, input in wgdata["tasks"][name]["inputs"].items():
                 if input.get("property"):
                     prop = input["property"]
                     if isinstance(prop["value"], PickledLocalFunction):
                         prop["value"] = prop["value"].value
-        wgdata["error_handlers"] = deserialize_unsafe(wgdata["error_handlers"])
-        wgdata["context"] = deserialize_unsafe(wgdata["context"])
+        wgdata["error_handlers"] = deserialize_safe(wgdata["error_handlers"])
+        wgdata["context"] = deserialize_safe(wgdata["context"])
         return wgdata
 
     def init_ctx(self, wgdata: t.Dict[str, t.Any]) -> None:

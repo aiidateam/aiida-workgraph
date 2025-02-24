@@ -19,10 +19,10 @@ def create_task_action(
 
 def get_task_state_info(node, name: str, key: str) -> str:
     """Get task state info from base.extras."""
-    from aiida.orm.utils.serialize import deserialize_unsafe
+    from aiida_workgraph.orm.utils import deserialize_safe
 
     if key == "process":
-        value = deserialize_unsafe(node.base.extras.get(f"_task_{key}_{name}", ""))
+        value = deserialize_safe(node.base.extras.get(f"_task_{key}_{name}", ""))
     else:
         value = node.base.extras.get(f"_task_{key}_{name}", "")
     return value

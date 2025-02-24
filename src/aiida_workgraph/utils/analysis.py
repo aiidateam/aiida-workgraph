@@ -2,7 +2,8 @@ from typing import Optional, Dict, Tuple, List
 
 # import datetime
 from aiida.orm import ProcessNode
-from aiida.orm.utils.serialize import serialize, deserialize_unsafe
+from aiida.orm.utils.serialize import serialize
+from aiida_workgraph.orm.utils import deserialize_safe
 from aiida_workgraph.config import WORKGRAPH_EXTRA_KEY, WORKGRAPH_SHORT_EXTRA_KEY
 
 
@@ -272,8 +273,8 @@ class WorkGraphSaver:
             print("No workgraph data found in the process node.")
             return
         for name, task in wgdata["tasks"].items():
-            wgdata["tasks"][name] = deserialize_unsafe(task)
-        wgdata["error_handlers"] = deserialize_unsafe(wgdata["error_handlers"])
+            wgdata["tasks"][name] = deserialize_safe(task)
+        wgdata["error_handlers"] = deserialize_safe(wgdata["error_handlers"])
         return wgdata
 
     def check_diff(
