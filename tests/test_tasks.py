@@ -187,6 +187,44 @@ def test_set_inputs_from_builder(add_code) -> None:
     ):
         add1.set_from_protocol(code=add_code, protocol="fast")
 
+def test_add_task_from_builder_add(add_code) -> None:
+    """Test adding a task from a ``ProcessBuilder``."""
+    from aiida.calculations.arithmetic.add import ArithmeticAddCalculation
+
+    # Test with the ArithmeticAddCalculation
+    
+    add_builder = ArithmeticAddCalculation.get_builder()
+
+    add_builder.code = add_code
+    add_builder.x = orm.Int(2)
+    add_builder.y = orm.Int(3)
+
+    add_wg = WorkGraph('add-builder')
+    add_wg.add_task(add_builder, name="add_builder")
+
+    assert add_wg.tasks['add_builder'].inputs.x.value == 2
+    assert add_wg.tasks['add_builder'].inputs["y"].value == 3
+    assert add_wg.tasks['add_builder'].inputs["code"].value == add_code
+    
+def test_add_task_from_builder_multiply_add(add_code) -> None:
+    # Test with the MultiplyAddWorkchain
+    # Might not even be necessary, as the MultiplyAddWorkchain anyway only appears as one entity
+    from aiida.workflows.arithmetic.multiply_add import MultiplyAddWorkChain
+    multiply_add_builder = MultiplyAddWorkChain.get_builder()
+
+    multiply_add_builder.code = orm.load_code('add@localhost')
+    multiply_add_builder.x = orm.Int(2)
+    multiply_add_builder.y = orm.Int(3)
+    multiply_add_builder.z = orm.Int(4)
+
+    wg = WorkGraph('multiply-add-builder')
+
+    wg.add_task(multiply_add_builder, name="multiply_add_builder")
+    print(wg)
+
+    wg.tasks['multiply_add_builder']
+    # Test if linking works
+
 
 def test_namespace_outputs():
     @task.calcfunction(
