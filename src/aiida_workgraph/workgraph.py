@@ -187,7 +187,7 @@ class WorkGraph(node_graph.NodeGraph):
         }
         wgdata.update(
             {
-                "restart_process": aiida.orm.Int(self.restart_process.pk)
+                "restart_process": self.restart_process.pk
                 if self.restart_process
                 else None,
                 "max_iteration": self.max_iteration,

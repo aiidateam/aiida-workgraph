@@ -1,7 +1,6 @@
 import pytest
 from aiida_workgraph import WorkGraph
 from aiida import orm
-import time
 from aiida.calculations.arithmetic.add import ArithmeticAddCalculation
 
 
@@ -113,15 +112,13 @@ def test_reset_message(wg_calcjob):
 
     wg = wg_calcjob
     wg.submit()
-    # wait for the daemon to start the workgraph
-    time.sleep(3)
+    wg.wait(tasks={"add1": ["RUNNING"]}, timeout=30, interval=1)
     wg = WorkGraph.load(wg.process.pk)
-    wg.tasks.add2.set({"y": orm.Int(10).store()})
+    wg.tasks.add1.set({"y": orm.Int(10).store()})
     wg.save()
-    wg.wait()
+    wg.wait(timeout=30)
     report = get_workchain_report(wg.process, "REPORT")
-    print(report)
-    assert "Action: reset. {'add2'}" in report
+    assert "Action: reset. {'add1'}" in report
 
 
 def test_restart_and_reset(wg_calcfunction):
@@ -136,13 +133,12 @@ def test_restart_and_reset(wg_calcfunction):
         y=wg.tasks["sumdiff2"].outputs.sum,
     )
     wg.name = "test_restart_0"
-    wg.submit(wait=True)
+    wg.run()
     wg1 = WorkGraph.load(wg.process.pk)
     wg1.restart()
     wg1.name = "test_restart_1"
     wg1.tasks["sumdiff2"].set({"x": orm.Int(10).store()})
-    # wg1.save()
-    wg1.submit(wait=True)
+    wg1.run()
     assert wg1.tasks["sumdiff1"].node.pk == wg.tasks["sumdiff1"].pk
     assert wg1.tasks["sumdiff2"].node.pk != wg.tasks["sumdiff2"].pk
     assert wg1.tasks["sumdiff3"].node.pk != wg.tasks["sumdiff3"].pk

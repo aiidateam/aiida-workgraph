@@ -274,7 +274,11 @@ class WorkGraphEngine(Process, metaclass=Protect):
         super().on_create()
         self.node.label = self._raw_inputs["workgraph_data"]["name"]
         saver = WorkGraphSaver(
-            self.node, self._raw_inputs["workgraph_data"], restart_process=None
+            self.node,
+            self._raw_inputs["workgraph_data"],
+            restart_process=self._raw_inputs["workgraph_data"].get(
+                "restart_process", None
+            ),
         )
         saver.save()
 

@@ -1,10 +1,9 @@
 from typing import Optional, Dict, Tuple, List
 
 # import datetime
-from aiida.orm import ProcessNode
+from aiida.orm import ProcessNode, load_node
 from aiida.orm.utils.serialize import serialize
 from aiida_workgraph.orm.utils import deserialize_safe
-from aiida_workgraph.config import WORKGRAPH_EXTRA_KEY
 
 
 class WorkGraphSaver:
@@ -22,7 +21,11 @@ class WorkGraphSaver:
             wgdata (dict): data of workgraph to be launched.
         """
         self.process = process
-        self.restart_process = restart_process
+        self.restart_process = (
+            load_node(restart_process)
+            if isinstance(restart_process, int)
+            else restart_process
+        )
         wgdata.setdefault("uuid", "")
         wgdata.setdefault("tasks", {})
         wgdata.setdefault("links", [])
@@ -322,10 +325,7 @@ class WorkGraphSaver:
         Returns:
             bool: _description_
         """
-        if (
-            self.process
-            and self.process.base.extras.get(WORKGRAPH_EXTRA_KEY, None) is not None
-        ):
+        if self.process and self.process.workgraph_data is not None:
             return True
         return False
 
