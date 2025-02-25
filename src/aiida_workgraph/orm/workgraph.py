@@ -15,6 +15,7 @@ class WorkGraphNode(WorkChainNode):
     TASK_PROCESSES_KEY = "task_processes"
     TASK_ACTIONS_KEY = "task_actions"
     WORKGRAPH_DATA_KEY = "workgraph_data"
+    WORKGRAPH_DATA_SHORT_KEY = "workgraph_data_short"
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -28,6 +29,7 @@ class WorkGraphNode(WorkChainNode):
         # pylint: disable=no-self-argument
         return super()._updatable_attributes + (
             cls.WORKGRAPH_DATA_KEY,
+            cls.WORKGRAPH_DATA_SHORT_KEY,
             cls.TASK_STATES_KEY,
             cls.TASK_PROCESSES_KEY,
             cls.TASK_ACTIONS_KEY,
@@ -154,3 +156,22 @@ class WorkGraphNode(WorkChainNode):
         :param data: string representation of the workgraph data
         """
         return self.base.attributes.set(self.WORKGRAPH_DATA_KEY, workgraph_data)
+
+    @property
+    def workgraph_data_short(self) -> Optional[str]:
+        """
+        Return the workgraph data
+
+        :returns: string representation of the workgraph data
+        """
+        return self.base.attributes.get(self.WORKGRAPH_DATA_SHORT_KEY, None)
+
+    def set_workgraph_data_short(self, workgraph_data_short: dict) -> None:
+        """
+        Set the workgraph data
+
+        :param data: string representation of the workgraph data
+        """
+        return self.base.attributes.set(
+            self.WORKGRAPH_DATA_SHORT_KEY, workgraph_data_short
+        )

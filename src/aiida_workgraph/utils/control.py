@@ -17,7 +17,7 @@ def create_task_action(
     controller._communicator.rpc_send(pk, message)
 
 
-def get_task_state_info(node, name: str, key: str) -> str:
+def get_task_runtime_info(node, name: str, key: str) -> str:
     """Get task state info from attributes."""
     from aiida_workgraph.orm.utils import deserialize_safe
 
@@ -44,12 +44,12 @@ def pause_tasks(pk: int, tasks: list[str], timeout: int = 5, wait: bool = False)
         "PAUSED",
     ]:
         for name in tasks:
-            if get_task_state_info(node, name, "state") == "PLANNED":
+            if get_task_runtime_info(node, name, "state") == "PLANNED":
                 create_task_action(pk, tasks, action="pause")
-            elif get_task_state_info(node, name, "state") == "RUNNING":
+            elif get_task_runtime_info(node, name, "state") == "RUNNING":
                 try:
                     control.pause_processes(
-                        [get_task_state_info(node, name, "process")],
+                        [get_task_runtime_info(node, name, "process")],
                         all_entries=None,
                         timeout=5,
                         wait=False,
@@ -72,19 +72,19 @@ def play_tasks(pk: int, tasks: list, timeout: int = 5, wait: bool = False):
         "PAUSED",
     ]:
         for name in tasks:
-            if get_task_state_info(node, name, "state") == "PLANNED":
+            if get_task_runtime_info(node, name, "state") == "PLANNED":
                 create_task_action(pk, tasks, action="play")
-            elif get_task_state_info(node, name, "state") in ["CREATED", "PAUSED"]:
+            elif get_task_runtime_info(node, name, "state") in ["CREATED", "PAUSED"]:
                 try:
                     control.play_processes(
-                        [get_task_state_info(node, name, "process")],
+                        [get_task_runtime_info(node, name, "process")],
                         all_entries=None,
                         timeout=5,
                         wait=False,
                     )
                 except Exception as e:
                     print(f"Play task {name} failed: {e}")
-            elif get_task_state_info(node, name, "process").is_finished:
+            elif get_task_runtime_info(node, name, "process").is_finished:
                 raise ValueError(f"Task {name} is already finished.")
     return True, ""
 
@@ -103,8 +103,8 @@ def kill_tasks(pk: int, tasks: list, timeout: int = 5, wait: bool = False):
     ]:
         print("tasks", tasks)
         for name in tasks:
-            state = get_task_state_info(node, name, "state")
-            process = get_task_state_info(node, name, "process")
+            state = get_task_runtime_info(node, name, "state")
+            process = get_task_runtime_info(node, name, "process")
             print("state", state)
             print("process", process)
             if state == "PLANNED":
@@ -115,13 +115,13 @@ def kill_tasks(pk: int, tasks: list, timeout: int = 5, wait: bool = False):
                 "WAITING",
                 "PAUSED",
             ]:
-                if get_task_state_info(node, name, "process") is None:
+                if get_task_runtime_info(node, name, "process") is None:
                     print(f"Task {name} is not a AiiDA process.")
                     create_task_action(pk, tasks, action="kill")
                 else:
                     try:
                         control.kill_processes(
-                            [get_task_state_info(node, name, "process")],
+                            [get_task_runtime_info(node, name, "process")],
                             all_entries=None,
                             timeout=5,
                             wait=False,

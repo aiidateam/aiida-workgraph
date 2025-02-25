@@ -35,7 +35,7 @@ __all__ = "WorkGraph"
 
 
 class WorkGraphSpec(WorkChainSpec):
-    workgraph_data_key = "workgraph_data"
+    WORKGRAPH_DATA_KEY = "workgraph_data"
 
 
 @auto_persist("_awaitables")
@@ -84,9 +84,11 @@ class WorkGraphEngine(Process, metaclass=Protect):
         super().define(spec)
         spec.input("input_file", valid_type=orm.SinglefileData, required=False)
         spec.input_namespace(
-            "workgraph_data", dynamic=True, required=False, help="WorkGraph inputs"
+            spec.WORKGRAPH_DATA_KEY,
+            dynamic=True,
+            required=False,
+            help="WorkGraph inputs",
         )
-        spec.input_namespace("input_tasks", dynamic=True, required=False)
         spec.exit_code(2, "ERROR_SUBPROCESS", message="A subprocess has failed.")
 
         spec.outputs.dynamic = True
@@ -432,5 +434,8 @@ class WorkGraphEngine(Process, metaclass=Protect):
         self.out("execution_count", orm.Int(self.ctx._execution_count).store())
         self.report("Finalize workgraph.")
         for _, task in self.ctx._tasks.items():
-            if self.task_manager.get_task_state_info(task["name"], "state") == "FAILED":
+            if (
+                self.task_manager.get_task_runtime_info(task["name"], "state")
+                == "FAILED"
+            ):
                 return self.exit_codes.TASK_FAILED

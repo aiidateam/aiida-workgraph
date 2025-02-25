@@ -204,7 +204,7 @@ class WorkGraphSaver:
         self.save_task_states()
         self.serialize_workgraph_data()
         self.process.set_workgraph_data(self.wgdata)
-        # self.process.base.extras.set(WORKGRAPH_SHORT_EXTRA_KEY, self.short_wgdata)
+        self.process.set_workgraph_data_short(self.short_wgdata)
 
     def serialize_workgraph_data(self) -> None:
         """Save a new workgraph in the database.
