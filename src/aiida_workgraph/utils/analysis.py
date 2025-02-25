@@ -4,7 +4,7 @@ from typing import Optional, Dict, Tuple, List
 from aiida.orm import ProcessNode
 from aiida.orm.utils.serialize import serialize
 from aiida_workgraph.orm.utils import deserialize_safe
-from aiida_workgraph.config import WORKGRAPH_EXTRA_KEY, WORKGRAPH_SHORT_EXTRA_KEY
+from aiida_workgraph.config import WORKGRAPH_EXTRA_KEY
 
 
 class WorkGraphSaver:
@@ -198,9 +198,10 @@ class WorkGraphSaver:
         - workgraph
         - all tasks
         """
+        self.save_task_states()
         self.serialize_workgraph_data()
-        self.process.base.extras.set(WORKGRAPH_SHORT_EXTRA_KEY, self.short_wgdata)
-        self.process.base.extras.set(WORKGRAPH_EXTRA_KEY, self.wgdata)
+        self.process.set_workgraph_data(self.wgdata)
+        # self.process.base.extras.set(WORKGRAPH_SHORT_EXTRA_KEY, self.short_wgdata)
 
     def serialize_workgraph_data(self) -> None:
         """Save a new workgraph in the database.
@@ -235,12 +236,12 @@ class WorkGraphSaver:
         task_processes = {}
         task_actions = {}
         for name, task in self.wgdata["tasks"].items():
-            task_states[f"_task_state_{name}"] = task["state"]
-            task_processes[f"_task_process_{name}"] = task["process"]
-            task_actions[f"_task_action_{name}"] = task["action"]
-        self.process.base.extras.set_many(task_states)
-        self.process.base.extras.set_many(task_processes)
-        self.process.base.extras.set_many(task_actions)
+            task_states[name] = task["state"]
+            task_processes[name] = task["process"]
+            task_actions[name] = task["action"]
+        self.process.set_task_states(task_states)
+        self.process.set_task_processes(task_processes)
+        self.process.set_task_actions(task_actions)
 
         return task_states
 
@@ -280,7 +281,7 @@ class WorkGraphSaver:
     ) -> Optional[Dict]:
 
         process = self.process if process is None else process
-        wgdata = process.base.extras.get(WORKGRAPH_EXTRA_KEY, None)
+        wgdata = process.workgraph_data
         if wgdata is None:
             print("No workgraph data found in the process node.")
             return

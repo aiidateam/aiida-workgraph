@@ -276,9 +276,7 @@ class WorkGraphEngine(Process, metaclass=Protect):
         saver = WorkGraphSaver(
             self.node, self._raw_inputs["workgraph_data"], restart_process=None
         )
-        saver.analyze()
-        saver.serialize_workgraph_data()
-        self.node.set_workgraph_data(saver.wgdata)
+        saver.save()
 
     def setup(self) -> None:
         """Setup the variables in the context."""
@@ -316,7 +314,7 @@ class WorkGraphEngine(Process, metaclass=Protect):
         self.ctx._error_handlers = wgdata["error_handlers"]
 
     def read_wgdata_from_base(self) -> t.Dict[str, t.Any]:
-        """Read workgraph data from base.extras."""
+        """Read workgraph data from attributes."""
         from aiida_workgraph.orm.pickled_function import PickledLocalFunction
 
         wgdata = self.node.workgraph_data

@@ -141,8 +141,8 @@ class TaskManager:
         return value
 
     def set_task_state_info(self, name: str, key: str, value: any) -> None:
-        """Set task state info to ctx and base.extras.
-        We task state to the base.extras, so that we can access outside the engine"""
+        """Set task state info to ctx and attributes.
+        We task state to the attributes, so that we can access outside the engine"""
 
         if key == "process":
             value = serialize(value)

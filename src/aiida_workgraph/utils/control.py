@@ -18,13 +18,15 @@ def create_task_action(
 
 
 def get_task_state_info(node, name: str, key: str) -> str:
-    """Get task state info from base.extras."""
+    """Get task state info from attributes."""
     from aiida_workgraph.orm.utils import deserialize_safe
 
     if key == "process":
-        value = deserialize_safe(node.base.extras.get(f"_task_{key}_{name}", ""))
-    else:
-        value = node.base.extras.get(f"_task_{key}_{name}", "")
+        value = deserialize_safe(node.task_processes.get(name, ""))
+    elif key == "state":
+        value = node.task_states.get(name, "")
+    elif key == "action":
+        value = node.task_actions.get(name, "")
     return value
 
 

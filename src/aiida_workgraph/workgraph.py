@@ -161,8 +161,19 @@ class WorkGraph(node_graph.NodeGraph):
             process_inited.close()
             print(f"WorkGraph process created, PK: {self.process.pk}")
         else:
-            self.save_to_base(inputs["wg"])
+            self.save_to_base(inputs["workgraph_data"])
         self.update()
+
+    def save_to_base(self, wgdata: Dict[str, Any]) -> None:
+        """Save new wgdata to attribute.
+        It will first check the difference, and reset tasks if needed.
+        """
+        from aiida_workgraph.utils.analysis import WorkGraphSaver
+
+        saver = WorkGraphSaver(
+            self.process, wgdata, restart_process=self.restart_process
+        )
+        saver.save()
 
     def to_dict(self, store_nodes=False) -> Dict[str, Any]:
         from aiida_workgraph.utils import store_nodes_recursely

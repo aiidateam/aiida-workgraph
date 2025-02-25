@@ -70,7 +70,7 @@ def test_save_load(wg_calcfunction, decorated_add):
 
 def test_load(create_process_node):
     node = create_process_node()
-    with pytest.raises(ValueError, match=f"Process {node.pk} is not a WorkGraph."):
+    with pytest.raises(ValueError, match=f"Process {node.pk} is not a WorkGraph"):
         WorkGraph.load(node.pk)
 
 
@@ -100,7 +100,7 @@ def test_organize_nested_inputs():
         "x": "1",
     }
     collected_data = collect_values_inside_namespace(
-        inputs["wg"]["tasks"]["task1"]["inputs"]["add"]
+        inputs["workgraph_data"]["tasks"]["task1"]["inputs"]["add"]
     )
     assert collected_data == data
 

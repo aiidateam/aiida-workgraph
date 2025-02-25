@@ -424,7 +424,7 @@ def create_and_pause_process(
     from aiida.engine.utils import instantiate_process
 
     process_inited = instantiate_process(runner, process_class, **inputs)
-    process_inited.pause(msg=state_msg)
+    process_inited.pause(state_msg)
     process_inited.runner.persister.save_checkpoint(process_inited)
     process_inited.close()
     runner.controller.continue_process(process_inited.pid, nowait=True, no_reply=True)
