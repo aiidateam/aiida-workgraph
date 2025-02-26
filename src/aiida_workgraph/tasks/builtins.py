@@ -341,8 +341,6 @@ class WorkGraphTask(Task):
     @property
     def workgraph(self):
         from aiida_workgraph import WorkGraph
-        print("I AM NEVER CALLED")
-        import ipdb; ipdb.set_trace()
         if not self._workgraph:
             graph_data = self.get_executor()["graph_data"]
             self._workgraph = WorkGraph.from_dict(graph_data)

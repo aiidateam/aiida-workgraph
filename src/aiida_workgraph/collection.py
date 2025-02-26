@@ -40,9 +40,7 @@ class TaskCollection(NodeCollection):
             task = super()._new("workgraph.if", name, uuid, **kwargs)
             return task
         if isinstance(identifier, WorkGraph):
-            import ipdb; ipdb.set_trace()
             identifier = build_task_from_workgraph(identifier)
-
         return super()._new(identifier, name, uuid, **kwargs)
 
 

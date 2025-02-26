@@ -303,9 +303,6 @@ def build_task_from_workgraph(wg: 'WorkGraph') -> WorkGraphTask:
     tdata["metadata"]["group_outputs"] = group_outputs
     tdata["executor"] = executor
 
-    # With this, `wg.tasks.<wg-task>.tasks` gives the dictionray
-    tdata["tasks"] = wgdata['tasks']
-
     task = create_task(tdata)
     return task
 
