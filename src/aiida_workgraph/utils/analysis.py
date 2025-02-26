@@ -208,6 +208,7 @@ class WorkGraphSaver:
         self.process.set_task_executors(self.task_executors)
         self.process.set_workgraph_data(self.wgdata)
         self.process.set_workgraph_data_short(self.short_wgdata)
+        self.process.set_workgraph_error_handlers(self.workgraph_error_handlers)
 
     def separate_workgraph_data(self) -> None:
         """Save a new workgraph in the database.
@@ -223,29 +224,23 @@ class WorkGraphSaver:
         self.task_processes = {}
         self.task_actions = {}
         self.task_executors = {}
+        self.task_error_handlers = {}
+        self.workgraph_error_handlers = {}
         self.short_wgdata = workgraph_to_short_json(self.wgdata)
         for name, task in self.wgdata["tasks"].items():
             self.task_states[name] = task["state"]
             self.task_processes[name] = task["process"]
             self.task_actions[name] = task["action"]
-            executor = task.pop("executor", None)
-            self.task_executors[name] = self.pickle_executor(executor)
+            self.task_executors[name] = task.pop("executor", None)
+            self.task_error_handlers[name] = task.pop("error_handler", None)
             for _, input in task["inputs"].items():
                 if input.get("property"):
                     prop = input["property"]
                     if inspect.isfunction(prop["value"]):
                         prop["value"] = PickledLocalFunction(prop["value"]).store()
             self.wgdata["tasks"][name] = serialize(task)
-        # nodes is a copy of tasks, so we need to pop it out
-        self.wgdata["error_handlers"] = serialize(self.wgdata["error_handlers"])
+        self.workgraph_error_handlers = self.wgdata.pop("error_handlers")
         self.wgdata["context"] = serialize(self.wgdata["context"])
-
-    def pickle_executor(self, executor):
-        from aiida_workgraph.utils import build_function_data
-
-        if executor and not executor.get("use_module_path", False):
-            return build_function_data(executor["callable"])
-        return executor
 
     def reset_tasks(self, tasks: List[str]) -> None:
         """Reset tasks

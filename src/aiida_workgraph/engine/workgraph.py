@@ -331,7 +331,7 @@ class WorkGraphEngine(Process, metaclass=Protect):
                     prop = input["property"]
                     if isinstance(prop["value"], PickledLocalFunction):
                         prop["value"] = prop["value"].value
-        wgdata["error_handlers"] = deserialize_safe(wgdata["error_handlers"])
+        wgdata["error_handlers"] = self.node.workgraph_error_handlers
         wgdata["context"] = deserialize_safe(wgdata["context"])
         return wgdata
 

@@ -15,7 +15,8 @@ class ErrorHandlerManager:
         if not node or not node.exit_status:
             return
         # error_handlers from the task
-        for _, data in self.ctx._tasks[task_name]["error_handlers"].items():
+        error_handlers = self.process.node.task_error_handlers.get(task_name, {})
+        for _, data in error_handlers.items():
             if node.exit_status in data.get("exit_codes", []):
                 handler = data["handler"]
                 self.run_error_handler(handler, data, task_name)

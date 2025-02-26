@@ -284,11 +284,13 @@ def get_workgraph_data(process: Union[int, orm.Node]) -> Optional[Dict[str, Any]
     if isinstance(process, int):
         process = load_node(process)
     wgdata = process.workgraph_data
+    task_executors = process.task_executors
     if wgdata is None:
         return
     for name, task in wgdata["tasks"].items():
         wgdata["tasks"][name] = deserialize_safe(task)
-    wgdata["error_handlers"] = deserialize_safe(wgdata["error_handlers"])
+        wgdata["tasks"][name]["executor"] = task_executors.get(name)
+    wgdata["error_handlers"] = process.workgraph_error_handlers
     return wgdata
 
 
@@ -459,11 +461,11 @@ def serialize_workgraph_inputs(wgdata):
         # find the pickled executor, create a pickleddata for it
         # then use the pk of the pickleddata as the value of the executor
         if task["executor"] and not task["executor"].get("use_module_path", False):
-            pickle_callable(task["executor"])
+            task["executor"] = build_function_data(task["executor"]["callable"])
         # error_handlers of the task
         for _, data in task["error_handlers"].items():
             if not data["handler"]["use_module_path"]:
-                pickle_callable(data["handler"])
+                data["handler"] = build_function_data(data["handler"]["callable"])
         if task["metadata"]["node_type"].upper() == "PYTHONJOB":
             PythonJob.serialize_pythonjob_data(task["inputs"])
         for _, input in task["inputs"].items():
@@ -474,7 +476,7 @@ def serialize_workgraph_inputs(wgdata):
     # error_handlers of the workgraph
     for _, data in wgdata["error_handlers"].items():
         if not data["handler"]["use_module_path"]:
-            pickle_callable(data["handler"])
+            data["handler"] = build_function_data(data["handler"]["callable"])
 
 
 def create_and_pause_process(
