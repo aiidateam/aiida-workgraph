@@ -201,12 +201,15 @@ class WorkGraphSaver:
         - workgraph
         - all tasks
         """
-        self.save_task_states()
-        self.serialize_workgraph_data()
+        self.separate_workgraph_data()
+        self.process.set_task_states(self.task_states)
+        self.process.set_task_processes(self.task_processes)
+        self.process.set_task_actions(self.task_actions)
+        self.process.set_task_executors(self.task_executors)
         self.process.set_workgraph_data(self.wgdata)
         self.process.set_workgraph_data_short(self.short_wgdata)
 
-    def serialize_workgraph_data(self) -> None:
+    def separate_workgraph_data(self) -> None:
         """Save a new workgraph in the database.
 
         - workgraph
@@ -216,12 +219,17 @@ class WorkGraphSaver:
         import inspect
         from aiida_workgraph.orm.pickled_function import PickledLocalFunction
 
-        # pprint(self.wgdata)
-        # self.wgdata["created"] = datetime.datetime.utcnow()
-        # self.wgdata["lastUpdate"] = datetime.datetime.utcnow()
+        self.task_states = {}
+        self.task_processes = {}
+        self.task_actions = {}
+        self.task_executors = {}
         self.short_wgdata = workgraph_to_short_json(self.wgdata)
-        # self.save_task_states()
         for name, task in self.wgdata["tasks"].items():
+            self.task_states[name] = task["state"]
+            self.task_processes[name] = task["process"]
+            self.task_actions[name] = task["action"]
+            executor = task.pop("executor", None)
+            self.task_executors[name] = self.pickle_executor(executor)
             for _, input in task["inputs"].items():
                 if input.get("property"):
                     prop = input["property"]
@@ -232,21 +240,12 @@ class WorkGraphSaver:
         self.wgdata["error_handlers"] = serialize(self.wgdata["error_handlers"])
         self.wgdata["context"] = serialize(self.wgdata["context"])
 
-    def save_task_states(self) -> Dict:
-        """Get task states."""
+    def pickle_executor(self, executor):
+        from aiida_workgraph.utils import build_function_data
 
-        task_states = {}
-        task_processes = {}
-        task_actions = {}
-        for name, task in self.wgdata["tasks"].items():
-            task_states[name] = task["state"]
-            task_processes[name] = task["process"]
-            task_actions[name] = task["action"]
-        self.process.set_task_states(task_states)
-        self.process.set_task_processes(task_processes)
-        self.process.set_task_actions(task_actions)
-
-        return task_states
+        if executor and not executor.get("use_module_path", False):
+            return build_function_data(executor["callable"])
+        return executor
 
     def reset_tasks(self, tasks: List[str]) -> None:
         """Reset tasks

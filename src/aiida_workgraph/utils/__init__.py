@@ -79,12 +79,16 @@ def get_executor(data: Dict[str, Any]) -> Union[Process, Any]:
     """Import executor from path and return the executor and type."""
     import importlib
     from aiida.plugins import CalculationFactory, WorkflowFactory, DataFactory
-    from aiida_workgraph.orm.pickled_function import PickledFunction
+    import cloudpickle
+    import base64
 
     data = data or {}
-    use_module_path = data.get("use_module_path", True)
+    use_pickled_function = data.get("mode", "") == "use_pickled_function"
     type = data.get("type", "function")
-    if use_module_path:
+    if use_pickled_function:
+        pickled_function = base64.b64decode(data["pickled_function"].encode("utf-8"))
+        executor = cloudpickle.loads(pickled_function)
+    else:
         if type == "WorkflowFactory":
             executor = WorkflowFactory(data["callable_name"])
         elif type == "CalculationFactory":
@@ -96,10 +100,6 @@ def get_executor(data: Dict[str, Any]) -> Union[Process, Any]:
         else:
             module = importlib.import_module("{}".format(data.get("module_path", "")))
             executor = getattr(module, data["callable_name"])
-    else:
-        if not isinstance(data["callable"], PickledFunction):
-            raise ValueError("The callable should be PickledFunction.")
-        executor = data["callable"].value
 
     return executor, type
 
@@ -380,6 +380,68 @@ def pickle_callable(data: dict):
 
     if not isinstance(data["callable"], PickledFunction):
         data["callable"] = PickledFunction(data["callable"]).store()
+
+
+def inspect_function(
+    func: Callable, inspect_source: bool = False, register_pickle_by_value: bool = False
+) -> Dict[str, Any]:
+    """Serialize a function for storage or transmission."""
+    # we need save the source code explicitly, because in the case of jupyter notebook,
+    # the source code is not saved in the pickle file
+    import cloudpickle
+    import importlib
+    import base64
+
+    if inspect_source:
+        try:
+            source_code = inspect.getsource(func)
+            # Split the source into lines for processing
+            source_code_lines = source_code.split("\n")
+            source_code = "\n".join(source_code_lines)
+        except OSError:
+            source_code = "Failed to retrieve source code."
+    else:
+        source_code = ""
+
+    if register_pickle_by_value:
+        module = importlib.import_module(func.__module__)
+        cloudpickle.register_pickle_by_value(module)
+        pickled_function = cloudpickle.dumps(func)
+        cloudpickle.unregister_pickle_by_value(module)
+    else:
+        pickled_function = cloudpickle.dumps(func)
+
+    pickled_function = base64.b64encode(pickled_function).decode("utf-8")
+
+    return {
+        "source_code": source_code,
+        "mode": "use_pickled_function",
+        "pickled_function": pickled_function,
+    }
+
+
+def build_function_data(
+    func: Callable, register_pickle_by_value: bool = False
+) -> Dict[str, Any]:
+    """Inspect the function and return a dictionary with the function data."""
+    import types
+
+    if isinstance(func, (types.FunctionType, types.BuiltinFunctionType, type)):
+        # Check if callable is nested (contains dots in __qualname__ after the first segment)
+        function_data = {"name": func.__name__}
+        if func.__module__ == "__main__" or "." in func.__qualname__.split(".", 1)[-1]:
+            # Local or nested callable, so pickle the callable
+            function_data.update(inspect_function(func, inspect_source=True))
+        else:
+            # Global callable (function/class), store its module and name for reference
+            function_data.update(
+                inspect_function(
+                    func, register_pickle_by_value=register_pickle_by_value
+                )
+            )
+    else:
+        raise TypeError("Provided object is not a callable function or class.")
+    return function_data
 
 
 def serialize_workgraph_inputs(wgdata):

@@ -250,7 +250,7 @@ class TaskManager:
             self.process.report(
                 f"Run task: {name}, type: {task['metadata']['node_type']}"
             )
-            executor, _ = get_executor(task["executor"])
+            executor, _ = get_executor(self.process.node.task_executors[name])
             args, kwargs, var_args, var_kwargs, args_dict = self.get_inputs(name)
             for i, key in enumerate(self.ctx._tasks[name]["args"]):
                 kwargs[key] = args[i]

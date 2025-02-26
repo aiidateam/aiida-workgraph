@@ -14,6 +14,7 @@ class WorkGraphNode(WorkChainNode):
     TASK_STATES_KEY = "task_states"
     TASK_PROCESSES_KEY = "task_processes"
     TASK_ACTIONS_KEY = "task_actions"
+    TASK_EXECUTORS_KEY = "task_executors"
     WORKGRAPH_DATA_KEY = "workgraph_data"
     WORKGRAPH_DATA_SHORT_KEY = "workgraph_data_short"
 
@@ -33,6 +34,7 @@ class WorkGraphNode(WorkChainNode):
             cls.TASK_STATES_KEY,
             cls.TASK_PROCESSES_KEY,
             cls.TASK_ACTIONS_KEY,
+            cls.TASK_EXECUTORS_KEY,
         )
 
     @property
@@ -139,6 +141,23 @@ class WorkGraphNode(WorkChainNode):
         task_actions = self.task_actions
         task_actions[task_name] = task_action
         return self.set_task_actions(task_actions)
+
+    @property
+    def task_executors(self) -> Optional[str]:
+        """
+        Return the task state info
+
+        :returns: string representation of the task state info
+        """
+        return self.base.attributes.get(self.TASK_EXECUTORS_KEY, {})
+
+    def set_task_executors(self, task_executors: str) -> None:
+        """
+        Set the task state info
+
+        :param state: string representation of the task state info
+        """
+        return self.base.attributes.set(self.TASK_EXECUTORS_KEY, task_executors)
 
     @property
     def workgraph_data(self) -> Optional[str]:
