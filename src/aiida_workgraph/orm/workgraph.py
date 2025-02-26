@@ -137,7 +137,7 @@ class WorkGraphNode(WorkChainNode):
         """Set the task action info"""
         task_actions = self.task_actions
         task_actions[task_name] = task_action
-        return self.set_task_actions(task_actions)
+        self.task_actions = task_actions
 
     @property
     def task_executors(self) -> Optional[str]:

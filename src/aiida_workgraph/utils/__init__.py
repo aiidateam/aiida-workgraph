@@ -23,41 +23,6 @@ def inspect_aiida_component_type(executor: Callable) -> str:
     return task_type
 
 
-def build_callable(obj: Callable) -> Dict[str, Any]:
-    """
-    Build the executor data from the callable. This will either serialize the callable
-    using cloudpickle if it's a local or lambda function, or store its module and name
-    if it's a globally defined callable (function or class).
-
-    Args:
-        obj (Callable): The callable to be serialized or referenced.
-
-    Returns:
-        Dict[str, Any]: A dictionary containing the serialized callable or a reference
-                        to its module and name.
-    """
-    import types
-
-    # Check if the callable is a function or class
-    if isinstance(obj, (types.FunctionType, type)):
-        # Check if callable is nested (contains dots in __qualname__ after the first segment)
-        if obj.__module__ == "__main__" or "." in obj.__qualname__.split(".", 1)[-1]:
-            # Local or nested callable, so pickle the callable
-            executor = {"callable": obj, "use_module_path": False}
-        else:
-            # Global callable (function/class), store its module and name for reference
-            executor = {
-                "module_path": obj.__module__,
-                "callable_name": obj.__name__,
-                "use_module_path": True,
-            }
-    elif isinstance(obj, dict):
-        executor = obj
-    else:
-        raise TypeError("Provided object is not a callable function or class.")
-    return executor
-
-
 def store_nodes_recursely(data: Any) -> None:
     """Recurse through a data structure and store any unstored nodes that are found along the way
     :param data: a data structure potentially containing unstored nodes
@@ -73,35 +38,6 @@ def store_nodes_recursely(data: Any) -> None:
     elif isinstance(data, collections.abc.Sequence) and not isinstance(data, str):
         for value in data:
             store_nodes_recursely(value)
-
-
-def get_executor(data: Dict[str, Any]) -> Union[Process, Any]:
-    """Import executor from path and return the executor and type."""
-    import importlib
-    from aiida.plugins import CalculationFactory, WorkflowFactory, DataFactory
-    import cloudpickle
-    import base64
-
-    data = data or {}
-    use_pickled_function = data.get("mode", "") == "use_pickled_function"
-    type = data.get("type", "function")
-    if use_pickled_function:
-        pickled_function = base64.b64decode(data["pickled_function"].encode("utf-8"))
-        executor = cloudpickle.loads(pickled_function)
-    else:
-        if type == "WorkflowFactory":
-            executor = WorkflowFactory(data["callable_name"])
-        elif type == "CalculationFactory":
-            executor = CalculationFactory(data["callable_name"])
-        elif type == "DataFactory":
-            executor = DataFactory(data["callable_name"])
-        elif not data.get("name", None) and not data.get("module_path", None):
-            executor = None
-        else:
-            module = importlib.import_module("{}".format(data.get("module_path", "")))
-            executor = getattr(module, data["callable_name"])
-
-    return executor, type
 
 
 def create_data_node(executor: orm.Data, args: list, kwargs: dict) -> orm.Node:
@@ -384,68 +320,6 @@ def pickle_callable(data: dict):
         data["callable"] = PickledFunction(data["callable"]).store()
 
 
-def inspect_function(
-    func: Callable, inspect_source: bool = False, register_pickle_by_value: bool = False
-) -> Dict[str, Any]:
-    """Serialize a function for storage or transmission."""
-    # we need save the source code explicitly, because in the case of jupyter notebook,
-    # the source code is not saved in the pickle file
-    import cloudpickle
-    import importlib
-    import base64
-
-    if inspect_source:
-        try:
-            source_code = inspect.getsource(func)
-            # Split the source into lines for processing
-            source_code_lines = source_code.split("\n")
-            source_code = "\n".join(source_code_lines)
-        except OSError:
-            source_code = "Failed to retrieve source code."
-    else:
-        source_code = ""
-
-    if register_pickle_by_value:
-        module = importlib.import_module(func.__module__)
-        cloudpickle.register_pickle_by_value(module)
-        pickled_function = cloudpickle.dumps(func)
-        cloudpickle.unregister_pickle_by_value(module)
-    else:
-        pickled_function = cloudpickle.dumps(func)
-
-    pickled_function = base64.b64encode(pickled_function).decode("utf-8")
-
-    return {
-        "source_code": source_code,
-        "mode": "use_pickled_function",
-        "pickled_function": pickled_function,
-    }
-
-
-def build_function_data(
-    func: Callable, register_pickle_by_value: bool = False
-) -> Dict[str, Any]:
-    """Inspect the function and return a dictionary with the function data."""
-    import types
-
-    if isinstance(func, (types.FunctionType, types.BuiltinFunctionType, type)):
-        # Check if callable is nested (contains dots in __qualname__ after the first segment)
-        function_data = {"name": func.__name__}
-        if func.__module__ == "__main__" or "." in func.__qualname__.split(".", 1)[-1]:
-            # Local or nested callable, so pickle the callable
-            function_data.update(inspect_function(func, inspect_source=True))
-        else:
-            # Global callable (function/class), store its module and name for reference
-            function_data.update(
-                inspect_function(
-                    func, register_pickle_by_value=register_pickle_by_value
-                )
-            )
-    else:
-        raise TypeError("Provided object is not a callable function or class.")
-    return function_data
-
-
 def serialize_workgraph_inputs(wgdata):
     """Serialize the inputs of the workgraph.
     Because we use yaml (aiida's serialize) to serialize the data and
@@ -458,14 +332,6 @@ def serialize_workgraph_inputs(wgdata):
     import inspect
 
     for _, task in wgdata["tasks"].items():
-        # find the pickled executor, create a pickleddata for it
-        # then use the pk of the pickleddata as the value of the executor
-        if task["executor"] and not task["executor"].get("use_module_path", False):
-            task["executor"] = build_function_data(task["executor"]["callable"])
-        # error_handlers of the task
-        for _, data in task["error_handlers"].items():
-            if not data["handler"]["use_module_path"]:
-                data["handler"] = build_function_data(data["handler"]["callable"])
         if task["metadata"]["node_type"].upper() == "PYTHONJOB":
             PythonJob.serialize_pythonjob_data(task["inputs"])
         for _, input in task["inputs"].items():
@@ -473,10 +339,6 @@ def serialize_workgraph_inputs(wgdata):
                 prop = input["property"]
                 if inspect.isfunction(prop["value"]):
                     prop["value"] = PickledLocalFunction(prop["value"]).store()
-    # error_handlers of the workgraph
-    for _, data in wgdata["error_handlers"].items():
-        if not data["handler"]["use_module_path"]:
-            data["handler"] = build_function_data(data["handler"]["callable"])
 
 
 def create_and_pause_process(

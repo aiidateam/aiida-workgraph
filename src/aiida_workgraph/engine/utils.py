@@ -1,11 +1,12 @@
 from aiida import orm
 from aiida.common.extendeddicts import AttributeDict
+from node_graph.executor import NodeExecutor
 
 
-def prepare_for_workgraph_task(task: dict, kwargs: dict) -> tuple:
+def prepare_for_workgraph_task(task: dict, executor: dict, kwargs: dict) -> tuple:
     """Prepare the inputs for WorkGraph task"""
 
-    wgdata = task["executor"]["graph_data"]
+    wgdata = executor["graph_data"]
     wgdata["name"] = task["name"]
     wgdata["metadata"]["group_outputs"] = task["metadata"]["group_outputs"]
     # update the workgraph data by kwargs
@@ -38,10 +39,11 @@ def sort_socket_data(socket_data: dict) -> dict:
     return data
 
 
-def prepare_for_python_task(task: dict, kwargs: dict, var_kwargs: dict) -> dict:
+def prepare_for_python_task(
+    task: dict, executor: dict, kwargs: dict, var_kwargs: dict
+) -> dict:
     """Prepare the inputs for PythonJob"""
     from aiida_pythonjob import prepare_pythonjob_inputs
-    from aiida_workgraph.utils import get_executor
 
     function_inputs = kwargs.pop("function_inputs", {})
     for _, input in task["inputs"].items():
@@ -71,7 +73,7 @@ def prepare_for_python_task(task: dict, kwargs: dict, var_kwargs: dict) -> dict:
     metadata = kwargs.pop("metadata", {})
     metadata.update({"call_link_label": task["name"]})
     # get the function from executor
-    func, _ = get_executor(task["executor"])
+    func = NodeExecutor(**executor).executor
     function_outputs = []
     for output in task["outputs"].values():
         if output["metadata"].get("is_function_output", False):

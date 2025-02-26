@@ -1,13 +1,13 @@
 from __future__ import annotations
 
 from typing import Any, Callable, Dict, List, Optional, Union, Tuple
-from aiida_workgraph.utils import get_executor
 from aiida.engine import calcfunction, workfunction, CalcJob, WorkChain
 from aiida_workgraph.task import Task
-from aiida_workgraph.utils import build_callable, validate_task_inout
+from aiida_workgraph.utils import validate_task_inout
 import inspect
 from aiida_workgraph.config import builtin_inputs, builtin_outputs, task_types
 from aiida_workgraph.orm.mapping import type_mapping
+from node_graph.executor import NodeExecutor
 
 
 def create_task(tdata):
@@ -45,9 +45,9 @@ def build_task(
             module,
             executor_name,
         ) = executor.rsplit(".", 1)
-        executor, _ = get_executor(
-            {"module_path": module, "callable_name": executor_name}
-        )
+        executor = NodeExecutor(
+            module_path=module, callable_name=executor_name
+        ).executor
     if callable(executor):
         return build_task_from_callable(executor, inputs=inputs, outputs=outputs)
 
@@ -291,7 +291,6 @@ def build_task_from_workgraph(wg: any) -> Task:
         "module_path": "aiida_workgraph.engine.workgraph",
         "callable_name": "WorkGraphEngine",
         "graph_data": wgdata,
-        "type": tdata["metadata"]["task_type"],
     }
     tdata["metadata"]["group_outputs"] = group_outputs
     tdata["executor"] = executor
@@ -374,7 +373,7 @@ def generate_tdata(
         "inputs": task_inputs,
         "outputs": task_outputs,
     }
-    tdata["executor"] = build_callable(func)
+    tdata["executor"] = NodeExecutor.from_callable(func).to_dict()
     if additional_data:
         tdata.update(additional_data)
     return tdata

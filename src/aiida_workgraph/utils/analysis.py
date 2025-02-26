@@ -205,6 +205,7 @@ class WorkGraphSaver:
         self.process.task_processes = self.task_processes
         self.process.task_actions = self.task_actions
         self.process.task_executors = self.task_executors
+        self.process.task_error_handlers = self.task_error_handlers
         self.process.workgraph_data = self.wgdata
         self.process.workgraph_data_short = self.short_wgdata
         self.process.workgraph_error_handlers = self.workgraph_error_handlers
@@ -231,7 +232,7 @@ class WorkGraphSaver:
             self.task_processes[name] = task["process"]
             self.task_actions[name] = task["action"]
             self.task_executors[name] = task.pop("executor", None)
-            self.task_error_handlers[name] = task.pop("error_handler", None)
+            self.task_error_handlers[name] = task.pop("error_handlers", {})
             for _, input in task["inputs"].items():
                 if input.get("property"):
                     prop = input["property"]
@@ -281,7 +282,7 @@ class WorkGraphSaver:
             return
         for name, task in wgdata["tasks"].items():
             wgdata["tasks"][name] = deserialize_safe(task)
-        wgdata["error_handlers"] = deserialize_safe(wgdata["error_handlers"])
+        wgdata["error_handlers"] = process.workgraph_error_handlers
         return wgdata
 
     def check_diff(

@@ -34,9 +34,9 @@ class ErrorHandlerManager:
     def run_error_handler(self, handler: dict, metadata: dict, task_name: str) -> None:
         """Run the error handler for a task."""
         from inspect import signature
-        from aiida_workgraph.utils import get_executor
+        from node_graph.executor import NodeExecutor
 
-        handler, _ = get_executor(handler)
+        handler = NodeExecutor(**handler).executor
         handler_sig = signature(handler)
         metadata.setdefault("retry", 0)
         self.process.report(f"Run error handler: {handler.__name__}")
