@@ -67,7 +67,7 @@ def test_save_load(wg_calcfunction, decorated_add):
     # remove the extra, will raise an error
 
 
-def test_load(create_process_node):
+def test_load_failure(create_process_node):
     node = create_process_node()
     with pytest.raises(ValueError, match=f"Process {node.pk} is not a WorkGraph"):
         WorkGraph.load(node.pk)

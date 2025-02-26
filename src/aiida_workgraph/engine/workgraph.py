@@ -274,11 +274,11 @@ class WorkGraphEngine(Process, metaclass=Protect):
         from aiida_workgraph.utils.analysis import WorkGraphSaver
 
         super().on_create()
-        self.node.label = self._raw_inputs["workgraph_data"]["name"]
+        self.node.label = self._raw_inputs[WorkGraphSpec.WORKGRAPH_DATA_KEY]["name"]
         saver = WorkGraphSaver(
             self.node,
-            self._raw_inputs["workgraph_data"],
-            restart_process=self._raw_inputs["workgraph_data"].get(
+            self._raw_inputs[WorkGraphSpec.WORKGRAPH_DATA_KEY],
+            restart_process=self._raw_inputs[WorkGraphSpec.WORKGRAPH_DATA_KEY].get(
                 "restart_process", None
             ),
         )

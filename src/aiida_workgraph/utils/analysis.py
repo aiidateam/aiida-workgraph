@@ -65,7 +65,7 @@ class WorkGraphSaver:
                 self.wgdata["links"].remove(link)
 
     def analyze(self) -> None:
-        """Save workgraph.
+        """Analyze workgraph.
 
         - Update uuid for links. Build compressed tasks for workgraph.
         - Analysis connectivity
@@ -81,7 +81,6 @@ class WorkGraphSaver:
             new_tasks, modified_tasks, update_metadata = self.check_diff(
                 self.restart_process
             )
-            print("modified_tasks: {}".format(modified_tasks))
             self.reset_tasks(modified_tasks)
 
     def save(self) -> None:
@@ -202,13 +201,13 @@ class WorkGraphSaver:
         - all tasks
         """
         self.separate_workgraph_data()
-        self.process.set_task_states(self.task_states)
-        self.process.set_task_processes(self.task_processes)
-        self.process.set_task_actions(self.task_actions)
-        self.process.set_task_executors(self.task_executors)
-        self.process.set_workgraph_data(self.wgdata)
-        self.process.set_workgraph_data_short(self.short_wgdata)
-        self.process.set_workgraph_error_handlers(self.workgraph_error_handlers)
+        self.process.task_states = self.task_states
+        self.process.task_processes = self.task_processes
+        self.process.task_actions = self.task_actions
+        self.process.task_executors = self.task_executors
+        self.process.workgraph_data = self.wgdata
+        self.process.workgraph_data_short = self.short_wgdata
+        self.process.workgraph_error_handlers = self.workgraph_error_handlers
 
     def separate_workgraph_data(self) -> None:
         """Save a new workgraph in the database.
@@ -250,7 +249,6 @@ class WorkGraphSaver:
         """
         from aiida_workgraph.utils.control import create_task_action
 
-        # print("process state: ", self.process.process_state.value.upper())
         if (
             self.process.process_state is None
             or self.process.process_state.value.upper() == "CREATED"
@@ -270,7 +268,6 @@ class WorkGraphSaver:
     def set_tasks_action(self, action: str) -> None:
         """Set task action."""
         for name, task in self.wgdata["tasks"].items():
-            # print("Reset task: {}".format(task))
             task["action"] = action
 
     def get_wgdata_from_db(

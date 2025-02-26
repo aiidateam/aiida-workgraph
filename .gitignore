@@ -72,6 +72,9 @@ instance/
 # Sphinx documentation
 docs/_build/
 docs/source/**/*.txt
+/docs/gallery/**/*html
+/docs/source/**/autogen
+/docs/source/sg_execution_times.rst
 
 # PyBuilder
 target/
