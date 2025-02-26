@@ -509,7 +509,6 @@ class WorkGraph(node_graph.NodeGraph):
         self, identifier: Union[str, callable], name: str = None, **kwargs
     ) -> Task:
         """Add a task to the workgraph."""
-        # import ipdb; ipdb.set_trace()
         node = self.tasks._new(identifier, name, **kwargs)
         return node
 

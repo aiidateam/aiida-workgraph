@@ -331,20 +331,27 @@ class WorkGraphTask(Task):
 
     identifier = "workgraph.workgraph"
     name = "AiiDAWorkGraph"
-    node_type = ""
-    catalog = ""
+    node_type = "workgraph"
+    catalog = "WORKGRAPH"
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self._workgraph = None
 
-        # import ipdb; ipdb.set_trace()
-        self.tasks = TaskCollection(parent=self)
+    @property
+    def workgraph(self):
+        from aiida_workgraph import WorkGraph
+        print("I AM NEVER CALLED")
+        import ipdb; ipdb.set_trace()
+        if not self._workgraph:
+            graph_data = self.get_executor()["graph_data"]
+            self._workgraph = WorkGraph.from_dict(graph_data)
+        return self._workgraph
 
-    # def create_sockets(self) -> None: ...
+    @property
+    def tasks(self):
+        return self.workgraph.tasks
 
-    def get_executor(self):
-        executor = {
-            "module_path": "aiida_workgraph.workgraph",
-            "callable_name": "WorkGraph",
-        }
-        return executor
+    @property
+    def links(self):
+        return self.workgraph.links

@@ -1,8 +1,5 @@
 from __future__ import annotations
 
-# import ipdb
-# import traceback
-
 from typing import Any, Callable, Dict, List, Optional, Union, Tuple
 from aiida_workgraph.utils import get_executor
 from aiida.engine import calcfunction, workfunction, CalcJob, WorkChain
@@ -27,13 +24,6 @@ def create_task(tdata):
     tdata["properties"] = list_to_dict(tdata.get("properties", {}))
     tdata["inputs"] = list_to_dict(tdata.get("inputs", {}))
     tdata["outputs"] = list_to_dict(tdata.get("outputs", {}))
-
-    # if 'tasks' in tdata.keys():
-    #     traceback.print_stack()
-    #     ipdb.set_trace()
-
-
-    # traceback.print_list
 
     return create_node(tdata)
 
@@ -250,7 +240,6 @@ def build_task_from_workgraph(wg: 'WorkGraph') -> WorkGraphTask:
     builtin_input_names = [input["name"] for input in builtin_inputs]
     builtin_output_names = [output["name"] for output in builtin_outputs]
 
-    # import ipdb; ipdb.set_trace()
 
     for task in wg.tasks:
         # inputs
@@ -305,7 +294,6 @@ def build_task_from_workgraph(wg: 'WorkGraph') -> WorkGraphTask:
     tdata["identifier"] = wg.name
     # get wgdata from the workgraph
     wgdata = wg.prepare_inputs()["wg"]
-    # import ipdb; ipdb.set_trace()
     executor = {
         "module_path": "aiida_workgraph.engine.workgraph",
         "callable_name": "WorkGraphEngine",
@@ -314,12 +302,11 @@ def build_task_from_workgraph(wg: 'WorkGraph') -> WorkGraphTask:
     }
     tdata["metadata"]["group_outputs"] = group_outputs
     tdata["executor"] = executor
-    # TODO: Add check if existing, empty, etc.
+
+    # With this, `wg.tasks.<wg-task>.tasks` gives the dictionray
     tdata["tasks"] = wgdata['tasks']
 
     task = create_task(tdata)
-    # import ipdb; ipdb.set_trace()
-
     return task
 
 
