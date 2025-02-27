@@ -187,6 +187,7 @@ class TaskManager:
         return is_finished, result
 
     def continue_workgraph(self) -> None:
+        breakpoint()
         self.process.report("Continue workgraph.")
         task_to_run = []
         for name, task in self.ctx._tasks.items():
@@ -245,6 +246,7 @@ class TaskManager:
                 f"Run task: {name}, type: {task['metadata']['node_type']}"
             )
             executor, _ = get_executor(task["executor"])
+            breakpoint()
             args, kwargs, var_args, var_kwargs, args_dict = self.get_inputs(name)
             for i, key in enumerate(self.ctx._tasks[name]["args"]):
                 kwargs[key] = args[i]
@@ -287,6 +289,8 @@ class TaskManager:
                 self.execute_get_context_task(task, kwargs)
             elif task_type == "SET_CONTEXT":
                 self.execute_set_context_task(task, kwargs)
+            elif task_type == "CONTEXT":
+                self.execute_context_task(task, kwargs)
             elif task_type == "AWAITABLE":
                 self.execute_awaitable_task(
                     task, executor, args, kwargs, var_args, var_kwargs
@@ -514,6 +518,20 @@ class TaskManager:
         self.update_parent_task_state(name)
         self.continue_workgraph()
 
+    def execute_context_task(self, task, kwargs):
+        # get the results from the context
+        name = task["name"]
+        # TODO(important) Are kwargs always inputs???? 
+        # --> Yes inputs are in kwargs
+        #kwargs is for me test run {"x", <Int uuid: ...>)
+        breakpoint()
+        task["results"] = kwargs
+        #task["results"] = kwargs --> NodeLinkManager(...)
+        self.set_task_state_info(name, "state", "FINISHED")
+        self.update_parent_task_state(name)
+        self.continue_workgraph()
+
+
     def execute_awaitable_task(
         self, task, executor, args, kwargs, var_args, var_kwargs
     ):
@@ -591,6 +609,15 @@ class TaskManager:
         var_kwargs = None
         task = self.ctx._tasks[name]
         inputs = {}
+        
+        # TODO figure out where exactly the context_mapping is resolved
+        #contex_namespace = self.ctx_manager.context['context_mapping']
+
+        #for name, links in task["input_links"].items():
+        #    contex_namespace.
+        #if task["identifier"] == "workgraph.identifier":
+        #    for input_ in task["inputs"]:
+        #        tasks["results"] = 
         for name, prop in task.get("properties", {}).items():
             inputs[name] = self.ctx_manager.update_context_variable(prop["value"])
         for name, input in task["inputs"].items():
@@ -609,6 +636,7 @@ class TaskManager:
         for name, links in task["input_links"].items():
             if len(links) == 1:
                 link = links[0]
+                breakpoint()
                 if self.ctx._tasks[link["from_node"]]["results"] is None:
                     inputs[name] = None
                 else:
@@ -616,7 +644,12 @@ class TaskManager:
                     if link["from_socket"] == "_wait":
                         continue
                     elif link["from_socket"] == "_outputs":
+                        # REMEMBER we use the ctx from aiida to populate the results
+                        # We are here already during the running of the WorkGraph
+                        # so everything should be populated at this point
                         inputs[name] = self.ctx._tasks[link["from_node"]]["results"]
+                    elif self.ctx._tasks[link["from_node"]]["identifier"] == "workgraph.context":
+                        inputs[name] = self.ctx._tasks[link["from_node"]]["results"][name]
                     else:
                         inputs[name] = get_nested_dict(
                             self.ctx._tasks[link["from_node"]]["results"],

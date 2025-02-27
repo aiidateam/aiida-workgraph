@@ -8,6 +8,13 @@ class SocketAny(TaskSocket):
     _socket_property_identifier: str = "workgraph.any"
 
 
+class SocketVariable(TaskSocket):
+    """Variable socket."""
+
+    _identifier: str = "workgraph.variable"
+    _socket_property_identifier: str = "workgraph.any"
+
+
 class SocketFloat(TaskSocket):
     """Float socket."""
 

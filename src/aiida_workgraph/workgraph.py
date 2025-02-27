@@ -1,9 +1,14 @@
 from __future__ import annotations
 
 import aiida.orm
+from aiida_workgraph.tasks.builtins import ContextTask
+from aiida_workgraph.sockets.builtins import SocketAny
 import node_graph
 import aiida
+import aiida.orm
 from node_graph.link import NodeLink
+from node_graph.socket import NodeSocketNamespace, NodeSocket
+
 from aiida_workgraph.socket import TaskSocket
 from aiida_workgraph.tasks import task_pool
 from aiida_workgraph.task import Task
@@ -15,6 +20,8 @@ from aiida_workgraph.utils.graph import (
     link_creation_hook,
     link_deletion_hook,
 )
+from aiida_workgraph.orm.mapping import type_mapping
+from aiida_workgraph.property import ContextProperty
 from typing import Any, Dict, List, Optional, Union
 
 from node_graph_widget import NodeGraphWidget
@@ -35,6 +42,87 @@ class WorkGraph(node_graph.NodeGraph):
     """
 
     node_pool = task_pool
+    
+    class ContexTaskWrapper:
+        """Represent a namespace of a Context in the AiiDA WorkGraph."""
+
+        _identifier = "workgraph.namespace"
+        _socket_property_class = ContextProperty
+        _type_mapping: dict = type_mapping
+
+        def __init__(self, name: str, workgraph: 'WorkGraph', *args, **kwargs):
+            # It is a bit tricky because we need to set attributes like the context task
+            self._initialization = True
+            # I did now ownership to have more flexibility, not sure yet what pattern makes more sense
+            #self.nsn = NodeSocketNamespace(name, *args, entry_point="aiida_workgraph.socket", **kwargs) # TODO why do I need  entry_point again?
+            self._workgraph = workgraph
+            self._context_task = self._workgraph.add_task(ContextTask, name="_CONTEXT")
+            self._variable_instances = {}
+            self._initialization = False
+
+        #def _new(...): 
+        #    # TODO we need at some point replace this to aiida valid labels, not sure where
+        #    #wgdata["context"] = {
+        #    #    key.replace(".", "__"): value for key, value in self.context.items()
+        #    #}
+
+        def __setattr__(self, name: str, value: Any, /) -> None:
+            if name == "_initialization" or self._initialization:
+                return super().__setattr__(name, value)
+
+            if name.startswith("_"):
+                raise ValueError("Socket names starting with an underscores are only for internal usage and are therefore not allowed.")
+                
+            if name not in self._variable_instances:
+                self._variable_instances[name] = 0
+            else:
+                self._variable_instances[name] += 1
+
+            variable_name = f"{name}{self._variable_instances[name]}"
+
+            # TODO change link limit to some constant constant
+            socket = self._context_task.add_variable(variable_name, link_limit=1000)
+            #socket = self.nsn._new("workgraph.any", name, link_limit=1000)
+            #socket._node = self._context_on 
+
+            if isinstance(value, TaskSocket):
+                # purely GUI, the value is populated in engine
+                #  socket                 value         
+                # wg.context.x = add_task.outputs.result
+                if isinstance(value._node, Task):
+                    self._workgraph.add_link(value, socket)
+                    # TODO(important) to implement this we need multiple tasks otherwise they will all wait for one
+                    #self._context_task.waiting_on.add(value._node)
+                else:
+                    raise TypeError(f"When setting context variable, got node type {type(value._node)} but need Task node.")
+            elif isinstance(value, aiida.orm.Data):
+                #  socket         value         
+                # wg.context.x = orm.Int(5)
+                socket.value = value
+                # TODO add case where it is convertible to an int type
+            else:
+                raise TypeError(f"value {value} has invalid type {type(value)}.")
+
+            
+        def __getattr__(self, name: str, /) -> Any:
+            # Assuming scenario
+            # add_task(add, x=wg.context.x)
+            # Is this dangerous to set and get different sockets? We have no choice
+            # TODO need to validate somehow that socket name does not collide with internal names  
+            if name in self._variable_instances:
+                variable_name = f"{name}{self._variable_instances[name]}"
+                return self._context_task.variables[variable_name]
+            # TODO raise better error message? "Socket could not be found"
+            return super().__getattribute__(name)
+
+        def update_sockets(self, namespace: 'ContextSocketNamespace'):
+            raise NotImplementedError("not properly implemented")
+            for socket in self.nsn._sockets:
+                if (internal_socket := self._sockets.get(socket._name, None)) is None:
+                    self._sockets.append(socket)
+                else:
+                    internal_socket.value = socket.value
+                    internal_socket._node = socket._node
 
     def __init__(self, name: str = "WorkGraph", **kwargs) -> None:
         """
@@ -45,6 +133,8 @@ class WorkGraph(node_graph.NodeGraph):
             **kwargs: Additional keyword arguments to be passed to the WorkGraph class.
         """
         super().__init__(name, **kwargs)
+
+        # TODO remove
         self.context = {}
         self.workgraph_type = "NORMAL"
         self.sequence = []
@@ -61,6 +151,17 @@ class WorkGraph(node_graph.NodeGraph):
         self.links.post_deletion_hooks = [link_deletion_hook]
         self._error_handlers = {}
         self._widget = NodeGraphWidget(parent=self)
+
+        self._variables = None
+
+    def __setattr__(self, name: str, value: Any, /) -> None:
+        return super().__setattr__(name, value)
+
+    @property
+    def variables(self) -> NodeSocketNamespace:
+        if self._variables is None:
+            self._variables = self.ContexTaskWrapper(name="variables", workgraph=self)
+        return self._variables
 
     @property
     def tasks(self) -> TaskCollection:
@@ -178,6 +279,7 @@ class WorkGraph(node_graph.NodeGraph):
 
         wgdata = super().to_dict()
         # save the sequence and context
+        # TODO(session) what is this sequence?
         self.context["_sequence"] = self.sequence
         # only alphanumeric and underscores are allowed
         wgdata["context"] = {
@@ -479,6 +581,7 @@ class WorkGraph(node_graph.NodeGraph):
         self.sequence = []
         self.conditions = []
         self.context = {}
+        self._variables = None 
         self.state = "PLANNED"
 
     def extend(self, wg: "WorkGraph", prefix: str = "") -> None:
@@ -492,6 +595,8 @@ class WorkGraph(node_graph.NodeGraph):
         # self.sequence.extend([prefix + task for task in wg.sequence])
         # self.conditions.extend(wg.conditions)
         self.context.update(wg.context)
+        # TODO _sockets and update sockets need to be public API
+        self.variables.update_sockets(wg.variables)
         # links
         for link in wg.links:
             self.links._append(link)

@@ -1,10 +1,10 @@
-from typing import Any, Type, Union, Dict, Optional, Callable
+from typing import Any, Type, Union, Dict, Optional, Callable, TypeVar
 from node_graph.property import NodeProperty
 import re
 
 
-class TaskProperty(NodeProperty):
-    """Represent a property of a Task in the AiiDA WorkGraph."""
+class WorkGraphProperty(NodeProperty):
+    """Represent a property in the AiiDA WorkGraph."""
 
     def validate(self, value: any) -> None:
         if isinstance(value, str) and not re.search(r"\{\{.*?\}\}", value):
@@ -28,16 +28,25 @@ If you want to use variable from context, use double curly braces like this: {{{
 
         # build the task on the fly if the identifier is a callable
         if callable(identifier):
-            identifier = build_property_from_AiiDA(identifier)
+            identifier = build_property_from_AiiDA(cls, identifier)
         return super().new(
             identifier, name=name, data=data, property_pool=property_pool
         )
 
+class TaskProperty(WorkGraphProperty):
+    """Represent a property of a Task in the AiiDA WorkGraph."""
+    pass
 
-def build_property_from_AiiDA(DataClass: Type[Any]) -> Type[TaskProperty]:
+class ContextProperty(WorkGraphProperty):
+    pass
+
+
+ParentWorkGraphProperty = TypeVar('ParentWorkGraphProperty', bound=WorkGraphProperty)
+
+def build_property_from_AiiDA(cls: Type[ParentWorkGraphProperty], DataClass: Type[Any]) -> Type[TaskProperty]:
     """Create a property class from AiiDA DataClass."""
 
-    class AiiDATaskProperty(TaskProperty):
+    class AiiDAWorkGraphProperty(cls):
         identifier: str = DataClass.__name__
 
         def set_value(self, value: Any) -> None:
@@ -55,4 +64,4 @@ def build_property_from_AiiDA(DataClass: Type[Any]) -> Type[TaskProperty]:
             else:
                 raise Exception("{} is not an {}.".format(value, DataClass.__name__))
 
-    return AiiDATaskProperty
+    return AiiDAWorkGraphProperty
