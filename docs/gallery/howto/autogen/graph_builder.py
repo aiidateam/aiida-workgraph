@@ -69,14 +69,15 @@ wg.to_html()
 # .. code-block:: Python
 #
 #   wg.tasks.add_multiply1.tasks
+#   wg.tasks.add_multiply1.tasks.add.inputs.x
 #   # or
-#   wg.tasks.add_multiply1.tasks
+#   wg.tasks.['add_multiply1'].tasks
 #   # and
 #   wg.tasks.add_multiply1.inputs
 #   wg.tasks.add_multiply1.outputs
 
-# The WorkGraph task thus behaves similarly as a normal workgraph would (and indeed actually has the associated
-# `NodeGraph` attached as an attribute.)
+# The WorkGraphTask thus behaves similarly as a normal WorkGraph would (and indeed actually has the associated
+# `NodeGraph` attached as an attribute).
 
 # %%
 # Run the workgraph
