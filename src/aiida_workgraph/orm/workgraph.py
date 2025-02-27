@@ -140,25 +140,25 @@ class WorkGraphNode(WorkChainNode):
         self.task_actions = task_actions
 
     @property
-    def task_executors(self) -> Optional[str]:
+    def task_executors(self) -> Optional[dict]:
         """
         Return the task executors
 
-        :returns: string representation of the task executors
+        :returns: dict representation of the task executors
         """
         return self.base.attributes.get(self.TASK_EXECUTORS_KEY, {})
 
     @task_executors.setter
-    def task_executors(self, task_executors: str) -> None:
+    def task_executors(self, task_executors: dict) -> None:
         """
         Set the task executors
 
-        :param task_executors: string representation of the task executors
+        :param task_executors: dict representation of the task executors
         """
         self.base.attributes.set(self.TASK_EXECUTORS_KEY, task_executors)
 
     @property
-    def task_error_handlers(self) -> Optional[str]:
+    def task_error_handlers(self) -> Optional[dict]:
         """
         Return the task error handlers
 
@@ -167,18 +167,16 @@ class WorkGraphNode(WorkChainNode):
         return self.base.attributes.get(self.TASK_ERROR_HANDLERS_KEY, {})
 
     @task_error_handlers.setter
-    def task_error_handlers(self, task_error_handlers: str) -> None:
+    def task_error_handlers(self, task_error_handlers: dict) -> None:
         """
         Set the task error handlers
 
         :param task_error_handlers: dict representation of the task error handlers
         """
-        return self.base.attributes.set(
-            self.TASK_ERROR_HANDLERS_KEY, task_error_handlers
-        )
+        self.base.attributes.set(self.TASK_ERROR_HANDLERS_KEY, task_error_handlers)
 
     @property
-    def workgraph_data(self) -> Optional[str]:
+    def workgraph_data(self) -> Optional[dict]:
         """
         Return the workgraph data
 
@@ -216,7 +214,7 @@ class WorkGraphNode(WorkChainNode):
         )
 
     @property
-    def workgraph_error_handlers(self) -> Optional[str]:
+    def workgraph_error_handlers(self) -> Optional[dict]:
         """
         Return the workgraph error handlers
 
@@ -231,6 +229,6 @@ class WorkGraphNode(WorkChainNode):
 
         :param workgraph_error_handlers: dict representation of the error handlers
         """
-        return self.base.attributes.set(
+        self.base.attributes.set(
             self.WORKGRAPH_ERROR_HANDLERS_KEY, workgraph_error_handlers
         )
