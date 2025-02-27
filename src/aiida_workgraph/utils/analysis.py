@@ -1,10 +1,9 @@
 from typing import Optional, Dict, Tuple, List
 
 # import datetime
-from aiida.orm import ProcessNode
+from aiida.orm import ProcessNode, load_node
 from aiida.orm.utils.serialize import serialize
 from aiida_workgraph.orm.utils import deserialize_safe
-from aiida_workgraph.config import WORKGRAPH_EXTRA_KEY, WORKGRAPH_SHORT_EXTRA_KEY
 
 
 class WorkGraphSaver:
@@ -22,7 +21,11 @@ class WorkGraphSaver:
             wgdata (dict): data of workgraph to be launched.
         """
         self.process = process
-        self.restart_process = restart_process
+        self.restart_process = (
+            load_node(restart_process)
+            if isinstance(restart_process, int)
+            else restart_process
+        )
         wgdata.setdefault("uuid", "")
         wgdata.setdefault("tasks", {})
         wgdata.setdefault("links", [])
@@ -61,8 +64,8 @@ class WorkGraphSaver:
             ):
                 self.wgdata["links"].remove(link)
 
-    def save(self) -> None:
-        """Save workgraph.
+    def analyze(self) -> None:
+        """Analyze workgraph.
 
         - Update uuid for links. Build compressed tasks for workgraph.
         - Analysis connectivity
@@ -78,8 +81,11 @@ class WorkGraphSaver:
             new_tasks, modified_tasks, update_metadata = self.check_diff(
                 self.restart_process
             )
-            print("modified_tasks: {}".format(modified_tasks))
             self.reset_tasks(modified_tasks)
+
+    def save(self) -> None:
+        """Save workgraph."""
+        self.analyze()
         self.insert_workgraph_to_db()
 
     def build_task_link(self) -> None:
@@ -194,16 +200,22 @@ class WorkGraphSaver:
         - workgraph
         - all tasks
         """
+        self.save_task_states()
+        self.serialize_workgraph_data()
+        self.process.workgraph_data = self.wgdata
+        self.process.workgraph_data_short = self.short_wgdata
+
+    def serialize_workgraph_data(self) -> None:
+        """Save a new workgraph in the database.
+
+        - workgraph
+        - all tasks
+        """
         from aiida_workgraph.utils import workgraph_to_short_json
         import inspect
         from aiida_workgraph.orm.pickled_function import PickledLocalFunction
 
-        # pprint(self.wgdata)
-        # self.wgdata["created"] = datetime.datetime.utcnow()
-        # self.wgdata["lastUpdate"] = datetime.datetime.utcnow()
-        short_wgdata = workgraph_to_short_json(self.wgdata)
-        self.process.base.extras.set(WORKGRAPH_SHORT_EXTRA_KEY, short_wgdata)
-        self.save_task_states()
+        self.short_wgdata = workgraph_to_short_json(self.wgdata)
         for name, task in self.wgdata["tasks"].items():
             for _, input in task["inputs"].items():
                 if input.get("property"):
@@ -211,10 +223,8 @@ class WorkGraphSaver:
                     if inspect.isfunction(prop["value"]):
                         prop["value"] = PickledLocalFunction(prop["value"]).store()
             self.wgdata["tasks"][name] = serialize(task)
-        # nodes is a copy of tasks, so we need to pop it out
         self.wgdata["error_handlers"] = serialize(self.wgdata["error_handlers"])
         self.wgdata["context"] = serialize(self.wgdata["context"])
-        self.process.base.extras.set(WORKGRAPH_EXTRA_KEY, self.wgdata)
 
     def save_task_states(self) -> Dict:
         """Get task states."""
@@ -223,12 +233,12 @@ class WorkGraphSaver:
         task_processes = {}
         task_actions = {}
         for name, task in self.wgdata["tasks"].items():
-            task_states[f"_task_state_{name}"] = task["state"]
-            task_processes[f"_task_process_{name}"] = task["process"]
-            task_actions[f"_task_action_{name}"] = task["action"]
-        self.process.base.extras.set_many(task_states)
-        self.process.base.extras.set_many(task_processes)
-        self.process.base.extras.set_many(task_actions)
+            task_states[name] = task["state"]
+            task_processes[name] = task["process"]
+            task_actions[name] = task["action"]
+        self.process.task_states = task_states
+        self.process.task_processes = task_processes
+        self.process.task_actions = task_actions
 
         return task_states
 
@@ -240,7 +250,6 @@ class WorkGraphSaver:
         """
         from aiida_workgraph.utils.control import create_task_action
 
-        # print("process state: ", self.process.process_state.value.upper())
         if (
             self.process.process_state is None
             or self.process.process_state.value.upper() == "CREATED"
@@ -260,7 +269,6 @@ class WorkGraphSaver:
     def set_tasks_action(self, action: str) -> None:
         """Set task action."""
         for name, task in self.wgdata["tasks"].items():
-            # print("Reset task: {}".format(task))
             task["action"] = action
 
     def get_wgdata_from_db(
@@ -268,7 +276,7 @@ class WorkGraphSaver:
     ) -> Optional[Dict]:
 
         process = self.process if process is None else process
-        wgdata = process.base.extras.get(WORKGRAPH_EXTRA_KEY, None)
+        wgdata = process.workgraph_data
         if wgdata is None:
             print("No workgraph data found in the process node.")
             return
@@ -309,7 +317,7 @@ class WorkGraphSaver:
         Returns:
             bool: _description_
         """
-        if self.process.base.extras.get(WORKGRAPH_EXTRA_KEY, None) is not None:
+        if self.process and self.process.workgraph_data is not None:
             return True
         return False
 

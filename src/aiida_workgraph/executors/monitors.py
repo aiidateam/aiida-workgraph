@@ -53,7 +53,7 @@ def task_monitor(task_name: str, workgraph_pk: int = None, workgraph_name: str =
             return False
     print("Found workgraph")
     node = builder.first()[0]
-    state = node.base.extras.get(f"_task_state_{task_name}", None)
+    state = node.task_states.get(task_name, "")
     print(f"Task state: {state}")
     if state in ["FINISHED", "FAILED", "SKIPPED"]:
         return True

@@ -296,7 +296,7 @@ def build_task_from_workgraph(wg: 'WorkGraph'):
     tdata["outputs"] = outputs
     tdata["identifier"] = wg.name
     # get wgdata from the workgraph
-    wgdata = wg.prepare_inputs()["wg"]
+    wgdata = wg.prepare_inputs()["workgraph_data"]
     executor = {
         "module_path": "aiida_workgraph.engine.workgraph",
         "callable_name": "WorkGraphEngine",

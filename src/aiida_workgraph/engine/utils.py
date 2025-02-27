@@ -22,7 +22,7 @@ def prepare_for_workgraph_task(task: dict, kwargs: dict) -> tuple:
     # organize_nested_inputs(wgdata)
     # serialize_workgraph_inputs(wgdata)
     metadata = {"call_link_label": task["name"]}
-    inputs = {"wg": wgdata, "metadata": metadata}
+    inputs = {"workgraph_data": wgdata, "metadata": metadata}
     return inputs, wgdata
 
 
