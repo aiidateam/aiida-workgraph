@@ -342,8 +342,10 @@ class WorkGraphTask(Task):
     @property
     def workgraph(self):
         from aiida_workgraph import WorkGraph
+        from copy import deepcopy
+
         if not self._workgraph:
-            graph_data = self.get_executor()["graph_data"]
+            graph_data = deepcopy(self.get_executor()["graph_data"])
             self._workgraph = WorkGraph.from_dict(graph_data)
         return self._workgraph
 
