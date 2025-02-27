@@ -293,6 +293,9 @@ def build_task_from_workgraph(wg: 'WorkGraph') -> WorkGraphTask:
     tdata["outputs"] = outputs
     tdata["identifier"] = wg.name
     # get wgdata from the workgraph
+    # @superstar54: Here, `wgdata` ends up in the executor dictionary under "graph_data", which we access later, and
+    # which is missing the `tasks` key
+    # import ipdb; ipdb.set_trace()
     wgdata = wg.prepare_inputs()["wg"]
     executor = {
         "module_path": "aiida_workgraph.engine.workgraph",

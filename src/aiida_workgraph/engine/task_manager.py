@@ -221,10 +221,12 @@ class TaskManager:
             update_nested_dict_with_special_keys,
         )
 
+        # import ipdb; ipdb.set_trace()
         for name in names:
             # skip if the max number of awaitables is reached
             task = self.ctx._tasks[name]
             if task["metadata"]["node_type"].upper() in process_task_types:
+                # @superstar54: This evaluates to False
                 if len(self.process._awaitables) >= self.ctx._max_number_awaitables:
                     print(
                         MAX_NUMBER_AWAITABLES_MSG.format(
@@ -245,11 +247,14 @@ class TaskManager:
                 f"Run task: {name}, type: {task['metadata']['node_type']}"
             )
             executor, _ = get_executor(task["executor"])
+            # @superstar54: Probably something in `get_input` goes wrong, leading to kwargs being empty
             args, kwargs, var_args, var_kwargs, args_dict = self.get_inputs(name)
             for i, key in enumerate(self.ctx._tasks[name]["args"]):
                 kwargs[key] = args[i]
             # update the port namespace
+            # @superstar54: Here, kwargs is empty
             kwargs = update_nested_dict_with_special_keys(kwargs)
+
             print("kwargs: ", kwargs)
             # kwargs["meta.label"] = name
             # output must be a Data type or a mapping of {string: Data}
@@ -584,6 +589,7 @@ class TaskManager:
         """Get input based on the links."""
         from node_graph.utils import collect_values_inside_namespace
 
+        # import ipdb; ipdb.set_trace()
         args = []
         args_dict = {}
         kwargs = {}
