@@ -268,7 +268,7 @@ def create_workgraph_process_node():
 
         process = WorkGraphEngine(
             inputs={
-                "wg": {
+                "workgraph_data": {
                     "name": "test",
                     "state": "",
                 }

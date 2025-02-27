@@ -103,7 +103,7 @@ def test_task_monitor(decorated_add):
     #
     wg1 = WorkGraph(name="wg1")
     wg1.add_task(decorated_add, "add1", x=1, y=2, t=5)
-    wg1.submit(wait=True)
+    wg1.submit(wait=True, timeout=60)
     wg2.wait()
     assert wg2.tasks.add1.node.ctime > wg1.tasks.add1.node.ctime
 
