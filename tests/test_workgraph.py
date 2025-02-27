@@ -1,7 +1,6 @@
 import pytest
 from aiida_workgraph import WorkGraph
 from aiida import orm
-import time
 from aiida.calculations.arithmetic.add import ArithmeticAddCalculation
 
 
@@ -47,7 +46,6 @@ def test_show_state(wg_calcfunction):
 
 def test_save_load(wg_calcfunction, decorated_add):
     """Save the workgraph"""
-    from aiida_workgraph.config import WORKGRAPH_EXTRA_KEY
     from aiida_workgraph.orm.pickled_function import PickledFunction
 
     wg = wg_calcfunction
@@ -67,11 +65,12 @@ def test_save_load(wg_calcfunction, decorated_add):
     # wg2.save()
     # assert wg2.tasks.add1.executor == decorated_add
     # remove the extra, will raise an error
-    wg.process.base.extras.delete(WORKGRAPH_EXTRA_KEY)
-    with pytest.raises(
-        ValueError, match=f"WorkGraph data not found for process {wg.process.pk}."
-    ):
-        WorkGraph.load(wg.process.pk)
+
+
+def test_load_failure(create_process_node):
+    node = create_process_node()
+    with pytest.raises(ValueError, match=f"Process {node.pk} is not a WorkGraph"):
+        WorkGraph.load(node.pk)
 
 
 def test_organize_nested_inputs():
@@ -100,7 +99,7 @@ def test_organize_nested_inputs():
         "x": "1",
     }
     collected_data = collect_values_inside_namespace(
-        inputs["wg"]["tasks"]["task1"]["inputs"]["add"]
+        inputs["workgraph_data"]["tasks"]["task1"]["inputs"]["add"]
     )
     assert collected_data == data
 
@@ -113,15 +112,13 @@ def test_reset_message(wg_calcjob):
 
     wg = wg_calcjob
     wg.submit()
-    # wait for the daemon to start the workgraph
-    time.sleep(3)
+    wg.wait(tasks={"add1": ["RUNNING"]}, timeout=30, interval=1)
     wg = WorkGraph.load(wg.process.pk)
-    wg.tasks.add2.set({"y": orm.Int(10).store()})
+    wg.tasks.add1.set({"y": orm.Int(10).store()})
     wg.save()
-    wg.wait()
+    wg.wait(timeout=30)
     report = get_workchain_report(wg.process, "REPORT")
-    print(report)
-    assert "Action: reset. {'add2'}" in report
+    assert "Action: reset. {'add1'}" in report
 
 
 def test_restart_and_reset(wg_calcfunction):
@@ -136,13 +133,12 @@ def test_restart_and_reset(wg_calcfunction):
         y=wg.tasks["sumdiff2"].outputs.sum,
     )
     wg.name = "test_restart_0"
-    wg.submit(wait=True)
+    wg.run()
     wg1 = WorkGraph.load(wg.process.pk)
     wg1.restart()
     wg1.name = "test_restart_1"
     wg1.tasks["sumdiff2"].set({"x": orm.Int(10).store()})
-    # wg1.save()
-    wg1.submit(wait=True)
+    wg1.run()
     assert wg1.tasks["sumdiff1"].node.pk == wg.tasks["sumdiff1"].pk
     assert wg1.tasks["sumdiff2"].node.pk != wg.tasks["sumdiff2"].pk
     assert wg1.tasks["sumdiff3"].node.pk != wg.tasks["sumdiff3"].pk
