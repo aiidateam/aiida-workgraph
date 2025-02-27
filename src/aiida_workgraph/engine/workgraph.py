@@ -385,6 +385,7 @@ class WorkGraphEngine(Process, metaclass=Protect):
     def finalize(self) -> t.Optional[ExitCode]:
         """"""
         # expose outputs of the workgraph
+        # import ipdb; ipdb.set_trace()
         group_outputs = {}
         for output in self.ctx._workgraph["metadata"]["group_outputs"]:
             names = output["from"].split(".", 1)
@@ -407,6 +408,7 @@ class WorkGraphEngine(Process, metaclass=Protect):
                 else:
                     # expose one output of the task
                     # note, the output may not exist
+                    # import ipdb; ipdb.set_trace()
                     if names[1] in self.ctx._tasks[names[0]]["results"]:
                         update_nested_dict(
                             group_outputs,

@@ -209,3 +209,8 @@ def test_namespace_outputs():
     assert wg.tasks.myfunc.outputs.minus.value == -1
     assert wg.tasks.myfunc.outputs.add_multiply.add.value == 3
     assert wg.tasks.myfunc.outputs.add_multiply.multiply.value == 2
+
+
+def test_workgraph_task_nested():
+
+    ...

@@ -192,3 +192,4 @@ def test_wait_timeout(create_workgraph_process_node):
         match="Timeout reached after 1 seconds while waiting for the WorkGraph:",
     ):
         wg.wait(timeout=1, interval=1)
+
