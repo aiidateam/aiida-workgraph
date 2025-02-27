@@ -37,7 +37,6 @@ def test_build_task_from_workgraph(decorated_add: Callable) -> None:
     assert hasattr(wg.tasks.sub_wg, 'links')
     assert hasattr(wg.tasks.sub_wg, 'tasks')
     assert isinstance(wg.tasks.sub_wg.tasks, TaskCollection)
-    assert isinstance(wg.tasks.sub_wg.tasks, TaskCollection)
     assert wg.tasks.sub_wg.tasks.parent.name == 'build_task_from_workgraph'
 
     wg.add_task(decorated_add, name="add2", y=3)

@@ -329,10 +329,10 @@ class Select(Task):
 
 class WorkGraphTask(Task):
 
-    identifier = "workgraph.workgraph"
-    name = "AiiDAWorkGraph"
-    node_type = "workgraph"
-    catalog = "WORKGRAPH"
+    identifier = "workgraph.workgraph_task"
+    name = "WorkGraphTask"
+    node_type = "Normal"
+    catalog = "Builtins"
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
