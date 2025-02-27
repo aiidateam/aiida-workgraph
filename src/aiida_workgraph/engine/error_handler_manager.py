@@ -11,7 +11,7 @@ class ErrorHandlerManager:
     def run_error_handlers(self, task_name: str) -> None:
         """Run error handlers for a task."""
 
-        node = self.process.task_manager.get_task_state_info(task_name, "process")
+        node = self.process.task_manager.get_task_runtime_info(task_name, "process")
         if not node or not node.exit_status:
             return
         # error_handlers from the task

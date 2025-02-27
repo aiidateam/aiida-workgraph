@@ -72,10 +72,12 @@ class WorkGraph(node_graph.NodeGraph):
     ) -> Dict[str, Any]:
         from aiida_workgraph.utils import serialize_workgraph_inputs
 
+        metadata = metadata or {}
+
         wgdata = self.to_dict()
         serialize_workgraph_inputs(wgdata)
         metadata = metadata or {}
-        inputs = {"wg": wgdata, "metadata": metadata}
+        inputs = {"workgraph_data": wgdata, "metadata": metadata}
         return inputs
 
     def run(
@@ -159,11 +161,11 @@ class WorkGraph(node_graph.NodeGraph):
             process_inited.close()
             print(f"WorkGraph process created, PK: {self.process.pk}")
         else:
-            self.save_to_base(inputs["wg"])
+            self.save_to_base(inputs["workgraph_data"])
         self.update()
 
     def save_to_base(self, wgdata: Dict[str, Any]) -> None:
-        """Save new wgdata to base.extras.
+        """Save new wgdata to attribute.
         It will first check the difference, and reset tasks if needed.
         """
         from aiida_workgraph.utils.analysis import WorkGraphSaver
@@ -185,7 +187,7 @@ class WorkGraph(node_graph.NodeGraph):
         }
         wgdata.update(
             {
-                "restart_process": aiida.orm.Int(self.restart_process.pk)
+                "restart_process": self.restart_process.pk
                 if self.restart_process
                 else None,
                 "max_iteration": self.max_iteration,
@@ -375,11 +377,12 @@ class WorkGraph(node_graph.NodeGraph):
             pk (int): The primary key of the process node.
         """
         from aiida_workgraph.utils import get_workgraph_data
+        from aiida_workgraph.orm.workgraph import WorkGraphNode
 
         process = aiida.orm.load_node(pk)
+        if not isinstance(process, WorkGraphNode):
+            raise ValueError(f"Process {pk} is not a WorkGraph")
         wgdata = get_workgraph_data(process)
-        if wgdata is None:
-            raise ValueError(f"WorkGraph data not found for process {pk}.")
         wg = cls.from_dict(wgdata)
         wg.process = process
         wg.update()

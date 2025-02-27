@@ -280,11 +280,10 @@ def get_workgraph_data(process: Union[int, orm.Node]) -> Optional[Dict[str, Any]
     """Get the workgraph data from the process node."""
     from aiida_workgraph.orm.utils import deserialize_safe
     from aiida.orm import load_node
-    from aiida_workgraph.config import WORKGRAPH_EXTRA_KEY
 
     if isinstance(process, int):
         process = load_node(process)
-    wgdata = process.base.extras.get(WORKGRAPH_EXTRA_KEY, None)
+    wgdata = process.workgraph_data
     if wgdata is None:
         return
     for name, task in wgdata["tasks"].items():
@@ -310,18 +309,16 @@ def get_parent_workgraphs(pk: int) -> list:
 
 
 def get_processes_latest(
-    pk: int, node_name: str = None, item_type: str = "task"
+    pk: int, task_name: str = None, item_type: str = "task"
 ) -> Dict[str, Dict[str, Union[int, str]]]:
     """Get the latest info of all tasks from the process."""
     import aiida
     from aiida_workgraph.orm.utils import deserialize_safe
-    from aiida.orm import QueryBuilder
-    from aiida_workgraph.engine.workgraph import WorkGraphEngine
 
     tasks = {}
+    node = aiida.orm.load_node(pk)
     if item_type == "called_process":
         # fetch the process that called by the workgraph
-        node = aiida.orm.load_node(pk)
         for link in node.base.links.get_outgoing().all():
             if isinstance(link.node, aiida.orm.ProcessNode):
                 tasks[f"{link.node.process_label}_{link.node.pk}"] = {
@@ -332,32 +329,12 @@ def get_processes_latest(
                     "mtime": link.node.mtime,
                 }
     elif item_type == "task":
-        node_names = [node_name] if node_name else []
-        if node_name:
-            projections = [
-                f"extras._task_state_{node_name}",
-                f"extras._task_process_{node_name}",
-            ]
-        else:
-            projections = []
-            process = aiida.orm.load_node(pk)
-            node_names = [
-                key[12:]
-                for key in process.base.extras.keys()
-                if key.startswith("_task_state")
-            ]
-            projections = [f"extras._task_state_{name}" for name in node_names]
-            projections.extend([f"extras._task_process_{name}" for name in node_names])
-        qb = QueryBuilder()
-        qb.append(WorkGraphEngine, filters={"id": pk}, project=projections)
-        # print("projections: ", projections)
-        results = qb.all()
-        # change results to dict
-        results = dict(zip(projections, results[0]))
-        # print("results: ", results)
-        for name in node_names:
-            state = results[f"extras._task_state_{name}"]
-            task_process = deserialize_safe(results[f"extras._task_process_{name}"])
+        task_states = node.task_states
+        task_processes = node.task_processes
+        task_names = [task_name] if task_name else task_states.keys()
+        for name in task_names:
+            state = task_states[name]
+            task_process = deserialize_safe(task_processes.get(name, ""))
             tasks[name] = {
                 "pk": task_process.pk if task_process else None,
                 "process_type": task_process.process_type if task_process else "",
@@ -447,7 +424,7 @@ def create_and_pause_process(
     from aiida.engine.utils import instantiate_process
 
     process_inited = instantiate_process(runner, process_class, **inputs)
-    process_inited.pause(msg=state_msg)
+    process_inited.pause(state_msg)
     process_inited.runner.persister.save_checkpoint(process_inited)
     process_inited.close()
     runner.controller.continue_process(process_inited.pid, nowait=True, no_reply=True)
