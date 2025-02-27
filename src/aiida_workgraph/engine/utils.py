@@ -13,7 +13,6 @@ def prepare_for_workgraph_task(task: dict, kwargs: dict) -> tuple:
         # because kwargs is updated using update_nested_dict_with_special_keys
         # which means the data is grouped by the task name
         for socket_name, value in data.items():
-            # import ipdb; ipdb.set_trace()
             input = wgdata["tasks"][task_name]["inputs"][socket_name]
             if input["identifier"] == "workgraph.namespace":
                 input["value"] = value

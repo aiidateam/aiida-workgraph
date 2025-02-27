@@ -23,7 +23,6 @@ def test_inputs_outptus(wg_calcfunction: WorkGraph) -> None:
 @pytest.mark.usefixtures("started_daemon_client")
 def test_build_task_from_workgraph(decorated_add: Callable) -> None:
     # create a sub workgraph
-    import inspect
     from aiida_workgraph.collection import TaskCollection
     sub_wg = WorkGraph("build_task_from_workgraph")
     sub_wg.add_task(decorated_add, name="add1", x=1, y=3)
@@ -37,6 +36,7 @@ def test_build_task_from_workgraph(decorated_add: Callable) -> None:
     assert hasattr(wg.tasks.sub_wg, 'workgraph')
     assert hasattr(wg.tasks.sub_wg, 'links')
     assert hasattr(wg.tasks.sub_wg, 'tasks')
+    assert isinstance(wg.tasks.sub_wg.tasks, TaskCollection)
     assert isinstance(wg.tasks.sub_wg.tasks, TaskCollection)
     assert wg.tasks.sub_wg.tasks.parent.name == 'build_task_from_workgraph'
 

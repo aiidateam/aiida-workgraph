@@ -101,7 +101,6 @@ class WorkGraph(node_graph.NodeGraph):
             print("Your workgraph is already created. Please use the submit() method.")
             return
         inputs = self.prepare_inputs(metadata=metadata)
-        # Check inputs here...
         result, node = aiida.engine.run_get_node(WorkGraphEngine, inputs=inputs)
         self.process = node
         self.update()
