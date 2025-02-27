@@ -9,6 +9,7 @@ import inspect
 from aiida_workgraph.config import builtin_inputs, builtin_outputs, task_types
 from aiida_workgraph.orm.mapping import type_mapping
 from typing import TYPE_CHECKING
+
 if TYPE_CHECKING:
     from aiida_workgraph import WorkGraph
 
@@ -227,7 +228,7 @@ def build_shelljob_task(outputs: list = None, parser_outputs: list = None) -> Ta
     return task, tdata
 
 
-def build_task_from_workgraph(wg: 'WorkGraph'):
+def build_task_from_workgraph(wg: "WorkGraph"):
     """Build task from workgraph.
 
     Note that this actually returns a ``DecoratedNode`` object, which is defined in the ``create_node`` class factory
@@ -242,7 +243,6 @@ def build_task_from_workgraph(wg: 'WorkGraph'):
     # add all the inputs/outputs from the tasks in the workgraph
     builtin_input_names = [input["name"] for input in builtin_inputs]
     builtin_output_names = [output["name"] for output in builtin_outputs]
-
 
     for task in wg.tasks:
         # inputs

@@ -218,7 +218,7 @@ def update_nested_dict(
 def update_nested_dict_with_special_keys(data: Dict[str, Any]) -> Dict[str, Any]:
     """Update the nested dictionary with special keys like "base.pw.parameters"."""
     # Remove None
-    
+
     data = {k: v for k, v in data.items() if v is not None}
     #
     special_keys = [k for k in data.keys() if "." in k]

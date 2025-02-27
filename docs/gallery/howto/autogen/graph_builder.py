@@ -58,7 +58,9 @@ def add_multiply(x=None, y=None, z=None):
 
 wg = WorkGraph("nested_workgraph")
 # Creating a task from the WorkGraph
-add_multiply1 = wg.add_task(add_multiply(x=Int(2), y=Int(3), z=Int(4)), name="add_multiply1")
+add_multiply1 = wg.add_task(
+    add_multiply(x=Int(2), y=Int(3), z=Int(4)), name="add_multiply1"
+)
 add_multiply2 = wg.add_task(add_multiply(x=Int(2), y=Int(3)), name="add_multiply2")
 # link the output of a task to the input of another task
 wg.add_link(add_multiply1.outputs.multiply.result, add_multiply2.inputs.multiply.x)

@@ -24,6 +24,7 @@ def test_inputs_outptus(wg_calcfunction: WorkGraph) -> None:
 def test_build_task_from_workgraph(decorated_add: Callable) -> None:
     # create a sub workgraph
     from aiida_workgraph.collection import TaskCollection
+
     sub_wg = WorkGraph("build_task_from_workgraph")
     sub_wg.add_task(decorated_add, name="add1", x=1, y=3)
     sub_wg.add_task(decorated_add, name="add2", x=2, y=sub_wg.tasks.add1.outputs.result)
@@ -33,11 +34,11 @@ def test_build_task_from_workgraph(decorated_add: Callable) -> None:
     wg_task = wg.add_task(sub_wg, name="sub_wg")
     # the default value of the namespace is None
     assert wg_task.inputs["add1"]._value == {}
-    assert hasattr(wg.tasks.sub_wg, 'workgraph')
-    assert hasattr(wg.tasks.sub_wg, 'links')
-    assert hasattr(wg.tasks.sub_wg, 'tasks')
+    assert hasattr(wg.tasks.sub_wg, "workgraph")
+    assert hasattr(wg.tasks.sub_wg, "links")
+    assert hasattr(wg.tasks.sub_wg, "tasks")
     assert isinstance(wg.tasks.sub_wg.tasks, TaskCollection)
-    assert wg.tasks.sub_wg.tasks.parent.name == 'build_task_from_workgraph'
+    assert wg.tasks.sub_wg.tasks.parent.name == "build_task_from_workgraph"
 
     wg.add_task(decorated_add, name="add2", y=3)
     wg.add_link(add1_task.outputs.result, wg_task.inputs["add1.x"])
