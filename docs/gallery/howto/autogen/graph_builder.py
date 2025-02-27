@@ -8,7 +8,7 @@ Graph Builder for nested and dynamic workflows
 # Introduction
 # ============
 # In this example we learn how to create nested workflows by creating a task
-# out of WorkGraph's. Further, we will learn how to do the same with the Graph
+# out of a WorkGraph. Further, we will learn how to do the same with the Graph
 # Builder, a decorator that allows us to move the creation of the WorkGraph to
 # runtime, so we can create dynamic workflows that change depending on the inputs.
 # This is of particular interest for integrating for-loops and if-then-else
@@ -63,6 +63,19 @@ add_multiply2 = wg.add_task(add_multiply(x=Int(2), y=Int(3)))
 # link the output of a task to the input of another task
 wg.add_link(add_multiply1.outputs.multiply.result, add_multiply2.inputs.multiply.x)
 wg.to_html()
+
+# We can then access elements of the sub-WorkGraph, for instance, its tasks via:
+
+# .. code-block:: Python
+#   wg.tasks.WORKGRAPH1.tasks
+#   # or
+#   wg.tasks.['WORKGRAPH1'].tasks
+#   # and
+#   wg.tasks.WORKGRAPH1.inputs
+#   wg.tasks.WORKGRAPH1.outputs
+
+# The WorkGraph task thus behaves similarly as a normal workgraph would (and indeed actually has the associated
+# `NodeGraph` attached as an attribute.)
 
 # %%
 # Run the workgraph

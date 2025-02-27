@@ -11,7 +11,6 @@ from aiida_workgraph.orm.mapping import type_mapping
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from aiida_workgraph import WorkGraph
-    from aiida_workgraph.tasks.builtins import WorkGraphTask
 
 
 def create_task(tdata):
@@ -228,9 +227,13 @@ def build_shelljob_task(outputs: list = None, parser_outputs: list = None) -> Ta
     return task, tdata
 
 
-def build_task_from_workgraph(wg: 'WorkGraph') -> WorkGraphTask:
-    # NOTE: This actually returns a `DecoratedNode` object
-    """Build task from workgraph."""
+def build_task_from_workgraph(wg: 'WorkGraph'):
+    """Build task from workgraph.
+
+    Note that this actually returns a ``DecoratedNode`` object, which is defined in the ``create_node`` class factory
+    called by ``create_task``.
+
+    """
 
     tdata = {"metadata": {"task_type": "workgraph"}}
     inputs = []

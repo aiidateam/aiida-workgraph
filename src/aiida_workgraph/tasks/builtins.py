@@ -333,7 +333,6 @@ class WorkGraphTask(Task):
     name = "AiiDAWorkGraph"
     node_type = "workgraph"
     catalog = "WORKGRAPH"
-    # is_aiida_component = True  # ???
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
