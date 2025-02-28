@@ -8,6 +8,10 @@ from aiida_workgraph.utils import build_callable, validate_task_inout, get_dict_
 import inspect
 from aiida_workgraph.config import builtin_inputs, builtin_outputs, task_types
 from aiida_workgraph.orm.mapping import type_mapping
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from aiida_workgraph import WorkGraph
 
 
 def create_task(tdata):
@@ -224,8 +228,13 @@ def build_shelljob_task(outputs: list = None, parser_outputs: list = None) -> Ta
     return task, tdata
 
 
-def build_task_from_workgraph(wg: any) -> Task:
-    """Build task from workgraph."""
+def build_task_from_workgraph(wg: "WorkGraph"):
+    """Build task from workgraph.
+
+    Note that this actually returns a ``DecoratedNode`` object, which is defined in the ``create_node`` class factory
+    called by ``create_task``.
+
+    """
 
     tdata = {"metadata": {"task_type": "workgraph"}}
     inputs = []
@@ -234,6 +243,7 @@ def build_task_from_workgraph(wg: any) -> Task:
     # add all the inputs/outputs from the tasks in the workgraph
     builtin_input_names = [input["name"] for input in builtin_inputs]
     builtin_output_names = [output["name"] for output in builtin_outputs]
+
     for task in wg.tasks:
         # inputs
         inputs.append(
@@ -279,8 +289,8 @@ def build_task_from_workgraph(wg: any) -> Task:
     for input in builtin_inputs:
         inputs.append(input.copy())
     tdata["metadata"]["node_class"] = {
-        "module_path": "aiida_workgraph.task",
-        "callable_name": "Task",
+        "module_path": "aiida_workgraph.tasks.builtins",
+        "callable_name": "WorkGraphTask",
     }
     tdata["inputs"] = inputs
     tdata["outputs"] = outputs
@@ -295,6 +305,7 @@ def build_task_from_workgraph(wg: any) -> Task:
     }
     tdata["metadata"]["group_outputs"] = group_outputs
     tdata["executor"] = executor
+
     task = create_task(tdata)
     return task
 

@@ -325,3 +325,33 @@ class Select(Task):
             "callable_name": "select",
         }
         return executor
+
+
+class WorkGraphTask(Task):
+
+    identifier = "workgraph.workgraph_task"
+    name = "WorkGraphTask"
+    node_type = "Normal"
+    catalog = "Builtins"
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._workgraph = None
+
+    @property
+    def workgraph(self):
+        from aiida_workgraph import WorkGraph
+        from copy import deepcopy
+
+        if not self._workgraph:
+            graph_data = deepcopy(self.get_executor()["graph_data"])
+            self._workgraph = WorkGraph.from_dict(graph_data)
+        return self._workgraph
+
+    @property
+    def tasks(self):
+        return self.workgraph.tasks
+
+    @property
+    def links(self):
+        return self.workgraph.links
