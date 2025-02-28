@@ -8,7 +8,7 @@ Graph Builder for nested and dynamic workflows
 # Introduction
 # ============
 # In this example we learn how to create nested workflows by creating a task
-# out of WorkGraph's. Further, we will learn how to do the same with the Graph
+# out of a WorkGraph. Further, we will learn how to do the same with the Graph
 # Builder, a decorator that allows us to move the creation of the WorkGraph to
 # runtime, so we can create dynamic workflows that change depending on the inputs.
 # This is of particular interest for integrating for-loops and if-then-else
@@ -58,14 +58,30 @@ def add_multiply(x=None, y=None, z=None):
 
 wg = WorkGraph("nested_workgraph")
 # Creating a task from the WorkGraph
-add_multiply1 = wg.add_task(add_multiply(x=Int(2), y=Int(3), z=Int(4)))
-add_multiply2 = wg.add_task(add_multiply(x=Int(2), y=Int(3)))
+add_multiply1 = wg.add_task(
+    add_multiply(x=Int(2), y=Int(3), z=Int(4)), name="add_multiply1"
+)
+add_multiply2 = wg.add_task(add_multiply(x=Int(2), y=Int(3)), name="add_multiply2")
 # link the output of a task to the input of another task
 wg.add_link(add_multiply1.outputs.multiply.result, add_multiply2.inputs.multiply.x)
 wg.to_html()
 
 # %%
-# Run the workgraph
+# The created WorkGraphTask behaves similarly as a normal WorkGraph would (and indeed actually has the associated
+# `WorkGraph` attached as an attribute).That means we can access elements of the sub-WorkGraph, for instance, its tasks,
+# inputs, etc., via:
+
+print(wg.tasks.add_multiply1.tasks)
+print(wg.tasks.add_multiply1.tasks.add.inputs.x)
+# or
+print(wg.tasks["add_multiply1"].tasks)
+# and
+print(wg.tasks.add_multiply1.inputs)
+print(wg.tasks.add_multiply1.outputs)
+
+
+# %%
+# Finally, we run the workgraph
 
 wg.submit(wait=True)
 # (2+3)*4 = 20
@@ -73,7 +89,7 @@ wg.submit(wait=True)
 assert add_multiply2.outputs.multiply.result.value == 100
 
 # %%
-# Generate node graph from the AiiDA process
+# And to generate the node graph from the AiiDA process
 
 from aiida_workgraph.utils import generate_node_graph
 
