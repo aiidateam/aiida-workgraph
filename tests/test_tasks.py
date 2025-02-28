@@ -234,10 +234,6 @@ def test_task_from_builder_add(add_code) -> None:
     assert add_wg.tasks["add_builder"].inputs["y"].value == 3
     assert add_wg.tasks["add_builder"].inputs["code"].value == add_code
 
-    # wg.run() -> Could check if it works. Did so manually, so maybe we don't need this.
-
-    # test linking
-
 
 def test_task_from_builder_multiply_add(add_code, decorated_add) -> None:
     """Test adding a task from a ``ProcessBuilder`` for ``MultiplyAdd``."""
@@ -254,9 +250,25 @@ def test_task_from_builder_multiply_add(add_code, decorated_add) -> None:
 
     multiply_add_task = wg.add_task(multiply_add_builder, name="multiply_add_builder")
 
-    import ipdb; ipdb.set_trace()
-
     assert wg.tasks.multiply_add_builder.name == "multiply_add_builder"
 
-    # Test if linking works
-    add1 = wg.add_task(decorated_add, "decorated_add", x=multiply_add_task.outputs.result, y=10)
+    # Check if task coming from ProcessBuilder behaves as other Tasks
+    add1 = wg.add_task(
+        decorated_add, "decorated_add", x=multiply_add_task.outputs.result, y=11
+    )
+    assert len(wg.tasks) == 2
+    assert len(wg.links) == 1
+    assert wg.links_to_dict() == [
+        {
+            "from_node": "multiply_add_builder",
+            "from_socket": "result",
+            "state": False,
+            "to_node": "decorated_add",
+            "to_socket": "x",
+        }
+    ]
+
+    wg.run()
+
+    # Top-level test for the expected result
+    assert wg.tasks.decorated_add.outputs.result.value.value == 21
