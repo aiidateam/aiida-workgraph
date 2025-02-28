@@ -543,3 +543,9 @@ class WorkGraph(node_graph.NodeGraph):
         """Write a standalone html file to visualize the workgraph."""
         self._widget.value = self.to_widget_value()
         return self._widget.to_html(output=output, **kwargs)
+
+    def __repr__(self) -> str:
+        return f'WorkGraph(name="{self.name}", uuid="{self.uuid}")'
+
+    def __str__(self) -> str:
+        return f'WorkGraph(name="{self.name}", uuid="{self.uuid}")'
