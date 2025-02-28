@@ -14,8 +14,11 @@ class WorkGraphNode(WorkChainNode):
     TASK_STATES_KEY = "task_states"
     TASK_PROCESSES_KEY = "task_processes"
     TASK_ACTIONS_KEY = "task_actions"
+    TASK_EXECUTORS_KEY = "task_executors"
+    TASK_ERROR_HANDLERS_KEY = "task_error_handlers"
     WORKGRAPH_DATA_KEY = "workgraph_data"
     WORKGRAPH_DATA_SHORT_KEY = "workgraph_data_short"
+    WORKGRAPH_ERROR_HANDLERS_KEY = "workgraph_error_handlers"
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -30,9 +33,12 @@ class WorkGraphNode(WorkChainNode):
         return super()._updatable_attributes + (
             cls.WORKGRAPH_DATA_KEY,
             cls.WORKGRAPH_DATA_SHORT_KEY,
+            cls.WORKGRAPH_ERROR_HANDLERS_KEY,
             cls.TASK_STATES_KEY,
             cls.TASK_PROCESSES_KEY,
             cls.TASK_ACTIONS_KEY,
+            cls.TASK_EXECUTORS_KEY,
+            cls.TASK_ERROR_HANDLERS_KEY,
         )
 
     @property
@@ -134,11 +140,47 @@ class WorkGraphNode(WorkChainNode):
         self.task_actions = task_actions
 
     @property
+    def task_executors(self) -> Optional[dict]:
+        """
+        Return the task executors
+
+        :returns: dict representation of the task executors
+        """
+        return self.base.attributes.get(self.TASK_EXECUTORS_KEY, {})
+
+    @task_executors.setter
+    def task_executors(self, task_executors: dict) -> None:
+        """
+        Set the task executors
+
+        :param task_executors: dict representation of the task executors
+        """
+        self.base.attributes.set(self.TASK_EXECUTORS_KEY, task_executors)
+
+    @property
+    def task_error_handlers(self) -> Optional[dict]:
+        """
+        Return the task error handlers
+
+        :returns: dict representation of the task error handlers
+        """
+        return self.base.attributes.get(self.TASK_ERROR_HANDLERS_KEY, {})
+
+    @task_error_handlers.setter
+    def task_error_handlers(self, task_error_handlers: dict) -> None:
+        """
+        Set the task error handlers
+
+        :param task_error_handlers: dict representation of the task error handlers
+        """
+        self.base.attributes.set(self.TASK_ERROR_HANDLERS_KEY, task_error_handlers)
+
+    @property
     def workgraph_data(self) -> Optional[dict]:
         """
         Return the workgraph data
 
-        :returns: string representation of the workgraph data
+        :returns: dict representation of the workgraph data
         """
         return self.base.attributes.get(self.WORKGRAPH_DATA_KEY, None)
 
@@ -169,4 +211,24 @@ class WorkGraphNode(WorkChainNode):
         """
         return self.base.attributes.set(
             self.WORKGRAPH_DATA_SHORT_KEY, workgraph_data_short
+        )
+
+    @property
+    def workgraph_error_handlers(self) -> Optional[dict]:
+        """
+        Return the workgraph error handlers
+
+        :returns: dict representation of the error handlers
+        """
+        return self.base.attributes.get(self.WORKGRAPH_ERROR_HANDLERS_KEY, None)
+
+    @workgraph_error_handlers.setter
+    def workgraph_error_handlers(self, workgraph_error_handlers: dict) -> None:
+        """
+        Set the workgraph error handlers
+
+        :param workgraph_error_handlers: dict representation of the error handlers
+        """
+        self.base.attributes.set(
+            self.WORKGRAPH_ERROR_HANDLERS_KEY, workgraph_error_handlers
         )
