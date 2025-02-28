@@ -74,7 +74,7 @@ wg.to_html()
 print(wg.tasks.add_multiply1.tasks)
 print(wg.tasks.add_multiply1.tasks.add.inputs.x)
 # or
-print(wg.tasks['add_multiply1'].tasks)
+print(wg.tasks["add_multiply1"].tasks)
 # and
 print(wg.tasks.add_multiply1.inputs)
 print(wg.tasks.add_multiply1.outputs)
