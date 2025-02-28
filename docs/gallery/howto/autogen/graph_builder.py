@@ -66,23 +66,22 @@ add_multiply2 = wg.add_task(add_multiply(x=Int(2), y=Int(3)), name="add_multiply
 wg.add_link(add_multiply1.outputs.multiply.result, add_multiply2.inputs.multiply.x)
 wg.to_html()
 
-# We can then access elements of the sub-WorkGraph, for instance, its tasks via:
+# %%
+# The created WorkGraphTask behaves similarly as a normal WorkGraph would (and indeed actually has the associated
+# `NodeGraph` attached as an attribute).That means we can access elements of the sub-WorkGraph, for instance, its tasks,
+# inputs, etc., via:
 
-# .. code-block:: Python
-#
-#   wg.tasks.add_multiply1.tasks
-#   wg.tasks.add_multiply1.tasks.add.inputs.x
-#   # or
-#   wg.tasks.['add_multiply1'].tasks
-#   # and
-#   wg.tasks.add_multiply1.inputs
-#   wg.tasks.add_multiply1.outputs
+print(wg.tasks.add_multiply1.tasks)
+print(wg.tasks.add_multiply1.tasks.add.inputs.x)
+# or
+print(wg.tasks['add_multiply1'].tasks)
+# and
+print(wg.tasks.add_multiply1.inputs)
+print(wg.tasks.add_multiply1.outputs)
 
-# The WorkGraphTask thus behaves similarly as a normal WorkGraph would (and indeed actually has the associated
-# `NodeGraph` attached as an attribute).
 
 # %%
-# Run the workgraph
+# Finally, we run the workgraph
 
 wg.submit(wait=True)
 # (2+3)*4 = 20
@@ -90,7 +89,7 @@ wg.submit(wait=True)
 assert add_multiply2.outputs.multiply.result.value == 100
 
 # %%
-# Generate node graph from the AiiDA process
+# And to generate the node graph from the AiiDA process
 
 from aiida_workgraph.utils import generate_node_graph
 
