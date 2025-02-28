@@ -4,9 +4,8 @@ Task
 
 Task is the basic building block of the WorkGraph. A task has inputs,
 outputs, and the executor. A task executor can be a ``calcfunction``,
-``workfunction``, ``calcjob``, ``Workchain`` or any other Python
-function, or even an AiiDA ``ProcessBuilder``.
-A task can be created in three ways.
+``workfunction``, ``calcjob``, ``Workchain``, a ``ProcessBuilder``,
+or any other Python function. A task can be created in three ways.
 
 Decorator
 ---------
