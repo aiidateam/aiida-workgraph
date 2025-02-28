@@ -14,7 +14,7 @@ Decorate any Python function using the ``task`` decorator. To use the
 power of AiiDA (e.g. save the results to a database, keep provenance),
 one can use the ``task.calcfunction`` decorator (note that this will,
 however, require that the inputs and outputs of your function have to
-be instances of ``orm.Node``.
+be instances of ``orm.Node``).
 
 """
 
