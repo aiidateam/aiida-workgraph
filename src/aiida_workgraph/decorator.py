@@ -42,8 +42,8 @@ def build_task(
         return build_task_from_workgraph(executor)
     elif isinstance(executor, str):
         executor = NodeExecutor(module_path=executor).executor
-        if callable(executor):
-            return build_task_from_callable(executor, inputs=inputs, outputs=outputs)
+    if callable(executor):
+        return build_task_from_callable(executor, inputs=inputs, outputs=outputs)
 
 
 def build_task_from_callable(
@@ -71,16 +71,22 @@ def build_task_from_callable(
     if inspect.isfunction(executor):
         # calcfunction and workfunction
         if getattr(executor, "node_class", False):
-            return AiiDAComponentTaskFactory.from_aiida_component(executor)
+            return AiiDAComponentTaskFactory.from_aiida_component(
+                executor, inputs=inputs, outputs=outputs
+            )
         else:
             return DecoratedFunctionTaskFactory.from_function(
                 executor, inputs=inputs, outputs=outputs
             )
     else:
         if issubclass(executor, CalcJob):
-            return AiiDAComponentTaskFactory.from_aiida_component(executor)
+            return AiiDAComponentTaskFactory.from_aiida_component(
+                executor, inputs=inputs, outputs=outputs
+            )
         elif issubclass(executor, WorkChain):
-            return AiiDAComponentTaskFactory.from_aiida_component(executor)
+            return AiiDAComponentTaskFactory.from_aiida_component(
+                executor, inputs=inputs, outputs=outputs
+            )
     raise ValueError(f"The executor {executor} is not supported.")
 
 
@@ -350,9 +356,10 @@ class TaskDecoratorCollection:
         """
 
         def decorator(func):
+
             task_outputs = [
                 {"identifier": "workgraph.any", "name": output["name"]}
-                for output in outputs
+                for output in outputs or []
             ]
             TaskCls = DecoratedFunctionTaskFactory.from_function(
                 func=func,

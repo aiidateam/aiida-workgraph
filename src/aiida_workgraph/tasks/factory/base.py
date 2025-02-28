@@ -3,6 +3,7 @@ from typing import Any, Dict, List, Optional, Tuple, Union
 from node_graph.utils import list_to_dict
 from aiida_workgraph.orm.mapping import type_mapping
 from aiida_workgraph.task import Task
+from node_graph.executor import NodeExecutor
 
 
 class BaseTaskFactory:
@@ -49,11 +50,8 @@ class BaseTaskFactory:
 
         return cls._create_task_class(tdata)
 
-    @staticmethod
-    def _create_task_class(ndata: dict):
-        """Dynamically create a specialized Task class embedding the given data."""
-
-        class _Task(Task):
+    def __new__(cls, ndata: dict):
+        class _TaskFactory(Task):
             """A specialized Task with the embedded ndata."""
 
             _ndata = deepcopy(ndata)
@@ -64,38 +62,48 @@ class BaseTaskFactory:
                     "node_type", "NORMAL"
                 )
                 self.catalog = self._ndata.get("metadata", {}).get("catalog", "Others")
+                self._executor = NodeExecutor(**self._ndata["executor"])
                 self._error_handlers = self._ndata.get("error_handlers", [])
                 super().__init__(*args, **kwargs)
+                self.group_inputs = ndata["metadata"].get("group_inputs", [])
+                self.group_outputs = ndata["metadata"].get("group_outputs", [])
 
             def create_properties(self):
-                properties = list_to_dict(self._ndata.get("properties") or {})
+                properties = list_to_dict(self._ndata.get("properties", {}))
                 for prop in properties.values():
                     self.add_property(
                         prop.pop("identifier", type_mapping["default"]), **prop
                     )
 
             def create_sockets(self):
-                for key in ["inputs", "outputs"]:
-                    items = list_to_dict(self._ndata.get(key) or {})
-                    for item in items.values():
-                        if isinstance(item, str):
-                            item = {"identifier": type_mapping["default"], "name": item}
-                        kwargs = {"metadata": item.get("metadata", {})}
-                        if key == "inputs":
-                            kwargs["link_limit"] = item.get("link_limit", 1)
-                            self.add_input(
-                                item.get("identifier", type_mapping["default"]),
-                                name=item["name"],
-                                **kwargs
-                            )
-                        else:
-                            self.add_output(
-                                item.get("identifier", type_mapping["default"]),
-                                name=item["name"],
-                                **kwargs
-                            )
+                inputs = list_to_dict(self._ndata.get("inputs", {}))
+                for inp in inputs.values():
+                    if isinstance(inp, str):
+                        inp = {"identifier": type_mapping["default"], "name": inp}
+                    kwargs = {}
+                    if "property_data" in inp:
+                        kwargs["property_data"] = inp.pop("property_data")
+                    if "sockets" in inp:
+                        kwargs["sockets"] = inp.pop("sockets")
+                    self.add_input(
+                        inp.get("identifier", type_mapping["default"]),
+                        name=inp["name"],
+                        metadata=inp.get("metadata", {}),
+                        link_limit=inp.get("link_limit", 1),
+                        **kwargs,
+                    )
+
+                outputs = list_to_dict(self._ndata.get("outputs", {}))
+                for out in outputs.values():
+                    if isinstance(out, str):
+                        out = {"identifier": type_mapping["default"], "name": out}
+                    self.add_output(
+                        out.get("identifier", type_mapping["default"]),
+                        name=out["name"],
+                        metadata=out.get("metadata", {}),
+                    )
 
             def get_executor(self):
                 return self._ndata.get("executor", None)
 
-        return _Task
+        return _TaskFactory
