@@ -68,7 +68,7 @@ wg.to_html()
 
 # %%
 # The created WorkGraphTask behaves similarly as a normal WorkGraph would (and indeed actually has the associated
-# `NodeGraph` attached as an attribute).That means we can access elements of the sub-WorkGraph, for instance, its tasks,
+# `WorkGraph` attached as an attribute).That means we can access elements of the sub-WorkGraph, for instance, its tasks,
 # inputs, etc., via:
 
 print(wg.tasks.add_multiply1.tasks)
