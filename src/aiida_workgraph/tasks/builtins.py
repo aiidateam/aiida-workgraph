@@ -1,5 +1,62 @@
 from typing import Any, Dict
 from aiida_workgraph.task import Task, TaskCollection
+from copy import deepcopy
+from node_graph.utils import list_to_dict
+from aiida_workgraph.orm.mapping import type_mapping
+
+
+class DecoratedFunctionTask(Task):
+    """DecoratedFunctionTask"""
+
+    identifier = "workgraph.decorated_function"
+    name = "DecoratedFunction"
+    node_type = "DynamicallyCreated"
+    catalog = "Custom"
+    _ndata = None
+
+    def __init__(self, *args, **kwargs):
+        # ndata is shared between all instances
+        self.ndata = deepcopy(self._ndata)
+        super().__init__(*args, **kwargs)
+
+    def create_properties(self):
+        properties = list_to_dict(self.ndata.get("properties", {}))
+        for prop in properties.values():
+            self.add_property(prop.pop("identifier", type_mapping["default"]), **prop)
+
+    def create_sockets(self):
+        inputs = list_to_dict(self.ndata.get("inputs", {}))
+        for input in inputs.values():
+            if isinstance(input, str):
+                input = {"identifier": type_mapping["default"], "name": input}
+            kwargs = {}
+            if "property_data" in input:
+                kwargs["property_data"] = input.pop("property_data")
+            if "sockets" in input:
+                kwargs["sockets"] = input.pop("sockets")
+            self.add_input(
+                input.get("identifier", type_mapping["default"]),
+                name=input["name"],
+                metadata=input.get("metadata", {}),
+                link_limit=input.get("link_limit", 1),
+                **kwargs,
+            )
+        outputs = list_to_dict(self.ndata.get("outputs", {}))
+        for output in outputs.values():
+            if isinstance(output, str):
+                output = {"identifier": type_mapping["default"], "name": output}
+            identifier = output.get("identifier", type_mapping["default"])
+            self.add_output(
+                identifier, name=output["name"], metadata=output.get("metadata", {})
+            )
+
+    def get_metadata(self):
+        metadata = super().get_metadata()
+        metadata["node_class"] = self.node_class
+        return metadata
+
+    def get_executor(self):
+        return self.ndata.get("executor", None)
 
 
 class Zone(Task):

@@ -8,12 +8,12 @@ from aiida_workgraph.utils import build_callable, validate_task_inout
 import inspect
 from aiida_workgraph.config import builtin_inputs, builtin_outputs, task_types
 from aiida_workgraph.orm.mapping import type_mapping
+from node_graph.utils import list_to_dict
 
 
 def create_task(tdata):
     """Wrap create_node from node_graph to create a Task."""
     from node_graph.decorator import create_node
-    from node_graph.utils import list_to_dict
 
     tdata["type_mapping"] = type_mapping
     tdata["metadata"]["node_type"] = tdata["metadata"].pop("task_type")
@@ -22,6 +22,19 @@ def create_task(tdata):
     tdata["outputs"] = list_to_dict(tdata.get("outputs", {}))
 
     return create_node(tdata)
+
+
+def create_decoratored_function_task(tdata):
+    from aiida_workgraph.tasks.builtins import DecoratedFunctionTask
+
+    tdata["type_mapping"] = type_mapping
+    tdata["metadata"]["node_type"] = tdata["metadata"].pop("task_type")
+    tdata["properties"] = list_to_dict(tdata.get("properties", {}))
+    tdata["inputs"] = list_to_dict(tdata.get("inputs", {}))
+    tdata["outputs"] = list_to_dict(tdata.get("outputs", {}))
+
+    DecoratedFunctionTask._ndata = tdata
+    return DecoratedFunctionTask
 
 
 def build_task(
@@ -124,7 +137,7 @@ def build_task_from_AiiDA(
     tdata = get_task_data_from_aiida_component(
         tdata=tdata, inputs=inputs, outputs=outputs
     )
-    task = create_task(tdata)
+    task = create_decoratored_function_task(tdata)
     task.is_aiida_component = True
     return task, tdata
 
@@ -436,7 +449,7 @@ class TaskDecoratorCollection:
                 catalog,
                 task_type,
             )
-            task = create_task(tdata)
+            task = create_decoratored_function_task(tdata)
             task._error_handlers = error_handlers
             func.identifier = identifier
             func.task = func.node = task
