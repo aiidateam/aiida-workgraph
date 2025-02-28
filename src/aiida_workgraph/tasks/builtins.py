@@ -1,6 +1,30 @@
 from typing import Any, Dict
 from aiida_workgraph.task import Task, TaskCollection
+from aiida_workgraph.socket import ContextSocketNamespace
+from aiida_workgraph.sockets.builtins import SocketVariable
 
+
+class ContextTask(Task):
+    """
+    Extend the Task class to include a 'children' attribute.
+    """
+
+    identifier = "workgraph.context"
+    name = "Context"
+    node_type = "CONTEXT"
+    catalog = "Control"
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # I think this can be NodeSocketNamsepace
+        # ContextSocketNamespace is doing nothing
+        self.variables = ContextSocketNamespace("variables", node=self, pool=self.socket_pool)
+
+    def add_variable(self, name: str, **kwargs) -> SocketVariable:
+        """Add a variable socket to this node."""
+
+        context = self.variables._new("workgraph.variable", name, **kwargs)
+        return context
 
 class Zone(Task):
     """

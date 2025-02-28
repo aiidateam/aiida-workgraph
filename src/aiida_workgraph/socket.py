@@ -1,12 +1,11 @@
-from typing import Any, Type
+from typing import Any, Type 
 
 from aiida import orm
 from node_graph.socket import (
     NodeSocket,
     NodeSocketNamespace,
 )
-
-from aiida_workgraph.property import TaskProperty
+from aiida_workgraph.property import TaskProperty 
 from aiida_workgraph.orm.mapping import type_mapping
 
 
@@ -31,8 +30,17 @@ class TaskSocket(NodeSocket):
                     "Data node does not have a value attribute. We do not know how to extract the raw Python value."
                 )
         else:
-            return self.value
+            return self.value 
 
+class ContextSocketNamespace(NodeSocketNamespace):
+    """Represent a namespace of a Task in the AiiDA WorkGraph."""
+
+    _identifier = "workgraph.context"
+    _socket_property_class = TaskProperty # I think this does not change
+    _type_mapping: dict = type_mapping
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, entry_point="aiida_workgraph.socket", **kwargs) # do we need different entry point?
 
 class TaskSocketNamespace(NodeSocketNamespace):
     """Represent a namespace of a Task in the AiiDA WorkGraph."""
