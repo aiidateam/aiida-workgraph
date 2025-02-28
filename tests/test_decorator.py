@@ -200,7 +200,7 @@ def test_decorator_workfunction(decorated_add_multiply: Callable) -> None:
 
     wg = WorkGraph(name="test_decorator_workfunction")
     wg.add_task(decorated_add_multiply, "add_multiply1", x=2, y=3, z=4)
-    wg.submit(wait=True, timeout=100)
+    wg.run()
     assert wg.tasks["add_multiply1"].outputs.result.value == 20
 
 

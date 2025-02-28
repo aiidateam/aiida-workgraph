@@ -7,13 +7,19 @@ from aiida.common.exceptions import NotExistent
 from aiida.engine.runners import Runner
 from aiida_workgraph.config import task_types
 from aiida.engine import CalcJob, WorkChain
+from aiida_pythonjob import PythonJob
+from aiida_shell.calculations.shell import ShellJob
 import inspect
 
 
 def inspect_aiida_component_type(executor: Callable) -> str:
     task_type = None
     if isinstance(executor, type):
-        if issubclass(executor, CalcJob):
+        if executor == PythonJob:
+            task_type = "PYTHONJOB"
+        elif executor == ShellJob:
+            task_type = "SHELLJOB"
+        elif issubclass(executor, CalcJob):
             task_type = task_types[CalcJob]
         elif issubclass(executor, WorkChain):
             task_type = task_types[WorkChain]

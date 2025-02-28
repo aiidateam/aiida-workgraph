@@ -5,10 +5,12 @@ from aiida.engine import calcfunction, workfunction, CalcJob, WorkChain
 from aiida_workgraph.task import Task
 from aiida_workgraph.utils import validate_task_inout
 import inspect
-from aiida_workgraph.config import builtin_inputs, builtin_outputs, task_types
+from aiida_workgraph.config import builtin_inputs, builtin_outputs
 from aiida_workgraph.orm.mapping import type_mapping
 from node_graph.executor import NodeExecutor
 from typing import TYPE_CHECKING
+from aiida_workgraph.tasks.factory.function_task import DecoratedFunctionTaskFactory
+from aiida_workgraph.tasks.factory.aiida_task import AiiDAComponentTaskFactory
 
 if TYPE_CHECKING:
     from aiida_workgraph import WorkGraph
@@ -28,19 +30,6 @@ def create_task(tdata):
     return create_node(tdata)
 
 
-def create_decoratored_function_task(tdata):
-    from aiida_workgraph.tasks.builtins import DecoratedFunctionTask
-
-    tdata["type_mapping"] = type_mapping
-    tdata["metadata"]["node_type"] = tdata["metadata"].pop("task_type")
-    tdata["properties"] = list_to_dict(tdata.get("properties", {}))
-    tdata["inputs"] = list_to_dict(tdata.get("inputs", {}))
-    tdata["outputs"] = list_to_dict(tdata.get("outputs", {}))
-
-    DecoratedFunctionTask._ndata = tdata
-    return DecoratedFunctionTask
-
-
 def build_task(
     executor: Union[Callable, str],
     inputs: Optional[List[str | dict]] = None,
@@ -49,24 +38,12 @@ def build_task(
     """Build task from executor."""
     from aiida_workgraph.workgraph import WorkGraph
 
-    if inputs:
-        inputs = validate_task_inout(inputs, "inputs")
-
-    if outputs:
-        outputs = validate_task_inout(outputs, "outputs")
-
     if isinstance(executor, WorkGraph):
         return build_task_from_workgraph(executor)
     elif isinstance(executor, str):
-        (
-            module,
-            executor_name,
-        ) = executor.rsplit(".", 1)
-        executor = NodeExecutor(
-            module_path=module, callable_name=executor_name
-        ).executor
-    if callable(executor):
-        return build_task_from_callable(executor, inputs=inputs, outputs=outputs)
+        executor = NodeExecutor(module_path=executor).executor
+        if callable(executor):
+            return build_task_from_callable(executor, inputs=inputs, outputs=outputs)
 
 
 def build_task_from_callable(
@@ -91,65 +68,25 @@ def build_task_from_callable(
         and issubclass(executor, Task)
     ):
         return executor
-    tdata = {"metadata": {}}
     if inspect.isfunction(executor):
         # calcfunction and workfunction
         if getattr(executor, "node_class", False):
-            tdata["metadata"]["task_type"] = task_types.get(
-                executor.node_class, "NORMAL"
-            )
-            tdata["callable"] = executor
-            return build_task_from_AiiDA(tdata, inputs=inputs, outputs=outputs)[0]
+            return AiiDAComponentTaskFactory.from_aiida_component(executor)
         else:
-            tdata["metadata"]["task_type"] = "NORMAL"
-            tdata["executor"] = executor
-            return build_task_from_function(executor, inputs=inputs, outputs=outputs)
+            return DecoratedFunctionTaskFactory.from_function(
+                executor, inputs=inputs, outputs=outputs
+            )
     else:
         if issubclass(executor, CalcJob):
-            tdata["metadata"]["task_type"] = "CALCJOB"
-            tdata["callable"] = executor
-            return build_task_from_AiiDA(tdata, inputs=inputs, outputs=outputs)[0]
+            return AiiDAComponentTaskFactory.from_aiida_component(executor)
         elif issubclass(executor, WorkChain):
-            tdata["metadata"]["task_type"] = "WORKCHAIN"
-            tdata["callable"] = executor
-            return build_task_from_AiiDA(tdata, inputs=inputs, outputs=outputs)[0]
+            return AiiDAComponentTaskFactory.from_aiida_component(executor)
     raise ValueError(f"The executor {executor} is not supported.")
-
-
-def build_task_from_function(
-    executor: Callable,
-    inputs: Optional[List[str]] = None,
-    outputs: Optional[List[str]] = None,
-) -> Task:
-    """Build task from function."""
-    return TaskDecoratorCollection.decorator_task(inputs=inputs, outputs=outputs)(
-        executor
-    ).task
-
-
-def build_task_from_AiiDA(
-    tdata: Dict[str, Any],
-    inputs: Optional[List[str]] = None,
-    outputs: Optional[List[str]] = None,
-) -> Tuple[Task, Dict[str, Any]]:
-    """Register a task from a AiiDA component.
-    For example: CalcJob, WorkChain, CalcFunction, WorkFunction."""
-    from aiida_workgraph.utils.inspect_aiida_components import (
-        get_task_data_from_aiida_component,
-    )
-
-    tdata = get_task_data_from_aiida_component(
-        tdata=tdata, inputs=inputs, outputs=outputs
-    )
-    task = create_decoratored_function_task(tdata)
-    task.is_aiida_component = True
-    return task, tdata
 
 
 def build_pythonjob_task(func: Callable) -> Task:
     """Build PythonJob task from function."""
     from aiida_pythonjob import PythonJob
-    from copy import deepcopy
 
     # if the function is not a task, build a task from the function
     if not hasattr(func, "node"):
@@ -158,33 +95,27 @@ def build_pythonjob_task(func: Callable) -> Task:
         raise ValueError(
             "GraphBuilder task cannot be run remotely. Please remove 'PythonJob'."
         )
-    tdata = {
-        "metadata": {"task_type": "PYTHONJOB"},
-        "callable": PythonJob,
-    }
-    _, tdata_py = build_task_from_AiiDA(tdata)
-    tdata = deepcopy(func.tdata)
+    TaskCls = AiiDAComponentTaskFactory.from_aiida_component(PythonJob)
+    tdata = func.task._ndata
     # merge the inputs and outputs from the PythonJob task to the function task
     # skip the already existed inputs and outputs
-    for input in [
-        {"identifier": "workgraph.string", "name": "computer"},
-        {"identifier": "workgraph.any", "name": "command_info"},
-    ]:
-        input["list_index"] = len(tdata["inputs"]) + 1
-        tdata["inputs"][input["name"]] = input
-    for name, input in tdata_py["inputs"].items():
-        if name not in tdata["inputs"]:
-            input["list_index"] = len(tdata["inputs"]) + 1
-            tdata["inputs"][name] = input
-    for name, output in tdata_py["outputs"].items():
-        if name not in tdata["outputs"]:
-            output["list_index"] = len(tdata["outputs"]) + 1
-            tdata["outputs"][name] = output
-    for output in [{"identifier": "workgraph.any", "name": "exit_code"}]:
-        output["list_index"] = len(tdata["outputs"]) + 1
-        tdata["outputs"][output["name"]] = output
+    tdata["inputs"].extend(
+        [
+            {"identifier": "workgraph.string", "name": "computer"},
+            {"identifier": "workgraph.any", "name": "command_info"},
+        ]
+    )
+    for input in TaskCls._ndata["inputs"]:
+        if input["name"] not in tdata["inputs"]:
+            tdata["inputs"].append(input)
+    for output in TaskCls._ndata["outputs"]:
+        if output["name"] not in tdata["outputs"]:
+            tdata["outputs"].append(output)
+    tdata["outputs"].append({"identifier": "workgraph.any", "name": "exit_code"})
     # change "copy_files" link_limit to 1e6
-    tdata["inputs"]["copy_files"]["link_limit"] = 1e6
+    for input in tdata["inputs"]:
+        if input["name"] == "copy_files":
+            input["link_limit"] = 1e6
     tdata["metadata"]["task_type"] = "PYTHONJOB"
     tdata["identifier"] = "workgraph.pythonjob"
     tdata["metadata"]["node_class"] = {
@@ -205,7 +136,7 @@ def build_shelljob_task(outputs: list = None, parser_outputs: list = None) -> Ta
         "metadata": {"task_type": "SHELLJOB"},
         "callable": ShellJob,
     }
-    _, tdata = build_task_from_AiiDA(tdata)
+    tdata = AiiDAComponentTaskFactory.from_aiida_component(tdata)
     # Extend the outputs
     for output in [
         {"identifier": "workgraph.any", "name": "stdout"},
@@ -354,59 +285,9 @@ def nonfunctional_usage(callable: Callable):
     return decorator_task_wrapper
 
 
-def generate_tdata(
-    func: Callable,
-    identifier: str,
-    inputs: List[Tuple[str, str]],
-    outputs: List[Tuple[str, str]],
-    properties: List[Tuple[str, str]],
-    catalog: str,
-    task_type: str,
-    group_inputs: List[Tuple[str, str]] = None,
-    group_outputs: List[Tuple[str, str]] = None,
-    additional_data: Optional[Dict[str, Any]] = None,
-) -> Dict[str, Any]:
-    """Generate task data for creating a task."""
-    from node_graph.decorator import generate_input_sockets
-
-    task_inputs = generate_input_sockets(
-        func, inputs, properties, type_mapping=type_mapping
-    )
-    for input in task_inputs:
-        input.setdefault("metadata", {})
-        input["metadata"]["is_function_input"] = True
-    task_outputs = outputs
-    # add built-in sockets
-    for output in builtin_outputs:
-        task_outputs.append(output.copy())
-    for input in builtin_inputs:
-        task_inputs.append(input.copy())
-    tdata = {
-        "identifier": identifier,
-        "metadata": {
-            "task_type": task_type,
-            "catalog": catalog,
-            "node_class": {
-                "module_path": "aiida_workgraph.task",
-                "callable_name": "Task",
-            },
-            "group_inputs": group_inputs or [],
-            "group_outputs": group_outputs or [],
-        },
-        "properties": properties,
-        "inputs": task_inputs,
-        "outputs": task_outputs,
-    }
-    tdata["executor"] = NodeExecutor.from_callable(func).to_dict()
-    if additional_data:
-        tdata.update(additional_data)
-    return tdata
-
-
 class TaskDecoratorCollection:
     """Collection of task decorators."""
 
-    # decorator with arguments indentifier, properties, inputs, outputs, executor
     @staticmethod
     @nonfunctional_usage
     def decorator_task(
@@ -428,47 +309,28 @@ class TaskDecoratorCollection:
             outputs (list): task outputs
         """
 
-        if inputs:
-            inputs = validate_task_inout(inputs, "inputs")
-
-        if outputs:
-            outputs = validate_task_inout(outputs, "outputs")
-
         def decorator(func):
-            nonlocal identifier, task_type
-
-            if identifier is None:
-                identifier = func.__name__
-
-            # Determine task_type based on AiiDA's node classes
-            task_type = task_type
-            if hasattr(func, "node_class"):
-                task_type = task_types.get(func.node_class, task_type)
+            # at least one output is required
             task_outputs = outputs or [
                 {"identifier": "workgraph.any", "name": "result"}
             ]
-            for output in task_outputs:
-                output.setdefault("metadata", {})
-                output["metadata"]["is_function_output"] = True
-            tdata = generate_tdata(
-                func,
-                identifier,
-                inputs or [],
-                task_outputs,
-                properties or [],
-                catalog,
-                task_type,
+            TaskCls = DecoratedFunctionTaskFactory.from_function(
+                func=func,
+                identifier=identifier,
+                task_type=task_type,
+                properties=properties,
+                inputs=inputs,
+                outputs=task_outputs,
+                error_handlers=error_handlers,
+                catalog=catalog,
             )
-            task = create_decoratored_function_task(tdata)
-            task._error_handlers = error_handlers
-            func.identifier = identifier
-            func.task = func.node = task
-            func.tdata = tdata
+
+            func.identifier = TaskCls.identifier
+            func.task = func.node = TaskCls
             return func
 
         return decorator
 
-    # decorator with arguments indentifier, properties, inputs, outputs, executor
     @staticmethod
     @nonfunctional_usage
     def decorator_graph_builder(
@@ -487,74 +349,65 @@ class TaskDecoratorCollection:
             outputs (list): task outputs
         """
 
-        outputs = outputs or []
-
         def decorator(func):
-            nonlocal identifier, inputs, outputs
-
-            if identifier is None:
-                identifier = func.__name__
-            # use cloudpickle to serialize function
-            func.identifier = identifier
-
             task_outputs = [
                 {"identifier": "workgraph.any", "name": output["name"]}
                 for output in outputs
             ]
-            # print(task_inputs, task_outputs)
-            #
-            task_type = "graph_builder"
-            tdata = generate_tdata(
-                func,
-                identifier,
-                inputs or [],
-                task_outputs,
-                properties or [],
-                catalog,
-                task_type,
+            TaskCls = DecoratedFunctionTaskFactory.from_function(
+                func=func,
+                identifier=identifier,
+                task_type="graph_builder",
+                properties=properties,
+                inputs=inputs,
+                outputs=task_outputs,
+                catalog=catalog,
                 group_inputs=inputs,
                 group_outputs=outputs,
             )
-
-            task = create_task(tdata)
-            func.task = func.node = task
+            func.task = func.node = TaskCls
             return func
 
         return decorator
 
     @staticmethod
     @nonfunctional_usage
-    def calcfunction(**kwargs: Any) -> Callable:
+    def calcfunction(
+        inputs: Optional[List[str | dict]] = None,
+        outputs: Optional[List[str | dict]] = None,
+        error_handlers: Optional[List[Dict[str, Any]]] = None,
+    ) -> Callable:
         def decorator(func):
-            # First, apply the calcfunction decorator
             func_decorated = calcfunction(func)
-            # Then, apply task decorator
-            task_decorated = build_task_from_callable(
+            TaskCls = AiiDAComponentTaskFactory.from_aiida_component(
                 func_decorated,
-                inputs=kwargs.get("inputs", []),
-                outputs=kwargs.get("outputs", []),
+                inputs=inputs,
+                outputs=outputs,
+                error_handlers=error_handlers,
             )
-            identifier = kwargs.get("identifier", None)
-            func_decorated.identifier = identifier if identifier else func.__name__
-            func_decorated.task = func_decorated.node = task_decorated
+            func_decorated.identifier = TaskCls.identifier
+            func_decorated.task = func_decorated.node = TaskCls
             return func_decorated
 
         return decorator
 
     @staticmethod
     @nonfunctional_usage
-    def workfunction(**kwargs: Any) -> Callable:
+    def workfunction(
+        inputs: Optional[List[str | dict]] = None,
+        outputs: Optional[List[str | dict]] = None,
+        error_handlers: Optional[List[Dict[str, Any]]] = None,
+    ) -> Callable:
         def decorator(func):
-            # First, apply the workfunction decorator
             func_decorated = workfunction(func)
-            task_decorated = build_task_from_callable(
+            TaskCls = AiiDAComponentTaskFactory.from_aiida_component(
                 func_decorated,
-                inputs=kwargs.get("inputs", []),
-                outputs=kwargs.get("outputs", []),
+                inputs=inputs,
+                outputs=outputs,
+                error_handlers=error_handlers,
             )
-            identifier = kwargs.get("identifier", None)
-            func_decorated.identifier = identifier if identifier else func.__name__
-            func_decorated.task = func_decorated.node = task_decorated
+            func_decorated.identifier = TaskCls.identifier
+            func_decorated.task = func_decorated.node = TaskCls
 
             return func_decorated
 
@@ -582,36 +435,37 @@ class TaskDecoratorCollection:
 
     @staticmethod
     @nonfunctional_usage
-    def awaitable(**kwargs: Any) -> Callable:
+    def awaitable(
+        inputs: Optional[List[str | dict]] = None,
+        outputs: Optional[List[str | dict]] = None,
+    ) -> Callable:
         def decorator(func):
-            # Then, apply task decorator
-            task_decorated = build_task_from_callable(
-                func,
-                inputs=kwargs.get("inputs", []),
-                outputs=kwargs.get("outputs", []),
+            TaskCls = DecoratedFunctionTaskFactory.from_function(
+                func=func,
+                task_type="awaitable",
+                inputs=inputs,
+                outputs=outputs,
             )
-            task_decorated.node_type = "awaitable"
-            func.identifier = "awaitable"
-            func.task = func.node = task_decorated
+            func.task = func.node = TaskCls
             return func
 
         return decorator
 
     @staticmethod
     @nonfunctional_usage
-    def monitor(**kwargs: Any) -> Callable:
+    def monitor(
+        inputs: Optional[List[str | dict]] = None,
+        outputs: Optional[List[str | dict]] = None,
+    ) -> Callable:
         def decorator(func):
-            # Then, apply task decorator
-            task_decorated = build_task_from_callable(
-                func,
-                inputs=kwargs.get(
-                    "inputs", [{"identifier": "workgraph.any", "name": "interval"}]
-                ),
-                outputs=kwargs.get("outputs", []),
+            TaskCls = DecoratedFunctionTaskFactory.from_function(
+                func=func,
+                task_type="monitor",
+                inputs=inputs,
+                outputs=outputs,
             )
-            task_decorated.node_type = "monitor"
-            func.identifier = "monitor"
-            func.task = func.node = task_decorated
+            # add an input: interval
+            func.task = func.node = TaskCls
             return func
 
         return decorator
