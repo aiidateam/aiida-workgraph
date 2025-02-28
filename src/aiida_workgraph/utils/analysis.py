@@ -211,10 +211,18 @@ class WorkGraphSaver:
         self.process.workgraph_error_handlers = self.workgraph_error_handlers
 
     def separate_workgraph_data(self) -> None:
-        """Save a new workgraph in the database.
+        """Separate the data into different parts and store them in the process node.
+        WorkGraph data:
+        - workgraph_data
+        - task_executors, which could contain pickled binary data
+        - task_error_handlers, which could contain pickled binary data
+        - workgraph_error_handlers, which could contain pickled binary data
 
-        - workgraph
-        - all tasks
+        Runtime information:
+        - task_states
+        - task_processes
+        - task_actions
+
         """
         from aiida_workgraph.utils import workgraph_to_short_json
         import inspect

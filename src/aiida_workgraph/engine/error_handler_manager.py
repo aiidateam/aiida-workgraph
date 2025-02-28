@@ -16,13 +16,13 @@ class ErrorHandlerManager:
             return
         # error_handlers from the task
         error_handlers = self.process.node.task_error_handlers.get(task_name, {})
-        for _, data in error_handlers.items():
+        for data in error_handlers.values():
             if node.exit_status in data.get("exit_codes", []):
                 handler = data["handler"]
                 self.run_error_handler(handler, data, task_name)
                 return
         # error_handlers from the workgraph
-        for _, data in self.ctx._error_handlers.items():
+        for data in self.ctx._error_handlers.values():
             if node.exit_code.status in data["tasks"].get(task_name, {}).get(
                 "exit_codes", []
             ):
