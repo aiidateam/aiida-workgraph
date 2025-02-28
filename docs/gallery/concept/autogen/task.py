@@ -4,15 +4,17 @@ Task
 
 Task is the basic building block of the WorkGraph. A task has inputs,
 outputs, and the executor. A task executor can be a ``calcfunction``,
-``workfunction``, ``calcjob``, ``Workchain`` or any other Python
-function. A task can be created in three ways.
+``workfunction``, ``calcjob``, ``Workchain``, a ``ProcessBuilder``,
+or any other Python function. A task can be created in three ways.
 
 Decorator
 ---------
 
 Decorate any Python function using the ``task`` decorator. To use the
-power of AiiDA (e.g. save the results to a database, keep provenance),
-one can use the ``task.calcfunction`` decorator.
+power of AiiDA (e.g. save the results to a database, keep provenance),
+one can use the ``task.calcfunction`` decorator (note that this will,
+however, require that the inputs and outputs of your function have to
+be instances of ``orm.Node``).
 
 """
 

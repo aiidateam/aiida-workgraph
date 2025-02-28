@@ -65,4 +65,5 @@ source folder `docs/gallery/<FOLDER>/autogen`. where `<FOLDER>` is the folder
 you want to attach the generated file in the sphinx source ( `docs/source`).
 Then in the `docs/source/<FOLDER>/index.rst` add `autogen/<SCRIPT>` to the
 toctree. The sphinx-gallery script will be converted to a `.rst` file during
-building time.
+building time. To modify existing documentation, change the corresponding
+Python files under `docs/gallery`.
