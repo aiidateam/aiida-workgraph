@@ -2,12 +2,11 @@ import pytest
 from aiida.workflows.arithmetic.multiply_add import MultiplyAddWorkChain
 
 
-@pytest.mark.usefixtures("started_daemon_client")
 def test_workchain(wg_workchain):
     """Submit simple calcjob."""
     wg = wg_workchain
     wg.name = "test_workchain"
-    wg.submit(wait=True, timeout=100)
+    wg.run()
     # print("results: ", results[])
     assert wg.tasks["multiply_add2"].node.outputs.result == 17
 

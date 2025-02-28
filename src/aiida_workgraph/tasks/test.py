@@ -95,8 +95,7 @@ class TestArithmeticMultiplyAdd(Task):
 
     def get_executor(self):
         executor = {
-            "use_module_path": True,
-            "module_path": "core.arithmetic.multiply_add",
-            "type": "WorkflowFactory",
+            "module_path": "aiida.workflows.arithmetic.multiply_add",
+            "callable_name": "MultiplyAddWorkChain",
         }
         return executor

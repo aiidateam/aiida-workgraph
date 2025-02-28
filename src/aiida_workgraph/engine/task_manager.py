@@ -222,10 +222,8 @@ class TaskManager:
         WorkGraph, PythonJob, ShellJob, While, If, Zone, GetContext, SetContext, Normal.
 
         """
-        from aiida_workgraph.utils import (
-            get_executor,
-            update_nested_dict_with_special_keys,
-        )
+        from aiida_workgraph.utils import update_nested_dict_with_special_keys
+        from node_graph.executor import NodeExecutor
 
         for name in names:
             # skip if the max number of awaitables is reached
@@ -250,7 +248,8 @@ class TaskManager:
             self.process.report(
                 f"Run task: {name}, type: {task['metadata']['node_type']}"
             )
-            executor, _ = get_executor(task["executor"])
+            executor_dict = self.process.node.task_executors[name]
+            executor = NodeExecutor(**executor_dict).executor if executor_dict else None
             args, kwargs, var_args, var_kwargs, args_dict = self.get_inputs(name)
             for i, key in enumerate(self.ctx._tasks[name]["args"]):
                 kwargs[key] = args[i]
@@ -402,7 +401,9 @@ class TaskManager:
         from .utils import prepare_for_workgraph_task
 
         name = task["name"]
-        inputs, _ = prepare_for_workgraph_task(task, kwargs)
+        inputs, _ = prepare_for_workgraph_task(
+            task, self.process.node.task_executors[name], kwargs
+        )
         process = self.process.submit(self.process.__class__, inputs=inputs)
         self.set_task_runtime_info(name, "process", process)
         self.set_task_runtime_info(name, "state", "RUNNING")
@@ -414,7 +415,9 @@ class TaskManager:
         from .utils import prepare_for_python_task
 
         name = task["name"]
-        inputs = prepare_for_python_task(task, kwargs, var_kwargs)
+        inputs = prepare_for_python_task(
+            task, self.process.node.task_executors[name], kwargs, var_kwargs
+        )
         # since aiida 2.5.0, we can pass inputs directly to the submit, no need to use **inputs
         if self.get_task_runtime_info(name, "action").upper() == "PAUSE":
             self.set_task_runtime_info(name, "action", "")

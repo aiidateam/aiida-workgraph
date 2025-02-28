@@ -46,7 +46,6 @@ def test_show_state(wg_calcfunction):
 
 def test_save_load(wg_calcfunction, decorated_add):
     """Save the workgraph"""
-    from aiida_workgraph.orm.pickled_function import PickledFunction
 
     wg = wg_calcfunction
     wg.add_task(decorated_add, name="add1", x=2, y=3)
@@ -58,9 +57,8 @@ def test_save_load(wg_calcfunction, decorated_add):
     wg2 = WorkGraph.load(wg.process.pk)
     assert len(wg.tasks) == len(wg2.tasks)
     # check the executor of the decorated task
-    callable = wg2.tasks.add1.get_executor()["callable"]
-    assert isinstance(callable, PickledFunction)
-    assert callable.value(1, 2) == 3
+    callable = wg2.tasks.add1.get_executor()
+    assert callable == wg.tasks.add1.get_executor()
     # TODO, the following code is not working
     # wg2.save()
     # assert wg2.tasks.add1.executor == decorated_add

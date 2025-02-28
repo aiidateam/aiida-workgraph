@@ -3,9 +3,9 @@ from __future__ import annotations
 from typing import Any, Dict, List, Optional, Union, Tuple
 import inspect
 from aiida.engine.processes.ports import PortNamespace
-from aiida_workgraph.utils import build_callable
 from aiida_workgraph.config import builtin_inputs, builtin_outputs
 from aiida_workgraph.orm.mapping import type_mapping
+from node_graph.executor import NodeExecutor
 
 
 def add_input_recursive(
@@ -144,7 +144,7 @@ def get_task_data_from_aiida_component(
             )
 
     tdata["identifier"] = tdata.pop("identifier", executor.__name__)
-    tdata["executor"] = build_callable(executor)
+    tdata["executor"] = NodeExecutor.from_callable(executor).to_dict()
     if task_type.upper() in ["CALCFUNCTION", "WORKFUNCTION"]:
         outputs = (
             [{"identifier": "workgraph.any", "name": "result"}]

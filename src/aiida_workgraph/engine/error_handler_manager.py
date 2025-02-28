@@ -15,13 +15,14 @@ class ErrorHandlerManager:
         if not node or not node.exit_status:
             return
         # error_handlers from the task
-        for _, data in self.ctx._tasks[task_name]["error_handlers"].items():
+        error_handlers = self.process.node.task_error_handlers.get(task_name, {})
+        for data in error_handlers.values():
             if node.exit_status in data.get("exit_codes", []):
                 handler = data["handler"]
                 self.run_error_handler(handler, data, task_name)
                 return
         # error_handlers from the workgraph
-        for _, data in self.ctx._error_handlers.items():
+        for data in self.ctx._error_handlers.values():
             if node.exit_code.status in data["tasks"].get(task_name, {}).get(
                 "exit_codes", []
             ):
@@ -33,9 +34,9 @@ class ErrorHandlerManager:
     def run_error_handler(self, handler: dict, metadata: dict, task_name: str) -> None:
         """Run the error handler for a task."""
         from inspect import signature
-        from aiida_workgraph.utils import get_executor
+        from node_graph.executor import NodeExecutor
 
-        handler, _ = get_executor(handler)
+        handler = NodeExecutor(**handler).executor
         handler_sig = signature(handler)
         metadata.setdefault("retry", 0)
         self.process.report(f"Run error handler: {handler.__name__}")

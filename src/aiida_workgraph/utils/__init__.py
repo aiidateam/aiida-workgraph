@@ -23,41 +23,6 @@ def inspect_aiida_component_type(executor: Callable) -> str:
     return task_type
 
 
-def build_callable(obj: Callable) -> Dict[str, Any]:
-    """
-    Build the executor data from the callable. This will either serialize the callable
-    using cloudpickle if it's a local or lambda function, or store its module and name
-    if it's a globally defined callable (function or class).
-
-    Args:
-        obj (Callable): The callable to be serialized or referenced.
-
-    Returns:
-        Dict[str, Any]: A dictionary containing the serialized callable or a reference
-                        to its module and name.
-    """
-    import types
-
-    # Check if the callable is a function or class
-    if isinstance(obj, (types.FunctionType, type)):
-        # Check if callable is nested (contains dots in __qualname__ after the first segment)
-        if obj.__module__ == "__main__" or "." in obj.__qualname__.split(".", 1)[-1]:
-            # Local or nested callable, so pickle the callable
-            executor = {"callable": obj, "use_module_path": False}
-        else:
-            # Global callable (function/class), store its module and name for reference
-            executor = {
-                "module_path": obj.__module__,
-                "callable_name": obj.__name__,
-                "use_module_path": True,
-            }
-    elif isinstance(obj, dict):
-        executor = obj
-    else:
-        raise TypeError("Provided object is not a callable function or class.")
-    return executor
-
-
 def store_nodes_recursely(data: Any) -> None:
     """Recurse through a data structure and store any unstored nodes that are found along the way
     :param data: a data structure potentially containing unstored nodes
@@ -73,35 +38,6 @@ def store_nodes_recursely(data: Any) -> None:
     elif isinstance(data, collections.abc.Sequence) and not isinstance(data, str):
         for value in data:
             store_nodes_recursely(value)
-
-
-def get_executor(data: Dict[str, Any]) -> Union[Process, Any]:
-    """Import executor from path and return the executor and type."""
-    import importlib
-    from aiida.plugins import CalculationFactory, WorkflowFactory, DataFactory
-    from aiida_workgraph.orm.pickled_function import PickledFunction
-
-    data = data or {}
-    use_module_path = data.get("use_module_path", True)
-    type = data.get("type", "function")
-    if use_module_path:
-        if type == "WorkflowFactory":
-            executor = WorkflowFactory(data["callable_name"])
-        elif type == "CalculationFactory":
-            executor = CalculationFactory(data["callable_name"])
-        elif type == "DataFactory":
-            executor = DataFactory(data["callable_name"])
-        elif not data.get("name", None) and not data.get("module_path", None):
-            executor = None
-        else:
-            module = importlib.import_module("{}".format(data.get("module_path", "")))
-            executor = getattr(module, data["callable_name"])
-    else:
-        if not isinstance(data["callable"], PickledFunction):
-            raise ValueError("The callable should be PickledFunction.")
-        executor = data["callable"].value
-
-    return executor, type
 
 
 def create_data_node(executor: orm.Data, args: list, kwargs: dict) -> orm.Node:
@@ -285,11 +221,13 @@ def get_workgraph_data(process: Union[int, orm.Node]) -> Optional[Dict[str, Any]
     if isinstance(process, int):
         process = load_node(process)
     wgdata = process.workgraph_data
+    task_executors = process.task_executors
     if wgdata is None:
         return
     for name, task in wgdata["tasks"].items():
         wgdata["tasks"][name] = deserialize_safe(task)
-    wgdata["error_handlers"] = deserialize_safe(wgdata["error_handlers"])
+        wgdata["tasks"][name]["executor"] = task_executors.get(name)
+    wgdata["error_handlers"] = process.workgraph_error_handlers
     return wgdata
 
 
@@ -395,14 +333,6 @@ def serialize_workgraph_inputs(wgdata):
     import inspect
 
     for _, task in wgdata["tasks"].items():
-        # find the pickled executor, create a pickleddata for it
-        # then use the pk of the pickleddata as the value of the executor
-        if task["executor"] and not task["executor"].get("use_module_path", False):
-            pickle_callable(task["executor"])
-        # error_handlers of the task
-        for _, data in task["error_handlers"].items():
-            if not data["handler"]["use_module_path"]:
-                pickle_callable(data["handler"])
         if task["metadata"]["node_type"].upper() == "PYTHONJOB":
             PythonJob.serialize_pythonjob_data(task["inputs"])
         for _, input in task["inputs"].items():
@@ -410,10 +340,6 @@ def serialize_workgraph_inputs(wgdata):
                 prop = input["property"]
                 if inspect.isfunction(prop["value"]):
                     prop["value"] = PickledLocalFunction(prop["value"]).store()
-    # error_handlers of the workgraph
-    for _, data in wgdata["error_handlers"].items():
-        if not data["handler"]["use_module_path"]:
-            pickle_callable(data["handler"])
 
 
 def create_and_pause_process(
