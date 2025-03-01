@@ -3,7 +3,6 @@ from __future__ import annotations
 from typing import Any, Callable, Dict, List, Optional, Union, Tuple
 from aiida.engine import calcfunction, workfunction, CalcJob, WorkChain
 from aiida_workgraph.task import Task
-from aiida_workgraph.utils import validate_task_inout
 import inspect
 from aiida_workgraph.config import builtin_inputs, builtin_outputs
 from node_graph.executor import NodeExecutor
@@ -77,47 +76,6 @@ def build_task_from_callable(
                 executor, inputs=inputs, outputs=outputs
             )
     raise ValueError(f"The executor {executor} is not supported.")
-
-
-def build_shelljob_task(outputs: list = None, parser_outputs: list = None) -> Task:
-    """Build ShellJob with custom inputs and outputs."""
-    from aiida_shell.calculations.shell import ShellJob
-    from aiida_shell.parsers.shell import ShellParser
-
-    outputs = outputs or []
-    parser_outputs = parser_outputs or []
-    TaskCls = AiiDAComponentTaskFactory.from_aiida_component(ShellJob)
-    tdata = TaskCls._ndata
-    # Extend the outputs
-    tdata["outputs"].extend(
-        [
-            {"identifier": "workgraph.any", "name": "stdout"},
-            {"identifier": "workgraph.any", "name": "stderr"},
-        ]
-    )
-    parser_outputs = validate_task_inout(parser_outputs, "parser_outputs")
-
-    outputs = [
-        {"identifier": "workgraph.any", "name": ShellParser.format_link_label(output)}
-        for output in outputs
-    ]
-    outputs.extend(parser_outputs)
-    # add user defined outputs
-    for output in outputs:
-        if output["name"] not in tdata["outputs"]:
-            tdata["outputs"].append(output)
-    #
-    tdata["identifier"] = "ShellJob"
-    tdata["inputs"].extend(
-        [
-            {"identifier": "workgraph.any", "name": "command"},
-            {"identifier": "workgraph.any", "name": "resolve_command"},
-        ]
-    )
-    tdata["metadata"]["node_type"] = "SHELLJOB"
-    TaskCls = BaseTaskFactory(tdata)
-    TaskCls.is_aiida_component = True
-    return TaskCls, tdata
 
 
 def build_task_from_workgraph(wg: "WorkGraph"):

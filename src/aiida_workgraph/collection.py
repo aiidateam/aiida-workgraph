@@ -15,11 +15,11 @@ class TaskCollection(NodeCollection):
     ) -> Any:
         from aiida_workgraph.decorator import (
             build_task_from_callable,
-            build_shelljob_task,
             build_task_from_workgraph,
         )
         from aiida_workgraph.workgraph import WorkGraph
         from aiida_workgraph.tasks.factory.pythonjob_task import PythonJobTaskFactory
+        from aiida_workgraph.tasks.factory.shelljob_task import ShellJobTaskFactory
 
         # build the task on the fly if the identifier is a callable
         if callable(identifier):
@@ -27,11 +27,11 @@ class TaskCollection(NodeCollection):
         if isinstance(identifier, str) and identifier.upper() == "PYTHONJOB":
             identifier = PythonJobTaskFactory.from_function(kwargs.pop("function"))
         if isinstance(identifier, str) and identifier.upper() == "SHELLJOB":
-            identifier, _ = build_shelljob_task(
+            TaskCls = ShellJobTaskFactory.create_task(
                 outputs=kwargs.get("outputs", None),
                 parser_outputs=kwargs.pop("parser_outputs", None),
             )
-            task = super()._new(identifier, name, uuid, **kwargs)
+            task = super()._new(TaskCls, name, uuid, **kwargs)
             return task
         if isinstance(identifier, str) and identifier.upper() == "WHILE":
             task = super()._new("workgraph.while", name, uuid, **kwargs)
