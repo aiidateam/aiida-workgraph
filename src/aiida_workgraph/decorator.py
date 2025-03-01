@@ -4,18 +4,12 @@ from typing import Any, Callable, Dict, List, Optional, Union, Tuple
 from aiida.engine import calcfunction, workfunction, CalcJob, WorkChain
 from aiida_workgraph.task import Task
 import inspect
-from aiida_workgraph.config import builtin_inputs, builtin_outputs
 from node_graph.executor import NodeExecutor
-from typing import TYPE_CHECKING
 from aiida_workgraph.tasks.factory import (
     DecoratedFunctionTaskFactory,
     AiiDAComponentTaskFactory,
-    BaseTaskFactory,
+    WorkGraphTaskFactory,
 )
-
-
-if TYPE_CHECKING:
-    from aiida_workgraph import WorkGraph
 
 
 def build_task(
@@ -27,7 +21,7 @@ def build_task(
     from aiida_workgraph.workgraph import WorkGraph
 
     if isinstance(executor, WorkGraph):
-        return build_task_from_workgraph(executor)
+        return WorkGraphTaskFactory.create_task(executor)
     elif isinstance(executor, str):
         executor = NodeExecutor(module_path=executor).executor
     if callable(executor):
@@ -76,87 +70,6 @@ def build_task_from_callable(
                 executor, inputs=inputs, outputs=outputs
             )
     raise ValueError(f"The executor {executor} is not supported.")
-
-
-def build_task_from_workgraph(wg: "WorkGraph"):
-    """Build task from workgraph.
-
-    Note that this actually returns a ``DecoratedNode`` object, which is defined in the ``create_node`` class factory
-    called by ``create_task``.
-
-    """
-
-    tdata = {"metadata": {"node_type": "workgraph"}}
-    inputs = []
-    outputs = []
-    group_outputs = []
-    # add all the inputs/outputs from the tasks in the workgraph
-    builtin_input_names = [input["name"] for input in builtin_inputs]
-    builtin_output_names = [output["name"] for output in builtin_outputs]
-
-    for task in wg.tasks:
-        # inputs
-        inputs.append(
-            {
-                "identifier": "workgraph.namespace",
-                "name": f"{task.name}",
-            }
-        )
-        for socket in task.inputs:
-            if socket._name in builtin_input_names:
-                continue
-            inputs.append(
-                {
-                    "identifier": socket._identifier,
-                    "name": f"{task.name}.{socket._name}",
-                }
-            )
-        # outputs
-        outputs.append(
-            {
-                "identifier": "workgraph.namespace",
-                "name": f"{task.name}",
-            }
-        )
-        for socket in task.outputs:
-            if socket._name in builtin_output_names:
-                continue
-            outputs.append(
-                {
-                    "identifier": socket._identifier,
-                    "name": f"{task.name}.{socket._name}",
-                }
-            )
-            group_outputs.append(
-                {
-                    "name": f"{task.name}.{socket._name}",
-                    "from": f"{task.name}.{socket._name}",
-                }
-            )
-    # add built-in sockets
-    for output in builtin_outputs:
-        outputs.append(output.copy())
-    for input in builtin_inputs:
-        inputs.append(input.copy())
-    tdata["metadata"]["node_class"] = {
-        "module_path": "aiida_workgraph.tasks.builtins",
-        "callable_name": "WorkGraphTask",
-    }
-    tdata["inputs"] = inputs
-    tdata["outputs"] = outputs
-    tdata["identifier"] = wg.name
-    # get wgdata from the workgraph
-    wgdata = wg.prepare_inputs()["workgraph_data"]
-    executor = {
-        "module_path": "aiida_workgraph.engine.workgraph",
-        "callable_name": "WorkGraphEngine",
-        "graph_data": wgdata,
-    }
-    tdata["metadata"]["group_outputs"] = group_outputs
-    tdata["executor"] = executor
-
-    TaskCls = BaseTaskFactory(tdata)
-    return TaskCls
 
 
 def nonfunctional_usage(callable: Callable):

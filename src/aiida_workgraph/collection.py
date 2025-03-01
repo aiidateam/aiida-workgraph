@@ -13,13 +13,11 @@ class TaskCollection(NodeCollection):
         uuid: Optional[str] = None,
         **kwargs: Any
     ) -> Any:
-        from aiida_workgraph.decorator import (
-            build_task_from_callable,
-            build_task_from_workgraph,
-        )
+        from aiida_workgraph.decorator import build_task_from_callable
         from aiida_workgraph.workgraph import WorkGraph
         from aiida_workgraph.tasks.factory.pythonjob_task import PythonJobTaskFactory
         from aiida_workgraph.tasks.factory.shelljob_task import ShellJobTaskFactory
+        from aiida_workgraph.tasks.factory.workgraph_task import WorkGraphTaskFactory
 
         # build the task on the fly if the identifier is a callable
         if callable(identifier):
@@ -40,7 +38,7 @@ class TaskCollection(NodeCollection):
             task = super()._new("workgraph.if", name, uuid, **kwargs)
             return task
         if isinstance(identifier, WorkGraph):
-            identifier = build_task_from_workgraph(identifier)
+            identifier = WorkGraphTaskFactory.create_task(identifier)
         return super()._new(identifier, name, uuid, **kwargs)
 
 
