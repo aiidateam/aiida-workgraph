@@ -79,11 +79,11 @@ class TestArithmeticMultiplyAdd(WorkChainTask):
         self.outputs._clear()
         self.add_input("workgraph.any", "code")
         inp = self.add_input("workgraph.aiida_int", "x")
-        inp.add_property("workgraph.aiida_int", "x", default=0.0)
+        inp.add_property("workgraph.aiida_int", "x", default=0)
         inp = self.add_input("workgraph.aiida_int", "y")
-        inp.add_property("workgraph.aiida_int", "y", default=0.0)
+        inp.add_property("workgraph.aiida_int", "y", default=0)
         inp = self.add_input("workgraph.aiida_int", "z")
-        inp.add_property("workgraph.aiida_int", "z", default=0.0)
+        inp.add_property("workgraph.aiida_int", "z", default=0)
         self.add_input(
             "workgraph.any", "_wait", metadata={"arg_type": "none"}, link_limit=100000
         )
