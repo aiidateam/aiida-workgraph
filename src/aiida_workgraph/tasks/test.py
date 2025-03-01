@@ -1,7 +1,7 @@
-from aiida_workgraph.task import Task
+from .aiida import CalcFunctionTask, WorkChainTask
 
 
-class TestAdd(Task):
+class TestAdd(CalcFunctionTask):
 
     identifier: str = "workgraph.test_add"
     name = "TestAAdd"
@@ -33,11 +33,10 @@ class TestAdd(Task):
         return executor
 
 
-class TestSumDiff(Task):
+class TestSumDiff(CalcFunctionTask):
 
     identifier: str = "workgraph.test_sum_diff"
     name = "TestSumDiff"
-    node_type = "CALCFUNCTION"
     catalog = "Test"
 
     def create_properties(self) -> None:
@@ -66,11 +65,10 @@ class TestSumDiff(Task):
         return executor
 
 
-class TestArithmeticMultiplyAdd(Task):
+class TestArithmeticMultiplyAdd(WorkChainTask):
 
     identifier: str = "workgraph.test_arithmetic_multiply_add"
     name = "TestArithmeticMultiplyAdd"
-    node_type = "WORKCHAIN"
     catalog = "Test"
 
     def create_properties(self) -> None:

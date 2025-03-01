@@ -1,62 +1,88 @@
 from aiida_workgraph.task import Task
-from aiida_workgraph.utils.inspect_aiida_components import (
-    get_task_data_from_aiida_component,
-)
-from aiida_workgraph.orm.mapping import type_mapping
-from copy import deepcopy
-from node_graph.utils import list_to_dict
-from node_graph.executor import NodeExecutor
+
+
+class AiiDAFunctionTask(Task):
+    """Task with AiiDA calcfunction/workfunction as executor."""
+
+    identifier = "workgraph.aiida_functions"
+    name = "aiida_function"
+    node_type = "function"
+    catalog = "AIIDA"
+
+    def execute(self, args, kwargs, var_kwargs):
+        from aiida.engine import run_get_node
+        from node_graph.executor import NodeExecutor
+
+        executor = NodeExecutor(**self.get_executor()).executor
+        kwargs.setdefault("metadata", {})
+        kwargs["metadata"].update({"call_link_label": self.name})
+        # since aiida 2.5.0, we need to use args_dict to pass the args to the run_get_node
+        if var_kwargs is None:
+            _, process = run_get_node(executor, **kwargs)
+        else:
+            _, process = run_get_node(executor, **kwargs, **var_kwargs)
+        process.label = self.name
+
+        return process, "FINISHED"
+
+
+class CalcFunctionTask(AiiDAFunctionTask):
+    identifier = "workgraph.calcfunction"
+    name = "calcfunction"
+    node_type = "CalcFunction"
+    catalog = "AIIDA"
+
+
+class WorkFunctionTask(AiiDAFunctionTask):
+    identifier = "workgraph.workfunction"
+    name = "workfunction"
+    node_type = "WorkFunction"
+    catalog = "AIIDA"
 
 
 class AiiDAProcessTask(Task):
-    """Task with AiiDA process as executor."""
+    """Task with AiiDA calcfunction/workfunction as executor."""
 
     identifier = "workgraph.aiida_process"
     name = "aiida_process"
     node_type = "Process"
     catalog = "AIIDA"
 
-    def __init__(self, executor: NodeExecutor, **kwargs):
+    def execute(self, engine_process, kwargs, var_kwargs=None):
+        from node_graph.executor import NodeExecutor
+        from aiida_workgraph.utils import create_and_pause_process
 
-        task_data = self.inspect_executor(executor)
-        self.task_data = task_data
-        super().__init__(executor=executor, **kwargs)
-        self.node_type = self.task_data["metadata"]["task_type"]
+        executor = NodeExecutor(**self.get_executor()).executor
 
-    def inspect_executor(self, executor) -> dict:
-        metadata = executor.get("metadata", {})
-        inputs = metadata.pop("inputs", [])
-        outputs = metadata.pop("outputs", [])
-        task_data = get_task_data_from_aiida_component(
-            tdata=deepcopy(executor),
-            inputs=deepcopy(inputs),
-            outputs=deepcopy(outputs),
-        )
-        return task_data
-
-    def create_sockets(self) -> None:
-        self.inputs._clear()
-        self.outputs._clear()
-
-        inputs = list_to_dict(self.task_data.get("inputs", {}))
-        for input in inputs.values():
-            if isinstance(input, str):
-                input = {"identifier": type_mapping["default"], "name": input}
-            kwargs = {}
-            if "property_data" in input:
-                kwargs["property_data"] = input.pop("property_data")
-            self.add_input(
-                input.get("identifier", type_mapping["default"]),
-                name=input["name"],
-                metadata=input.get("metadata", {}),
-                link_limit=input.get("link_limit", 1),
-                **kwargs,
+        kwargs.setdefault("metadata", {})
+        kwargs["metadata"].update({"call_link_label": self.name})
+        if self.action == "PAUSE":
+            engine_process.report(f"Task {self.name} is created and paused.")
+            process = create_and_pause_process(
+                engine_process.runner,
+                executor,
+                kwargs,
+                state_msg="Paused through WorkGraph",
             )
-        outputs = list_to_dict(self.task_data.get("outputs", {}))
-        for output in outputs.values():
-            if isinstance(output, str):
-                output = {"identifier": type_mapping["default"], "name": output}
-            identifier = output.get("identifier", type_mapping["default"])
-            self.add_output(
-                identifier, name=output["name"], metadata=output.get("metadata", {})
-            )
+            state = "CREATED"
+            process = process.node
+        else:
+            process = engine_process.submit(executor, **kwargs)
+            state = "RUNNING"
+        process.label = self.name
+
+        return process, state
+
+
+class CalcJobTask(AiiDAProcessTask):
+    identifier = "workgraph.calcjob"
+    name = "calcjob"
+    node_type = "CalcJob"
+    catalog = "AIIDA"
+
+
+class WorkChainTask(AiiDAProcessTask):
+    identifier = "workgraph.workchain"
+    name = "workchain"
+    node_type = "WorkChain"
+    catalog = "AIIDA"

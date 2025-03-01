@@ -1,7 +1,7 @@
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 from .base import BaseTaskFactory
 from aiida_pythonjob import PythonJob
-from aiida_workgraph.tasks.pythonjob import PythonJob as PythonJobTask
+from aiida_workgraph.tasks.pythonjob import PythonJobTask
 from .function_task import DecoratedFunctionTaskFactory
 from .aiida_task import AiiDAComponentTaskFactory
 
