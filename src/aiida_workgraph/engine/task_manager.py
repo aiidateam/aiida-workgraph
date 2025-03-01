@@ -37,7 +37,10 @@ class TaskManager:
 
     def get_task(self, name: str):
         """Get task from the context."""
-        task = Task.from_dict(self.ctx._tasks[name])
+        executor_dict = self.process.node.task_executors[name]
+        tdata = {"executor": executor_dict}
+        tdata.update(self.ctx._tasks[name])
+        task = Task.from_dict(tdata)
         # update task results
         for output in task.outputs:
             output.value = get_nested_dict(

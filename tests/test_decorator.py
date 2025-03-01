@@ -11,7 +11,7 @@ def test_custom_outputs():
     def add_multiply(x, y):
         return {"sum": x + y, "product": x * y}
 
-    n = add_multiply.task()
+    n = add_multiply.TaskCls()
     assert "sum" in n.outputs
     assert "product" in n.outputs
 
@@ -21,7 +21,7 @@ def test_decorators_args() -> None:
     def test(a, b=1, **c):
         print(a, b, c)
 
-    n = test.task()
+    n = test.TaskCls()
     tdata = n.to_dict()
     assert tdata["args"] == []
     assert set(tdata["kwargs"]) == set(["a", "b"])
@@ -43,7 +43,7 @@ def test_decorators_calcfunction_args() -> None:
         ]
     )
     kwargs = set(test.process_class.spec().inputs.ports.keys())
-    n = test.task()
+    n = test.TaskCls()
     tdata = n.to_dict()
     assert tdata["args"] == []
     assert set(tdata["kwargs"]) == set(kwargs)
@@ -75,7 +75,7 @@ def task_function(request):
 
 def test_decorators_task_args(task_function):
 
-    n = task_function.task()
+    n = task_function.TaskCls()
     tdata = n.to_dict()
     assert tdata["args"] == []
     assert tdata["kwargs"] == ["a", "b"]
@@ -114,7 +114,7 @@ def test_decorators_workfunction_args(task_workfunction) -> None:
     )
     kwargs = set(task_workfunction.process_class.spec().inputs.ports.keys())
     #
-    n = task_workfunction.task()
+    n = task_workfunction.TaskCls()
     tdata = n.to_dict()
     assert tdata["args"] == []
     assert set(tdata["kwargs"]) == set(kwargs)
@@ -134,7 +134,7 @@ def test_decorators_parameters() -> None:
     def test(a, b=1, **c):
         return {"sum": a + b, "product": a * b}
 
-    test1 = test.task()
+    test1 = test.TaskCls()
     assert test1.inputs["c"]._link_limit == 1000
     assert "sum" in test1.get_output_names()
     assert "product" in test1.get_output_names()
@@ -166,7 +166,7 @@ def task_graph_builder(request):
 
 def test_decorators_graph_builder_args(task_graph_builder) -> None:
     assert task_graph_builder.identifier == "add_multiply_group"
-    n = task_graph_builder.task()
+    n = task_graph_builder.TaskCls()
     tdata = n.to_dict()
     assert tdata["args"] == []
     assert tdata["kwargs"] == ["a", "b"]

@@ -57,16 +57,13 @@ class DecoratedFunctionTaskFactory(BaseTaskFactory):
             "metadata": {
                 "node_type": task_type,
                 "catalog": catalog,
-                "node_class": {
-                    "module_path": "aiida_workgraph.task",
-                    "callable_name": "Task",
-                },
                 "group_inputs": group_inputs or [],
                 "group_outputs": group_outputs or [],
             },
             "properties": properties,
             "inputs": task_inputs,
             "outputs": task_outputs,
+            "error_handlers": error_handlers,
         }
         tdata["executor"] = NodeExecutor.from_callable(func).to_dict()
         additional_data = additional_data or {}
