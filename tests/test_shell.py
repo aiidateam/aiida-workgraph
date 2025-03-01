@@ -46,7 +46,7 @@ def test_shell_code():
             "file_b": SinglefileData.from_string("string b"),
         },
     )
-    wg.submit(wait=True)
+    wg.run()
     assert job1.node.outputs.stdout.get_content() == "string astring b"
 
 
@@ -121,5 +121,5 @@ def test_shell_graph_builder():
 
     wg = WorkGraph(name="test_shell_graph_builder")
     add_multiply1 = wg.add_task(add_multiply, x=Int(2), y=Int(3))
-    wg.submit(wait=True)
+    wg.submit(wait=True, timeout=60)
     assert add_multiply1.outputs.result.value.value == 5

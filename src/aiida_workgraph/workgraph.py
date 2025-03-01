@@ -328,10 +328,11 @@ class WorkGraph(node_graph.NodeGraph):
 
     @classmethod
     def from_dict(cls, wgdata: Dict[str, Any]) -> "WorkGraph":
+        from aiida_workgraph.tasks.factory.base import BaseTaskFactory
 
         if "tasks" in wgdata:
             wgdata["nodes"] = wgdata.pop("tasks")
-        wg = super().from_dict(wgdata)
+        wg = super().from_dict(wgdata, class_factory=BaseTaskFactory)
         for key in [
             "max_iteration",
             "execution_count",
