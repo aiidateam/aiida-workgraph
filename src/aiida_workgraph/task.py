@@ -262,6 +262,9 @@ class TaskCollection:
 
     def add(self, tasks: Union[List[Union[str, Task]], str, Task]) -> None:
         """Add tasks to the collection. Tasks can be a list or a single Task or task name."""
+        # If the task does not belong to any graph, skip adding it
+        if isinstance(self.graph, Task):
+            return
         for task in self._normalize_tasks(tasks):
             self._items.add(task)
 

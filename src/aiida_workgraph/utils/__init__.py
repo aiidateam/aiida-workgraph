@@ -335,12 +335,12 @@ def serialize_workgraph_inputs(wgdata):
     So, if a function is used as input, we needt to serialize the function.
     """
     from aiida_workgraph.orm.pickled_function import PickledLocalFunction
-    from aiida_workgraph.tasks.pythonjob import PythonJob
+    from aiida_workgraph.tasks.pythonjob import PythonJobTask
     import inspect
 
     for _, task in wgdata["tasks"].items():
         if task["metadata"]["node_type"].upper() == "PYTHONJOB":
-            PythonJob.serialize_pythonjob_data(task["inputs"])
+            PythonJobTask.serialize_pythonjob_data(task["inputs"])
         for _, input in task["inputs"].items():
             if input.get("property"):
                 prop = input["property"]

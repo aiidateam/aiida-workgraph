@@ -8,6 +8,20 @@ from aiida.engine.processes.ports import PortNamespace
 from aiida_workgraph.config import builtin_inputs, builtin_outputs
 from .base import BaseTaskFactory
 from aiida_workgraph.utils import validate_task_inout
+from aiida_workgraph.tasks.aiida import (
+    CalcFunctionTask,
+    WorkFunctionTask,
+    CalcJobTask,
+    WorkChainTask,
+)
+
+
+task_class_mapping = {
+    "CALCFUNCTION": CalcFunctionTask,
+    "WORKFUNCTION": WorkFunctionTask,
+    "CALCJOB": CalcJobTask,
+    "WORKCHAIN": WorkChainTask,
+}
 
 
 def add_input_recursive(
@@ -153,6 +167,7 @@ def get_task_data_from_aiida_component(
     for input in builtin_inputs:
         inputs.append(input.copy())
     tdata["metadata"]["node_type"] = task_type
+    tdata["metadata"]["node_class"] = task_class_mapping.get(task_type.upper(), Task)
     tdata["inputs"] = inputs
     tdata["outputs"] = outputs
     return tdata

@@ -23,6 +23,7 @@ class DecoratedFunctionTaskFactory(BaseTaskFactory):
         group_inputs: List[Tuple[str, str]] = None,
         group_outputs: List[Tuple[str, str]] = None,
         additional_data: Optional[Dict[str, Any]] = None,
+        node_class: Optional[Callable] = None,
     ):
         """
         Build the _DecoratedFunctionTask subclass from the function
@@ -66,6 +67,8 @@ class DecoratedFunctionTaskFactory(BaseTaskFactory):
             "error_handlers": error_handlers,
         }
         tdata["executor"] = NodeExecutor.from_callable(func).to_dict()
+        if node_class:
+            tdata["metadata"]["node_class"] = node_class
         additional_data = additional_data or {}
         tdata.update(additional_data)
 
