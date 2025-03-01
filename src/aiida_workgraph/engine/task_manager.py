@@ -280,11 +280,10 @@ class TaskManager:
                 "SHELLJOB",
                 "PYTHONJOB",
                 "WORKGRAPH",
+                "GRAPH_BUILDER",
             ]:
-                self.execute_process_task(name, kwargs=kwargs, var_kwargs=var_kwargs)
-            elif task_type == "GRAPH_BUILDER":
-                self.execute_graph_builder_task(
-                    task, executor, kwargs, var_args, var_kwargs
+                self.execute_process_task(
+                    name, args=args, kwargs=kwargs, var_kwargs=var_kwargs
                 )
             elif task_type == "WHILE":
                 self.execute_while_task(task)
@@ -359,12 +358,15 @@ class TaskManager:
         if continue_workgraph:
             self.continue_workgraph()
 
-    def execute_process_task(self, name, kwargs, var_kwargs=None):
+    def execute_process_task(self, name, args=None, kwargs=None, var_kwargs=None):
         """Execute a CalcJob or WorkChain task."""
         try:
             task = self.get_task(name)
             process, state = task.execute(
-                engine_process=self.process, kwargs=kwargs, var_kwargs=var_kwargs
+                engine_process=self.process,
+                args=args,
+                kwargs=kwargs,
+                var_kwargs=var_kwargs,
             )
             self.set_task_runtime_info(name, "state", state)
             self.set_task_runtime_info(name, "action", "")
@@ -376,19 +378,6 @@ class TaskManager:
                 f"Error in task {name}: {e}\n{error_traceback}"
             )  # Log the error with traceback
             self.update_task_state(name, success=False)
-
-    def execute_graph_builder_task(self, task, executor, kwargs, var_args, var_kwargs):
-        """Execute a GraphBuilder task."""
-        name = task["name"]
-        wg = self.run_executor(executor, [], kwargs, var_args, var_kwargs)
-        wg.name = name
-        wg.group_outputs = self.ctx._tasks[name]["metadata"]["group_outputs"]
-        wg.parent_uuid = self.process.node.uuid
-        inputs = wg.prepare_inputs(metadata={"call_link_label": name})
-        process = self.process.submit(self.process.__class__, inputs=inputs)
-        self.set_task_runtime_info(name, "process", process)
-        self.set_task_runtime_info(name, "state", "RUNNING")
-        self.awaitable_manager.to_context(**{name: process})
 
     def execute_while_task(self, task):
         """Execute a WHILE task."""

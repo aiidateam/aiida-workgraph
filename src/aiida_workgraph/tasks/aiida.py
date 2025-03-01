@@ -9,7 +9,7 @@ class AiiDAFunctionTask(Task):
     node_type = "function"
     catalog = "AIIDA"
 
-    def execute(self, args, kwargs, var_kwargs):
+    def execute(self, args=None, kwargs=None, var_kwargs=None):
         from aiida.engine import run_get_node
         from node_graph.executor import NodeExecutor
 
@@ -48,7 +48,7 @@ class AiiDAProcessTask(Task):
     node_type = "Process"
     catalog = "AIIDA"
 
-    def execute(self, engine_process, kwargs, var_kwargs=None):
+    def execute(self, engine_process, args=None, kwargs=None, var_kwargs=None):
         from node_graph.executor import NodeExecutor
         from aiida_workgraph.utils import create_and_pause_process
 

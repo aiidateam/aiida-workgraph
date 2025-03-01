@@ -169,6 +169,7 @@ class TaskDecoratorCollection:
         """
 
         def decorator(func):
+            from aiida_workgraph.tasks.builtins import GraphBuilderTask
 
             task_outputs = [
                 {"identifier": "workgraph.any", "name": output["name"]}
@@ -184,6 +185,7 @@ class TaskDecoratorCollection:
                 catalog=catalog,
                 group_inputs=inputs,
                 group_outputs=outputs,
+                node_class=GraphBuilderTask,
             )
             func.TaskCls = func.NodeCls = TaskCls
             return func

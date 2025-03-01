@@ -46,7 +46,7 @@ class ShellJobTask(Task):
     node_type = "ShellJob"
     catalog = "AIIDA"
 
-    def execute(self, engine_process, kwargs, var_kwargs=None):
+    def execute(self, engine_process, args=None, kwargs=None, var_kwargs=None):
         from aiida_workgraph.utils import create_and_pause_process
 
         inputs = prepare_for_shell_task(kwargs)

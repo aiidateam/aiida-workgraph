@@ -136,7 +136,7 @@ class PythonJobTask(Task):
 
         return inputs
 
-    def execute(self, engine_process, kwargs, var_kwargs):
+    def execute(self, engine_process, args=None, kwargs=None, var_kwargs=None):
         from aiida_workgraph.utils import create_and_pause_process
         from aiida_pythonjob import PythonJob
 
