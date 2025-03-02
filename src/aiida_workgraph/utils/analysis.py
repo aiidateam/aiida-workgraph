@@ -200,47 +200,55 @@ class WorkGraphSaver:
         - workgraph
         - all tasks
         """
-        self.save_task_states()
-        self.serialize_workgraph_data()
+        self.separate_workgraph_data()
+        self.process.task_states = self.task_states
+        self.process.task_processes = self.task_processes
+        self.process.task_actions = self.task_actions
+        self.process.task_executors = self.task_executors
+        self.process.task_error_handlers = self.task_error_handlers
         self.process.workgraph_data = self.wgdata
         self.process.workgraph_data_short = self.short_wgdata
+        self.process.workgraph_error_handlers = self.workgraph_error_handlers
 
-    def serialize_workgraph_data(self) -> None:
-        """Save a new workgraph in the database.
+    def separate_workgraph_data(self) -> None:
+        """Separate the data into different parts and store them in the process node.
+        WorkGraph data:
+        - workgraph_data
+        - task_executors, which could contain pickled binary data
+        - task_error_handlers, which could contain pickled binary data
+        - workgraph_error_handlers, which could contain pickled binary data
 
-        - workgraph
-        - all tasks
+        Runtime information:
+        - task_states
+        - task_processes
+        - task_actions
+
         """
         from aiida_workgraph.utils import workgraph_to_short_json
         import inspect
         from aiida_workgraph.orm.pickled_function import PickledLocalFunction
 
+        self.task_states = {}
+        self.task_processes = {}
+        self.task_actions = {}
+        self.task_executors = {}
+        self.task_error_handlers = {}
+        self.workgraph_error_handlers = {}
         self.short_wgdata = workgraph_to_short_json(self.wgdata)
         for name, task in self.wgdata["tasks"].items():
+            self.task_states[name] = task["state"]
+            self.task_processes[name] = task["process"]
+            self.task_actions[name] = task["action"]
+            self.task_executors[name] = task.pop("executor", None)
+            self.task_error_handlers[name] = task.pop("error_handlers", {})
             for _, input in task["inputs"].items():
                 if input.get("property"):
                     prop = input["property"]
                     if inspect.isfunction(prop["value"]):
                         prop["value"] = PickledLocalFunction(prop["value"]).store()
             self.wgdata["tasks"][name] = serialize(task)
-        self.wgdata["error_handlers"] = serialize(self.wgdata["error_handlers"])
+        self.workgraph_error_handlers = self.wgdata.pop("error_handlers")
         self.wgdata["context"] = serialize(self.wgdata["context"])
-
-    def save_task_states(self) -> Dict:
-        """Get task states."""
-
-        task_states = {}
-        task_processes = {}
-        task_actions = {}
-        for name, task in self.wgdata["tasks"].items():
-            task_states[name] = task["state"]
-            task_processes[name] = task["process"]
-            task_actions[name] = task["action"]
-        self.process.task_states = task_states
-        self.process.task_processes = task_processes
-        self.process.task_actions = task_actions
-
-        return task_states
 
     def reset_tasks(self, tasks: List[str]) -> None:
         """Reset tasks
@@ -282,7 +290,7 @@ class WorkGraphSaver:
             return
         for name, task in wgdata["tasks"].items():
             wgdata["tasks"][name] = deserialize_safe(task)
-        wgdata["error_handlers"] = deserialize_safe(wgdata["error_handlers"])
+        wgdata["error_handlers"] = process.workgraph_error_handlers
         return wgdata
 
     def check_diff(

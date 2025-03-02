@@ -6,12 +6,11 @@ from aiida.orm import SinglefileData, load_computer, Int
 
 def test_prepare_for_shell_task_nonexistent():
     """Check that the `ValueError` raised by `aiida-shell` for a non-extistent executable is captured by WorkGraph."""
-    from aiida_workgraph.engine.utils import prepare_for_shell_task
+    from aiida_workgraph.tasks.factory.shelljob_task import prepare_for_shell_task
 
-    task = {"name": "test"}
     inputs = {"command": "abc42"}
     with pytest.raises(ValueError, match="failed to determine the absolute path"):
-        prepare_for_shell_task(task=task, inputs=inputs)
+        prepare_for_shell_task(inputs=inputs)
 
 
 def test_shell_command(fixture_localhost):
@@ -46,7 +45,7 @@ def test_shell_code():
             "file_b": SinglefileData.from_string("string b"),
         },
     )
-    wg.submit(wait=True)
+    wg.run()
     assert job1.node.outputs.stdout.get_content() == "string astring b"
 
 
@@ -121,5 +120,5 @@ def test_shell_graph_builder():
 
     wg = WorkGraph(name="test_shell_graph_builder")
     add_multiply1 = wg.add_task(add_multiply, x=Int(2), y=Int(3))
-    wg.submit(wait=True)
+    wg.submit(wait=True, timeout=60)
     assert add_multiply1.outputs.result.value.value == 5

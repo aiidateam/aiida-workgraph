@@ -208,11 +208,8 @@ class WorkGraph(node_graph.NodeGraph):
         """Get the error handlers."""
         from aiida.engine import ExitCode
 
-        from aiida_workgraph.utils import build_callable
-
         error_handlers = {}
         for name, error_handler in self._error_handlers.items():
-            error_handler["handler"] = build_callable(error_handler["handler"])
             error_handlers[name] = error_handler
         # convert exit code label (str) to status (int)
         for handler in error_handlers.values():
@@ -283,7 +280,6 @@ class WorkGraph(node_graph.NodeGraph):
         of the tasks that are outgoing from the process node. This includes updating the state of process nodes
         linked to the current process, and data nodes linked to the current process.
         """
-        # from aiida_workgraph.utils import get_executor
         from aiida_workgraph.utils import get_nested_dict, get_processes_latest
 
         if self.process is None:
@@ -332,10 +328,11 @@ class WorkGraph(node_graph.NodeGraph):
 
     @classmethod
     def from_dict(cls, wgdata: Dict[str, Any]) -> "WorkGraph":
+        from aiida_workgraph.tasks.factory.base import BaseTaskFactory
 
         if "tasks" in wgdata:
             wgdata["nodes"] = wgdata.pop("tasks")
-        wg = super().from_dict(wgdata)
+        wg = super().from_dict(wgdata, class_factory=BaseTaskFactory)
         for key in [
             "max_iteration",
             "execution_count",
@@ -506,7 +503,12 @@ class WorkGraph(node_graph.NodeGraph):
 
     def add_error_handler(self, handler, name, tasks: dict = None) -> None:
         """Attach an error handler to the workgraph."""
-        self._error_handlers[name] = {"handler": handler, "tasks": tasks}
+        from node_graph.executor import NodeExecutor
+
+        self._error_handlers[name] = {
+            "handler": NodeExecutor.from_callable(handler).to_dict(),
+            "tasks": tasks,
+        }
 
     def add_task(
         self, identifier: Union[str, callable], name: str = None, **kwargs
@@ -543,3 +545,9 @@ class WorkGraph(node_graph.NodeGraph):
         """Write a standalone html file to visualize the workgraph."""
         self._widget.value = self.to_widget_value()
         return self._widget.to_html(output=output, **kwargs)
+
+    def __repr__(self) -> str:
+        return f'WorkGraph(name="{self.name}", uuid="{self.uuid}")'
+
+    def __str__(self) -> str:
+        return f'WorkGraph(name="{self.name}", uuid="{self.uuid}")'

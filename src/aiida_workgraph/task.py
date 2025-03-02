@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from node_graph.node import Node as GraphNode
-
+from node_graph.executor import NodeExecutor
 from aiida_workgraph.properties import property_pool
 from aiida_workgraph.sockets import socket_pool
 from aiida_workgraph.socket import NodeSocketNamespace
@@ -92,9 +92,8 @@ class Task(GraphNode):
 
     def set_from_protocol(self, *args: Any, **kwargs: Any) -> None:
         """Set the task inputs from protocol data."""
-        from aiida_workgraph.utils import get_executor
 
-        executor = get_executor(self.get_executor())[0]
+        executor = NodeExecutor(**self.get_executor()).executor
         # check if the executor has the get_builder_from_protocol method
         if not hasattr(executor, "get_builder_from_protocol"):
             raise AttributeError(
@@ -151,7 +150,6 @@ class Task(GraphNode):
 
     def get_error_handlers(self) -> list:
         """Get the error handler function for this task."""
-        from aiida_workgraph.utils import build_callable
         from aiida.engine import ExitCode
 
         if self._error_handlers is None:
@@ -160,11 +158,15 @@ class Task(GraphNode):
         handlers = {}
         if isinstance(self._error_handlers, dict):
             for handler in self._error_handlers.values():
-                handler["handler"] = build_callable(handler["handler"])
+                handler["handler"] = NodeExecutor.from_callable(
+                    handler["handler"]
+                ).to_dict()
         elif isinstance(self._error_handlers, list):
             for handler in self._error_handlers:
                 name = handler.get("name", handler["handler"].__name__)
-                handler["handler"] = build_callable(handler["handler"])
+                handler["handler"] = NodeExecutor.from_callable(
+                    handler["handler"]
+                ).to_dict()
                 handlers[name] = handler
         # convert exit code label (str) to status (int)
         for handler in handlers.values():
@@ -260,6 +262,9 @@ class TaskCollection:
 
     def add(self, tasks: Union[List[Union[str, Task]], str, Task]) -> None:
         """Add tasks to the collection. Tasks can be a list or a single Task or task name."""
+        # If the task does not belong to any graph, skip adding it
+        if isinstance(self.graph, Task):
+            return
         for task in self._normalize_tasks(tasks):
             self._items.add(task)
 

@@ -325,3 +325,45 @@ class Select(Task):
             "callable_name": "select",
         }
         return executor
+
+
+class GraphBuilderTask(Task):
+    """Graph builder task"""
+
+    identifier = "workgraph.graph_builder"
+    name = "graph_builder"
+    node_type = "graph_builder"
+    catalog = "builtins"
+
+    def execute(self, engine_process, args=None, kwargs=None, var_kwargs=None):
+        from aiida_workgraph.utils import create_and_pause_process
+        from aiida_workgraph.engine.workgraph import WorkGraphEngine
+        from node_graph.executor import NodeExecutor
+
+        executor = NodeExecutor(**self.get_executor()).executor
+
+        if var_kwargs is None:
+            wg = executor(*args, **kwargs)
+        else:
+            wg = executor(*args, **kwargs, **var_kwargs)
+        wg.name = self.name
+
+        wg.group_outputs = self.metadata["group_outputs"]
+        wg.parent_uuid = engine_process.node.uuid
+        inputs = wg.prepare_inputs(metadata={"call_link_label": self.name})
+        if self.action == "PAUSE":
+            engine_process.report(f"Task {self.name} is created and paused.")
+            process = create_and_pause_process(
+                engine_process.runner,
+                WorkGraphEngine,
+                inputs,
+                state_msg="Paused through WorkGraph",
+            )
+            state = "CREATED"
+            process = process.node
+        else:
+            process = engine_process.submit(WorkGraphEngine, **inputs)
+            state = "RUNNING"
+        process.label = self.name
+
+        return process, state

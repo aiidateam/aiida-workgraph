@@ -1,7 +1,7 @@
-from aiida_workgraph.task import Task
+from .aiida import CalcFunctionTask, WorkChainTask
 
 
-class TestAdd(Task):
+class TestAdd(CalcFunctionTask):
 
     identifier: str = "workgraph.test_add"
     name = "TestAAdd"
@@ -33,11 +33,10 @@ class TestAdd(Task):
         return executor
 
 
-class TestSumDiff(Task):
+class TestSumDiff(CalcFunctionTask):
 
     identifier: str = "workgraph.test_sum_diff"
     name = "TestSumDiff"
-    node_type = "CALCFUNCTION"
     catalog = "Test"
 
     def create_properties(self) -> None:
@@ -66,11 +65,10 @@ class TestSumDiff(Task):
         return executor
 
 
-class TestArithmeticMultiplyAdd(Task):
+class TestArithmeticMultiplyAdd(WorkChainTask):
 
     identifier: str = "workgraph.test_arithmetic_multiply_add"
     name = "TestArithmeticMultiplyAdd"
-    node_type = "WORKCHAIN"
     catalog = "Test"
 
     def create_properties(self) -> None:
@@ -81,11 +79,11 @@ class TestArithmeticMultiplyAdd(Task):
         self.outputs._clear()
         self.add_input("workgraph.any", "code")
         inp = self.add_input("workgraph.aiida_int", "x")
-        inp.add_property("workgraph.aiida_int", "x", default=0.0)
+        inp.add_property("workgraph.aiida_int", "x", default=0)
         inp = self.add_input("workgraph.aiida_int", "y")
-        inp.add_property("workgraph.aiida_int", "y", default=0.0)
+        inp.add_property("workgraph.aiida_int", "y", default=0)
         inp = self.add_input("workgraph.aiida_int", "z")
-        inp.add_property("workgraph.aiida_int", "z", default=0.0)
+        inp.add_property("workgraph.aiida_int", "z", default=0)
         self.add_input(
             "workgraph.any", "_wait", metadata={"arg_type": "none"}, link_limit=100000
         )
@@ -95,8 +93,7 @@ class TestArithmeticMultiplyAdd(Task):
 
     def get_executor(self):
         executor = {
-            "use_module_path": True,
-            "module_path": "core.arithmetic.multiply_add",
-            "type": "WorkflowFactory",
+            "module_path": "aiida.workflows.arithmetic.multiply_add",
+            "callable_name": "MultiplyAddWorkChain",
         }
         return executor
