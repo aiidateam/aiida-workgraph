@@ -61,7 +61,7 @@
         const { RenderUtils } = ReteRenderUtils;
         const styled = window.styled;
 
-        const workgraphData = {"name": "if_task", "uuid": "ff2de966-7724-11ef-ad13-906584de3e5b", "state": "CREATED", "nodes": {"add1": {"label": "add1", "node_type": "CALCFUNCTION", "inputs": [{"name": "x"}, {"name": "y"}], "properties": {"metadata": null, "metadata.store_provenance": null, "metadata.description": null, "metadata.label": null, "metadata.call_link_label": null, "metadata.disable_cache": null, "x": null, "y": null, "_wait": null}, "outputs": [{"name": "result"}, {"name": "result"}], "position": [30, 30], "children": []}, "condition1": {"label": "condition1", "node_type": "CALCFUNCTION", "inputs": [{"name": "x"}, {"name": "y"}], "properties": {"metadata": null, "metadata.store_provenance": null, "metadata.description": null, "metadata.label": null, "metadata.call_link_label": null, "metadata.disable_cache": null, "x": null, "y": null, "_wait": null}, "outputs": [{"name": "result"}, {"name": "result"}, {"name": "result"}], "position": [60, 60], "children": []}, "add2": {"label": "add2", "node_type": "CALCFUNCTION", "inputs": [{"name": "x"}, {"name": "y"}, {"name": "x"}], "properties": {"metadata": null, "metadata.store_provenance": null, "metadata.description": null, "metadata.label": null, "metadata.call_link_label": null, "metadata.disable_cache": null, "x": null, "y": null, "_wait": null}, "outputs": [{"name": "result"}], "position": [90, 90], "children": []}, "if_true": {"label": "if_true", "node_type": "IF", "inputs": [{"name": "conditions"}], "properties": {"_wait": null, "conditions": null, "invert_condition": null}, "outputs": [], "position": [120, 120], "children": ["add2"]}, "multiply1": {"label": "multiply1", "node_type": "CALCFUNCTION", "inputs": [{"name": "x"}, {"name": "y"}, {"name": "x"}], "properties": {"metadata": null, "metadata.store_provenance": null, "metadata.description": null, "metadata.label": null, "metadata.call_link_label": null, "metadata.disable_cache": null, "x": null, "y": null, "_wait": null}, "outputs": [{"name": "result"}], "position": [150, 150], "children": []}, "if_false": {"label": "if_false", "node_type": "IF", "inputs": [{"name": "conditions"}], "properties": {"_wait": null, "conditions": null, "invert_condition": null}, "outputs": [], "position": [180, 180], "children": ["multiply1"]}, "select1": {"label": "select1", "node_type": "NORMAL", "inputs": [{"name": "condition"}, {"name": "true"}, {"name": "false"}, {"name": "true"}, {"name": "false"}, {"name": "condition"}], "properties": {"condition": null, "true": null, "false": null, "_wait": null}, "outputs": [{"name": "result"}], "position": [210, 210], "children": []}, "add3": {"label": "add3", "node_type": "CALCFUNCTION", "inputs": [{"name": "x"}, {"name": "y"}, {"name": "x"}], "properties": {"metadata": null, "metadata.store_provenance": null, "metadata.description": null, "metadata.label": null, "metadata.call_link_label": null, "metadata.disable_cache": null, "x": null, "y": null, "_wait": null}, "outputs": [], "position": [240, 240], "children": []}}, "links": [{"from_socket": "result", "from_node": "add1", "to_socket": "x", "to_node": "add2", "state": false}, {"from_socket": "result", "from_node": "condition1", "to_socket": "conditions", "to_node": "if_true", "state": false}, {"from_socket": "result", "from_node": "add1", "to_socket": "x", "to_node": "multiply1", "state": false}, {"from_socket": "result", "from_node": "condition1", "to_socket": "conditions", "to_node": "if_false", "state": false}, {"from_socket": "result", "from_node": "add2", "to_socket": "true", "to_node": "select1", "state": false}, {"from_socket": "result", "from_node": "multiply1", "to_socket": "false", "to_node": "select1", "state": false}, {"from_socket": "result", "from_node": "condition1", "to_socket": "condition", "to_node": "select1", "state": false}, {"from_socket": "result", "from_node": "select1", "to_socket": "x", "to_node": "add3", "state": false}]}
+        const nodegraphData = {"name": "if_task", "uuid": "0f32f5b4-f73f-11ef-9e3d-906584de3e5b", "state": "CREATED", "nodes": {"add1": {"label": "add1", "node_type": "CALCFUNCTION", "inputs": [{"name": "x", "identifier": "workgraph.any"}, {"name": "y", "identifier": "workgraph.any"}], "properties": {"x": {"identifier": "workgraph.any", "value": null}, "y": {"identifier": "workgraph.any", "value": null}, "_wait": {"identifier": "workgraph.any", "value": null}}, "outputs": [{"name": "result"}, {"name": "result"}], "position": [30, 30], "children": []}, "condition1": {"label": "condition1", "node_type": "CALCFUNCTION", "inputs": [{"name": "x", "identifier": "workgraph.any"}, {"name": "y", "identifier": "workgraph.any"}], "properties": {"x": {"identifier": "workgraph.any", "value": null}, "y": {"identifier": "workgraph.any", "value": null}, "_wait": {"identifier": "workgraph.any", "value": null}}, "outputs": [{"name": "result"}, {"name": "result"}, {"name": "result"}], "position": [60, 60], "children": []}, "if_true": {"label": "if_true", "node_type": "IF", "inputs": [{"name": "conditions"}], "properties": {"_wait": {"identifier": "workgraph.any", "value": null}, "conditions": {"identifier": "workgraph.any", "value": null}, "invert_condition": {"identifier": "workgraph.bool", "value": false}}, "outputs": [], "position": [90, 90], "children": ["add2"]}, "add2": {"label": "add2", "node_type": "CALCFUNCTION", "inputs": [{"name": "x", "identifier": "workgraph.any"}, {"name": "y", "identifier": "workgraph.any"}, {"name": "x"}], "properties": {"x": {"identifier": "workgraph.any", "value": null}, "y": {"identifier": "workgraph.any", "value": null}, "_wait": {"identifier": "workgraph.any", "value": null}}, "outputs": [{"name": "result"}], "position": [120, 120], "children": []}, "if_false": {"label": "if_false", "node_type": "IF", "inputs": [{"name": "conditions"}], "properties": {"_wait": {"identifier": "workgraph.any", "value": null}, "conditions": {"identifier": "workgraph.any", "value": null}, "invert_condition": {"identifier": "workgraph.bool", "value": true}}, "outputs": [], "position": [150, 150], "children": ["multiply1"]}, "multiply1": {"label": "multiply1", "node_type": "CALCFUNCTION", "inputs": [{"name": "x", "identifier": "workgraph.any"}, {"name": "y", "identifier": "workgraph.any"}, {"name": "x"}], "properties": {"x": {"identifier": "workgraph.any", "value": null}, "y": {"identifier": "workgraph.any", "value": null}, "_wait": {"identifier": "workgraph.any", "value": null}}, "outputs": [{"name": "result"}], "position": [180, 180], "children": []}, "select1": {"label": "select1", "node_type": "NORMAL", "inputs": [{"name": "true"}, {"name": "false"}, {"name": "condition"}], "properties": {"condition": {"identifier": "workgraph.any", "value": null}, "true": {"identifier": "workgraph.any", "value": null}, "false": {"identifier": "workgraph.any", "value": null}, "_wait": {"identifier": "workgraph.any", "value": null}}, "outputs": [{"name": "result"}], "position": [210, 210], "children": []}, "add3": {"label": "add3", "node_type": "CALCFUNCTION", "inputs": [{"name": "x", "identifier": "workgraph.any"}, {"name": "y", "identifier": "workgraph.any"}, {"name": "x"}], "properties": {"x": {"identifier": "workgraph.any", "value": null}, "y": {"identifier": "workgraph.any", "value": null}, "_wait": {"identifier": "workgraph.any", "value": null}}, "outputs": [], "position": [240, 240], "children": []}}, "links": [{"from_socket": "result", "from_node": "condition1", "to_socket": "conditions", "to_node": "if_true", "state": false}, {"from_socket": "result", "from_node": "add1", "to_socket": "x", "to_node": "add2", "state": false}, {"from_socket": "result", "from_node": "condition1", "to_socket": "conditions", "to_node": "if_false", "state": false}, {"from_socket": "result", "from_node": "add1", "to_socket": "x", "to_node": "multiply1", "state": false}, {"from_socket": "result", "from_node": "add2", "to_socket": "true", "to_node": "select1", "state": false}, {"from_socket": "result", "from_node": "multiply1", "to_socket": "false", "to_node": "select1", "state": false}, {"from_socket": "result", "from_node": "condition1", "to_socket": "condition", "to_node": "select1", "state": false}, {"from_socket": "result", "from_node": "select1", "to_socket": "x", "to_node": "add3", "state": false}]}
 
         // Define Schemes to use in vanilla JS
         const Schemes = {
@@ -133,21 +133,21 @@
           }
         }
 
-        async function loadJSON(editor, area, layout, workgraphData) {
-          for (const nodeId in workgraphData.nodes) {
-            const nodeData = workgraphData.nodes[nodeId];
+        async function loadJSON(editor, area, layout, nodegraphData) {
+          for (const nodeId in nodegraphData.nodes) {
+            const nodeData = nodegraphData.nodes[nodeId];
             await addNode(editor, area, nodeData);
           }
 
-          // Adding connections based on workgraphData
-          workgraphData.links.forEach(async (link) => { // Specify the type of link here
+          // Adding connections based on nodegraphData
+          nodegraphData.links.forEach(async (link) => { // Specify the type of link here
             await addLink(editor, area, layout, link);
           });
 
           // Add while zones
           console.log("Adding while zone: ");
-          for (const nodeId in workgraphData.nodes) {
-            const nodeData = workgraphData.nodes[nodeId];
+          for (const nodeId in nodegraphData.nodes) {
+            const nodeData = nodegraphData.nodes[nodeId];
             const node_type = nodeData['node_type'];
             if (node_type === "WHILE" || node_type === "IF" || node_type === "ZONE") {
               // find the node
@@ -162,7 +162,11 @@
           }
         }
 
-        const customPadding = () => ({
+        /**
+        * Defines custom padding for a scope layout.
+        * The padding values are used by the ScopesPlugin to avoid node overlapping with the socket of the parent node.
+        */
+        const customScopePadding = () => ({
           top: 80,
           left: 30,
           right: 30,
@@ -177,7 +181,7 @@
             const area = new AreaPlugin(container);
             const connection = new ConnectionPlugin();
             const render = new ReactPlugin({ createRoot });
-            const scopes = new ScopesPlugin({padding: customPadding});
+            const scopes = new ScopesPlugin({padding: customScopePadding});
             const arrange = new AutoArrangePlugin();
 
             const minimap = new MinimapPlugin({
@@ -217,7 +221,7 @@
               AreaExtensions.zoomAt(area, editor.getNodes());
             }
 
-            // Adding nodes based on workgraphData
+            // Adding nodes based on nodegraphData
             const nodeMap = {}; // To keep track of created nodes for linking
             editor.nodeMap = nodeMap;
 
@@ -246,7 +250,7 @@
                 if (containerRef.current && !editor) {
                     createEditor(containerRef.current).then((editor) => {
                         setEditor(editor);
-                        loadJSON(editor.editor, editor.area, editor.layout, workgraphData).then(() => {
+                        loadJSON(editor.editor, editor.area, editor.layout, nodegraphData).then(() => {
                           // aplly layout twice to ensure all nodes are arranged
                           editor?.layout(false).then(() => editor?.layout(true));
                         });
