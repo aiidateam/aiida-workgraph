@@ -35,6 +35,7 @@ class If_:
 
     def elif_(self):
         """Not implemented."""
+        raise NotImplementedError("elif_ not implemented.")
 
     def else_(self, *tasks):
         """
