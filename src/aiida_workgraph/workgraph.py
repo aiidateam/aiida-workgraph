@@ -5,7 +5,7 @@ import node_graph
 import aiida
 from node_graph.link import NodeLink
 from aiida_workgraph.socket import TaskSocket
-from aiida_workgraph.tasks import task_pool
+from aiida_workgraph.tasks import TaskPool
 from aiida_workgraph.task import Task
 import time
 from aiida_workgraph.collection import TaskCollection
@@ -34,7 +34,7 @@ class WorkGraph(node_graph.NodeGraph):
         pk (int): The primary key of the process node.
     """
 
-    node_pool = task_pool
+    NodePool = TaskPool
 
     def __init__(self, name: str = "WorkGraph", **kwargs) -> None:
         """
@@ -54,7 +54,7 @@ class WorkGraph(node_graph.NodeGraph):
         self.max_number_jobs = 1000000
         self.execution_count = 0
         self.max_iteration = 1000000
-        self.nodes = TaskCollection(self, pool=self.node_pool)
+        self.nodes = TaskCollection(self, pool=self.NodePool)
         self.nodes.post_deletion_hooks = [task_deletion_hook]
         self.nodes.post_creation_hooks = [task_creation_hook]
         self.links.post_creation_hooks = [link_creation_hook]

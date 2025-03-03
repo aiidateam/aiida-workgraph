@@ -73,6 +73,13 @@ class ShellJobTaskFactory(BaseTaskFactory):
     """A factory to create ShellJobTask."""
 
     @classmethod
+    def create_class(cls, inputs: dict) -> Union[Task, None]:
+        return ShellJobTaskFactory.create_task(
+            outputs=inputs.get("outputs", None),
+            parser_outputs=inputs.pop("parser_outputs", None),
+        )
+
+    @classmethod
     def create_task(
         cls,
         outputs: Optional[List[Union[str, dict]]] = None,

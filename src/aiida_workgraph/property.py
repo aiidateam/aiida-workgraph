@@ -22,16 +22,14 @@ If you want to use variable from context, use double curly braces like this: {{{
         data: Dict[str, Any] = {},
     ) -> "TaskProperty":
         """Create a property from a identifier."""
-        # use property_pool from aiida_workgraph.properties
-        # to override the default property_pool from node_graph
-        from aiida_workgraph.properties import property_pool
+        # use PropertyPool from aiida_workgraph.properties
+        # to override the default PropertyPool from node_graph
+        from aiida_workgraph.properties import PropertyPool
 
         # build the task on the fly if the identifier is a callable
         if callable(identifier):
             identifier = build_property_from_AiiDA(identifier)
-        return super().new(
-            identifier, name=name, data=data, property_pool=property_pool
-        )
+        return super().new(identifier, name=name, data=data, PropertyPool=PropertyPool)
 
 
 def build_property_from_AiiDA(DataClass: Type[Any]) -> Type[TaskProperty]:

@@ -55,7 +55,7 @@ class While(Zone):
             "workgraph.any", "_wait", link_limit=100000, metadata={"arg_type": "none"}
         )
         self.add_input(
-            "node_graph.int", "max_iterations", property_data={"default": 10000}
+            "workgraph.int", "max_iterations", property_data={"default": 10000}
         )
         self.add_input("workgraph.any", "conditions", link_limit=100000)
         self.add_output("workgraph.any", "_wait")

@@ -1,6 +1,3 @@
-from node_graph.utils import get_entries
+from .property_pool import PropertyPool
 
-property_pool = {
-    **get_entries(entry_point_name="node_graph.property"),
-    **get_entries(entry_point_name="aiida_workgraph.property"),
-}
+__all__ = ["PropertyPool"]
