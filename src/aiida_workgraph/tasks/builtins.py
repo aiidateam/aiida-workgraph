@@ -43,7 +43,7 @@ class Zone(Task):
 class While(Zone):
     """While"""
 
-    identifier = "workgraph.while"
+    identifier = "workgraph.while_zone"
     name = "While"
     node_type = "WHILE"
     catalog = "Control"
@@ -64,7 +64,7 @@ class While(Zone):
 class If(Zone):
     """If task"""
 
-    identifier = "workgraph.if"
+    identifier = "workgraph.if_zone"
     name = "If"
     node_type = "IF"
     catalog = "Control"

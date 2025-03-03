@@ -24,10 +24,10 @@ load_profile()
 # Run a shell command without any arguments. Here we run the `date` command to show the date.
 #
 
-from aiida_workgraph import WorkGraph
+from aiida_workgraph import WorkGraph, TaskPool
 
 wg = WorkGraph(name="test_shell_date")
-date_task = wg.add_task("ShellJob", command="date")
+date_task = wg.add_task(TaskPool.workgraph.shelljob, command="date")
 wg.submit(wait=True)
 
 # Print out the result:
@@ -55,7 +55,7 @@ if created:
 
 wg = WorkGraph(name="test_shell_date_remote")
 date_task_remote = wg.add_task(
-    "ShellJob",
+    TaskPool.workgraph.shelljob,
     command="date",
     metadata={"computer": orm.load_computer("my-remote-computer")},
 )
@@ -75,7 +75,7 @@ mock_remote_code = get_or_create_code(
 
 wg = WorkGraph(name="test_shell_date_preconfigured")
 preconf_task = wg.add_task(
-    "ShellJob", command=orm.load_code("remote-date@my-remote-computer")
+    TaskPool.workgraph.shelljob, command=orm.load_code("remote-date@my-remote-computer")
 )
 
 # Note, we are not running or submitting the ``WorkGraph`` in the above two examples, as we are using mocked
@@ -89,7 +89,7 @@ preconf_task = wg.add_task(
 
 
 wg = WorkGraph(name="test_shell_date_with_arguments")
-date_task = wg.add_task("ShellJob", command="date", arguments=["--iso-8601"])
+date_task = wg.add_task("workgraph.shelljob", command="date", arguments=["--iso-8601"])
 wg.submit(wait=True)
 
 # Print out the result:
@@ -106,7 +106,7 @@ from aiida.orm import SinglefileData
 
 wg = WorkGraph(name="test_shell_cat_with_file_arguments")
 cat_task = wg.add_task(
-    "ShellJob",
+    TaskPool.workgraph.shelljob,
     command="cat",
     arguments=["{file_a}", "{file_b}"],
     nodes={
@@ -144,7 +144,7 @@ def parser(dirpath):
 # Create a workgraph
 wg = WorkGraph(name="shell_add_mutiply_workflow")
 expr_1 = wg.add_task(
-    "ShellJob",
+    TaskPool.workgraph.shelljob,
     name="expr_1",
     command="expr",
     arguments=["{x}", "+", "{y}"],
@@ -153,7 +153,7 @@ expr_1 = wg.add_task(
     parser_outputs=[{"name": "result"}],
 )
 expr_2 = wg.add_task(
-    "ShellJob",
+    TaskPool.workgraph.shelljob,
     name="expr_2",
     command="expr",
     arguments=["{result}", "*", "{z}"],
