@@ -3,6 +3,36 @@ from aiida_workgraph import task, WorkGraph, TaskPool
 from aiida import orm
 
 
+def test_while_instruction(decorated_add, decorated_multiply, decorated_compare):
+    from aiida_workgraph import while_
+
+    wg = WorkGraph("test_while")
+    wg.context = {"n": 1}
+    add1 = wg.add_task(decorated_add, name="add1", x=1, y=1)
+    add1.set_context({"n": "result"})
+    # ---------------------------------------------------------------------
+    compare1 = wg.add_task(decorated_compare, name="compare1", x="{{n}}", y=20)
+    while_(compare1.outputs["result"], max_iterations=10)(
+        wg.add_task(decorated_add, name="add2", x="{{n}}", y=1),
+        wg.add_task(
+            decorated_multiply,
+            name="multiply1",
+            x=wg.tasks["add2"].outputs["result"],
+            y=2,
+        ),
+    )
+    wg.tasks["add2"].waiting_on.add("add1")
+    wg.tasks["multiply1"].set_context({"n": "result"})
+    add3 = wg.add_task(decorated_add, name="add3", x=1, y=1)
+    wg.add_link(wg.tasks["multiply1"].outputs["result"], add3.inputs["x"])
+    assert len(wg.tasks) == 6
+    assert "while_1" in wg.tasks
+    assert len(wg.tasks["while_1"].children) == 2
+    wg.run()
+    assert wg.state == "FINISHED"
+    assert wg.tasks["add3"].outputs.result.value == 31
+
+
 def test_while_task(decorated_add, decorated_compare):
     """Test nested while task.
     Also test the max_iteration parameter."""
