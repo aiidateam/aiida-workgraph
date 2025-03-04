@@ -43,7 +43,7 @@ class Zone(Task):
 class While(Zone):
     """While"""
 
-    identifier = "workgraph.while"
+    identifier = "workgraph.while_zone"
     name = "While"
     node_type = "WHILE"
     catalog = "Control"
@@ -55,7 +55,7 @@ class While(Zone):
             "workgraph.any", "_wait", link_limit=100000, metadata={"arg_type": "none"}
         )
         self.add_input(
-            "node_graph.int", "max_iterations", property_data={"default": 10000}
+            "workgraph.int", "max_iterations", property_data={"default": 10000}
         )
         self.add_input("workgraph.any", "conditions", link_limit=100000)
         self.add_output("workgraph.any", "_wait")
@@ -64,7 +64,7 @@ class While(Zone):
 class If(Zone):
     """If task"""
 
-    identifier = "workgraph.if"
+    identifier = "workgraph.if_zone"
     name = "If"
     node_type = "IF"
     catalog = "Control"

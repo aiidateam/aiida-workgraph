@@ -1,5 +1,5 @@
 import pytest
-from aiida_workgraph import WorkGraph, task, Task
+from aiida_workgraph import WorkGraph, task, Task, TaskPool
 from typing import Any
 
 
@@ -58,7 +58,7 @@ def test_PythonJob_kwargs(fixture_localhost, python_executable_path):
         return x
 
     wg = WorkGraph("test_PythonJob")
-    wg.add_task("PythonJob", function=add, name="add1")
+    wg.add_task(TaskPool.workgraph.pythonjob, function=add, name="add1")
     wg.run(
         inputs={
             "add1": {
@@ -108,15 +108,15 @@ def test_PythonJob_namespace_output_input(fixture_localhost, python_executable_p
         return x + y
 
     wg = WorkGraph("test_namespace_outputs")
-    wg.add_task("PythonJob", function=myfunc, name="myfunc")
+    wg.add_task(TaskPool.workgraph.pythonjob, function=myfunc, name="myfunc")
     wg.add_task(
-        "PythonJob",
+        TaskPool.workgraph.pythonjob,
         function=myfunc2,
         name="myfunc2",
         x=wg.tasks["myfunc"].outputs["add_multiply"],
     )
     wg.add_task(
-        "PythonJob",
+        TaskPool.workgraph.pythonjob,
         function=myfunc3,
         name="myfunc3",
         x=wg.tasks["myfunc"].outputs["add_multiply.add"],
@@ -168,10 +168,10 @@ def test_PythonJob_copy_files(fixture_localhost, python_executable_path):
         return x * y
 
     wg = WorkGraph("test_PythonJob_parent_folder")
-    wg.add_task("PythonJob", function=add, name="add1")
-    wg.add_task("PythonJob", function=add, name="add2")
+    wg.add_task(TaskPool.workgraph.pythonjob, function=add, name="add1")
+    wg.add_task(TaskPool.workgraph.pythonjob, function=add, name="add2")
     wg.add_task(
-        "PythonJob",
+        TaskPool.workgraph.pythonjob,
         function=multiply,
         name="multiply",
     )

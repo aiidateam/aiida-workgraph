@@ -1,4 +1,5 @@
 from aiida_workgraph.socket import TaskSocket
+from aiida_workgraph.tasks.task_pool import TaskPool
 
 
 def if_(condition):
@@ -11,13 +12,19 @@ class If_:
         self.condition = condition
         self.wg = condition._parent._node.parent
         self.true_zone = self.wg.add_task(
-            "If", name=self._generate_name(), conditions=condition
+            TaskPool.workgraph.if_zone, name=self._generate_name(), conditions=condition
         )
         self.false_zone = None
 
     def _generate_name(self, prefix: str = "if_true") -> str:
         n = (
-            len([task for task in self.wg.tasks if task.identifier == "workgraph.if"])
+            len(
+                [
+                    task
+                    for task in self.wg.tasks
+                    if task.identifier == "workgraph.if_zone"
+                ]
+            )
             + 1
         )
         return f"{prefix}_{n}"
@@ -43,7 +50,7 @@ class If_:
             .else_(<tasks-for-false>)
         """
         self.false_zone = self.wg.add_task(
-            "If",
+            TaskPool.workgraph.if_zone,
             name=self._generate_name("if_false"),
             conditions=self.condition,
             invert_condition=True,
@@ -66,7 +73,7 @@ class While_:
         self.condition = condition
         self.wg = condition._parent._node.parent
         self.zone = self.wg.add_task(
-            "While",
+            TaskPool.workgraph.while_zone,
             name=self._generate_name(),
             conditions=condition,
             max_iterations=max_iterations,
@@ -75,7 +82,11 @@ class While_:
     def _generate_name(self, prefix: str = "while") -> str:
         n = (
             len(
-                [task for task in self.wg.tasks if task.identifier == "workgraph.while"]
+                [
+                    task
+                    for task in self.wg.tasks
+                    if task.identifier == "workgraph.while_zone"
+                ]
             )
             + 1
         )

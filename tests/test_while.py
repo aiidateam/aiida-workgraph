@@ -1,5 +1,5 @@
 import pytest
-from aiida_workgraph import task, WorkGraph
+from aiida_workgraph import task, WorkGraph, TaskPool
 from aiida import orm
 
 
@@ -77,11 +77,15 @@ def test_while_task(decorated_add, decorated_compare):
     # ---------------------------------------------------------------------
     # the `result` of compare1 taskis used as condition
     compare1 = wg.add_task(decorated_compare, name="compare1", x="{{m}}", y=10)
-    while1 = wg.add_task("While", name="while1", conditions=compare1.outputs.result)
+    while1 = wg.add_task(
+        TaskPool.workgraph.while_zone, name="while1", conditions=compare1.outputs.result
+    )
     add11 = wg.add_task(decorated_add, name="add11", x=1, y=1)
     # ---------------------------------------------------------------------
     compare2 = wg.add_task(decorated_compare, name="compare2", x="{{n}}", y=5)
-    while2 = wg.add_task("While", name="while2", conditions=compare2.outputs.result)
+    while2 = wg.add_task(
+        TaskPool.workgraph.while_zone, name="while2", conditions=compare2.outputs.result
+    )
     add21 = wg.add_task(decorated_add, name="add21", x="{{n}}", y=add11.outputs.result)
     add21.waiting_on.add("add1")
     add22 = wg.add_task(decorated_add, name="add22", x=add21.outputs.result, y=1)
@@ -90,7 +94,10 @@ def test_while_task(decorated_add, decorated_compare):
     # ---------------------------------------------------------------------
     compare3 = wg.add_task(decorated_compare, name="compare3", x="{{l}}", y=5)
     while3 = wg.add_task(
-        "While", name="while3", max_iterations=1, conditions=compare3.outputs.result
+        TaskPool.workgraph.while_zone,
+        name="while3",
+        max_iterations=1,
+        conditions=compare3.outputs.result,
     )
     add31 = wg.add_task(decorated_add, name="add31", x="{{l}}", y=1)
     add31.waiting_on.add("add22")

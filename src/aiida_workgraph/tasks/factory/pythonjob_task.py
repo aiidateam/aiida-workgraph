@@ -4,10 +4,17 @@ from aiida_pythonjob import PythonJob
 from aiida_workgraph.tasks.pythonjob import PythonJobTask
 from .function_task import DecoratedFunctionTaskFactory
 from .aiida_task import AiiDAComponentTaskFactory
+from aiida_workgraph import Task
 
 
 class PythonJobTaskFactory(BaseTaskFactory):
     """A factory to create PythonJobTask from functions."""
+
+    @classmethod
+    def create_class(cls, inputs: dict) -> Union[Task, None]:
+        return PythonJobTaskFactory.from_function(
+            func=inputs.pop("function", None),
+        )
 
     @classmethod
     def from_function(
@@ -64,6 +71,7 @@ class PythonJobTaskFactory(BaseTaskFactory):
         tdata["metadata"]["catalog"] = catalog
         tdata["identifier"] = "workgraph.pythonjob"
         tdata["metadata"]["node_class"] = PythonJobTask
+        tdata["metadata"]["class_name"] = "PythonJobTask"
         additional_data = additional_data or {}
         tdata.update(additional_data)
 

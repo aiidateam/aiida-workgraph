@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from node_graph.node import Node as GraphNode
 from node_graph.executor import NodeExecutor
-from aiida_workgraph.properties import property_pool
-from aiida_workgraph.sockets import socket_pool
+from aiida_workgraph.properties import PropertyPool
+from aiida_workgraph.sockets import SocketPool
 from aiida_workgraph.socket import NodeSocketNamespace
 from node_graph_widget import NodeGraphWidget
 from aiida_workgraph.collection import (
@@ -20,8 +20,8 @@ class Task(GraphNode):
     attributes to it.
     """
 
-    property_pool = property_pool
-    socket_pool = socket_pool
+    PropertyPool = PropertyPool
+    SocketPool = SocketPool
     is_aiida_component = False
     _error_handlers = None
 
@@ -107,29 +107,29 @@ class Task(GraphNode):
         cls, identifier: Union[str, Callable], name: Optional[str] = None
     ) -> "Task":
         """Create a task from a identifier."""
-        from aiida_workgraph.tasks import task_pool
+        from aiida_workgraph.tasks import TaskPool
 
-        return super().new(identifier, name=name, node_pool=task_pool)
+        return super().new(identifier, name=name, NodePool=TaskPool)
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any], task_pool: Optional[Any] = None) -> "Task":
+    def from_dict(cls, data: Dict[str, Any], TaskPool: Optional[Any] = None) -> "Task":
         """Create a task from a dictionary. This method initializes a Node instance with properties and settings
-        defined within the provided data dictionary. If task_pool is not specified, the default task_pool from
+        defined within the provided data dictionary. If TaskPool is not specified, the default TaskPool from
         aiida_workgraph.tasks is used.
 
         Args:
             data (Dict[str, Any]): A dictionary containing the task's configuration.
-            task_pool (Optional[Any]): A pool of node configurations, defaults to None
-            which will use the global task_pool.
+            TaskPool (Optional[Any]): A pool of node configurations, defaults to None
+            which will use the global TaskPool.
 
         Returns:
             Node: An instance of Node initialized with the provided data."""
-        from aiida_workgraph.tasks import task_pool as workgraph_task_pool
+        from aiida_workgraph.tasks import TaskPool as workgraph_TaskPool
         from aiida_workgraph.orm.utils import deserialize_safe
 
-        if task_pool is None:
-            task_pool = workgraph_task_pool
-        task = GraphNode.from_dict(data, node_pool=task_pool)
+        if TaskPool is None:
+            TaskPool = workgraph_TaskPool
+        task = GraphNode.from_dict(data, NodePool=TaskPool)
         task.context_mapping = data.get("context_mapping", {})
         task.waiting_on.add(data.get("wait", []))
         process = data.get("process", None)

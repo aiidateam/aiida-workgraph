@@ -28,7 +28,7 @@ dependencies = [
     "numpy~=1.21",
     "scipy",
     "ase",
-    "node-graph==0.1.15",
+    "node-graph==0.1.16",
     "node-graph-widget",
     "aiida-core>=2.3",
     "cloudpickle",
@@ -89,8 +89,8 @@ workgraph = "aiida_workgraph.cli.cmd_workgraph:workgraph"
 [project.entry-points."aiida_workgraph.task"]
 "workgraph.workgraph_task" = "aiida_workgraph.tasks.factory.workgraph_task:WorkGraphTask"
 "workgraph.zone" = "aiida_workgraph.tasks.builtins:Zone"
-"workgraph.while" = "aiida_workgraph.tasks.builtins:While"
-"workgraph.if" = "aiida_workgraph.tasks.builtins:If"
+"workgraph.while_zone" = "aiida_workgraph.tasks.builtins:While"
+"workgraph.if_zone" = "aiida_workgraph.tasks.builtins:If"
 "workgraph.select" = "aiida_workgraph.tasks.builtins:Select"
 "workgraph.set_context" = "aiida_workgraph.tasks.builtins:SetContext"
 "workgraph.get_context" = "aiida_workgraph.tasks.builtins:GetContext"
@@ -107,7 +107,8 @@ workgraph = "aiida_workgraph.cli.cmd_workgraph:workgraph"
 "workgraph.test_add" = "aiida_workgraph.tasks.test:TestAdd"
 "workgraph.test_sum_diff" = "aiida_workgraph.tasks.test:TestSumDiff"
 "workgraph.test_arithmetic_multiply_add" = "aiida_workgraph.tasks.test:TestArithmeticMultiplyAdd"
-"workgraph.pythonjob" = "aiida_workgraph.tasks.pythonjob:PythonJob"
+"workgraph.pythonjob" = "aiida_workgraph.tasks.factory.pythonjob_task:PythonJobTaskFactory"
+"workgraph.shelljob" = "aiida_workgraph.tasks.factory.shelljob_task:ShellJobTaskFactory"
 "workgraph.aiida_process" = "aiida_workgraph.tasks.aiida:AiiDAProcessTask"
 
 [project.entry-points."aiida_workgraph.property"]
