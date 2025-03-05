@@ -3,6 +3,48 @@ from aiida_workgraph import WorkGraph, task, Task, TaskPool
 from typing import Any
 
 
+def test_to_dict():
+    """Test the to_dict method.
+    PythonJobTask override the `to_dict` method to serialize the raw
+    data to AiiDA data."""
+    from ase import Atoms
+    from ase.build import bulk
+    from aiida import orm
+
+    @task.pythonjob()
+    def make_supercell(atoms: Atoms, dim: int = 2) -> Atoms:
+        """Scale the structure by the given scales."""
+        return atoms * (dim, dim, dim)
+
+    atoms = bulk("Si")
+    structure = orm.StructureData(ase=atoms)
+    wg = WorkGraph("test_PythonJob_retrieve_files")
+    # atoms will be converted to AtomsData automatically
+    wg.add_task(
+        make_supercell,
+        atoms=atoms,
+        dim=2,
+        name="make_supercell_1",
+    )
+    # structure will be converted to AtomsData automatically
+    wg.add_task(
+        make_supercell,
+        atoms=structure,
+        dim=2,
+        name="make_supercell_2",
+    )
+    data = wg.tasks.make_supercell_1.to_dict()
+    assert isinstance(
+        data["inputs"]["atoms"]["property"]["value"],
+        orm.Data,
+    )
+    data = wg.tasks.make_supercell_1.to_dict()
+    assert isinstance(
+        data["inputs"]["atoms"]["property"]["value"],
+        orm.Data,
+    )
+
+
 @pytest.mark.usefixtures("started_daemon_client")
 def test_decorator(fixture_localhost, python_executable_path):
     """Test decorator."""
