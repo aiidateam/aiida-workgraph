@@ -64,12 +64,12 @@ class PythonJobTask(Task):
         for input in input_data.values():
             if is_function_input or input["metadata"].get("is_function_input", False):
                 if input["identifier"] == "workgraph.namespace":
-                    print("deserialize namespace: ", input["name"])
+                    # print("deserialize namespace: ", input["name"])
                     cls.deserialize_pythonjob_data(
                         input["sockets"], is_function_input=True
                     )
                 else:
-                    print("deserialize socket: ", input["name"])
+                    # print("deserialize socket: ", input["name"])
                     cls.deserialize_socket_data(input)
 
     @classmethod
