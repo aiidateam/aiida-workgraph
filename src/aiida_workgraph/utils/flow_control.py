@@ -2,103 +2,101 @@ from aiida_workgraph.socket import TaskSocket
 from aiida_workgraph.tasks.task_pool import TaskPool
 
 
-def if_(condition):
-    """Helper function to create an If_ object."""
-    return If_(condition)
-
-
-class If_:
+class BaseFlowBlock:
     def __init__(self, condition: TaskSocket):
         self.condition = condition
+        # The "work graph" is always the parent of the node in question
         self.wg = condition._parent._node.parent
+
+    def _generate_name(self, prefix: str) -> str:
+        # Subclasses can define their own identifier (e.g. "workgraph.if_zone" or "workgraph.while_zone")
+        # for now, just do a dummy:
+        existing = [
+            task
+            for task in self.wg.tasks
+            if hasattr(task, "identifier") and task.identifier == self._task_identifier
+        ]
+        index = len(existing) + 1
+        return f"{prefix}_{index}"
+
+    @property
+    def _task_identifier(self):
+        """
+        Subclasses must override to specify the identifier
+        ("workgraph.if_zone" or "workgraph.while_zone", etc.)
+        """
+        raise NotImplementedError
+
+
+class If_(BaseFlowBlock):
+    _task_identifier = "workgraph.if_zone"
+
+    def __init__(self, condition: TaskSocket):
+        super().__init__(condition)
         self.true_zone = self.wg.add_task(
-            TaskPool.workgraph.if_zone, name=self._generate_name(), conditions=condition
+            TaskPool.workgraph.if_zone,
+            name=self._generate_name("if_true"),
+            conditions=self.condition,
         )
         self.false_zone = None
 
-    def _generate_name(self, prefix: str = "if_true") -> str:
-        n = (
-            len(
-                [
-                    task
-                    for task in self.wg.tasks
-                    if task.identifier == "workgraph.if_zone"
-                ]
-            )
-            + 1
-        )
-        return f"{prefix}_{n}"
-
     def __call__(self, *tasks):
-        """
-        Called when the user does:
-            if_(condition)(<tasks-for-true>)
-        """
-        from aiida_workgraph.task import Task
-
-        tasks = [task for task in tasks if isinstance(task, Task)]
-        self.true_zone.children.add(tasks)
+        _add_tasks_to_zone(self.true_zone, tasks)
         return self
 
-    def elif_(self):
-        """Not implemented."""
-        raise NotImplementedError("elif_ not implemented.")
-
     def else_(self, *tasks):
-        """
-        Called when the user does:
-            .else_(<tasks-for-false>)
-        """
         self.false_zone = self.wg.add_task(
             TaskPool.workgraph.if_zone,
             name=self._generate_name("if_false"),
             conditions=self.condition,
             invert_condition=True,
         )
-        from aiida_workgraph.task import Task
-
-        tasks = [task for task in tasks if isinstance(task, Task)]
-        self.false_zone.children.add(tasks)
-
+        _add_tasks_to_zone(self.false_zone, tasks)
         return self
 
 
-def while_(condition, max_iterations: int = 10000):
-    """Helper function to create an While_ object."""
-    return While_(condition, max_iterations=max_iterations)
+class While_(BaseFlowBlock):
+    _task_identifier = "workgraph.while_zone"
 
-
-class While_:
     def __init__(self, condition: TaskSocket, max_iterations: int = 10000):
-        self.condition = condition
-        self.wg = condition._parent._node.parent
+        super().__init__(condition)
         self.zone = self.wg.add_task(
             TaskPool.workgraph.while_zone,
-            name=self._generate_name(),
-            conditions=condition,
+            name=self._generate_name("while"),
+            conditions=self.condition,
             max_iterations=max_iterations,
         )
 
-    def _generate_name(self, prefix: str = "while") -> str:
-        n = (
-            len(
-                [
-                    task
-                    for task in self.wg.tasks
-                    if task.identifier == "workgraph.while_zone"
-                ]
-            )
-            + 1
-        )
-        return f"{prefix}_{n}"
-
     def __call__(self, *tasks):
-        """
-        Called when the user does:
-            while_(condition)(<tasks-for-loop>)
-        """
-        from aiida_workgraph.task import Task
-
-        tasks = [task for task in tasks if isinstance(task, Task)]
-        self.zone.children.add(tasks)
+        _add_tasks_to_zone(self.zone, tasks)
         return self
+
+
+def _add_tasks_to_zone(zone, tasks):
+    """
+    A helper that takes a 'zone' (i.e. the node to which tasks will be attached)
+    and a list of tasks (some of which might be normal tasks, while_ objects, or
+    if_ objects). It dispatches them to the zone accordingly.
+    """
+    from aiida_workgraph.task import Task
+
+    normal_tasks = [t for t in tasks if isinstance(t, Task)]
+    zone.children.add(normal_tasks)
+
+    while_tasks = [t for t in tasks if isinstance(t, While_)]
+    for w_task in while_tasks:
+        zone.children.add(w_task.zone)
+
+    if_tasks = [t for t in tasks if isinstance(t, If_)]
+    for i_task in if_tasks:
+        zone.children.add(i_task.true_zone)
+        if i_task.false_zone:
+            zone.children.add(i_task.false_zone)
+
+
+def if_(condition):
+    return If_(condition)
+
+
+def while_(condition, max_iterations=10000):
+    return While_(condition, max_iterations)
