@@ -163,10 +163,13 @@ class Task(GraphNode):
                 ).to_dict()
         elif isinstance(self._error_handlers, list):
             for handler in self._error_handlers:
-                name = handler.get("name", handler["handler"].__name__)
-                handler["handler"] = NodeExecutor.from_callable(
-                    handler["handler"]
-                ).to_dict()
+                if isinstance(handler["handler"], dict):
+                    name = handler.get("name", handler["handler"]["callable_name"])
+                else:
+                    name = handler.get("name", handler["handler"].__name__)
+                    handler["handler"] = NodeExecutor.from_callable(
+                        handler["handler"]
+                    ).to_dict()
                 handlers[name] = handler
         # convert exit code label (str) to status (int)
         for handler in handlers.values():
