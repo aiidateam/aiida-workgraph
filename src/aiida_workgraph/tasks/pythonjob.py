@@ -1,6 +1,7 @@
 from typing import Any, Dict
 from aiida import orm
 from aiida_pythonjob.data.serializer import general_serializer
+from aiida_pythonjob.data.deserializer import deserialize_to_raw_python_data
 from aiida_workgraph.task import Task
 from aiida.common.extendeddicts import AttributeDict
 from node_graph.executor import NodeExecutor
@@ -69,7 +70,7 @@ class PythonJobTask(Task):
     def deserialize_socket_data(cls, data: Dict[str, Any]) -> Any:
         value = data.get("property", {}).get("value")
         if isinstance(value, orm.Data):
-            data["property"]["value"] = value.value
+            data["property"]["value"] = deserialize_to_raw_python_data(value)
 
     def prepare_for_python_task(self, kwargs: dict, var_kwargs: dict) -> dict:
         """Prepare the inputs for PythonJob"""
@@ -99,6 +100,7 @@ class PythonJobTask(Task):
         code = kwargs.pop("code", None)
         computer = kwargs.pop("computer", "localhost")
         command_info = kwargs.pop("command_info", {})
+        register_pickle_by_value = kwargs.pop("register_pickle_by_value", False)
         upload_files = kwargs.pop("upload_files", {})
 
         metadata = kwargs.pop("metadata", {})
@@ -131,6 +133,7 @@ class PythonJobTask(Task):
             metadata=metadata,
             upload_files=upload_files,
             process_label=f"PythonJob<{self.name}>",
+            register_pickle_by_value=register_pickle_by_value,
             **kwargs,
         )
 

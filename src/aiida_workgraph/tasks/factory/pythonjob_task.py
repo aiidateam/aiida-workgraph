@@ -54,6 +54,7 @@ class PythonJobTaskFactory(BaseTaskFactory):
             [
                 {"identifier": "workgraph.string", "name": "computer"},
                 {"identifier": "workgraph.any", "name": "command_info"},
+                {"identifier": "workgraph.any", "name": "register_pickle_by_value"},
             ]
         )
         for input in TaskCls._ndata["inputs"]:
