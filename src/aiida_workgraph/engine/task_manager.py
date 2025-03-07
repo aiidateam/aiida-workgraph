@@ -291,6 +291,8 @@ class TaskManager:
                 self.execute_if_task(task)
             elif task_type == "ZONE":
                 self.execute_zone_task(task)
+            elif task_type == "MAP":
+                self.execute_map_task(task)
             elif task_type == "GET_CONTEXT":
                 self.execute_get_context_task(task, kwargs)
             elif task_type == "SET_CONTEXT":
@@ -422,6 +424,18 @@ class TaskManager:
             self.update_zone_task_state(name)
         else:
             self.set_task_runtime_info(name, "state", "RUNNING")
+        self.continue_workgraph()
+
+    def execute_map_task(self, task):
+        # in case of an empty zone, it will finish immediately
+        name = task["name"]
+        if self.are_childen_finished(name)[0]:
+            self.update_zone_task_state(name)
+        else:
+            self.set_task_runtime_info(name, "state", "RUNNING")
+            # generate the map tasks
+            for child_task in task["children"]:
+                self.set_task_runtime_info(child_task, "action", "MAP")
         self.continue_workgraph()
 
     def execute_get_context_task(self, task, kwargs):

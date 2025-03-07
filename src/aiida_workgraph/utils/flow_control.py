@@ -72,6 +72,22 @@ class While_(BaseFlowBlock):
         return self
 
 
+class Map_(BaseFlowBlock):
+    _task_identifier = "workgraph.map_zone"
+
+    def __init__(self, inputs: TaskSocket):
+        super().__init__(inputs)
+        self.zone = self.wg.add_task(
+            TaskPool.workgraph.map_zone,
+            name=self._generate_name("map"),
+            inputs=self.condition,
+        )
+
+    def __call__(self, *tasks):
+        _add_tasks_to_zone(self.zone, tasks)
+        return self
+
+
 def _add_tasks_to_zone(zone, tasks):
     """
     A helper that takes a 'zone' (i.e. the node to which tasks will be attached)
@@ -100,3 +116,7 @@ def if_(condition):
 
 def while_(condition, max_iterations=10000):
     return While_(condition, max_iterations)
+
+
+def map_(condition):
+    return Map_(condition)
