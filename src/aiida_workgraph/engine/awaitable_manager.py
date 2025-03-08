@@ -150,14 +150,14 @@ class AwaitableManager:
                         awaitable.key, "state", "KILLED"
                     )
                     # set child tasks state to SKIPPED
-                    self.process.task_manager.set_tasks_state(
+                    self.process.task_manager.state_manager.set_tasks_state(
                         self.ctx._connectivity["child_node"][awaitable.key],
                         "SKIPPED",
                     )
                     self.process.report(f"Task: {awaitable.key} cancelled.")
                 else:
                     results = awaitable.result()
-                    self.process.task_manager.update_normal_task_state(
+                    self.process.task_manager.state_manager.update_normal_task_state(
                         awaitable.key, results
                     )
             except Exception as e:
@@ -166,7 +166,7 @@ class AwaitableManager:
                     awaitable.key, "state", "FAILED"
                 )
                 # set child tasks state to SKIPPED
-                self.process.task_manager.set_tasks_state(
+                self.process.task_manager.state_manager.set_tasks_state(
                     self.ctx._connectivity["child_node"][awaitable.key],
                     "SKIPPED",
                 )

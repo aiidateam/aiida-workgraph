@@ -145,6 +145,6 @@ def test_task_monitor_kill(decorated_add):
     wg.kill_tasks(["monitor1"])
     wg.wait()
     report = get_workchain_report(wg.process, "REPORT")
-    assert "Task monitor1 action: KILLED." in report
+    assert "Task monitor1 was KILLED" in report
     assert monitor1.state == "KILLED"
     assert add1.state == "SKIPPED"

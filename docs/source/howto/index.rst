@@ -14,6 +14,7 @@ This section contains a collection of HowTos for various topics.
    autogen/aggregate
    if
    while
+   map
    context
    waiting_on
    combine_workgraph
