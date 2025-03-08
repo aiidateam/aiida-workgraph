@@ -29,7 +29,7 @@ dependencies = [
     "scipy",
     "ase",
     "node-graph==0.1.16",
-    "node-graph-widget",
+    "node-graph-widget>=0.0.3",
     "aiida-core>=2.3",
     "cloudpickle",
     "aiida-shell~=0.8",
