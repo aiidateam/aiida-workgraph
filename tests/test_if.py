@@ -1,13 +1,13 @@
 from aiida_workgraph import WorkGraph, if_, TaskPool
 
 
-def test_if_instruction(decorated_add, decorated_multiply, decorated_compare):
+def test_if_instruction(decorated_add, decorated_multiply, decorated_smaller_than):
     """Test the If instruction."""
 
     wg = WorkGraph()
     add1 = wg.add_task(decorated_add, name="add1", x=1, y=-2)
     condition1 = wg.add_task(
-        decorated_compare, name="condition1", x=add1.outputs.result, y=0
+        decorated_smaller_than, name="condition1", x=add1.outputs.result, y=0
     )
     if_(condition1.outputs.result)(
         wg.add_task(decorated_add, name="add2", x=add1.outputs.result, y=2),
@@ -25,12 +25,12 @@ def test_if_instruction(decorated_add, decorated_multiply, decorated_compare):
     assert wg.tasks["multiply1"].outputs.result.value is None
 
 
-def test_if_task(decorated_add, decorated_multiply, decorated_compare):
+def test_if_task(decorated_add, decorated_multiply, decorated_smaller_than):
     """Test the If task."""
 
     wg = WorkGraph("test_if")
     add1 = wg.add_task(decorated_add, name="add1", x=1, y=1)
-    condition1 = wg.add_task(decorated_compare, name="condition1", x=1, y=0)
+    condition1 = wg.add_task(decorated_smaller_than, name="condition1", x=1, y=0)
     if_zone = wg.add_task(
         TaskPool.workgraph.if_zone, name="if_true", conditions=condition1.outputs.result
     )

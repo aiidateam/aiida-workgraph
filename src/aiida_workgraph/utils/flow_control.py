@@ -1,6 +1,8 @@
 from aiida_workgraph.socket import TaskSocket
 from aiida_workgraph.tasks.task_pool import TaskPool
 
+DEFAULT_MAP_PLACEHOLDER = "map_input"
+
 
 class BaseFlowBlock:
     def __init__(self, condition: TaskSocket):
@@ -72,6 +74,23 @@ class While_(BaseFlowBlock):
         return self
 
 
+class Map_(BaseFlowBlock):
+    _task_identifier = "workgraph.map_zone"
+
+    def __init__(self, source: TaskSocket, placeholder: str = DEFAULT_MAP_PLACEHOLDER):
+        super().__init__(source)
+        self.zone = self.wg.add_task(
+            TaskPool.workgraph.map_zone,
+            name=self._generate_name("map"),
+            source=self.condition,
+            placeholder=placeholder,
+        )
+
+    def __call__(self, *tasks):
+        _add_tasks_to_zone(self.zone, tasks)
+        return self
+
+
 def _add_tasks_to_zone(zone, tasks):
     """
     A helper that takes a 'zone' (i.e. the node to which tasks will be attached)
@@ -100,3 +119,10 @@ def if_(condition):
 
 def while_(condition, max_iterations=10000):
     return While_(condition, max_iterations)
+
+
+def map_(source, placeholder: str = DEFAULT_MAP_PLACEHOLDER):
+    return Map_(source, placeholder)
+
+
+map_.default_placeholder = DEFAULT_MAP_PLACEHOLDER
