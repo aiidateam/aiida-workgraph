@@ -146,7 +146,7 @@ class AwaitableManager:
             try:
                 # if awaitable is cancelled, the result is None
                 if awaitable.cancelled():
-                    self.process.task_manager.set_task_runtime_info(
+                    self.process.task_manager.state_manager.set_task_runtime_info(
                         awaitable.key, "state", "KILLED"
                     )
                     # set child tasks state to SKIPPED
@@ -162,7 +162,7 @@ class AwaitableManager:
                     )
             except Exception as e:
                 self.logger.error(f"Error in awaitable {awaitable.key}: {e}")
-                self.process.task_manager.set_task_runtime_info(
+                self.process.task_manager.state_manager.set_task_runtime_info(
                     awaitable.key, "state", "FAILED"
                 )
                 # set child tasks state to SKIPPED
@@ -178,7 +178,7 @@ class AwaitableManager:
 
         # node finished, update the task state and result
         # udpate the task state
-        self.process.task_manager.update_task_state(awaitable.key)
+        self.process.task_manager.state_manager.update_task_state(awaitable.key)
         # try to resume the workgraph, if the workgraph is already resumed
         # by other awaitable, this will not work
         try:

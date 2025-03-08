@@ -116,7 +116,7 @@ def test_reset_message(wg_calcjob):
     wg.save()
     wg.wait(timeout=30)
     report = get_workchain_report(wg.process, "REPORT")
-    assert "Action: reset. {'add1'}" in report
+    assert "Action: RESET. Tasks: {'add1'}" in report
 
 
 def test_restart_and_reset(wg_calcfunction):

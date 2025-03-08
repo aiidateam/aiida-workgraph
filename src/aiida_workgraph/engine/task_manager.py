@@ -1,14 +1,13 @@
 from __future__ import annotations
 
-from aiida.orm import ProcessNode, Data
-from typing import Any, Dict, List, Optional, Tuple, Callable, Union, Sequence
+from typing import Any, Dict, List, Optional, Tuple, Callable
 from aiida_workgraph.task import Task
 from aiida_workgraph.utils import get_nested_dict
-from aiida.orm.utils.serialize import serialize
-from aiida_workgraph.orm.utils import deserialize_safe
 import asyncio
 from aiida.engine.processes.exit_code import ExitCode
 from aiida_workgraph.executors.monitors import monitor
+from .task_state import TaskStateManager
+from .task_actions import TaskActionManager
 import traceback
 
 MAX_NUMBER_AWAITABLES_MSG = "The maximum number of subprocesses has been reached: {}. Cannot launch the job: {}."
@@ -27,12 +26,24 @@ class TaskManager:
     """Manages task execution, state updates, and error handling."""
 
     def __init__(self, ctx_manager, logger, runner, process, awaitable_manager):
+        """
+        :param ctx_manager: The object managing the 'ctx' dictionary.
+        :param logger: A logger instance.
+        :param runner: An AiiDA runner.
+        :param process: The AiiDA process object that orchestrates the entire WorkGraph.
+        :param awaitable_manager: Manages the global context variables.
+        """
         self.ctx_manager = ctx_manager
         self.ctx = ctx_manager.ctx
         self.logger = logger
         self.runner = runner
         self.process = process
         self.awaitable_manager = awaitable_manager
+        # Sub-managers
+        self.state_manager = TaskStateManager(
+            ctx_manager, logger, process, awaitable_manager
+        )
+        self.action_manager = TaskActionManager(self.state_manager, logger, process)
 
     def get_task_executor_dict(self, name: str):
         # if task is a mappped task, we need to get the executor from the parent task
@@ -50,7 +61,7 @@ class TaskManager:
         tdata = {"executor": executor_dict}
         tdata.update(self.ctx._tasks[name])
         task = Task.from_dict(tdata)
-        action = self.get_task_runtime_info(name, "action").upper()
+        action = self.state_manager.get_task_runtime_info(name, "action").upper()
         task.action = action
         # update task results
         # namespace socket does not have a value, but _value
@@ -62,123 +73,14 @@ class TaskManager:
             )
         return task
 
-    def reset_task(
-        self,
-        name: str,
-        reset_process: bool = True,
-        recursive: bool = True,
-        reset_execution_count: bool = True,
-    ) -> None:
-        """Reset task state and remove it from the executed task.
-        If recursive is True, reset its child tasks."""
-
-        self.set_task_runtime_info(name, "state", "PLANNED")
-        if reset_process:
-            self.set_task_runtime_info(name, "process", None)
-        self.remove_executed_task(name)
-        # self.logger.debug(f"Task {name} action: RESET.")
-        # if the task is a while task, reset its child tasks
-        if self.ctx._tasks[name]["metadata"]["node_type"].upper() == "WHILE":
-            if reset_execution_count:
-                self.ctx._tasks[name]["execution_count"] = 0
-            for child_task in self.ctx._tasks[name]["children"]:
-                self.reset_task(child_task, reset_process=False, recursive=False)
-        elif self.ctx._tasks[name]["metadata"]["node_type"].upper() in [
-            "IF",
-            "ZONE",
-        ]:
-            for child_task in self.ctx._tasks[name]["children"]:
-                self.reset_task(child_task, reset_process=False, recursive=False)
-        if recursive:
-            # reset its child tasks
-            names = self.ctx._connectivity["child_node"][name]
-            for name in names:
-                self.reset_task(name, recursive=False)
-
-    def remove_executed_task(self, name: str) -> None:
-        """Remove labels with name from executed tasks."""
-        self.ctx._executed_tasks = [
-            label for label in self.ctx._executed_tasks if label.split(".")[0] != name
-        ]
-
-    def is_task_ready_to_run(self, name: str) -> Tuple[bool, Optional[str]]:
-        """Check if the task ready to run.
-        For normal task and a zone task, we need to check its input tasks in the connectivity["zone"].
-        For task inside a zone, we need to check if the zone (parent task) is ready.
-        """
-        parent_task = self.ctx._tasks[name]["parent_task"]
-        # input_tasks, parent_task, conditions
-        parent_states = [True, True]
-        # if the task belongs to a parent zone
-        if parent_task[0]:
-            state = self.get_task_runtime_info(parent_task[0], "state")
-            if state not in ["RUNNING"]:
-                parent_states[1] = False
-        # check the input tasks of the zone
-        # check if the zone input tasks are ready
-        for child_task_name in self.ctx._connectivity["zone"][name]["input_tasks"]:
-            if self.get_task_runtime_info(child_task_name, "state") not in [
-                "FINISHED",
-                "SKIPPED",
-                "FAILED",
-            ]:
-                parent_states[0] = False
-                break
-        return all(parent_states), parent_states
-
     def set_task_results(self) -> None:
         for name, task in self.ctx._tasks.items():
-            if self.get_task_runtime_info(name, "action").upper() == "RESET":
-                self.reset_task(task["name"])
-            self.update_task_state(name)
-
-    def task_set_context(self, name: str) -> None:
-        """Export task results to the context based on context mapping."""
-        from aiida_workgraph.utils import update_nested_dict
-
-        items = self.ctx._tasks[name]["context_mapping"]
-        for key, result_name in items.items():
-            result = self.ctx._tasks[name]["results"][result_name]
-            # for mapped tasks, should use dict to hold the results
-            if "map_data" in self.ctx._tasks[name]:
-                prefix = self.ctx._tasks[name]["map_data"]["prefix"]
-                key = f"{key}.{prefix}"
-            update_nested_dict(self.ctx, key, result)
-
-    def get_task_runtime_info(self, name: str, key: str) -> str:
-        """Get task state info from attributes."""
-
-        if key == "process":
-            value = self.process.node.get_task_process(name)
-            if value is not None:
-                value = deserialize_safe(value)
-        elif key == "state":
-            value = self.process.node.get_task_state(name)
-        elif key == "action":
-            value = self.process.node.get_task_action(name)
-        return value
-
-    def set_task_runtime_info(self, name: str, key: str, value: any) -> None:
-        """Set task state info to attributes.
-        This also allow us access this info outside the engine"""
-
-        if key == "process":
-            value = serialize(value)
-            self.process.node.set_task_process(name, value)
-        elif key == "state":
-            self.process.node.set_task_state(name, value)
-        elif key == "action":
-            self.process.node.set_task_action(name, value)
-
-    def set_tasks_state(
-        self, tasks: Union[List[str], Sequence[str]], value: str
-    ) -> None:
-        """Set tasks state, including its children tasks.
-        Only used for skip and reset tasks."""
-        for name in tasks:
-            self.set_task_runtime_info(name, "state", value)
-            if "children" in self.ctx._tasks[name]:
-                self.set_tasks_state(self.ctx._tasks[name]["children"], value)
+            if (
+                self.state_manager.get_task_runtime_info(name, "action").upper()
+                == "RESET"
+            ):
+                self.state_manager.reset_task(task["name"])
+            self.state_manager.update_task_state(name)
 
     def is_workgraph_finished(self) -> bool:
         """Check if the workgraph is finished.
@@ -188,10 +90,11 @@ class TaskManager:
         not_finished_tasks = []
         for name, task in self.ctx._tasks.items():
             # if the task is in mapped state, we need to check its children (mapped tasks)
-
-            if self.get_task_runtime_info(task["name"], "state") in ["MAPPED"]:
-                self.update_mapped_task_state(name)
-            elif self.get_task_runtime_info(task["name"], "state") in [
+            if self.state_manager.get_task_runtime_info(task["name"], "state") in [
+                "MAPPED"
+            ]:
+                self.state_manager.update_template_task_state(name)
+            elif self.state_manager.get_task_runtime_info(task["name"], "state") in [
                 "RUNNING",
                 "CREATED",
                 "PLANNED",
@@ -199,7 +102,10 @@ class TaskManager:
             ]:
                 not_finished_tasks.append(name)
                 is_finished = False
-            elif self.get_task_runtime_info(task["name"], "state") == "FAILED":
+            elif (
+                self.state_manager.get_task_runtime_info(task["name"], "state")
+                == "FAILED"
+            ):
                 failed_tasks.append(name)
         if is_finished:
             if self.ctx._workgraph["workgraph_type"].upper() == "WHILE":
@@ -217,12 +123,15 @@ class TaskManager:
         return is_finished, result
 
     def continue_workgraph(self) -> None:
+        """
+        Resume the WorkGraph by looking for tasks that are ready to run.
+        """
         self.process.report("Continue workgraph.")
         task_to_run = []
         for name, task in self.ctx._tasks.items():
             # update task state
             if (
-                self.get_task_runtime_info(task["name"], "state")
+                self.state_manager.get_task_runtime_info(task["name"], "state")
                 in [
                     "CREATED",
                     "RUNNING",
@@ -234,7 +143,7 @@ class TaskManager:
                 or name in self.ctx._executed_tasks
             ):
                 continue
-            ready, _ = self.is_task_ready_to_run(name)
+            ready, _ = self.state_manager.is_task_ready_to_run(name)
             if ready:
                 task_to_run.append(name)
         #
@@ -263,9 +172,11 @@ class TaskManager:
                     continue
             # skip if the task is already executed
             # or if the task is in a skippped state
-            if name in self.ctx._executed_tasks or self.get_task_runtime_info(
-                name, "state"
-            ) in ["SKIPPED"]:
+            if (
+                name in self.ctx._executed_tasks
+                or self.state_manager.get_task_runtime_info(name, "state")
+                in ["SKIPPED"]
+            ):
                 continue
             self.ctx._executed_tasks.append(name)
             print("-" * 60)
@@ -344,8 +255,8 @@ class TaskManager:
     ):
         """Execute a NODE task."""
         results = self.run_executor(executor, [], kwargs, var_args, var_kwargs)
-        self.set_task_runtime_info(name, "process", results)
-        self.update_task_state(name)
+        self.state_manager.set_task_runtime_info(name, "process", results)
+        self.state_manager.update_task_state(name)
         if continue_workgraph:
             self.continue_workgraph()
 
@@ -356,8 +267,8 @@ class TaskManager:
         for key in self.ctx._tasks[name]["args"]:
             kwargs.pop(key, None)
         results = create_data_node(executor, args, kwargs)
-        self.set_task_runtime_info(name, "process", results)
-        self.update_task_state(name)
+        self.state_manager.set_task_runtime_info(name, "process", results)
+        self.state_manager.update_task_state(name)
         self.ctx._new_data[name] = results
         if continue_workgraph:
             self.continue_workgraph()
@@ -368,14 +279,14 @@ class TaskManager:
         try:
             task = self.get_task(name)
             process, _ = task.execute(None, kwargs, var_kwargs)
-            self.set_task_runtime_info(name, "process", process)
-            self.update_task_state(name)
+            self.state_manager.set_task_runtime_info(name, "process", process)
+            self.state_manager.update_task_state(name)
         except Exception as e:
             error_traceback = traceback.format_exc()  # Capture the full traceback
             self.logger.error(
                 f"Error in task {name}: {e}\n{error_traceback}"
             )  # Log the error with traceback
-            self.update_task_state(name, success=False)
+            self.state_manager.update_task_state(name, success=False)
         # exclude the current tasks from the next run
         if continue_workgraph:
             self.continue_workgraph()
@@ -390,9 +301,9 @@ class TaskManager:
                 kwargs=kwargs,
                 var_kwargs=var_kwargs,
             )
-            self.set_task_runtime_info(name, "state", state)
-            self.set_task_runtime_info(name, "action", "")
-            self.set_task_runtime_info(name, "process", process)
+            self.state_manager.set_task_runtime_info(name, "state", state)
+            self.state_manager.set_task_runtime_info(name, "action", "")
+            self.state_manager.set_task_runtime_info(name, "process", process)
             # update the parent task state of mappped tasks
             if "map_data" in self.ctx._tasks[name]:
                 parent_task_name = self.ctx._tasks[name]["map_data"]["parent"]
@@ -404,51 +315,53 @@ class TaskManager:
             self.logger.error(
                 f"Error in task {name}: {e}\n{error_traceback}"
             )  # Log the error with traceback
-            self.update_task_state(name, success=False)
+            self.state_manager.update_task_state(name, success=False)
 
     def execute_while_task(self, task):
         """Execute a WHILE task."""
         # TODO refactor this for while, if and zone
         # in case of an empty zone, it will finish immediately
         name = task["name"]
-        if self.are_childen_finished(name)[0]:
-            self.update_while_task_state(name)
+        if self.state_manager.are_childen_finished(name)[0]:
+            self.state_manager.update_while_task_state(name)
         else:
             # check the conditions of the while task
             should_run = self.should_run_while_task(name)
             if not should_run:
-                self.set_task_runtime_info(name, "state", "FINISHED")
-                self.set_tasks_state(self.ctx._tasks[name]["children"], "SKIPPED")
-                self.update_parent_task_state(name)
+                self.state_manager.set_task_runtime_info(name, "state", "FINISHED")
+                self.state_manager.set_tasks_state(
+                    self.ctx._tasks[name]["children"], "SKIPPED"
+                )
+                self.state_manager.update_parent_task_state(name)
                 self.process.report(
                     f"While Task {name}: Condition not fullilled, task finished. Skip all its children."
                 )
             else:
                 task["execution_count"] += 1
-                self.set_task_runtime_info(name, "state", "RUNNING")
+                self.state_manager.set_task_runtime_info(name, "state", "RUNNING")
         self.continue_workgraph()
 
     def execute_if_task(self, task):
         # in case of an empty zone, it will finish immediately
         name = task["name"]
-        if self.are_childen_finished(name)[0]:
-            self.update_zone_task_state(name)
+        if self.state_manager.are_childen_finished(name)[0]:
+            self.state_manager.update_zone_task_state(name)
         else:
             should_run = self.should_run_if_task(name)
             if should_run:
-                self.set_task_runtime_info(name, "state", "RUNNING")
+                self.state_manager.set_task_runtime_info(name, "state", "RUNNING")
             else:
-                self.set_tasks_state(task["children"], "SKIPPED")
-                self.update_zone_task_state(name)
+                self.state_manager.set_tasks_state(task["children"], "SKIPPED")
+                self.state_manager.update_zone_task_state(name)
         self.continue_workgraph()
 
     def execute_zone_task(self, task):
         # in case of an empty zone, it will finish immediately
         name = task["name"]
-        if self.are_childen_finished(name)[0]:
-            self.update_zone_task_state(name)
+        if self.state_manager.are_childen_finished(name)[0]:
+            self.state_manager.update_zone_task_state(name)
         else:
-            self.set_task_runtime_info(name, "state", "RUNNING")
+            self.state_manager.set_task_runtime_info(name, "state", "RUNNING")
         self.continue_workgraph()
 
     def execute_map_task(self, task, kwargs):
@@ -457,10 +370,10 @@ class TaskManager:
         2. Mark this MAP node as running and schedule a continuation.
         """
         name = task["name"]
-        if self.are_childen_finished(name)[0]:
-            self.update_zone_task_state(name)
+        if self.state_manager.are_childen_finished(name)[0]:
+            self.state_manager.update_zone_task_state(name)
         else:
-            self.set_task_runtime_info(name, "state", "RUNNING")
+            self.state_manager.set_task_runtime_info(name, "state", "RUNNING")
             source = kwargs["source"]
             placeholder = kwargs.get("placeholder", "map_input")
             for prefix, value in source.items():
@@ -475,16 +388,16 @@ class TaskManager:
         name = task["name"]
         results = {"result": getattr(self.ctx, kwargs["key"])}
         task["results"] = results
-        self.set_task_runtime_info(name, "state", "FINISHED")
-        self.update_parent_task_state(name)
+        self.state_manager.set_task_runtime_info(name, "state", "FINISHED")
+        self.state_manager.update_parent_task_state(name)
         self.continue_workgraph()
 
     def execute_set_context_task(self, task, kwargs):
         name = task["name"]
         # get the results from the context
         setattr(self.ctx, kwargs["key"], kwargs["value"])
-        self.set_task_runtime_info(name, "state", "FINISHED")
-        self.update_parent_task_state(name)
+        self.state_manager.set_task_runtime_info(name, "state", "FINISHED")
+        self.state_manager.update_parent_task_state(name)
         self.continue_workgraph()
 
     def execute_awaitable_task(
@@ -500,7 +413,7 @@ class TaskManager:
         awaitable = self.awaitable_manager.construct_awaitable_function(
             name, awaitable_target
         )
-        self.set_task_runtime_info(name, "state", "RUNNING")
+        self.state_manager.set_task_runtime_info(name, "state", "RUNNING")
         self.awaitable_manager.to_context(**{name: awaitable})
 
     def execute_monitor_task(self, task, executor, args, kwargs, var_args, var_kwargs):
@@ -521,7 +434,7 @@ class TaskManager:
         awaitable = self.awaitable_manager.construct_awaitable_function(
             name, awaitable_target
         )
-        self.set_task_runtime_info(name, "state", "RUNNING")
+        self.state_manager.set_task_runtime_info(name, "state", "RUNNING")
         # save the awaitable to the temp, so that we can kill it if needed
         self.awaitable_manager.not_persisted_awaitables[name] = awaitable_target
         self.awaitable_manager.to_context(**{name: awaitable})
@@ -538,10 +451,12 @@ class TaskManager:
             kwargs.pop(key, None)
         try:
             results = self.run_executor(executor, args, kwargs, var_args, var_kwargs)
-            self.update_normal_task_state(name, results)
+            self.state_manager.update_normal_task_state(name, results)
         except Exception as e:
             self.logger.error(f"Error in task {name}: {e}")
-            self.update_normal_task_state(name, results=None, success=False)
+            self.state_manager.update_normal_task_state(
+                name, results=None, success=False
+            )
         if continue_workgraph:
             self.continue_workgraph()
 
@@ -623,164 +538,13 @@ class TaskManager:
                 var_kwargs = input
         return args, kwargs, var_args, var_kwargs, args_dict
 
-    def update_task_state(self, name: str, success=True) -> None:
-        """Update task state when the task is finished."""
-        task = self.ctx._tasks[name]
-        if success:
-            node = self.get_task_runtime_info(name, "process")
-            if isinstance(node, ProcessNode):
-                state = node.process_state.value.upper()
-                if node.is_finished_ok:
-                    self.set_task_runtime_info(task["name"], "state", state)
-                    if task["metadata"]["node_type"].upper() == "WORKGRAPH":
-                        # expose the outputs of all the tasks in the workgraph
-                        task["results"] = {}
-                        outgoing = node.base.links.get_outgoing()
-                        for link in outgoing.all():
-                            if isinstance(link.node, ProcessNode) and getattr(
-                                link.node, "process_state", False
-                            ):
-                                task["results"][link.link_label] = link.node.outputs
-                    else:
-                        task["results"] = node.outputs
-                        # self.ctx._new_data[name] = task["results"]
-                    self.set_task_runtime_info(task["name"], "state", "FINISHED")
-                    self.task_set_context(name)
-                    self.process.report(f"Task: {name} finished.")
-                # all other states are considered as failed
-                else:
-                    task["results"] = node.outputs
-                    self.on_task_failed(name)
-            elif isinstance(node, Data):
-                #
-                output_name = [
-                    output_name
-                    for output_name in list(task["outputs"].keys())
-                    if output_name not in ["_wait", "_outputs"]
-                ][0]
-                task["results"] = {output_name: node}
-                self.set_task_runtime_info(task["name"], "state", "FINISHED")
-                self.task_set_context(name)
-                self.process.report(f"Task: {name} finished.")
-            else:
-                task.setdefault("results", None)
-        else:
-            self.on_task_failed(name)
-        self.update_parent_task_state(name)
-
-    def on_task_failed(self, name: str) -> None:
-        """Handle the case where a task has failed."""
-        self.set_task_runtime_info(name, "state", "FAILED")
-        self.set_tasks_state(self.ctx._connectivity["child_node"][name], "SKIPPED")
-        self.process.report(f"Task: {name} failed.")
-        self.process.error_handler_manager.run_error_handlers(name)
-
     def update_task(self, task: Task):
         """Update task in the context.
         This is used in error handlers to update the task parameters."""
         tdata = task.to_dict()
         self.ctx._tasks[task.name]["properties"] = tdata["properties"]
         self.ctx._tasks[task.name]["inputs"] = tdata["inputs"]
-        self.reset_task(task.name)
-
-    def update_normal_task_state(self, name, results, success=True):
-        """Set the results of a normal task.
-        A normal task is created by decorating a function with @task().
-        """
-        from aiida_workgraph.config import builtin_outputs
-
-        builtin_output_names = [output["name"] for output in builtin_outputs]
-
-        if success:
-            task = self.ctx._tasks[name]
-            if isinstance(results, tuple):
-                # there are two built-in outputs: _wait and _outputs
-                if len(task["outputs"]) - 2 != len(results):
-                    self.on_task_failed(name)
-                    return self.process.exit_codes.OUTPUS_NOT_MATCH_RESULTS
-                output_names = [
-                    name for name in task["outputs"] if name not in builtin_output_names
-                ]
-                for i, output_name in enumerate(output_names):
-                    task["results"][output_name] = results[i]
-            elif isinstance(results, dict):
-                task["results"] = results
-            else:
-                output_name = [
-                    output_name
-                    for output_name in list(task["outputs"].keys())
-                    if output_name not in ["_wait", "_outputs"]
-                ][0]
-                task["results"][output_name] = results
-            self.task_set_context(name)
-            self.set_task_runtime_info(name, "state", "FINISHED")
-            self.process.report(f"Task: {name} finished.")
-        else:
-            self.on_task_failed(name)
-        self.update_parent_task_state(name)
-
-    def update_parent_task_state(self, name: str) -> None:
-        """Update parent task state."""
-        parent_task = self.ctx._tasks[name]["parent_task"]
-        if parent_task[0]:
-            task_type = self.ctx._tasks[parent_task[0]]["metadata"]["node_type"].upper()
-            if task_type == "WHILE":
-                self.update_while_task_state(parent_task[0])
-            elif task_type == "IF":
-                self.update_zone_task_state(parent_task[0])
-            elif task_type == "ZONE":
-                self.update_zone_task_state(parent_task[0])
-            elif task_type == "MAP":
-                self.update_zone_task_state(parent_task[0])
-        # for mapped tasks, we need to update the parent task
-        if "map_data" in self.ctx._tasks[name]:
-            parent_task_name = self.ctx._tasks[name]["map_data"]["parent"]
-            self.update_mapped_task_state(parent_task_name)
-
-    def update_while_task_state(self, name: str) -> None:
-        """Update while task state."""
-        finished, _ = self.are_childen_finished(name)
-
-        if finished:
-            self.process.report(
-                f"Wihle Task {name}: this iteration finished. Try to reset for the next iteration."
-            )
-            # reset the condition tasks
-            for link in self.ctx._tasks[name]["inputs"]["conditions"]["links"]:
-                self.reset_task(link["from_node"], recursive=False)
-            # reset the task and all its children, so that the task can run again
-            # do not reset the execution count
-            self.reset_task(name, reset_execution_count=False)
-
-    def update_zone_task_state(self, name: str) -> None:
-        """Update zone task state."""
-        finished, _ = self.are_childen_finished(name)
-        if finished:
-            self.set_task_runtime_info(name, "state", "FINISHED")
-            self.process.report(f"Task: {name} finished.")
-            self.update_parent_task_state(name)
-
-    def update_mapped_task_state(self, name: str) -> None:
-        """Update the mapped task state.
-        1) check if all child tasks are finished.
-        2) gather the results of all the mapped tasks.
-        3) update the parent task state.
-        """
-        finished, _ = self.are_childen_finished(name)
-        if finished:
-            # gather the results of all the mapped tasks
-            results = {}
-            for prefix, mapped_task in self.ctx._tasks[name]["mapped_tasks"].items():
-                for output_name in mapped_task["outputs"]:
-                    if output_name in mapped_task["results"]:
-                        results.setdefault(output_name, {})
-                        results[output_name][prefix] = mapped_task["results"][
-                            output_name
-                        ]
-            self.ctx._tasks[name]["results"] = results
-            self.set_task_runtime_info(name, "state", "FINISHED")
-            self.process.report(f"Task: {name} finished.")
-            self.update_parent_task_state(name)
+        self.state_manager.reset_task(task.name)
 
     def should_run_while_task(self, name: str) -> tuple[bool, Any]:
         """Check if the while task should run."""
@@ -810,29 +574,6 @@ class TaskManager:
             return not flag
         return flag
 
-    def are_childen_finished(self, name: str) -> tuple[bool, Any]:
-        """Check if the child tasks are finished."""
-        task = self.ctx._tasks[name]
-        finished = True
-        for name in task["children"]:
-            if self.get_task_runtime_info(name, "state") not in [
-                "FINISHED",
-                "SKIPPED",
-                "FAILED",
-            ]:
-                finished = False
-                break
-        # check the mapped tasks
-        for mapped_task in task.get("mapped_tasks", {}).values():
-            if self.get_task_runtime_info(mapped_task["name"], "state") not in [
-                "FINISHED",
-                "SKIPPED",
-                "FAILED",
-            ]:
-                finished = False
-                break
-        return finished, None
-
     def run_executor(
         self,
         executor: Callable,
@@ -845,58 +586,6 @@ class TaskManager:
             return executor(*args, **kwargs)
         else:
             return executor(*args, **kwargs, **var_kwargs)
-
-    def apply_task_actions(self, msg: dict) -> None:
-        """Apply task actions to the workgraph."""
-        action = msg["action"]
-        tasks = msg["tasks"]
-        self.process.report(f"Action: {action}. {tasks}")
-        if action.upper() == "RESET":
-            for name in tasks:
-                self.reset_task(name)
-        elif action.upper() == "PAUSE":
-            for name in tasks:
-                self.pause_task(name)
-        elif action.upper() == "PLAY":
-            for name in tasks:
-                self.play_task(name)
-        elif action.upper() == "SKIP":
-            for name in tasks:
-                self.skip_task(name)
-        elif action.upper() == "KILL":
-            for name in tasks:
-                self.kill_task(name)
-
-    def pause_task(self, name: str) -> None:
-        """Pause task."""
-        self.set_task_runtime_info(name, "action", "PAUSE")
-        self.process.report(f"Task {name} action: PAUSE.")
-
-    def play_task(self, name: str) -> None:
-        """Play task."""
-        self.set_task_runtime_info(name, "action", "")
-        self.process.report(f"Task {name} action: PLAY.")
-
-    def skip_task(self, name: str) -> None:
-        """Skip task."""
-        self.set_task_runtime_info(name, "state", "SKIPPED")
-        self.process.report(f"Task {name} action: SKIP.")
-
-    def kill_task(self, name: str) -> None:
-        """Kill task.
-        This is used to kill the awaitable and monitor task.
-        """
-        if self.get_task_runtime_info(name, "state") in ["RUNNING"]:
-            if self.ctx._tasks[name]["metadata"]["node_type"].upper() in [
-                "AWAITABLE",
-                "MONITOR",
-            ]:
-                try:
-                    self.awaitable_manager.not_persisted_awaitables[name].cancel()
-                    self.set_task_runtime_info(name, "state", "KILLED")
-                    self.process.report(f"Task {name} action: KILLED.")
-                except Exception as e:
-                    self.logger.error(f"Error in killing task {name}: {e}")
 
     def check_while_conditions(self) -> bool:
         """Check while conditions.
@@ -911,7 +600,7 @@ class TaskManager:
             task_name, socket_name = c.split(".")
             if "task_name" != "context":
                 condition_tasks.append(task_name)
-                self.reset_task(task_name)
+                self.state_manager.reset_task(task_name)
         self.run_tasks(condition_tasks, continue_workgraph=False)
         conditions = []
         for c in self.ctx._workgraph["conditions"]:
@@ -923,7 +612,7 @@ class TaskManager:
         should_run = False not in conditions
         if should_run:
             self.reset()
-            self.set_tasks_state(condition_tasks, "SKIPPED")
+            self.state_manager.set_tasks_state(condition_tasks, "SKIPPED")
         return should_run
 
     def check_for_conditions(self) -> bool:
@@ -936,14 +625,14 @@ class TaskManager:
         should_run = False not in conditions
         if should_run:
             self.reset()
-            self.set_tasks_state(condition_tasks, "SKIPPED")
+            self.state_manager.set_tasks_state(condition_tasks, "SKIPPED")
             self.ctx["i"] = self.ctx._sequence[self.ctx._count]
         self.ctx._count += 1
         return should_run
 
     def reset(self) -> None:
         self.ctx._execution_count += 1
-        self.set_tasks_state(self.ctx._tasks.keys(), "PLANNED")
+        self.state_manager.set_tasks_state(self.ctx._tasks.keys(), "PLANNED")
         self.ctx._executed_tasks = []
 
     def get_all_children(self, name: str) -> List[str]:
@@ -970,7 +659,7 @@ class TaskManager:
         child_tasks = self.get_all_children(zone_task["name"])
         for child_task in child_tasks:
             # since the child task is mapped, it should be skipped
-            self.set_task_runtime_info(child_task, "state", "MAPPED")
+            self.state_manager.set_task_runtime_info(child_task, "state", "MAPPED")
             # keep track of the mapped tasks
             self.ctx._tasks[child_task].setdefault("mapped_tasks", {})
             new_name = f"{prefix}_{child_task}"
@@ -980,8 +669,8 @@ class TaskManager:
             new_task_data["uuid"] = str(uuid.uuid4())
             # Reset runtime states
             new_task_data["results"] = {}
-            self.set_task_runtime_info(new_name, "state", "PLANNED")
-            self.set_task_runtime_info(new_name, "action", "")
+            self.state_manager.set_task_runtime_info(new_name, "state", "PLANNED")
+            self.state_manager.set_task_runtime_info(new_name, "action", "")
             # Insert new_data in ctx._tasks
             self.ctx._tasks[new_name] = new_task_data
             self.ctx._tasks[child_task]["mapped_tasks"][prefix] = new_task_data
