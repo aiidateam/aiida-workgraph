@@ -172,15 +172,15 @@ def decorated_sqrt() -> Callable:
 
 
 @pytest.fixture
-def decorated_compare() -> Callable:
+def decorated_smaller_than() -> Callable:
     """Generate a decorated node for test."""
 
-    # define compare task
+    # define smaller_than task
     @task()
-    def compare(x, y):
+    def smaller_than(x, y):
         return x < y
 
-    return compare
+    return smaller_than
 
 
 @pytest.fixture

@@ -3,7 +3,7 @@ from aiida_workgraph import task, WorkGraph, TaskPool
 from aiida import orm
 
 
-def test_while_instruction(decorated_add, decorated_multiply, decorated_compare):
+def test_while_instruction(decorated_add, decorated_multiply, decorated_smaller_than):
     from aiida_workgraph import while_
 
     wg = WorkGraph("test_while")
@@ -11,7 +11,7 @@ def test_while_instruction(decorated_add, decorated_multiply, decorated_compare)
     add1 = wg.add_task(decorated_add, name="add1", x=1, y=1)
     add1.set_context({"n": "result"})
     # ---------------------------------------------------------------------
-    compare1 = wg.add_task(decorated_compare, name="compare1", x="{{n}}", y=20)
+    compare1 = wg.add_task(decorated_smaller_than, name="compare1", x="{{n}}", y=20)
     while_(compare1.outputs["result"], max_iterations=10)(
         wg.add_task(decorated_add, name="add2", x="{{n}}", y=1),
         wg.add_task(
@@ -33,7 +33,7 @@ def test_while_instruction(decorated_add, decorated_multiply, decorated_compare)
     assert wg.tasks["add3"].outputs.result.value == 31
 
 
-def test_while_task(decorated_add, decorated_compare):
+def test_while_task(decorated_add, decorated_smaller_than):
     """Test nested while task.
     Also test the max_iteration parameter."""
 
@@ -76,13 +76,13 @@ def test_while_task(decorated_add, decorated_compare):
     add1.set_context({"n": "result"})
     # ---------------------------------------------------------------------
     # the `result` of compare1 taskis used as condition
-    compare1 = wg.add_task(decorated_compare, name="compare1", x="{{m}}", y=10)
+    compare1 = wg.add_task(decorated_smaller_than, name="compare1", x="{{m}}", y=10)
     while1 = wg.add_task(
         TaskPool.workgraph.while_zone, name="while1", conditions=compare1.outputs.result
     )
     add11 = wg.add_task(decorated_add, name="add11", x=1, y=1)
     # ---------------------------------------------------------------------
-    compare2 = wg.add_task(decorated_compare, name="compare2", x="{{n}}", y=5)
+    compare2 = wg.add_task(decorated_smaller_than, name="compare2", x="{{n}}", y=5)
     while2 = wg.add_task(
         TaskPool.workgraph.while_zone, name="while2", conditions=compare2.outputs.result
     )
@@ -92,7 +92,7 @@ def test_while_task(decorated_add, decorated_compare):
     add22.set_context({"n": "result"})
     while2.children.add(["add21", "add22"])
     # ---------------------------------------------------------------------
-    compare3 = wg.add_task(decorated_compare, name="compare3", x="{{l}}", y=5)
+    compare3 = wg.add_task(decorated_smaller_than, name="compare3", x="{{l}}", y=5)
     while3 = wg.add_task(
         TaskPool.workgraph.while_zone,
         name="while3",
@@ -122,14 +122,14 @@ def test_while_task(decorated_add, decorated_compare):
 
 
 @pytest.mark.usefixtures("started_daemon_client")
-def test_while_workgraph(decorated_add, decorated_multiply, decorated_compare):
+def test_while_workgraph(decorated_add, decorated_multiply, decorated_smaller_than):
     # Create a WorkGraph will repeat itself based on the conditions
     wg = WorkGraph("while_workgraph")
     wg.workgraph_type = "WHILE"
     wg.conditions = ["compare1.result"]
     wg.context = {"n": 1}
     wg.max_iteration = 5
-    wg.add_task(decorated_compare, name="compare1", x="{{n}}", y=20)
+    wg.add_task(decorated_smaller_than, name="compare1", x="{{n}}", y=20)
     multiply1 = wg.add_task(
         decorated_multiply, name="multiply1", x="{{ n }}", y=orm.Int(2)
     )
@@ -142,7 +142,7 @@ def test_while_workgraph(decorated_add, decorated_multiply, decorated_compare):
 
 
 @pytest.mark.usefixtures("started_daemon_client")
-def test_while_graph_builder(decorated_add, decorated_multiply, decorated_compare):
+def test_while_graph_builder(decorated_add, decorated_multiply, decorated_smaller_than):
     """Test the while WorkGraph in graph builder.
     Also test the max_iteration parameter."""
 
@@ -153,7 +153,9 @@ def test_while_graph_builder(decorated_add, decorated_multiply, decorated_compar
         wg.max_iteration = 2
         wg.conditions = ["compare1.result"]
         wg.context = {"n": n}
-        wg.add_task(decorated_compare, name="compare1", x="{{n}}", y=orm.Int(limit))
+        wg.add_task(
+            decorated_smaller_than, name="compare1", x="{{n}}", y=orm.Int(limit)
+        )
         multiply1 = wg.add_task(
             decorated_multiply, name="multiply1", x="{{ n }}", y=orm.Int(2)
         )

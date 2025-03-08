@@ -96,7 +96,8 @@ class Map(Zone):
         self.add_input(
             "workgraph.any", "_wait", link_limit=100000, metadata={"arg_type": "none"}
         )
-        self.add_input("workgraph.any", "inputs", link_limit=100000)
+        self.add_input("workgraph.any", "source", link_limit=100000)
+        self.add_input("workgraph.any", "placeholder")
         self.add_output("workgraph.any", "_wait")
 
 

@@ -539,3 +539,10 @@ def wait_to_link(wgdata: Dict[str, Any]) -> None:
                         "to_socket": "_wait",
                     }
                 )
+
+
+def shallow_copy_nested_dict(d):
+    """Recursively copies only the dictionary structure but keeps value references."""
+    if isinstance(d, dict):
+        return {key: shallow_copy_nested_dict(value) for key, value in d.items()}
+    return d

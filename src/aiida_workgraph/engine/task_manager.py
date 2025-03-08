@@ -34,9 +34,19 @@ class TaskManager:
         self.process = process
         self.awaitable_manager = awaitable_manager
 
+    def get_task_executor_dict(self, name: str):
+        # if task is a mappped task, we need to get the executor from the parent task
+        # TODO: recursive get the parent task
+        if "map_data" in self.ctx._tasks[name]:
+            parent_task_name = self.ctx._tasks[name]["map_data"]["parent"]
+            executor_dict = self.process.node.task_executors[parent_task_name]
+        else:
+            executor_dict = self.process.node.task_executors[name]
+        return executor_dict
+
     def get_task(self, name: str):
         """Get task from the context."""
-        executor_dict = self.process.node.task_executors[name]
+        executor_dict = self.get_task_executor_dict(name)
         tdata = {"executor": executor_dict}
         tdata.update(self.ctx._tasks[name])
         task = Task.from_dict(tdata)
@@ -114,7 +124,6 @@ class TaskManager:
             ]:
                 parent_states[0] = False
                 break
-
         return all(parent_states), parent_states
 
     def set_task_results(self) -> None:
@@ -130,6 +139,10 @@ class TaskManager:
         items = self.ctx._tasks[name]["context_mapping"]
         for key, result_name in items.items():
             result = self.ctx._tasks[name]["results"][result_name]
+            # for mapped tasks, should use dict to hold the results
+            if "map_data" in self.ctx._tasks[name]:
+                prefix = self.ctx._tasks[name]["map_data"]["prefix"]
+                key = f"{key}.{prefix}"
             update_nested_dict(self.ctx, key, result)
 
     def get_task_runtime_info(self, name: str, key: str) -> str:
@@ -160,7 +173,8 @@ class TaskManager:
     def set_tasks_state(
         self, tasks: Union[List[str], Sequence[str]], value: str
     ) -> None:
-        """Set tasks state"""
+        """Set tasks state, including its children tasks.
+        Only used for skip and reset tasks."""
         for name in tasks:
             self.set_task_runtime_info(name, "state", value)
             if "children" in self.ctx._tasks[name]:
@@ -171,14 +185,19 @@ class TaskManager:
         For `while` workgraph, we need check its conditions"""
         is_finished = True
         failed_tasks = []
+        not_finished_tasks = []
         for name, task in self.ctx._tasks.items():
-            # self.update_task_state(name)
-            if self.get_task_runtime_info(task["name"], "state") in [
+            # if the task is in mapped state, we need to check its children (mapped tasks)
+
+            if self.get_task_runtime_info(task["name"], "state") in ["MAPPED"]:
+                self.update_mapped_task_state(name)
+            elif self.get_task_runtime_info(task["name"], "state") in [
                 "RUNNING",
                 "CREATED",
                 "PLANNED",
                 "READY",
             ]:
+                not_finished_tasks.append(name)
                 is_finished = False
             elif self.get_task_runtime_info(task["name"], "state") == "FAILED":
                 failed_tasks.append(name)
@@ -210,6 +229,7 @@ class TaskManager:
                     "FINISHED",
                     "FAILED",
                     "SKIPPED",
+                    "MAPPED",
                 ]
                 or name in self.ctx._executed_tasks
             ):
@@ -253,7 +273,7 @@ class TaskManager:
             self.process.report(
                 f"Run task: {name}, type: {task['metadata']['node_type']}"
             )
-            executor_dict = self.process.node.task_executors[name]
+            executor_dict = self.get_task_executor_dict(name)
             executor = NodeExecutor(**executor_dict).executor if executor_dict else None
             args, kwargs, var_args, var_kwargs, args_dict = self.get_inputs(name)
             for i, key in enumerate(self.ctx._tasks[name]["args"]):
@@ -292,7 +312,7 @@ class TaskManager:
             elif task_type == "ZONE":
                 self.execute_zone_task(task)
             elif task_type == "MAP":
-                self.execute_map_task(task)
+                self.execute_map_task(task, kwargs)
             elif task_type == "GET_CONTEXT":
                 self.execute_get_context_task(task, kwargs)
             elif task_type == "SET_CONTEXT":
@@ -373,6 +393,11 @@ class TaskManager:
             self.set_task_runtime_info(name, "state", state)
             self.set_task_runtime_info(name, "action", "")
             self.set_task_runtime_info(name, "process", process)
+            # update the parent task state of mappped tasks
+            if "map_data" in self.ctx._tasks[name]:
+                parent_task_name = self.ctx._tasks[name]["map_data"]["parent"]
+                if self.process.node.get_task_state(parent_task_name) == "PLANNED":
+                    self.process.node.set_task_state(parent_task_name, state)
             self.awaitable_manager.to_context(**{name: process})
         except Exception as e:
             error_traceback = traceback.format_exc()  # Capture the full traceback
@@ -426,16 +451,23 @@ class TaskManager:
             self.set_task_runtime_info(name, "state", "RUNNING")
         self.continue_workgraph()
 
-    def execute_map_task(self, task):
-        # in case of an empty zone, it will finish immediately
+    def execute_map_task(self, task, kwargs):
+        """
+        1. Clone the subgraph tasks for each item in `source`.
+        2. Mark this MAP node as running and schedule a continuation.
+        """
         name = task["name"]
         if self.are_childen_finished(name)[0]:
             self.update_zone_task_state(name)
         else:
             self.set_task_runtime_info(name, "state", "RUNNING")
-            # generate the map tasks
-            for child_task in task["children"]:
-                self.set_task_runtime_info(child_task, "action", "MAP")
+            source = kwargs["source"]
+            placeholder = kwargs.get("placeholder", "map_input")
+            for prefix, value in source.items():
+                self.generate_mapped_tasks(
+                    task, prefix=prefix, placeholder=placeholder, value=value
+                )
+
         self.continue_workgraph()
 
     def execute_get_context_task(self, task, kwargs):
@@ -535,7 +567,6 @@ class TaskManager:
         for name, prop in task.get("properties", {}).items():
             inputs[name] = self.ctx_manager.update_context_variable(prop["value"])
         for name, input in task["inputs"].items():
-            # print(f"input: {input['name']}")
             if input["identifier"] == "workgraph.namespace":
                 # inputs[name] = self.ctx_manager.update_context_variable(input["value"])
                 value = collect_values_inside_namespace(input)
@@ -598,7 +629,6 @@ class TaskManager:
         if success:
             node = self.get_task_runtime_info(name, "process")
             if isinstance(node, ProcessNode):
-                # print(f"set task result: {name} process")
                 state = node.process_state.value.upper()
                 if node.is_finished_ok:
                     self.set_task_runtime_info(task["name"], "state", state)
@@ -700,6 +730,12 @@ class TaskManager:
                 self.update_zone_task_state(parent_task[0])
             elif task_type == "ZONE":
                 self.update_zone_task_state(parent_task[0])
+            elif task_type == "MAP":
+                self.update_zone_task_state(parent_task[0])
+        # for mapped tasks, we need to update the parent task
+        if "map_data" in self.ctx._tasks[name]:
+            parent_task_name = self.ctx._tasks[name]["map_data"]["parent"]
+            self.update_mapped_task_state(parent_task_name)
 
     def update_while_task_state(self, name: str) -> None:
         """Update while task state."""
@@ -720,6 +756,28 @@ class TaskManager:
         """Update zone task state."""
         finished, _ = self.are_childen_finished(name)
         if finished:
+            self.set_task_runtime_info(name, "state", "FINISHED")
+            self.process.report(f"Task: {name} finished.")
+            self.update_parent_task_state(name)
+
+    def update_mapped_task_state(self, name: str) -> None:
+        """Update the mapped task state.
+        1) check if all child tasks are finished.
+        2) gather the results of all the mapped tasks.
+        3) update the parent task state.
+        """
+        finished, _ = self.are_childen_finished(name)
+        if finished:
+            # gather the results of all the mapped tasks
+            results = {}
+            for prefix, mapped_task in self.ctx._tasks[name]["mapped_tasks"].items():
+                for output_name in mapped_task["outputs"]:
+                    if output_name in mapped_task["results"]:
+                        results.setdefault(output_name, {})
+                        results[output_name][prefix] = mapped_task["results"][
+                            output_name
+                        ]
+            self.ctx._tasks[name]["results"] = results
             self.set_task_runtime_info(name, "state", "FINISHED")
             self.process.report(f"Task: {name} finished.")
             self.update_parent_task_state(name)
@@ -758,6 +816,15 @@ class TaskManager:
         finished = True
         for name in task["children"]:
             if self.get_task_runtime_info(name, "state") not in [
+                "FINISHED",
+                "SKIPPED",
+                "FAILED",
+            ]:
+                finished = False
+                break
+        # check the mapped tasks
+        for mapped_task in task.get("mapped_tasks", {}).values():
+            if self.get_task_runtime_info(mapped_task["name"], "state") not in [
                 "FINISHED",
                 "SKIPPED",
                 "FAILED",
@@ -878,3 +945,124 @@ class TaskManager:
         self.ctx._execution_count += 1
         self.set_tasks_state(self.ctx._tasks.keys(), "PLANNED")
         self.ctx._executed_tasks = []
+
+    def get_all_children(self, name: str) -> List[str]:
+        """Find all children of the zone_task, and their children recursively"""
+        child_tasks = {}
+        task = self.ctx._tasks[name]
+        for child_task in task.get("children", []):
+            child_tasks[child_task] = self.get_all_children(child_task)
+            children = self.ctx._tasks[child_task].get("children")
+            if children:
+                child_tasks.update(self.get_all_children(child_task))
+        return child_tasks
+
+    def generate_mapped_tasks(
+        self, zone_task: dict, prefix: str, value: any, placeholder: str = "map_input"
+    ) -> None:
+        """
+        Recursively clone the subgraph starting from zone_children,
+        rewriting references to old tasks with new task names.
+        """
+        import uuid
+
+        new_tasks = {}
+        child_tasks = self.get_all_children(zone_task["name"])
+        for child_task in child_tasks:
+            # since the child task is mapped, it should be skipped
+            self.set_task_runtime_info(child_task, "state", "MAPPED")
+            # keep track of the mapped tasks
+            self.ctx._tasks[child_task].setdefault("mapped_tasks", {})
+            new_name = f"{prefix}_{child_task}"
+            new_task_data = self.copy_task(self.ctx._tasks[child_task])
+            new_task_data["name"] = new_name
+            new_task_data["map_data"] = {"parent": child_task, "prefix": prefix}
+            new_task_data["uuid"] = str(uuid.uuid4())
+            # Reset runtime states
+            new_task_data["results"] = {}
+            self.set_task_runtime_info(new_name, "state", "PLANNED")
+            self.set_task_runtime_info(new_name, "action", "")
+            # Insert new_data in ctx._tasks
+            self.ctx._tasks[new_name] = new_task_data
+            self.ctx._tasks[child_task]["mapped_tasks"][prefix] = new_task_data
+            new_tasks[child_task] = new_task_data
+
+        # fix references in the newly mapped tasks (children, input_links, etc.)
+        self._patch_cloned_tasks(new_tasks, value, placeholder=placeholder)
+
+        # update ctx._connectivity so the new tasks are recognized in child_node, zone references, etc.
+        self._patch_connectivity(new_tasks)
+
+    def copy_task(self, task: dict) -> dict:
+        from aiida_workgraph.utils import shallow_copy_nested_dict
+        from copy import deepcopy
+
+        new_task_data = shallow_copy_nested_dict(task)
+        new_task_data["input_links"] = deepcopy(task["input_links"])
+        return new_task_data
+
+    def _patch_cloned_tasks(
+        self,
+        new_tasks: dict[str, str],
+        value: any,
+        placeholder: str = "map_input",
+    ):
+        """
+        For each newly mapped task, fix references (children, input_links, etc.)
+        from old_name -> new_name.
+        """
+        for task in new_tasks.values():
+            # update input
+            for input in task["inputs"].values():
+                if "property" not in input:
+                    continue
+                if (
+                    isinstance(input["property"]["value"], str)
+                    and placeholder in input["property"]["value"]
+                ):
+                    input["property"]["value"] = value
+            # fix children references
+            new_children = []
+            for child in task.get("children", []):
+                new_children.append(new_tasks[child]["name"])
+            task["children"] = new_children
+            # since this is a newly created task, it should not have any mapped tasks
+            task.pop("mapped_tasks", None)
+            # fix parent reference
+            new_parent = []
+            for parent in task.get("parent_task", []):
+                if parent in new_tasks:
+                    new_parent.append(new_tasks[parent]["name"])
+                else:
+                    new_parent.append(parent)
+            task["parent_task"] = new_parent
+            # fix input_links references
+            for links in task["input_links"].values():
+                for link in links:
+                    # this node is mapped, so we need to update the link
+                    if link["from_node"] in new_tasks:
+                        link["from_node"] = new_tasks[link["from_node"]]["name"]
+
+    def _patch_connectivity(self, new_tasks: dict[str, str]):
+        """
+        Update the global connectivity for newly created tasks.
+        """
+        for name, task in new_tasks.items():
+            # child_node
+            new_child_node = []
+            for child_task in self.ctx._connectivity["child_node"][name]:
+                if child_task in new_tasks:
+                    new_child_node.append(new_tasks[child_task]["name"])
+                else:
+                    new_child_node.append(child_task)
+            self.ctx._connectivity["child_node"][task["name"]] = new_child_node
+            # input_tasks
+            new_input_tasks = []
+            for input_task in self.ctx._connectivity["zone"][name]["input_tasks"]:
+                if input_task in new_tasks:
+                    new_input_tasks.append(new_tasks[input_task]["name"])
+                else:
+                    new_input_tasks.append(input_task)
+            self.ctx._connectivity["zone"][task["name"]] = {
+                "input_tasks": new_input_tasks
+            }
