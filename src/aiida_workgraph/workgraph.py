@@ -349,7 +349,8 @@ class WorkGraph(node_graph.NodeGraph):
         if "error_handlers" in wgdata:
             wg._error_handlers = wgdata["error_handlers"]
         wg.context = {
-            key.replace("__", "."): value for key, value in wgdata["context"].items()
+            key.replace("__", "."): value
+            for key, value in wgdata.get("context", {}).items()
         }
         # for zone tasks, add their children
         for task in wg.tasks:

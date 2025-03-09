@@ -161,6 +161,7 @@ class TaskManager:
         for name in names:
             # skip if the max number of awaitables is reached
             task = self.process.wg.tasks[name]
+            task.action = self.state_manager.get_task_runtime_info(name, "action")
             if task.node_type.upper() in process_task_types:
                 if len(self.process._awaitables) >= self.process.wg.max_number_jobs:
                     print(
@@ -279,9 +280,7 @@ class TaskManager:
             self.state_manager.update_task_state(task.name)
         except Exception as e:
             error_traceback = traceback.format_exc()  # Capture the full traceback
-            self.logger.error(
-                f"Error in task {task.name}: {e}\n{error_traceback}"
-            )  # Log the error with traceback
+            self.logger.error(f"Error in task {task.name}: {e}\n{error_traceback}")
             self.state_manager.update_task_state(task.name, success=False)
         # exclude the current tasks from the next run
         if continue_workgraph:
@@ -456,12 +455,59 @@ class TaskManager:
             results = self.run_executor(executor, args, kwargs, var_args, var_kwargs)
             self.state_manager.update_normal_task_state(name, results)
         except Exception as e:
-            self.logger.error(f"Error in task {name}: {e}")
+            error_traceback = traceback.format_exc()
+            self.logger.error(f"Error in task {task.name}: {e}\n{error_traceback}")
             self.state_manager.update_normal_task_state(
                 name, results=None, success=False
             )
         if continue_workgraph:
             self.continue_workgraph()
+
+    def get_socket_value(self, socket) -> Any:
+        """Get the value of the socket recursively."""
+        socket_value = None
+        if socket._identifier == "workgraph.namespace":
+            socket_value = {}
+            # inputs[name] = self.ctx_manager.update_context_variable(input["value"])
+            for name, sub_socket in socket._sockets.items():
+                value = self.get_socket_value(sub_socket)
+                if value is None or (isinstance(value, dict) and value == {}):
+                    continue
+                socket_value[name] = value
+        else:
+            socket_value = self.ctx_manager.update_context_variable(
+                socket.property.value
+            )
+        links = socket._links
+        if len(links) == 1:
+            link = links[0]
+            if self.ctx._task_results.get(link.from_node.name):
+                # handle the special socket _wait, _outputs
+                if link.from_socket._scoped_name == "_wait":
+                    return socket_value
+                elif link.from_socket._scoped_name == "_outputs":
+                    socket_value = self.ctx._task_results[link.from_node.name]
+                else:
+                    socket_value = get_nested_dict(
+                        self.ctx._task_results[link.from_node.name],
+                        link.from_socket._scoped_name,
+                        default=None,
+                    )
+        # handle the case of multiple outputs
+        elif len(links) > 1:
+            socket_value = {}
+            for link in links:
+                item_name = f"{link.from_node.name}_{link.from_socket._scoped_name}"
+                # handle the special socket _wait, _outputs
+                if link.from_socket._scoped_name == "_wait":
+                    continue
+                if self.ctx._task_results[link.from_node.name] is None:
+                    socket_value[item_name] = None
+                else:
+                    socket_value[item_name] = self.ctx._task_results[
+                        link.from_node.name
+                    ][link.from_socket._scoped_name]
+        return socket_value
 
     def get_inputs(
         self, name: str
@@ -482,49 +528,9 @@ class TaskManager:
         inputs = {}
         for prop in task.properties:
             inputs[prop.name] = self.ctx_manager.update_context_variable(prop.value)
-        for input in task.inputs:
-            if input._identifier == "workgraph.namespace":
-                # inputs[name] = self.ctx_manager.update_context_variable(input["value"])
-                value = input._value
-                if value:
-                    inputs[input._name] = value
-            else:
-                value = self.ctx_manager.update_context_variable(input.property.value)
-                if value is not None:
-                    inputs[input._name] = value
-            links = input._links
-            if len(links) == 1:
-                link = links[0]
-                if self.ctx._task_results[link.from_node.name] is None:
-                    inputs[input._name] = None
-                else:
-                    # handle the special socket _wait, _outputs
-                    if link.from_socket._name == "_wait":
-                        continue
-                    elif link.from_socket._name == "_outputs":
-                        inputs[input._name] = self.ctx._task_results[
-                            link.from_node.name
-                        ]
-                    else:
-                        inputs[input._name] = get_nested_dict(
-                            self.ctx._task_results[link.from_node.name],
-                            link.from_socket._name,
-                        )
-            # handle the case of multiple outputs
-            elif len(links) > 1:
-                value = {}
-                for link in links:
-                    item_name = f"{link.from_node.name}_{link.from_socket._name}"
-                    # handle the special socket _wait, _outputs
-                    if link.from_socket._name == "_wait":
-                        continue
-                    if self.ctx._task_results[link.from_node.name] is None:
-                        value[item_name] = None
-                    else:
-                        value[item_name] = self.ctx._task_results[link.from_node.name][
-                            link.from_socket._name
-                        ]
-                inputs[input._name] = value
+
+        inputs.update(self.get_socket_value(task.inputs))
+
         for name, input in inputs.items():
             # only need to check the top level key
             key = name.split(".")[0]
@@ -600,19 +606,19 @@ class TaskManager:
             self.process.report("Max iteration reached.")
             return False
         condition_tasks = []
-        for c in self.ctx._workgraph["conditions"]:
+        for c in self.process.wg.conditions:
             task_name, socket_name = c.split(".")
             if "task_name" != "context":
                 condition_tasks.append(task_name)
                 self.state_manager.reset_task(task_name)
         self.run_tasks(condition_tasks, continue_workgraph=False)
         conditions = []
-        for c in self.ctx._workgraph["conditions"]:
+        for c in self.process.wg.conditions:
             task_name, socket_name = c.split(".")
             if task_name == "context":
                 conditions.append(self.ctx[socket_name])
             else:
-                conditions.append(self.ctx._tasks[task_name]["results"][socket_name])
+                conditions.append(self.ctx._task_results[task_name][socket_name])
         should_run = False not in conditions
         if should_run:
             self.reset()
@@ -620,11 +626,10 @@ class TaskManager:
         return should_run
 
     def check_for_conditions(self) -> bool:
-        condition_tasks = [c[0] for c in self.ctx._workgraph["conditions"]]
+        condition_tasks = [c[0] for c in self.process.wg.conditions]
         self.run_tasks(condition_tasks)
         conditions = [self.ctx._count < len(self.ctx._sequence)] + [
-            self.ctx._tasks[c[0]]["results"][c[1]]
-            for c in self.ctx._workgraph["conditions"]
+            self.ctx._tasks[c[0]]["results"][c[1]] for c in self.process.wg.conditions
         ]
         should_run = False not in conditions
         if should_run:
@@ -636,7 +641,7 @@ class TaskManager:
 
     def reset(self) -> None:
         self.ctx._execution_count += 1
-        self.state_manager.set_tasks_state(self.ctx._tasks.keys(), "PLANNED")
+        self.state_manager.set_tasks_state(self.process.wg.tasks._get_keys(), "PLANNED")
         self.ctx._executed_tasks = []
 
     def get_all_children(self, name: str) -> List[str]:

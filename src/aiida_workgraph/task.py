@@ -4,7 +4,7 @@ from node_graph.node import Node as GraphNode
 from node_graph.executor import NodeExecutor
 from aiida_workgraph.properties import PropertyPool
 from aiida_workgraph.sockets import SocketPool
-from aiida_workgraph.socket import NodeSocketNamespace
+from aiida_workgraph.socket import TaskSocketNamespace
 from node_graph_widget import NodeGraphWidget
 from aiida_workgraph.collection import (
     WorkGraphPropertyCollection,
@@ -37,8 +37,8 @@ class Task(GraphNode):
         """
         super().__init__(
             property_collection_class=WorkGraphPropertyCollection,
-            input_collection_class=NodeSocketNamespace,
-            output_collection_class=NodeSocketNamespace,
+            input_collection_class=TaskSocketNamespace,
+            output_collection_class=TaskSocketNamespace,
             **kwargs,
         )
         self.context_mapping = {} if context_mapping is None else context_mapping

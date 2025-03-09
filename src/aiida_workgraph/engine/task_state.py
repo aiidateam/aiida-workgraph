@@ -134,9 +134,9 @@ class TaskStateManager:
                     self.on_task_failed(name)
                     return self.process.exit_codes.OUTPUS_NOT_MATCH_RESULTS
                 output_names = [
-                    output.name
+                    output._name
                     for output in task.outputs
-                    if output.name not in builtin_output_names
+                    if output._name not in builtin_output_names
                 ]
                 for i, output_name in enumerate(output_names):
                     self.ctx._task_results[name][output_name] = results[i]

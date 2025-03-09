@@ -358,6 +358,7 @@ class WorkGraphEngine(Process, metaclass=Protect):
     def finalize(self) -> t.Optional[ExitCode]:
         """"""
         # expose outputs of the workgraph
+        print("group_outputs", self.wg.group_outputs)
         group_outputs = {}
         for output in self.wg.group_outputs:
             names = output["from"].split(".", 1)
@@ -386,6 +387,7 @@ class WorkGraphEngine(Process, metaclass=Protect):
                             output["name"],
                             self.ctx._task_results[names[0]][names[1]],
                         )
+        print("group_outputs: ", group_outputs)
         self.out_many(group_outputs)
         # output the new data
         if self.ctx._new_data:
