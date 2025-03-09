@@ -82,6 +82,25 @@ class If(Zone):
         self.add_output("workgraph.any", "_wait")
 
 
+class Map(Zone):
+    """Map"""
+
+    identifier = "workgraph.map_zone"
+    name = "Map"
+    node_type = "MAP"
+    catalog = "Control"
+
+    def create_sockets(self) -> None:
+        self.inputs._clear()
+        self.outputs._clear()
+        self.add_input(
+            "workgraph.any", "_wait", link_limit=100000, metadata={"arg_type": "none"}
+        )
+        self.add_input("workgraph.any", "source", link_limit=100000)
+        self.add_input("workgraph.any", "placeholder")
+        self.add_output("workgraph.any", "_wait")
+
+
 class SetContext(Task):
     """SetContext"""
 

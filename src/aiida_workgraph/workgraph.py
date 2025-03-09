@@ -288,6 +288,9 @@ class WorkGraph(node_graph.NodeGraph):
         self.state = self.process.process_state.value.upper()
         processes_data = get_processes_latest(self.pk)
         for name, data in processes_data.items():
+            # the mapped tasks are not in the workgraph
+            if name not in self.tasks:
+                continue
             self.tasks[name].state = data["state"]
             self.tasks[name].ctime = data["ctime"]
             self.tasks[name].mtime = data["mtime"]

@@ -353,7 +353,7 @@ class WorkGraphEngine(Process, metaclass=Protect):
     def apply_action(self, msg: dict) -> None:
 
         if msg["catalog"] == "task":
-            self.task_manager.apply_task_actions(msg)
+            self.task_manager.action_manager.apply_task_actions(msg)
         else:
             self.report(f"Unknow message type {msg}")
 
@@ -435,7 +435,9 @@ class WorkGraphEngine(Process, metaclass=Protect):
         self.report("Finalize workgraph.")
         for _, task in self.ctx._tasks.items():
             if (
-                self.task_manager.get_task_runtime_info(task["name"], "state")
+                self.task_manager.state_manager.get_task_runtime_info(
+                    task["name"], "state"
+                )
                 == "FAILED"
             ):
                 return self.exit_codes.TASK_FAILED
