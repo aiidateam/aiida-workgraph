@@ -52,6 +52,10 @@ class Task(GraphNode):
         self.state = "PLANNED"
         self.action = ""
         self.show_socket_depth = 0
+        self.parent_task = None
+        self.map_data = None
+        self.mapped_tasks = None
+        self.execution_count = 0
 
     def to_dict(self, short: bool = False) -> Dict[str, Any]:
         from aiida.orm.utils.serialize import serialize
@@ -63,8 +67,8 @@ class Task(GraphNode):
         tdata["context_mapping"] = self.context_mapping
         tdata["wait"] = [task.name for task in self.waiting_on]
         tdata["children"] = []
-        tdata["execution_count"] = 0
-        tdata["parent_task"] = [None]
+        tdata["execution_count"] = self.execution_count
+        tdata["parent_task"] = [self.parent_task.name] if self.parent_task else [None]
         tdata["process"] = serialize(self.process) if self.process else serialize(None)
         tdata["metadata"]["pk"] = self.process.pk if self.process else None
         tdata["metadata"]["is_aiida_component"] = self.is_aiida_component
@@ -125,20 +129,24 @@ class Task(GraphNode):
         Returns:
             Node: An instance of Node initialized with the provided data."""
         from aiida_workgraph.tasks import TaskPool as workgraph_TaskPool
-        from aiida_workgraph.orm.utils import deserialize_safe
 
         if TaskPool is None:
             TaskPool = workgraph_TaskPool
         task = GraphNode.from_dict(data, NodePool=TaskPool)
-        task.context_mapping = data.get("context_mapping", {})
-        task.waiting_on.add(data.get("wait", []))
+
+        return task
+
+    def update_from_dict(self, data: Dict[str, Any]) -> None:
+        from aiida_workgraph.orm.utils import deserialize_safe
+
+        super().update_from_dict(data)
+        self.context_mapping = data.get("context_mapping", {})
         process = data.get("process", None)
         if process and isinstance(process, str):
             process = deserialize_safe(process)
-        task.process = process
-        task._error_handlers = data.get("error_handlers", [])
-
-        return task
+        self.process = process
+        self._error_handlers = data.get("error_handlers", [])
+        self.waiting_on.add(data.get("wait", []))
 
     def reset(self) -> None:
         self.process = None
@@ -295,3 +303,12 @@ class TaskCollection:
 
     def __repr__(self) -> str:
         return f"{self._items}"
+
+
+# collection of child tasks
+class ChildTaskCollection(TaskCollection):
+    def add(self, tasks: Union[List[Union[str, Task]], str, Task]) -> None:
+        """Add tasks to the collection. Tasks can be a list or a single Task or task name."""
+        super().add(tasks)
+        for task in self.items:
+            task.parent_task = self.parent

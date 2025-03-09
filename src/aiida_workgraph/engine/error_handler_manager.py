@@ -24,7 +24,7 @@ class ErrorHandlerManager:
                 self.run_error_handler(handler, data, task_name)
                 return
         # error_handlers from the workgraph
-        for data in self.ctx._error_handlers.values():
+        for data in self.process.wg._error_handlers.values():
             if node.exit_code.status in data["tasks"].get(task_name, {}).get(
                 "exit_codes", []
             ):

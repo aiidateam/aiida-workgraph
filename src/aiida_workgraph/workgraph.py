@@ -342,11 +342,19 @@ class WorkGraph(node_graph.NodeGraph):
             "workgraph_type",
             "conditions",
             "max_number_jobs",
+            "connectivity",
         ]:
             if key in wgdata:
                 setattr(wg, key, wgdata[key])
         if "error_handlers" in wgdata:
             wg._error_handlers = wgdata["error_handlers"]
+        wg.context = {
+            key.replace("__", "."): value for key, value in wgdata["context"].items()
+        }
+        # for zone tasks, add their children
+        for task in wg.tasks:
+            if hasattr(task, "children"):
+                task.children.add(wgdata["nodes"][task.name].get("children", []))
         return wg
 
     @classmethod
@@ -369,7 +377,7 @@ class WorkGraph(node_graph.NodeGraph):
         return nt
 
     @classmethod
-    def load(cls, pk: int) -> Optional["WorkGraph"]:
+    def load(cls, pk: int | aiida.orm.ProcessNode) -> Optional["WorkGraph"]:
         """
         Load WorkGraph from the process node with the given primary key.
 
@@ -379,7 +387,14 @@ class WorkGraph(node_graph.NodeGraph):
         from aiida_workgraph.utils import get_workgraph_data
         from aiida_workgraph.orm.workgraph import WorkGraphNode
 
-        process = aiida.orm.load_node(pk)
+        if isinstance(pk, int):
+            process = aiida.orm.load_node(pk)
+        elif isinstance(pk, aiida.orm.ProcessNode):
+            process = pk
+        else:
+            raise ValueError(
+                f"Invalid pk type: {type(pk)}, requires int or ProcessNode."
+            )
         if not isinstance(process, WorkGraphNode):
             raise ValueError(f"Process {pk} is not a WorkGraph")
         wgdata = get_workgraph_data(process)
