@@ -3,9 +3,7 @@ from __future__ import annotations
 from typing import Any, Dict, List, Optional, Tuple, Callable
 from aiida_workgraph.task import Task
 from aiida_workgraph.utils import get_nested_dict
-import asyncio
 from aiida.engine.processes.exit_code import ExitCode
-from aiida_workgraph.executors.monitors import monitor
 from .task_state import TaskStateManager
 from .task_actions import TaskActionManager
 import traceback
@@ -158,7 +156,6 @@ class TaskManager:
 
         """
         from aiida_workgraph.utils import update_nested_dict_with_special_keys
-        from node_graph.executor import NodeExecutor
 
         for name in names:
             # skip if the max number of awaitables is reached
@@ -172,8 +169,7 @@ class TaskManager:
                         )
                     )
                     continue
-            # skip if the task is already executed
-            # or if the task is in a skippped state
+            # skip if the task is already executed or if the task is in a skippped state
             if (
                 name in self.ctx._executed_tasks
                 or self.state_manager.get_task_runtime_info(name, "state")
@@ -184,9 +180,10 @@ class TaskManager:
             print("-" * 60)
 
             self.process.report(f"Run task: {name}, type: {task.node_type}")
-            executor_dict = self.get_task_executor_dict(name)
-            executor = NodeExecutor(**executor_dict).executor if executor_dict else None
-            args, kwargs, var_args, var_kwargs, args_dict = self.get_inputs(name)
+            inputs = self.get_inputs(name)
+            args = inputs["args"]
+            kwargs = inputs["kwargs"]
+            var_kwargs = inputs["var_kwargs"]
             for i, key in enumerate(task.args_data["args"]):
                 kwargs[key] = args[i]
             # update the port namespace
@@ -197,9 +194,7 @@ class TaskManager:
             # output must be a Data type or a mapping of {string: Data}
             self.ctx._task_results[task.name] = {}
             task_type = task.node_type.upper()
-            if task_type == "DATA":
-                self.execute_data_task(name, executor, args, kwargs, continue_workgraph)
-            elif task_type in ["CALCFUNCTION", "WORKFUNCTION"]:
+            if task_type in ["CALCFUNCTION", "WORKFUNCTION"]:
                 self.execute_function_task(task, kwargs, var_kwargs, continue_workgraph)
             elif task_type in [
                 "CALCJOB",
@@ -220,40 +215,19 @@ class TaskManager:
                 self.execute_zone_task(task)
             elif task_type == "MAP":
                 self.execute_map_task(task, kwargs)
-            elif task_type == "AWAITABLE":
-                self.execute_awaitable_task(
-                    task, executor, args, kwargs, var_args, var_kwargs
-                )
-            elif task_type == "MONITOR":
-                self.execute_monitor_task(
-                    task, executor, args, kwargs, var_args, var_kwargs
-                )
+            elif task_type in ["AWAITABLE", "MONITOR"]:
+                self.execute_awaitable_task(task, args, kwargs, var_kwargs)
             elif task_type == "NORMAL":
                 self.execute_normal_task(
                     task,
-                    executor,
                     args,
                     kwargs,
-                    var_args,
                     var_kwargs,
                     continue_workgraph,
                 )
             else:
                 self.process.report(f"Unknown task type {task_type}")
-                return self.process.exit_codes.UNKNOWN_TASK_TYPE
-
-    def execute_data_task(self, name, executor, args, kwargs, continue_workgraph):
-        """Execute a DATA task."""
-        from aiida_workgraph.utils import create_data_node
-
-        for key in self.process.wg.tasks[name].args_data["args"]:
-            kwargs.pop(key, None)
-        results = create_data_node(executor, args, kwargs)
-        self.state_manager.set_task_runtime_info(name, "process", results)
-        self.state_manager.update_task_state(name)
-        self.ctx._new_data[name] = results
-        if continue_workgraph:
-            self.continue_workgraph()
+                self.state_manager.set_task_runtime_info(name, "state", "FAILED")
 
     def execute_function_task(self, task, kwargs, var_kwargs, continue_workgraph):
         """Execute a CalcFunction or WorkFunction task."""
@@ -369,37 +343,11 @@ class TaskManager:
 
         self.continue_workgraph()
 
-    def execute_awaitable_task(
-        self, task, executor, args, kwargs, var_args, var_kwargs
-    ):
+    def execute_awaitable_task(self, task, args, kwargs, var_kwargs):
         name = task.name
         for key in task.args_data["args"]:
             kwargs.pop(key, None)
-        awaitable_target = asyncio.ensure_future(
-            self.run_executor(executor, args, kwargs, var_args, var_kwargs),
-            loop=self.process.loop,
-        )
-        awaitable = self.awaitable_manager.construct_awaitable_function(
-            name, awaitable_target
-        )
-        self.state_manager.set_task_runtime_info(name, "state", "RUNNING")
-        self.awaitable_manager.to_context(**{name: awaitable})
-
-    def execute_monitor_task(self, task, executor, args, kwargs, var_args, var_kwargs):
-        name = task.name
-        for key in self.process.wg.tasks[name].args_data["args"]:
-            kwargs.pop(key, None)
-        # add function and interval to the args
-        args = [
-            executor,
-            kwargs.pop("interval", 1),
-            kwargs.pop("timeout", 3600),
-            *args,
-        ]
-        awaitable_target = asyncio.ensure_future(
-            self.run_executor(monitor, args, kwargs, var_args, var_kwargs),
-            loop=self.process.loop,
-        )
+        awaitable_target, _ = task.execute(self.process, args, kwargs, var_kwargs)
         awaitable = self.awaitable_manager.construct_awaitable_function(
             name, awaitable_target
         )
@@ -408,9 +356,7 @@ class TaskManager:
         self.awaitable_manager.not_persisted_awaitables[name] = awaitable_target
         self.awaitable_manager.to_context(**{name: awaitable})
 
-    def execute_normal_task(
-        self, task, executor, args, kwargs, var_args, var_kwargs, continue_workgraph
-    ):
+    def execute_normal_task(self, task, args, kwargs, var_kwargs, continue_workgraph):
         # Normal task is created by decoratoring a function with @task()
         name = task.name
         if "context" in task.args_data["kwargs"]:
@@ -419,7 +365,7 @@ class TaskManager:
         for key in task.args_data["args"]:
             kwargs.pop(key, None)
         try:
-            results = self.run_executor(executor, args, kwargs, var_args, var_kwargs)
+            results, _ = task.execute(args, kwargs, var_kwargs)
             self.state_manager.update_normal_task_state(name, results)
         except Exception as e:
             error_traceback = traceback.format_exc()
@@ -489,7 +435,6 @@ class TaskManager:
         args = []
         args_dict = {}
         kwargs = {}
-        var_args = None
         var_kwargs = None
         task = self.process.wg.tasks[name]
         inputs = {}
@@ -506,11 +451,14 @@ class TaskManager:
                 args_dict[name] = input
             elif key in task.args_data["kwargs"]:
                 kwargs[name] = input
-            elif key == task.args_data["var_args"]:
-                var_args = input
             elif key == task.args_data["var_kwargs"]:
                 var_kwargs = input
-        return args, kwargs, var_args, var_kwargs, args_dict
+        return {
+            "args": args,
+            "kwargs": kwargs,
+            "var_kwargs": var_kwargs,
+            "args_dict": args_dict,
+        }
 
     def should_run_while_task(self, name: str) -> tuple[bool, Any]:
         """Check if the while task should run."""
@@ -523,7 +471,8 @@ class TaskManager:
             < self.process.wg.tasks[name].inputs.max_iterations.property.value
         )
         conditions = [not_excess_max_iterations]
-        _, kwargs, _, _, _ = self.get_inputs(name)
+        inputs = self.get_inputs(name)
+        kwargs = inputs["kwargs"]
         if isinstance(kwargs["conditions"], list):
             for condition in kwargs["conditions"]:
                 value = get_nested_dict(self.ctx, condition)
@@ -537,7 +486,8 @@ class TaskManager:
 
     def should_run_if_task(self, name: str) -> tuple[bool, Any]:
         """Check if the IF task should run."""
-        _, kwargs, _, _, _ = self.get_inputs(name)
+        inputs = self.get_inputs(name)
+        kwargs = inputs["kwargs"]
         flag = kwargs["conditions"]
         if kwargs["invert_condition"]:
             return not flag
@@ -548,7 +498,6 @@ class TaskManager:
         executor: Callable,
         args: List[Any],
         kwargs: Dict[str, Any],
-        var_args: Optional[List[Any]],
         var_kwargs: Optional[Dict[str, Any]],
     ) -> Any:
         if var_kwargs is None:

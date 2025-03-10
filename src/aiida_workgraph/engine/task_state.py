@@ -151,6 +151,9 @@ class TaskStateManager:
                 # some task does not have any output
                 if len(output_names) == 1:
                     self.ctx._task_results[name][output_names[0]] = results
+                    if isinstance(results, Data):
+                        results.store()
+                        self.set_task_runtime_info(task.name, "process", results)
                 elif len(output_names) > 1:
                     self.process.exit_codes.OUTPUS_NOT_MATCH_RESULTS
             self.task_set_context(name)

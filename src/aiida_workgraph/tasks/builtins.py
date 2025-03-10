@@ -154,7 +154,7 @@ class GetContext(Task):
 class AiiDAInt(Task):
     identifier = "workgraph.aiida_int"
     name = "AiiDAInt"
-    node_type = "data"
+    node_type = "Normal"
     catalog = "Test"
 
     def create_sockets(self) -> None:
@@ -176,7 +176,7 @@ class AiiDAInt(Task):
 class AiiDAFloat(Task):
     identifier = "workgraph.aiida_float"
     name = "AiiDAFloat"
-    node_type = "data"
+    node_type = "Normal"
     catalog = "Test"
 
     def create_sockets(self) -> None:
@@ -200,7 +200,7 @@ class AiiDAFloat(Task):
 class AiiDAString(Task):
     identifier = "workgraph.aiida_string"
     name = "AiiDAString"
-    node_type = "data"
+    node_type = "Normal"
     catalog = "Test"
 
     def create_sockets(self) -> None:
@@ -224,7 +224,7 @@ class AiiDAString(Task):
 class AiiDAList(Task):
     identifier = "workgraph.aiida_list"
     name = "AiiDAList"
-    node_type = "data"
+    node_type = "Normal"
     catalog = "Test"
 
     def create_sockets(self) -> None:
@@ -248,7 +248,7 @@ class AiiDAList(Task):
 class AiiDADict(Task):
     identifier = "workgraph.aiida_dict"
     name = "AiiDADict"
-    node_type = "data"
+    node_type = "Normal"
     catalog = "Test"
 
     def create_sockets(self) -> None:

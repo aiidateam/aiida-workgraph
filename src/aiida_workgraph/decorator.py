@@ -263,13 +263,16 @@ class TaskDecoratorCollection:
         outputs: Optional[List[str | dict]] = None,
     ) -> Callable:
         def decorator(func):
+            from aiida_workgraph.tasks.factory.awaitable_task import (
+                AwaitableFunctionTaskFactory,
+            )
+
             # at least one output is required
             task_outputs = outputs or [
                 {"identifier": "workgraph.any", "name": "result"}
             ]
-            TaskCls = DecoratedFunctionTaskFactory.from_function(
+            TaskCls = AwaitableFunctionTaskFactory.from_function(
                 func=func,
-                task_type="awaitable",
                 inputs=inputs,
                 outputs=task_outputs,
             )
@@ -285,13 +288,16 @@ class TaskDecoratorCollection:
         outputs: Optional[List[str | dict]] = None,
     ) -> Callable:
         def decorator(func):
+            from aiida_workgraph.tasks.factory.awaitable_task import (
+                MonitorFunctionTaskFactory,
+            )
+
             # at least one output is required
             task_outputs = outputs or [
                 {"identifier": "workgraph.any", "name": "result"}
             ]
-            TaskCls = DecoratedFunctionTaskFactory.from_function(
+            TaskCls = MonitorFunctionTaskFactory.from_function(
                 func=func,
-                task_type="monitor",
                 inputs=inputs,
                 outputs=task_outputs,
             )

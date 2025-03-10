@@ -276,7 +276,7 @@ class WorkGraph(node_graph.NodeGraph):
         of the tasks that are outgoing from the process node. This includes updating the state of process nodes
         linked to the current process, and data nodes linked to the current process.
         """
-        from aiida_workgraph.utils import get_nested_dict, get_processes_latest
+        from aiida_workgraph.utils import get_processes_latest
 
         if self.process is None:
             return
@@ -287,34 +287,8 @@ class WorkGraph(node_graph.NodeGraph):
             # the mapped tasks are not in the workgraph
             if name not in self.tasks:
                 continue
-            self.tasks[name].state = data["state"]
-            self.tasks[name].ctime = data["ctime"]
-            self.tasks[name].mtime = data["mtime"]
-            self.tasks[name].pk = data["pk"]
-            if data["pk"] is not None:
-                node = aiida.orm.load_node(data["pk"])
-                self.tasks[name].process = self.tasks[name].node = node
-                if isinstance(node, aiida.orm.ProcessNode) and getattr(
-                    node, "process_state", False
-                ):
-                    # if the node is finished ok, update the output sockets
-                    # note the task.state may not be the same as the node.process_state
-                    # for example, task.state can be `SKIPPED` if it is inside a conditional block,
-                    # even if the node.is_finished_ok is True
-                    if node.is_finished_ok:
-                        # update the output sockets
-                        for socket in self.tasks[name].outputs:
-                            if socket._identifier == "workgraph.namespace":
-                                socket._value = get_nested_dict(
-                                    node.outputs, socket._name, default=None
-                                )
-                            else:
-                                socket.value = get_nested_dict(
-                                    node.outputs, socket._name, default=None
-                                )
-                # read results from the process outputs
-                elif isinstance(node, aiida.orm.Data):
-                    self.tasks[name].outputs[0].value = node
+            self.tasks[name].update_state(data)
+
         execution_count = getattr(self.process.outputs, "execution_count", None)
         self.execution_count = execution_count if execution_count else 0
         if self._widget is not None:
