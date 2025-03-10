@@ -4,7 +4,7 @@ from node_graph.node import Node as GraphNode
 from node_graph.executor import NodeExecutor
 from aiida_workgraph.properties import PropertyPool
 from aiida_workgraph.sockets import SocketPool
-from aiida_workgraph.socket import NodeSocketNamespace
+from aiida_workgraph.socket import TaskSocketNamespace
 from node_graph_widget import NodeGraphWidget
 from aiida_workgraph.collection import (
     WorkGraphPropertyCollection,
@@ -37,8 +37,8 @@ class Task(GraphNode):
         """
         super().__init__(
             property_collection_class=WorkGraphPropertyCollection,
-            input_collection_class=NodeSocketNamespace,
-            output_collection_class=NodeSocketNamespace,
+            input_collection_class=TaskSocketNamespace,
+            output_collection_class=TaskSocketNamespace,
             **kwargs,
         )
         self.context_mapping = {} if context_mapping is None else context_mapping
@@ -52,6 +52,10 @@ class Task(GraphNode):
         self.state = "PLANNED"
         self.action = ""
         self.show_socket_depth = 0
+        self.parent_task = None
+        self.map_data = None
+        self.mapped_tasks = None
+        self.execution_count = 0
 
     def to_dict(self, short: bool = False) -> Dict[str, Any]:
         from aiida.orm.utils.serialize import serialize
@@ -63,8 +67,8 @@ class Task(GraphNode):
         tdata["context_mapping"] = self.context_mapping
         tdata["wait"] = [task.name for task in self.waiting_on]
         tdata["children"] = []
-        tdata["execution_count"] = 0
-        tdata["parent_task"] = [None]
+        tdata["execution_count"] = self.execution_count
+        tdata["parent_task"] = [self.parent_task.name] if self.parent_task else [None]
         tdata["process"] = serialize(self.process) if self.process else serialize(None)
         tdata["metadata"]["pk"] = self.process.pk if self.process else None
         tdata["metadata"]["is_aiida_component"] = self.is_aiida_component
@@ -125,20 +129,25 @@ class Task(GraphNode):
         Returns:
             Node: An instance of Node initialized with the provided data."""
         from aiida_workgraph.tasks import TaskPool as workgraph_TaskPool
-        from aiida_workgraph.orm.utils import deserialize_safe
 
         if TaskPool is None:
             TaskPool = workgraph_TaskPool
         task = GraphNode.from_dict(data, NodePool=TaskPool)
-        task.context_mapping = data.get("context_mapping", {})
-        task.waiting_on.add(data.get("wait", []))
+
+        return task
+
+    def update_from_dict(self, data: Dict[str, Any]) -> None:
+        from aiida_workgraph.orm.utils import deserialize_safe
+
+        super().update_from_dict(data)
+        self.context_mapping = data.get("context_mapping", {})
         process = data.get("process", None)
         if process and isinstance(process, str):
             process = deserialize_safe(process)
-        task.process = process
-        task._error_handlers = data.get("error_handlers", [])
-
-        return task
+        self.process = process
+        self._error_handlers = data.get("error_handlers", [])
+        self.waiting_on.add(data.get("wait", []))
+        self.map_data = data.get("map_data", None)
 
     def reset(self) -> None:
         self.process = None
@@ -183,6 +192,54 @@ class Task(GraphNode):
                     raise ValueError(f"Exit code {exit_code} is not a valid exit code.")
             handler["exit_codes"] = exit_codes
         return handlers
+
+    def update_state(self, data: Dict[str, Any]) -> None:
+        """Set the outputs of the task from a dictionary."""
+        self.state = data["state"]
+        self.ctime = data["ctime"]
+        self.mtime = data["mtime"]
+        self.pk = data["pk"]
+        if data["pk"] is not None:
+            node = aiida.orm.load_node(data["pk"])
+            self.process = self.node = node
+            if isinstance(node, aiida.orm.ProcessNode):
+                self.set_outputs_from_process_node(node)
+            elif isinstance(node, aiida.orm.Data):
+                self.set_outputs_from_data_node(node)
+
+    def set_outputs_from_process_node(self, node: aiida.orm.ProcessNode) -> None:
+        from aiida_workgraph.utils import get_nested_dict
+
+        # if the node is finished ok, update the output sockets
+        # note the task.state may not be the same as the node.process_state
+        # for example, task.state can be `SKIPPED` if it is inside a conditional block,
+        # even if the node.is_finished_ok is True
+        self.process = node
+        if node.is_finished_ok:
+            # update the output sockets
+            for socket in self.outputs:
+                if socket._identifier == "workgraph.namespace":
+                    socket._value = get_nested_dict(
+                        node.outputs, socket._name, default=None
+                    )
+                else:
+                    socket.value = get_nested_dict(
+                        node.outputs, socket._name, default=None
+                    )
+
+    def set_outputs_from_data_node(self, node: aiida.orm.Data) -> None:
+        self.outputs[0].value = node
+
+    def execute(self, args=None, kwargs=None, var_kwargs=None):
+        """Execute the task."""
+        from node_graph.executor import NodeExecutor
+
+        executor = NodeExecutor(**self.get_executor()).executor
+        if var_kwargs is None:
+            result = executor(*args, **kwargs)
+        else:
+            result = executor(*args, **kwargs, **var_kwargs)
+        return result, "FINISHED"
 
     def to_widget_value(self):
         from aiida_workgraph.utils import filter_keys_namespace_depth
@@ -295,3 +352,12 @@ class TaskCollection:
 
     def __repr__(self) -> str:
         return f"{self._items}"
+
+
+# collection of child tasks
+class ChildTaskCollection(TaskCollection):
+    def add(self, tasks: Union[List[Union[str, Task]], str, Task]) -> None:
+        """Add tasks to the collection. Tasks can be a list or a single Task or task name."""
+        super().add(tasks)
+        for task in self.items:
+            task.parent_task = self.parent

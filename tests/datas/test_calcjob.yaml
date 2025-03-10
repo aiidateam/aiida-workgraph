@@ -9,7 +9,7 @@ tasks:
     name: int1
     properties:
       value: 3
-  - identifier: workgraph.aiida_code
+  - identifier: workgraph.load_code
     name: code1
     properties:
       value: "add@localhost"

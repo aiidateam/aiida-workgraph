@@ -90,8 +90,6 @@ from aiida import load_profile
 from aiida.common.exceptions import NotExistent
 from aiida.orm import (
     Dict,
-    KpointsData,
-    StructureData,
     load_code,
     load_group,
     InstalledCode,

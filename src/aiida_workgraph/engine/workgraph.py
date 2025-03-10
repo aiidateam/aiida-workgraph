@@ -15,7 +15,6 @@ from aiida.common.extendeddicts import AttributeDict
 from aiida.common.lang import override
 from aiida import orm
 from aiida.orm import Node
-from aiida_workgraph.orm.utils import deserialize_safe
 from aiida_workgraph.orm.workgraph import WorkGraphNode
 
 from aiida.engine.processes.exit_code import ExitCode
@@ -286,69 +285,29 @@ class WorkGraphEngine(Process, metaclass=Protect):
 
     def setup(self) -> None:
         """Setup the variables in the context."""
+        from aiida_workgraph import WorkGraph
+
         # track if the awaitable callback is added to the runner
         self.ctx._awaitable_actions = []
         self.ctx._new_data = {}
         self.ctx._executed_tasks = []
+        self.ctx._task_results = {}
         # read the latest workgraph data
-        wgdata = self.read_wgdata_from_base()
-        self.init_ctx(wgdata)
+        self.wg = WorkGraph.load(self.node)
+        # update the context
+        for key, value in self.wg.context.items():
+            key = key.replace("__", ".")
+            update_nested_dict(self.ctx, key, value)
         #
-        self.ctx._msgs = []
         self.ctx._execution_count = 1
         # init task results
         self.task_manager.set_task_results()
         # while workgraph
-        if self.ctx._workgraph["workgraph_type"].upper() == "WHILE":
-            self.ctx._max_iteration = self.ctx._workgraph.get("max_iteration", 1000)
+        if self.wg.workgraph_type.upper() == "WHILE":
+            self.ctx._max_iteration = self.wg.max_iteration
             should_run = self.task_manager.check_while_conditions()
             if not should_run:
                 self.task_manager.set_tasks_state(self.ctx._tasks.keys(), "SKIPPED")
-        # for workgraph
-        if self.ctx._workgraph["workgraph_type"].upper() == "FOR":
-            should_run = self.task_manager.check_for_conditions()
-            if not should_run:
-                self.task_manager.set_tasks_state(self.ctx._tasks.keys(), "SKIPPED")
-
-    def setup_ctx_workgraph(self, wgdata: t.Dict[str, t.Any]) -> None:
-        """setup the workgraph in the context."""
-
-        self.ctx._tasks = wgdata["tasks"]
-        self.ctx._links = wgdata["links"]
-        self.ctx._connectivity = wgdata["connectivity"]
-        self.ctx._workgraph = wgdata
-        self.ctx._error_handlers = wgdata["error_handlers"]
-
-    def read_wgdata_from_base(self) -> t.Dict[str, t.Any]:
-        """Read workgraph data from attributes."""
-        from aiida_workgraph.orm.pickled_function import PickledLocalFunction
-
-        wgdata = self.node.workgraph_data
-        for name, task in wgdata["tasks"].items():
-            wgdata["tasks"][name] = deserialize_safe(task)
-            for _, input in wgdata["tasks"][name]["inputs"].items():
-                if input.get("property"):
-                    prop = input["property"]
-                    if isinstance(prop["value"], PickledLocalFunction):
-                        prop["value"] = prop["value"].value
-        wgdata["error_handlers"] = self.node.workgraph_error_handlers
-        wgdata["context"] = deserialize_safe(wgdata["context"])
-        return wgdata
-
-    def init_ctx(self, wgdata: t.Dict[str, t.Any]) -> None:
-        """Init the context from the workgraph data."""
-        from aiida_workgraph.utils import update_nested_dict
-
-        # set up the context variables
-        self.ctx._max_number_awaitables = (
-            wgdata["max_number_jobs"] if wgdata["max_number_jobs"] else 1000000
-        )
-        self.ctx["_count"] = 0
-        for key, value in wgdata["context"].items():
-            key = key.replace("__", ".")
-            update_nested_dict(self.ctx, key, value)
-        # set up the workgraph
-        self.setup_ctx_workgraph(wgdata)
 
     def apply_action(self, msg: dict) -> None:
 
@@ -399,8 +358,9 @@ class WorkGraphEngine(Process, metaclass=Protect):
     def finalize(self) -> t.Optional[ExitCode]:
         """"""
         # expose outputs of the workgraph
+        print("group_outputs", self.wg.group_outputs)
         group_outputs = {}
-        for output in self.ctx._workgraph["metadata"]["group_outputs"]:
+        for output in self.wg.group_outputs:
             names = output["from"].split(".", 1)
             if names[0] == "context":
                 if len(names) == 1:
@@ -416,27 +376,28 @@ class WorkGraphEngine(Process, metaclass=Protect):
                     update_nested_dict(
                         group_outputs,
                         output["name"],
-                        self.ctx._tasks[names[0]]["results"],
+                        self.ctx._task_results[names[0]],
                     )
                 else:
                     # expose one output of the task
                     # note, the output may not exist
-                    if names[1] in self.ctx._tasks[names[0]]["results"]:
+                    if names[1] in self.ctx._task_results[names[0]]:
                         update_nested_dict(
                             group_outputs,
                             output["name"],
-                            self.ctx._tasks[names[0]]["results"][names[1]],
+                            self.ctx._task_results[names[0]][names[1]],
                         )
+        print("group_outputs: ", group_outputs)
         self.out_many(group_outputs)
         # output the new data
         if self.ctx._new_data:
             self.out("new_data", self.ctx._new_data)
         self.out("execution_count", orm.Int(self.ctx._execution_count).store())
         self.report("Finalize workgraph.")
-        for _, task in self.ctx._tasks.items():
+        for task in self.wg.tasks:
             if (
                 self.task_manager.state_manager.get_task_runtime_info(
-                    task["name"], "state"
+                    task.name, "state"
                 )
                 == "FAILED"
             ):

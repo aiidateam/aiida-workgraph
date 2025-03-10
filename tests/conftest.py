@@ -97,9 +97,9 @@ def wg_workchain(add_code) -> WorkGraph:
     """A workgraph with workchain."""
 
     wg = WorkGraph(name="test_debug_math")
-    int1 = wg.add_task("workgraph.aiida_node", "int1", pk=Int(2).store().pk)
-    int2 = wg.add_task("workgraph.aiida_node", "int2", pk=Int(3).store().pk)
-    code1 = wg.add_task("workgraph.aiida_code", "code1", pk=add_code.pk)
+    int1 = wg.add_task("workgraph.load_node", "int1", pk=Int(2).store().pk)
+    int2 = wg.add_task("workgraph.load_node", "int2", pk=Int(3).store().pk)
+    code1 = wg.add_task("workgraph.load_code", "code1", pk=add_code.pk)
     multiply_add1 = wg.add_task(
         "workgraph.test_arithmetic_multiply_add", "multiply_add1", x=Int(4).store()
     )
