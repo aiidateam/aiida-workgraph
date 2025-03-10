@@ -1,9 +1,10 @@
-from typing import List, Optional, Union
+from typing import List, Optional, Union, Dict, Any
 from .base import BaseTaskFactory
 from aiida_shell import ShellJob
 from .aiida_task import AiiDAComponentTaskFactory
 from aiida_workgraph.utils import validate_task_inout
 from aiida_workgraph import Task
+from node_graph.executor import NodeExecutor
 
 
 def prepare_for_shell_task(inputs: dict) -> dict:
@@ -19,6 +20,10 @@ def prepare_for_shell_task(inputs: dict) -> dict:
     inputs_aiida_shell_subset = {
         key: inputs[key] for key in inputs.keys() if key in aiida_shell_input_keys
     }
+    # if parser in inputs, and the parser is a dict
+    parser = inputs_aiida_shell_subset.get("parser", None)
+    if isinstance(parser, dict):
+        inputs_aiida_shell_subset["parser"] = NodeExecutor(**parser).executor
 
     try:
         aiida_shell_inputs = prepare_shell_job_inputs(**inputs_aiida_shell_subset)
@@ -45,6 +50,17 @@ class ShellJobTask(Task):
     name = "shelljob"
     node_type = "ShellJob"
     catalog = "AIIDA"
+
+    def to_dict(self, short: bool = False) -> Dict[str, Any]:
+        """Overwrite the to_dict method to handle the parser function."""
+        import inspect
+
+        data = super().to_dict(short=short)
+        if data["inputs"]["parser"]["property"]["value"] is not None:
+            prop = data["inputs"]["parser"]["property"]
+            if inspect.isfunction(prop["value"]):
+                prop["value"] = NodeExecutor.from_callable(prop["value"]).to_dict()
+        return data
 
     def execute(self, engine_process, args=None, kwargs=None, var_kwargs=None):
         from aiida_workgraph.utils import create_and_pause_process
