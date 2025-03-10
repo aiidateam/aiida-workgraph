@@ -9,12 +9,14 @@ from .base import BaseTaskFactory
 class DecoratedFunctionTaskFactory(BaseTaskFactory):
     """A factory to create specialized subclasses of Task from functions."""
 
+    default_task_type = "Normal"
+
     @classmethod
     def from_function(
         cls,
         func: Callable,
         identifier: Optional[str] = None,
-        task_type: str = "Normal",
+        task_type: str = None,
         properties: Optional[List[Tuple[str, str]]] = None,
         inputs: Optional[List[Union[str, dict]]] = None,
         outputs: Optional[List[Union[str, dict]]] = None,
@@ -31,6 +33,7 @@ class DecoratedFunctionTaskFactory(BaseTaskFactory):
         """
         from node_graph.decorator import generate_input_sockets
 
+        task_type = task_type or cls.default_task_type
         identifier = identifier or func.__name__
         inputs = inputs or []
         properties = properties or []

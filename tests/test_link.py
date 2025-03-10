@@ -16,9 +16,9 @@ def test_multiply_link() -> None:
         return Float(total)
 
     wg = WorkGraph(name="test_multiply_link")
-    float1 = wg.add_task("workgraph.aiida_node", pk=Float(1.0).store().pk)
-    float2 = wg.add_task("workgraph.aiida_node", pk=Float(2.0).store().pk)
-    float3 = wg.add_task("workgraph.aiida_node", pk=Float(3.0).store().pk)
+    float1 = wg.add_task("workgraph.load_node", pk=Float(1.0).store().pk)
+    float2 = wg.add_task("workgraph.load_node", pk=Float(2.0).store().pk)
+    float3 = wg.add_task("workgraph.load_node", pk=Float(3.0).store().pk)
     sum1 = wg.add_task(sum, "sum1")
     sum1.inputs.datas._link_limit = 100
     wg.add_link(float1.outputs[0], sum1.inputs.datas)

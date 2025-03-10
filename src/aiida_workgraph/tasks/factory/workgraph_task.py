@@ -54,8 +54,6 @@ class WorkGraphTask(Task):
                 else:
                     input["property"]["value"] = value
         # merge the properties
-        # organize_nested_inputs(wgdata)
-        # serialize_workgraph_inputs(wgdata)
         metadata = {"call_link_label": self.name}
         inputs = {"workgraph_data": wgdata, "metadata": metadata}
         return inputs

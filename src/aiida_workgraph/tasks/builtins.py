@@ -1,5 +1,5 @@
 from typing import Any, Dict
-from aiida_workgraph.task import Task, TaskCollection
+from aiida_workgraph.task import Task, ChildTaskCollection
 
 
 class Zone(Task):
@@ -14,7 +14,7 @@ class Zone(Task):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.children = TaskCollection(parent=self)
+        self.children = ChildTaskCollection(parent=self)
 
     def add_task(self, *args, **kwargs):
         """Syntactic sugar to add a task to the zone."""
@@ -34,10 +34,6 @@ class Zone(Task):
         tdata = super().to_dict(short=short)
         tdata["children"] = [task.name for task in self.children]
         return tdata
-
-    def from_dict(self, data: Dict[str, Any]) -> None:
-        super().from_dict(data)
-        self.children.add(data.get("children", []))
 
 
 class While(Zone):
@@ -106,12 +102,13 @@ class SetContext(Task):
 
     identifier = "workgraph.set_context"
     name = "SetContext"
-    node_type = "SET_CONTEXT"
+    node_type = "Normal"
     catalog = "Control"
 
     def create_sockets(self) -> None:
         self.inputs._clear()
         self.outputs._clear()
+        self.add_input("workgraph.any", "context")
         self.add_input("workgraph.any", "key")
         self.add_input("workgraph.any", "value")
         self.add_input(
@@ -119,18 +116,26 @@ class SetContext(Task):
         )
         self.add_output("workgraph.any", "_wait")
 
+    def get_executor(self):
+        executor = {
+            "module_path": "aiida_workgraph.executors.builtins",
+            "callable_name": "set_context",
+        }
+        return executor
+
 
 class GetContext(Task):
     """GetContext"""
 
     identifier = "workgraph.get_context"
     name = "GetContext"
-    node_type = "GET_CONTEXT"
+    node_type = "Normal"
     catalog = "Control"
 
     def create_sockets(self) -> None:
         self.inputs._clear()
         self.outputs._clear()
+        self.add_input("workgraph.any", "context")
         self.add_input("workgraph.any", "key")
         self.add_input(
             "workgraph.any", "_wait", link_limit=100000, metadata={"arg_type": "none"}
@@ -138,11 +143,18 @@ class GetContext(Task):
         self.add_output("workgraph.any", "result")
         self.add_output("workgraph.any", "_wait")
 
+    def get_executor(self):
+        executor = {
+            "module_path": "aiida_workgraph.executors.builtins",
+            "callable_name": "get_context",
+        }
+        return executor
+
 
 class AiiDAInt(Task):
     identifier = "workgraph.aiida_int"
     name = "AiiDAInt"
-    node_type = "data"
+    node_type = "Normal"
     catalog = "Test"
 
     def create_sockets(self) -> None:
@@ -164,7 +176,7 @@ class AiiDAInt(Task):
 class AiiDAFloat(Task):
     identifier = "workgraph.aiida_float"
     name = "AiiDAFloat"
-    node_type = "data"
+    node_type = "Normal"
     catalog = "Test"
 
     def create_sockets(self) -> None:
@@ -188,7 +200,7 @@ class AiiDAFloat(Task):
 class AiiDAString(Task):
     identifier = "workgraph.aiida_string"
     name = "AiiDAString"
-    node_type = "data"
+    node_type = "Normal"
     catalog = "Test"
 
     def create_sockets(self) -> None:
@@ -212,7 +224,7 @@ class AiiDAString(Task):
 class AiiDAList(Task):
     identifier = "workgraph.aiida_list"
     name = "AiiDAList"
-    node_type = "data"
+    node_type = "Normal"
     catalog = "Test"
 
     def create_sockets(self) -> None:
@@ -236,7 +248,7 @@ class AiiDAList(Task):
 class AiiDADict(Task):
     identifier = "workgraph.aiida_dict"
     name = "AiiDADict"
-    node_type = "data"
+    node_type = "Normal"
     catalog = "Test"
 
     def create_sockets(self) -> None:
@@ -260,9 +272,9 @@ class AiiDADict(Task):
 class AiiDANode(Task):
     """AiiDANode"""
 
-    identifier = "workgraph.aiida_node"
+    identifier = "workgraph.load_node"
     name = "AiiDANode"
-    node_type = "node"
+    node_type = "Normal"
     catalog = "Test"
 
     def create_properties(self) -> None:
@@ -292,9 +304,9 @@ class AiiDANode(Task):
 class AiiDACode(Task):
     """AiiDACode"""
 
-    identifier = "workgraph.aiida_code"
+    identifier = "workgraph.load_code"
     name = "AiiDACode"
-    node_type = "node"
+    node_type = "Normal"
     catalog = "Test"
 
     def create_sockets(self) -> None:

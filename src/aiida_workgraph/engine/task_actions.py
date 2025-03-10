@@ -64,8 +64,8 @@ class TaskActionManager:
         """
         state = self.state_manager.get_task_runtime_info(name, "state")
         if state == "RUNNING":
-            task_data = self.state_manager.ctx._tasks[name]
-            node_type = task_data["metadata"]["node_type"].upper()
+            task = self.process.wg.tasks[name]
+            node_type = task.node_type.upper()
             if node_type in ["AWAITABLE", "MONITOR"]:
                 awaitable_manager = self.state_manager.awaitable_manager
                 awaitable_target = awaitable_manager.not_persisted_awaitables.get(name)

@@ -234,6 +234,7 @@ def get_workgraph_data(process: Union[int, orm.Node]) -> Optional[Dict[str, Any]
         wgdata["tasks"][name] = deserialize_safe(task)
         wgdata["tasks"][name]["executor"] = task_executors.get(name)
     wgdata["error_handlers"] = process.workgraph_error_handlers
+    wgdata["context"] = deserialize_safe(wgdata["context"])
     return wgdata
 
 
@@ -325,24 +326,6 @@ def pickle_callable(data: dict):
 
     if not isinstance(data["callable"], PickledFunction):
         data["callable"] = PickledFunction(data["callable"]).store()
-
-
-def serialize_workgraph_inputs(wgdata):
-    """Serialize the inputs of the workgraph.
-    Because we use yaml (aiida's serialize) to serialize the data and
-    save it to the node.base.extras. yaml can not handle the function
-    defined in a scope, e.g., local function in another function.
-    So, if a function is used as input, we needt to serialize the function.
-    """
-    from aiida_workgraph.orm.pickled_function import PickledLocalFunction
-    import inspect
-
-    for _, task in wgdata["tasks"].items():
-        for _, input in task["inputs"].items():
-            if input.get("property"):
-                prop = input["property"]
-                if inspect.isfunction(prop["value"]):
-                    prop["value"] = PickledLocalFunction(prop["value"]).store()
 
 
 def create_and_pause_process(

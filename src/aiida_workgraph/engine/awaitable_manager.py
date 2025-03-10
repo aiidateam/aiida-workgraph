@@ -151,7 +151,7 @@ class AwaitableManager:
                     )
                     # set child tasks state to SKIPPED
                     self.process.task_manager.state_manager.set_tasks_state(
-                        self.ctx._connectivity["child_node"][awaitable.key],
+                        self.process.wg.connectivity["child_node"][awaitable.key],
                         "SKIPPED",
                     )
                     self.process.report(f"Task: {awaitable.key} cancelled.")
@@ -167,7 +167,7 @@ class AwaitableManager:
                 )
                 # set child tasks state to SKIPPED
                 self.process.task_manager.state_manager.set_tasks_state(
-                    self.ctx._connectivity["child_node"][awaitable.key],
+                    self.process.wg.connectivity["child_node"][awaitable.key],
                     "SKIPPED",
                 )
                 self.process.report(f"Task: {awaitable.key} failed: {e}")

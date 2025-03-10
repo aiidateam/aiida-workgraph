@@ -46,9 +46,19 @@ def test_show_state(wg_calcfunction):
 
 def test_save_load(wg_calcfunction, decorated_add):
     """Save the workgraph"""
+    from aiida.calculations.arithmetic.add import ArithmeticAddCalculation
 
     wg = wg_calcfunction
     wg.add_task(decorated_add, name="add1", x=2, y=3)
+    metadata = {
+        "options": {
+            "resources": {
+                "num_machines": 1,
+                "num_mpiprocs_per_machine": 2,
+            },
+        }
+    }
+    wg.add_task(ArithmeticAddCalculation, name="add2", x=4, metadata=metadata)
     wg.name = "test_save_load"
     wg.save()
     assert wg.process.process_state.value.upper() == "CREATED"
@@ -59,6 +69,7 @@ def test_save_load(wg_calcfunction, decorated_add):
     # check the executor of the decorated task
     callable = wg2.tasks.add1.get_executor()
     assert callable == wg.tasks.add1.get_executor()
+    assert wg.tasks.add2.inputs.metadata._value == wg2.tasks.add2.inputs.metadata._value
     # TODO, the following code is not working
     # wg2.save()
     # assert wg2.tasks.add1.executor == decorated_add

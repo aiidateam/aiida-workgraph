@@ -1,12 +1,11 @@
-from aiida_workgraph.task import Task
+from aiida_workgraph.tasks.factory.awaitable_task import MonitorFunctionTask
 
 
-class TimeMonitor(Task):
+class TimeMonitor(MonitorFunctionTask):
     """Monitor the time"""
 
     identifier = "workgraph.time_monitor"
     name = "TimeMonitor"
-    node_type = "MONITOR"
     catalog = "Monitor"
 
     def create_sockets(self) -> None:
@@ -32,12 +31,11 @@ class TimeMonitor(Task):
         return executor
 
 
-class FileMonitor(Task):
+class FileMonitor(MonitorFunctionTask):
     """Monitor the file"""
 
     identifier = "workgraph.file_monitor"
     name = "FileMonitor"
-    node_type = "MONITOR"
     catalog = "Monitor"
 
     def create_sockets(self) -> None:
@@ -63,12 +61,11 @@ class FileMonitor(Task):
         return executor
 
 
-class TaskMonitor(Task):
+class TaskMonitor(MonitorFunctionTask):
     """Monitor the file"""
 
     identifier = "workgraph.task_monitor"
     name = "TaskMonitor"
-    node_type = "MONITOR"
     catalog = "Monitor"
 
     def create_sockets(self) -> None:

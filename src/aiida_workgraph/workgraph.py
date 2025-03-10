@@ -70,12 +70,8 @@ class WorkGraph(node_graph.NodeGraph):
     def prepare_inputs(
         self, metadata: Optional[Dict[str, Any]] = None
     ) -> Dict[str, Any]:
-        from aiida_workgraph.utils import serialize_workgraph_inputs
-
-        metadata = metadata or {}
 
         wgdata = self.to_dict()
-        serialize_workgraph_inputs(wgdata)
         metadata = metadata or {}
         inputs = {"workgraph_data": wgdata, "metadata": metadata}
         return inputs
@@ -280,7 +276,7 @@ class WorkGraph(node_graph.NodeGraph):
         of the tasks that are outgoing from the process node. This includes updating the state of process nodes
         linked to the current process, and data nodes linked to the current process.
         """
-        from aiida_workgraph.utils import get_nested_dict, get_processes_latest
+        from aiida_workgraph.utils import get_processes_latest
 
         if self.process is None:
             return
@@ -291,34 +287,8 @@ class WorkGraph(node_graph.NodeGraph):
             # the mapped tasks are not in the workgraph
             if name not in self.tasks:
                 continue
-            self.tasks[name].state = data["state"]
-            self.tasks[name].ctime = data["ctime"]
-            self.tasks[name].mtime = data["mtime"]
-            self.tasks[name].pk = data["pk"]
-            if data["pk"] is not None:
-                node = aiida.orm.load_node(data["pk"])
-                self.tasks[name].process = self.tasks[name].node = node
-                if isinstance(node, aiida.orm.ProcessNode) and getattr(
-                    node, "process_state", False
-                ):
-                    # if the node is finished ok, update the output sockets
-                    # note the task.state may not be the same as the node.process_state
-                    # for example, task.state can be `SKIPPED` if it is inside a conditional block,
-                    # even if the node.is_finished_ok is True
-                    if node.is_finished_ok:
-                        # update the output sockets
-                        for socket in self.tasks[name].outputs:
-                            if socket._identifier == "workgraph.namespace":
-                                socket._value = get_nested_dict(
-                                    node.outputs, socket._name, default=None
-                                )
-                            else:
-                                socket.value = get_nested_dict(
-                                    node.outputs, socket._name, default=None
-                                )
-                # read results from the process outputs
-                elif isinstance(node, aiida.orm.Data):
-                    self.tasks[name].outputs[0].value = node
+            self.tasks[name].update_state(data)
+
         execution_count = getattr(self.process.outputs, "execution_count", None)
         self.execution_count = execution_count if execution_count else 0
         if self._widget is not None:
@@ -342,11 +312,20 @@ class WorkGraph(node_graph.NodeGraph):
             "workgraph_type",
             "conditions",
             "max_number_jobs",
+            "connectivity",
         ]:
             if key in wgdata:
                 setattr(wg, key, wgdata[key])
         if "error_handlers" in wgdata:
             wg._error_handlers = wgdata["error_handlers"]
+        wg.context = {
+            key.replace("__", "."): value
+            for key, value in wgdata.get("context", {}).items()
+        }
+        # for zone tasks, add their children
+        for task in wg.tasks:
+            if hasattr(task, "children"):
+                task.children.add(wgdata["nodes"][task.name].get("children", []))
         return wg
 
     @classmethod
@@ -369,7 +348,7 @@ class WorkGraph(node_graph.NodeGraph):
         return nt
 
     @classmethod
-    def load(cls, pk: int) -> Optional["WorkGraph"]:
+    def load(cls, pk: int | aiida.orm.ProcessNode) -> Optional["WorkGraph"]:
         """
         Load WorkGraph from the process node with the given primary key.
 
@@ -379,7 +358,14 @@ class WorkGraph(node_graph.NodeGraph):
         from aiida_workgraph.utils import get_workgraph_data
         from aiida_workgraph.orm.workgraph import WorkGraphNode
 
-        process = aiida.orm.load_node(pk)
+        if isinstance(pk, int):
+            process = aiida.orm.load_node(pk)
+        elif isinstance(pk, aiida.orm.ProcessNode):
+            process = pk
+        else:
+            raise ValueError(
+                f"Invalid pk type: {type(pk)}, requires int or ProcessNode."
+            )
         if not isinstance(process, WorkGraphNode):
             raise ValueError(f"Process {pk} is not a WorkGraph")
         wgdata = get_workgraph_data(process)
