@@ -149,53 +149,50 @@ class TaskManager:
         self.process.report("tasks ready to run: {}".format(",".join(task_to_run)))
         self.run_tasks(task_to_run)
 
+    def should_run_task(self, task: "Task") -> bool:
+        """Check if the task should run."""
+        name = task.name
+        # skip if the max number of awaitables is reached
+        if task.node_type.upper() in process_task_types:
+            if len(self.process._awaitables) >= self.process.wg.max_number_jobs:
+                print(
+                    MAX_NUMBER_AWAITABLES_MSG.format(
+                        self.process.wg.max_number_jobs, name
+                    )
+                )
+                return False
+        # skip if the task is already executed or if the task is in a skippped state
+        if name in self.ctx._executed_tasks or self.state_manager.get_task_runtime_info(
+            name, "state"
+        ) in ["SKIPPED"]:
+            return False
+        return True
+
     def run_tasks(self, names: List[str], continue_workgraph: bool = True) -> None:
         """Run tasks.
         Task type includes: Node, Data, CalcFunction, WorkFunction, CalcJob, WorkChain, GraphBuilder,
         WorkGraph, PythonJob, ShellJob, While, If, Zone, GetContext, SetContext, Normal.
 
         """
-        from aiida_workgraph.utils import update_nested_dict_with_special_keys
-
         for name in names:
             # skip if the max number of awaitables is reached
             task = self.process.wg.tasks[name]
             task.action = self.state_manager.get_task_runtime_info(name, "action")
-            if task.node_type.upper() in process_task_types:
-                if len(self.process._awaitables) >= self.process.wg.max_number_jobs:
-                    print(
-                        MAX_NUMBER_AWAITABLES_MSG.format(
-                            self.process.wg.max_number_jobs, name
-                        )
-                    )
-                    continue
-            # skip if the task is already executed or if the task is in a skippped state
-            if (
-                name in self.ctx._executed_tasks
-                or self.state_manager.get_task_runtime_info(name, "state")
-                in ["SKIPPED"]
-            ):
+            if not self.should_run_task(task):
                 continue
+
             self.ctx._executed_tasks.append(name)
             print("-" * 60)
 
             self.process.report(f"Run task: {name}, type: {task.node_type}")
             inputs = self.get_inputs(name)
-            args = inputs["args"]
-            kwargs = inputs["kwargs"]
-            var_kwargs = inputs["var_kwargs"]
-            for i, key in enumerate(task.args_data["args"]):
-                kwargs[key] = args[i]
-            # update the port namespace
-            kwargs = update_nested_dict_with_special_keys(kwargs)
-
-            print("kwargs: ", kwargs)
+            print("kwargs: ", inputs["kwargs"])
             # kwargs["meta.label"] = name
             # output must be a Data type or a mapping of {string: Data}
             self.ctx._task_results[task.name] = {}
             task_type = task.node_type.upper()
             if task_type in ["CALCFUNCTION", "WORKFUNCTION"]:
-                self.execute_function_task(task, kwargs, var_kwargs, continue_workgraph)
+                self.execute_function_task(task, continue_workgraph, **inputs)
             elif task_type in [
                 "CALCJOB",
                 "WORKCHAIN",
@@ -204,9 +201,7 @@ class TaskManager:
                 "WORKGRAPH",
                 "GRAPH_BUILDER",
             ]:
-                self.execute_process_task(
-                    task, args=args, kwargs=kwargs, var_kwargs=var_kwargs
-                )
+                self.execute_process_task(task, **inputs)
             elif task_type == "WHILE":
                 self.execute_while_task(task)
             elif task_type == "IF":
@@ -214,22 +209,22 @@ class TaskManager:
             elif task_type == "ZONE":
                 self.execute_zone_task(task)
             elif task_type == "MAP":
-                self.execute_map_task(task, kwargs)
+                self.execute_map_task(task, inputs["kwargs"])
             elif task_type in ["AWAITABLE", "MONITOR"]:
-                self.execute_awaitable_task(task, args, kwargs, var_kwargs)
+                self.execute_awaitable_task(task, **inputs)
             elif task_type == "NORMAL":
                 self.execute_normal_task(
                     task,
-                    args,
-                    kwargs,
-                    var_kwargs,
                     continue_workgraph,
+                    **inputs,
                 )
             else:
                 self.process.report(f"Unknown task type {task_type}")
                 self.state_manager.set_task_runtime_info(name, "state", "FAILED")
 
-    def execute_function_task(self, task, kwargs, var_kwargs, continue_workgraph):
+    def execute_function_task(
+        self, task, continue_workgraph=None, args=None, kwargs=None, var_kwargs=None
+    ):
         """Execute a CalcFunction or WorkFunction task."""
 
         try:
@@ -343,7 +338,7 @@ class TaskManager:
 
         self.continue_workgraph()
 
-    def execute_awaitable_task(self, task, args, kwargs, var_kwargs):
+    def execute_awaitable_task(self, task, args=None, kwargs=None, var_kwargs=None):
         name = task.name
         for key in task.args_data["args"]:
             kwargs.pop(key, None)
@@ -356,9 +351,14 @@ class TaskManager:
         self.awaitable_manager.not_persisted_awaitables[name] = awaitable_target
         self.awaitable_manager.to_context(**{name: awaitable})
 
-    def execute_normal_task(self, task, args, kwargs, var_kwargs, continue_workgraph):
-        # Normal task is created by decoratoring a function with @task()
+    def execute_normal_task(
+        self, task, continue_workgraph=None, args=None, kwargs=None, var_kwargs=None
+    ):
+        """Execute a Normal task."""
         name = task.name
+
+        # A "context" key is special and should be passed to the context manager
+        # TODO this is hard coded for now, need to be refactored
         if "context" in task.args_data["kwargs"]:
             self.ctx.task_name = name
             kwargs.update({"context": self.ctx})
@@ -432,8 +432,9 @@ class TaskManager:
         Dict[str, Any],
     ]:
         """Get input based on the links."""
+        from aiida_workgraph.utils import update_nested_dict_with_special_keys
+
         args = []
-        args_dict = {}
         kwargs = {}
         var_kwargs = None
         task = self.process.wg.tasks[name]
@@ -448,16 +449,18 @@ class TaskManager:
             key = name.split(".")[0]
             if key in task.args_data["args"]:
                 args.append(input)
-                args_dict[name] = input
             elif key in task.args_data["kwargs"]:
                 kwargs[name] = input
             elif key == task.args_data["var_kwargs"]:
                 var_kwargs = input
+        for i, key in enumerate(task.args_data["args"]):
+            kwargs[key] = args[i]
+        # update the port namespace
+        kwargs = update_nested_dict_with_special_keys(kwargs)
         return {
             "args": args,
             "kwargs": kwargs,
             "var_kwargs": var_kwargs,
-            "args_dict": args_dict,
         }
 
     def should_run_while_task(self, name: str) -> tuple[bool, Any]:
