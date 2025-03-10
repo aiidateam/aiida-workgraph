@@ -143,12 +143,16 @@ class TaskStateManager:
             elif isinstance(results, dict):
                 self.ctx._task_results[name] = results
             else:
-                output_name = [
+                output_names = [
                     output_name
                     for output_name in task.outputs._get_keys()
                     if output_name not in ["_wait", "_outputs"]
-                ][0]
-                self.ctx._task_results[name][output_name] = results
+                ]
+                # some task does not have any output
+                if len(output_names) == 1:
+                    self.ctx._task_results[name][output_names[0]] = results
+                elif len(output_names) > 1:
+                    self.process.exit_codes.OUTPUS_NOT_MATCH_RESULTS
             self.task_set_context(name)
             self.set_task_runtime_info(name, "state", "FINISHED")
             self.process.report(f"Task: {name} finished.")

@@ -102,12 +102,13 @@ class SetContext(Task):
 
     identifier = "workgraph.set_context"
     name = "SetContext"
-    node_type = "SET_CONTEXT"
+    node_type = "Normal"
     catalog = "Control"
 
     def create_sockets(self) -> None:
         self.inputs._clear()
         self.outputs._clear()
+        self.add_input("workgraph.any", "context")
         self.add_input("workgraph.any", "key")
         self.add_input("workgraph.any", "value")
         self.add_input(
@@ -115,24 +116,39 @@ class SetContext(Task):
         )
         self.add_output("workgraph.any", "_wait")
 
+    def get_executor(self):
+        executor = {
+            "module_path": "aiida_workgraph.executors.builtins",
+            "callable_name": "set_context",
+        }
+        return executor
+
 
 class GetContext(Task):
     """GetContext"""
 
     identifier = "workgraph.get_context"
     name = "GetContext"
-    node_type = "GET_CONTEXT"
+    node_type = "Normal"
     catalog = "Control"
 
     def create_sockets(self) -> None:
         self.inputs._clear()
         self.outputs._clear()
+        self.add_input("workgraph.any", "context")
         self.add_input("workgraph.any", "key")
         self.add_input(
             "workgraph.any", "_wait", link_limit=100000, metadata={"arg_type": "none"}
         )
         self.add_output("workgraph.any", "result")
         self.add_output("workgraph.any", "_wait")
+
+    def get_executor(self):
+        executor = {
+            "module_path": "aiida_workgraph.executors.builtins",
+            "callable_name": "get_context",
+        }
+        return executor
 
 
 class AiiDAInt(Task):

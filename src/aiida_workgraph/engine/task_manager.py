@@ -220,10 +220,6 @@ class TaskManager:
                 self.execute_zone_task(task)
             elif task_type == "MAP":
                 self.execute_map_task(task, kwargs)
-            elif task_type == "GET_CONTEXT":
-                self.execute_get_context_task(task, kwargs)
-            elif task_type == "SET_CONTEXT":
-                self.execute_set_context_task(task, kwargs)
             elif task_type == "AWAITABLE":
                 self.execute_awaitable_task(
                     task, executor, args, kwargs, var_args, var_kwargs
@@ -371,23 +367,6 @@ class TaskManager:
                     task, prefix=prefix, placeholder=placeholder, value=value
                 )
 
-        self.continue_workgraph()
-
-    def execute_get_context_task(self, task, kwargs):
-        # get the results from the context
-        name = task.name
-        results = {"result": getattr(self.ctx, kwargs["key"])}
-        self.ctx._task_results[task.name] = results
-        self.state_manager.set_task_runtime_info(name, "state", "FINISHED")
-        self.state_manager.update_parent_task_state(name)
-        self.continue_workgraph()
-
-    def execute_set_context_task(self, task, kwargs):
-        name = task.name
-        # get the results from the context
-        setattr(self.ctx, kwargs["key"], kwargs["value"])
-        self.state_manager.set_task_runtime_info(name, "state", "FINISHED")
-        self.state_manager.update_parent_task_state(name)
         self.continue_workgraph()
 
     def execute_awaitable_task(
