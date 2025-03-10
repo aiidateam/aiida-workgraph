@@ -240,7 +240,6 @@ class TaskStateManager:
             if child_state not in ["FINISHED", "SKIPPED", "FAILED"]:
                 parent_states[0] = False
                 break
-
         return all(parent_states), parent_states
 
     # --------------------------------------------------
@@ -313,16 +312,14 @@ class TaskStateManager:
         if finished:
             # gather the results of all the mapped tasks
             results = {}
-            for prefix, mapped_task in self.process.wg.tasks[name][
-                "mapped_tasks"
-            ].items():
-                for output_name in mapped_task["outputs"]:
-                    if output_name in mapped_task["results"]:
-                        results.setdefault(output_name, {})
-                        results[output_name][prefix] = mapped_task["results"][
-                            output_name
-                        ]
-            self.process.wg.tasks[name]["results"] = results
+            for prefix, mapped_task in self.process.wg.tasks[name].mapped_tasks.items():
+                for output in mapped_task.outputs:
+                    if output._name in self.ctx._task_results[mapped_task.name]:
+                        results.setdefault(output._name, {})
+                        results[output._name][prefix] = self.ctx._task_results[
+                            mapped_task.name
+                        ][output._name]
+            self.ctx._task_results[name] = results
             self.set_task_runtime_info(name, "state", "FINISHED")
             self.process.report(f"Task: {name} finished.")
             self.update_parent_task_state(name)
@@ -331,17 +328,18 @@ class TaskStateManager:
         """Check if the child tasks are finished."""
         task = self.process.wg.tasks[name]
         finished = True
-        for child in task.children:
-            if self.get_task_runtime_info(child.name, "state") not in [
-                "FINISHED",
-                "SKIPPED",
-                "FAILED",
-            ]:
-                finished = False
-                break
+        if hasattr(task, "children"):
+            for child in task.children:
+                if self.get_task_runtime_info(child.name, "state") not in [
+                    "FINISHED",
+                    "SKIPPED",
+                    "FAILED",
+                ]:
+                    finished = False
+                    break
         # check the mapped tasks
-        mapped_tasks = task.mapped_tasks or []
-        for mapped_task in mapped_tasks:
+        mapped_tasks = task.mapped_tasks or {}
+        for mapped_task in mapped_tasks.values():
             if self.get_task_runtime_info(mapped_task.name, "state") not in [
                 "FINISHED",
                 "SKIPPED",

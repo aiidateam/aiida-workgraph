@@ -9,6 +9,7 @@ from aiida_workgraph.executors.monitors import monitor
 from .task_state import TaskStateManager
 from .task_actions import TaskActionManager
 import traceback
+from node_graph.link import NodeLink
 
 MAX_NUMBER_AWAITABLES_MSG = "The maximum number of subprocesses has been reached: {}. Cannot launch the job: {}."
 
@@ -57,20 +58,20 @@ class TaskManager:
 
     def get_task(self, name: str):
         """Get task from the context."""
-        executor_dict = self.get_task_executor_dict(name)
-        tdata = {"executor": executor_dict}
-        tdata.update(self.process.wg.tasks[name])
-        task = Task.from_dict(tdata)
+        task = self.process.wg.tasks[name]
         action = self.state_manager.get_task_runtime_info(name, "action").upper()
         task.action = action
         # update task results
         # namespace socket does not have a value, but _value
-        for output in task.outputs:
-            output.value = get_nested_dict(
-                self.process.wg.tasks[name]["results"],
-                output._name,
-                default=output.value if hasattr(output, "value") else None,
-            )
+        for socket in task.outputs:
+            if socket._identifier == "workgraph.namespace":
+                socket._value = get_nested_dict(
+                    self.ctx._task_results[name], socket._name, default=None
+                )
+            else:
+                socket.value = get_nested_dict(
+                    self.ctx._task_results[name], socket._name, default=None
+                )
         return task
 
     def set_task_results(self) -> None:
@@ -119,6 +120,7 @@ class TaskManager:
             result = ExitCode(302, message)
         else:
             result = None
+        # print("not_finished_tasks: ", not_finished_tasks)
         return is_finished, result
 
     def continue_workgraph(self) -> None:
@@ -545,14 +547,6 @@ class TaskManager:
                 var_kwargs = input
         return args, kwargs, var_args, var_kwargs, args_dict
 
-    def update_task(self, task: Task):
-        """Update task in the context.
-        This is used in error handlers to update the task parameters."""
-        tdata = task.to_dict()
-        self.ctx._tasks[task.name]["properties"] = tdata["properties"]
-        self.ctx._tasks[task.name]["inputs"] = tdata["inputs"]
-        self.state_manager.reset_task(task.name)
-
     def should_run_while_task(self, name: str) -> tuple[bool, Any]:
         """Check if the while task should run."""
         # check the conditions of the while task
@@ -646,13 +640,13 @@ class TaskManager:
 
     def get_all_children(self, name: str) -> List[str]:
         """Find all children of the zone_task, and their children recursively"""
-        child_tasks = {}
+        child_tasks = []
         task = self.process.wg.tasks[name]
+        if not hasattr(task, "children"):
+            return child_tasks
         for child_task in task.children:
-            child_tasks[child_task] = self.get_all_children(child_task)
-            children = self.ctx._tasks[child_task].get("children")
-            if children:
-                child_tasks.update(self.get_all_children(child_task))
+            child_tasks.append(child_task.name)
+            child_tasks.extend(self.get_all_children(child_task.name))
         return child_tasks
 
     def generate_mapped_tasks(
@@ -662,46 +656,53 @@ class TaskManager:
         Recursively clone the subgraph starting from zone_children,
         rewriting references to old tasks with new task names.
         """
-        import uuid
-
+        # keep track of the mapped tasks
         new_tasks = {}
+        new_links = []
         child_tasks = self.get_all_children(zone_task.name)
         for child_task in child_tasks:
             # since the child task is mapped, it should be skipped
             self.state_manager.set_task_runtime_info(child_task, "state", "MAPPED")
-            # keep track of the mapped tasks
-            self.ctx._tasks[child_task].setdefault("mapped_tasks", {})
-            new_name = f"{prefix}_{child_task}"
-            new_task_data = self.copy_task(self.ctx._tasks[child_task])
-            new_task_data["name"] = new_name
-            new_task_data["map_data"] = {"parent": child_task, "prefix": prefix}
-            new_task_data["uuid"] = str(uuid.uuid4())
-            # Reset runtime states
-            new_task_data["results"] = {}
-            self.state_manager.set_task_runtime_info(new_name, "state", "PLANNED")
-            self.state_manager.set_task_runtime_info(new_name, "action", "")
-            # Insert new_data in ctx._tasks
-            self.ctx._tasks[new_name] = new_task_data
-            self.ctx._tasks[child_task]["mapped_tasks"][prefix] = new_task_data
-            new_tasks[child_task] = new_task_data
-
+            task = self.copy_task(child_task, prefix)
+            new_tasks[child_task] = task
+            links = self.process.wg.tasks[child_task].inputs._all_links
+            new_links.extend(links)
         # fix references in the newly mapped tasks (children, input_links, etc.)
-        self._patch_cloned_tasks(new_tasks, value, placeholder=placeholder)
+        self._patch_cloned_tasks(new_tasks, new_links, value, placeholder=placeholder)
 
         # update process.wg.connectivity so the new tasks are recognized in child_node, zone references, etc.
         self._patch_connectivity(new_tasks)
 
-    def copy_task(self, task: dict) -> dict:
-        from aiida_workgraph.utils import shallow_copy_nested_dict
-        from copy import deepcopy
+    def copy_task(self, name: str, prefix: str) -> "Task":
+        from aiida_workgraph.task import Task
+        import uuid
 
-        new_task_data = shallow_copy_nested_dict(task)
-        new_task_data["input_links"] = deepcopy(task["input_links"])
-        return new_task_data
+        # new_task_data = shallow_copy_nested_dict(task)
+        # new_task_data["input_links"] = deepcopy(task["input_links"])
+        # keep track of the mapped tasks
+        if not self.process.wg.tasks[name].mapped_tasks:
+            self.process.wg.tasks[name].mapped_tasks = {}
+        task_data = self.process.wg.tasks[name].to_dict()
+        new_name = f"{prefix}_{name}"
+        task_data["name"] = new_name
+        task_data["map_data"] = {"parent": name, "prefix": prefix}
+        task_data["uuid"] = str(uuid.uuid4())
+        # Reset runtime states
+        self.ctx._task_results[new_name] = {}
+        self.state_manager.set_task_runtime_info(new_name, "state", "PLANNED")
+        self.state_manager.set_task_runtime_info(new_name, "action", "")
+        # Insert new_data in ctx._tasks
+        task = Task.from_dict(task_data)
+        task.parent = self.process.wg
+        self.process.wg.tasks._append(task)
+
+        self.process.wg.tasks[name].mapped_tasks[prefix] = task
+        return task
 
     def _patch_cloned_tasks(
         self,
-        new_tasks: dict[str, str],
+        new_tasks: dict[str, "Task"],
+        new_links: List[NodeLink],
         value: any,
         placeholder: str = "map_input",
     ):
@@ -709,10 +710,11 @@ class TaskManager:
         For each newly mapped task, fix references (children, input_links, etc.)
         from old_name -> new_name.
         """
-        for task in new_tasks.values():
+        for orginal_name, task in new_tasks.items():
+            orginal_task = self.process.wg.tasks[orginal_name]
             # update input
-            for input in task["inputs"].values():
-                if "property" not in input:
+            for input in task.inputs:
+                if not hasattr(input, "property"):
                     continue
                 if (
                     isinstance(input.property.value, str)
@@ -720,28 +722,34 @@ class TaskManager:
                 ):
                     input.property.value = value
             # fix children references
-            new_children = []
-            for child in task.get("children", []):
-                new_children.append(new_tasks[child]["name"])
-            task["children"] = new_children
+            if hasattr(orginal_task, "children"):
+                for child_task in orginal_task.children:
+                    task.children.add(new_tasks[child_task.name])
             # since this is a newly created task, it should not have any mapped tasks
-            task.pop("mapped_tasks", None)
+            task.mapped_tasks = None
             # fix parent reference
-            new_parent = []
-            for parent in task.get("parent_task", []):
-                if parent in new_tasks:
-                    new_parent.append(new_tasks[parent]["name"])
+            if orginal_task.parent_task is not None:
+                if orginal_task.parent_task.name in new_tasks:
+                    task.parent_task = new_tasks[orginal_task.parent_task.name]
                 else:
-                    new_parent.append(parent)
-            task["parent_task"] = new_parent
-            # fix input_links references
-            for links in task["input_links"].values():
-                for link in links:
-                    # this node is mapped, so we need to update the link
-                    if link.from_node.name in new_tasks:
-                        link.from_node.name = new_tasks[link.from_node.name]
+                    task.parent_task = orginal_task.parent_task
+        # fix links references
+        for link in new_links:
+            if link.to_node.name in new_tasks:
+                to_node = new_tasks[link.to_node.name]
+            else:
+                # if the to_node is not in the new_tasks, skip
+                continue
+            if link.from_node.name in new_tasks:
+                from_node = new_tasks[link.from_node.name]
+            else:
+                from_node = link.from_node
+            self.process.wg.add_link(
+                from_node.outputs[link.from_socket._scoped_name],
+                to_node.inputs[link.to_socket._scoped_name],
+            )
 
-    def _patch_connectivity(self, new_tasks: dict[str, str]):
+    def _patch_connectivity(self, new_tasks: dict[str, "Task"]) -> None:
         """
         Update the global connectivity for newly created tasks.
         """
@@ -750,7 +758,7 @@ class TaskManager:
             new_child_node = []
             for child_task in self.process.wg.connectivity["child_node"][name]:
                 if child_task in new_tasks:
-                    new_child_node.append(new_tasks[child_task]["name"])
+                    new_child_node.append(new_tasks[child_task].name)
                 else:
                     new_child_node.append(child_task)
             self.process.wg.connectivity["child_node"][task.name] = new_child_node
@@ -758,7 +766,7 @@ class TaskManager:
             new_input_tasks = []
             for input_task in self.process.wg.connectivity["zone"][name]["input_tasks"]:
                 if input_task in new_tasks:
-                    new_input_tasks.append(new_tasks[input_task]["name"])
+                    new_input_tasks.append(new_tasks[input_task].name)
                 else:
                     new_input_tasks.append(input_task)
             self.process.wg.connectivity["zone"][task.name] = {

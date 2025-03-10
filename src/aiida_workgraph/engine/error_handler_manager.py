@@ -1,4 +1,5 @@
 from __future__ import annotations
+import traceback
 
 
 class ErrorHandlerManager:
@@ -45,13 +46,18 @@ class ErrorHandlerManager:
         if metadata["retry"] < metadata["max_retries"]:
             task = self.process.task_manager.get_task(task_name)
             try:
+                # Run the error handler to update the inputs of the task
                 if "engine" in handler_sig.parameters:
                     msg = handler(task, engine=self, **metadata.get("kwargs", {}))
                 else:
                     msg = handler(task, **metadata.get("kwargs", {}))
-                self.process.task_manager.update_task(task)
+                # Reset the task to rerun it
+                self.process.task_manager.state_manager.reset_task(task.name)
                 if msg:
                     self.process.report(msg)
                 metadata["retry"] += 1
             except Exception as e:
-                self.process.report(f"Error in running error handler: {e}")
+                error_traceback = traceback.format_exc()  # Capture the full traceback
+                self.logger.error(
+                    f"Error in running error handler for {task_name}: {e}\n{error_traceback}"
+                )

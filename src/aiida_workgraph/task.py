@@ -147,6 +147,7 @@ class Task(GraphNode):
         self.process = process
         self._error_handlers = data.get("error_handlers", [])
         self.waiting_on.add(data.get("wait", []))
+        self.map_data = data.get("map_data", None)
 
     def reset(self) -> None:
         self.process = None
