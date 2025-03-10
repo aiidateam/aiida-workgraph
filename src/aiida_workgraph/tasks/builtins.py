@@ -256,9 +256,9 @@ class AiiDADict(Task):
 class AiiDANode(Task):
     """AiiDANode"""
 
-    identifier = "workgraph.aiida_node"
+    identifier = "workgraph.load_node"
     name = "AiiDANode"
-    node_type = "node"
+    node_type = "Normal"
     catalog = "Test"
 
     def create_properties(self) -> None:
@@ -288,9 +288,9 @@ class AiiDANode(Task):
 class AiiDACode(Task):
     """AiiDACode"""
 
-    identifier = "workgraph.aiida_code"
+    identifier = "workgraph.load_code"
     name = "AiiDACode"
-    node_type = "node"
+    node_type = "Normal"
     catalog = "Test"
 
     def create_sockets(self) -> None:

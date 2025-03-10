@@ -197,11 +197,7 @@ class TaskManager:
             # output must be a Data type or a mapping of {string: Data}
             self.ctx._task_results[task.name] = {}
             task_type = task.node_type.upper()
-            if task_type == "NODE":
-                self.execute_node_task(
-                    name, executor, kwargs, var_args, var_kwargs, continue_workgraph
-                )
-            elif task_type == "DATA":
+            if task_type == "DATA":
                 self.execute_data_task(name, executor, args, kwargs, continue_workgraph)
             elif task_type in ["CALCFUNCTION", "WORKFUNCTION"]:
                 self.execute_function_task(task, kwargs, var_kwargs, continue_workgraph)
@@ -249,16 +245,6 @@ class TaskManager:
             else:
                 self.process.report(f"Unknown task type {task_type}")
                 return self.process.exit_codes.UNKNOWN_TASK_TYPE
-
-    def execute_node_task(
-        self, name, executor, kwargs, var_args, var_kwargs, continue_workgraph
-    ):
-        """Execute a NODE task."""
-        results = self.run_executor(executor, [], kwargs, var_args, var_kwargs)
-        self.state_manager.set_task_runtime_info(name, "process", results)
-        self.state_manager.update_task_state(name)
-        if continue_workgraph:
-            self.continue_workgraph()
 
     def execute_data_task(self, name, executor, args, kwargs, continue_workgraph):
         """Execute a DATA task."""
