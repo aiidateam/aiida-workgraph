@@ -51,6 +51,7 @@ class WorkGraphNode(WorkChainNode):
     TASK_EXECUTORS_KEY = "task_executors"
     TASK_ERROR_HANDLERS_KEY = "task_error_handlers"
     TASK_EXECUTION_COUNTS_KEY = "task_execution_counts"
+    TASK_MAP_INFO_KEY = "task_map_info"
     WORKGRAPH_DATA_KEY = "workgraph_data"
     WORKGRAPH_DATA_SHORT_KEY = "workgraph_data_short"
     WORKGRAPH_ERROR_HANDLERS_KEY = "workgraph_error_handlers"
@@ -75,6 +76,7 @@ class WorkGraphNode(WorkChainNode):
             cls.TASK_EXECUTORS_KEY,
             cls.TASK_ERROR_HANDLERS_KEY,
             cls.TASK_EXECUTION_COUNTS_KEY,
+            cls.TASK_MAP_INFO_KEY,
         )
 
     # -------------------------
@@ -86,6 +88,7 @@ class WorkGraphNode(WorkChainNode):
     task_executors = make_dict_property(TASK_EXECUTORS_KEY, default={})
     task_error_handlers = make_dict_property(TASK_ERROR_HANDLERS_KEY, default={})
     task_execution_counts = make_dict_property(TASK_EXECUTION_COUNTS_KEY, default={})
+    task_map_info = make_dict_property(TASK_MAP_INFO_KEY, default={})
     workgraph_data = make_dict_property(WORKGRAPH_DATA_KEY, default=None)
     workgraph_data_short = make_dict_property(WORKGRAPH_DATA_SHORT_KEY, default=None)
     workgraph_error_handlers = make_dict_property(
@@ -134,3 +137,13 @@ class WorkGraphNode(WorkChainNode):
     def set_task_execution_count(self, task_name: str, count: int) -> None:
         """Set the execution count of a single task."""
         set_item_in_dict(self.base, self.TASK_EXECUTION_COUNTS_KEY, task_name, count)
+
+    def get_task_map_info(self, task_name: str) -> Optional[str]:
+        """Return the map info of a single task."""
+        return get_item_from_dict(
+            self.base, self.TASK_MAP_INFO_KEY, task_name, default=""
+        )
+
+    def set_task_map_info(self, task_name: str, task_map_info: str) -> None:
+        """Set the map info of a single task."""
+        set_item_in_dict(self.base, self.TASK_MAP_INFO_KEY, task_name, task_map_info)
