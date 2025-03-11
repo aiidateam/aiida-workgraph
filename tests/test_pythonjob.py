@@ -126,28 +126,32 @@ def test_PythonJob_namespace_output_input(fixture_localhost, python_executable_p
     # output namespace
     @task(
         outputs=[
-            {"identifier": "workgraph.namespace", "name": "add_multiply"},
-            {"name": "add_multiply.add"},
+            {"name": "add_multiply", "identifier": "workgraph.namespace"},
+            {
+                "name": "add_multiply.add",
+                "identifier": "workgraph.namespace",
+                "metadata": {"dynamic": True},
+            },
             {"name": "add_multiply.multiply"},
             {"name": "minus"},
         ]
     )
     def myfunc(x, y):
         return {
-            "add_multiply": {"add": x + y, "multiply": x * y},
+            "add_multiply": {"add": {"sum": x + y, "total": x + y}, "multiply": x * y},
             "minus": x - y,
         }
 
     # input namespace
     @task()
     def myfunc2(x, y):
-        add = x["add"]
+        add = x["add"]["sum"]
         multiply = x["multiply"]
         return y + add + multiply
 
     @task()
     def myfunc3(x, y):
-        return x + y
+        return x["sum"] + y
 
     wg = WorkGraph("test_namespace_outputs")
     wg.add_task(TaskPool.workgraph.pythonjob, function=myfunc, name="myfunc")
@@ -155,13 +159,13 @@ def test_PythonJob_namespace_output_input(fixture_localhost, python_executable_p
         TaskPool.workgraph.pythonjob,
         function=myfunc2,
         name="myfunc2",
-        x=wg.tasks["myfunc"].outputs["add_multiply"],
+        x=wg.tasks.myfunc.outputs.add_multiply,
     )
     wg.add_task(
         TaskPool.workgraph.pythonjob,
         function=myfunc3,
         name="myfunc3",
-        x=wg.tasks["myfunc"].outputs["add_multiply.add"],
+        x=wg.tasks.myfunc.outputs.add_multiply.add,
     )
 
     inputs = {
@@ -183,7 +187,7 @@ def test_PythonJob_namespace_output_input(fixture_localhost, python_executable_p
         },
     }
     wg.run(inputs=inputs)
-    assert wg.tasks.myfunc.outputs.add_multiply.add.value == 3
+    assert wg.tasks.myfunc.outputs.add_multiply.add.sum.value == 3
     assert wg.tasks.myfunc.outputs.add_multiply.multiply.value == 2
     assert wg.tasks.myfunc2.outputs.result.value == 8
     assert wg.tasks.myfunc3.outputs.result.value == 7
