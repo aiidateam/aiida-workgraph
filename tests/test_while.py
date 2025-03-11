@@ -125,7 +125,7 @@ def test_while_task(decorated_add, decorated_smaller_than):
 def test_while_workgraph(decorated_add, decorated_multiply, decorated_smaller_than):
     # Create a WorkGraph will repeat itself based on the conditions
     wg = WorkGraph("while_workgraph")
-    wg.workgraph_type = "WHILE"
+    wg.graph_type = "WHILE"
     wg.conditions = ["compare1.result"]
     wg.context = {"n": 1}
     wg.max_iteration = 5
@@ -149,7 +149,7 @@ def test_while_graph_builder(decorated_add, decorated_multiply, decorated_smalle
     @task.graph_builder(outputs=[{"name": "result", "from": "context.n"}])
     def my_while(n=0, limit=100):
         wg = WorkGraph("while_workgraph")
-        wg.workgraph_type = "WHILE"
+        wg.graph_type = "WHILE"
         wg.max_iteration = 2
         wg.conditions = ["compare1.result"]
         wg.context = {"n": n}

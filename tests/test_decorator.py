@@ -22,11 +22,10 @@ def test_decorators_args() -> None:
         print(a, b, c)
 
     n = test.TaskCls()
-    tdata = n.to_dict()
-    assert tdata["args"] == []
-    assert set(tdata["kwargs"]) == set(["a", "b"])
-    assert tdata["var_args"] is None
-    assert tdata["var_kwargs"] == "c"
+    assert n.args_data["args"] == []
+    assert set(n.args_data["kwargs"]) == set(["a", "b"])
+    assert n.args_data["var_args"] is None
+    assert n.args_data["var_kwargs"] == "c"
     assert set(n.get_output_names()) == set(["result", "_outputs", "_wait"])
     assert isinstance(n.inputs.c, TaskSocketNamespace)
 
@@ -44,11 +43,10 @@ def test_decorators_calcfunction_args() -> None:
     )
     kwargs = set(test.process_class.spec().inputs.ports.keys())
     n = test.TaskCls()
-    tdata = n.to_dict()
-    assert tdata["args"] == []
-    assert set(tdata["kwargs"]) == set(kwargs)
-    assert tdata["var_args"] is None
-    assert tdata["var_kwargs"] == "c"
+    assert n.args_data["args"] == []
+    assert set(n.args_data["kwargs"]) == set(kwargs)
+    assert n.args_data["var_args"] is None
+    assert n.args_data["var_kwargs"] == "c"
     assert set(n.get_output_names()) == set(["result", "_outputs", "_wait"])
     assert isinstance(n.inputs.c, TaskSocketNamespace)
     assert set(n.inputs.metadata._get_keys()) == metadata_kwargs
@@ -77,10 +75,10 @@ def test_decorators_task_args(task_function):
 
     n = task_function.TaskCls()
     tdata = n.to_dict()
-    assert tdata["args"] == []
-    assert tdata["kwargs"] == ["a", "b"]
-    assert tdata["var_args"] is None
-    assert tdata["var_kwargs"] == "c"
+    assert n.args_data["args"] == []
+    assert n.args_data["kwargs"] == ["a", "b"]
+    assert n.args_data["var_args"] is None
+    assert n.args_data["var_kwargs"] == "c"
     assert set(tdata["outputs"].keys()) == set(["result", "_outputs", "_wait"])
 
 
@@ -115,11 +113,10 @@ def test_decorators_workfunction_args(task_workfunction) -> None:
     kwargs = set(task_workfunction.process_class.spec().inputs.ports.keys())
     #
     n = task_workfunction.TaskCls()
-    tdata = n.to_dict()
-    assert tdata["args"] == []
-    assert set(tdata["kwargs"]) == set(kwargs)
-    assert tdata["var_args"] is None
-    assert tdata["var_kwargs"] == "c"
+    assert n.args_data["args"] == []
+    assert set(n.args_data["kwargs"]) == set(kwargs)
+    assert n.args_data["var_args"] is None
+    assert n.args_data["var_kwargs"] == "c"
     assert set(n.get_output_names()) == set(["result", "_outputs", "_wait"])
     assert set(n.inputs.metadata._get_keys()) == metadata_kwargs
 
@@ -167,11 +164,10 @@ def task_graph_builder(request):
 def test_decorators_graph_builder_args(task_graph_builder) -> None:
     assert task_graph_builder.identifier == "add_multiply_group"
     n = task_graph_builder.TaskCls()
-    tdata = n.to_dict()
-    assert tdata["args"] == []
-    assert tdata["kwargs"] == ["a", "b"]
-    assert tdata["var_args"] is None
-    assert tdata["var_kwargs"] == "c"
+    assert n.args_data["args"] == []
+    assert n.args_data["kwargs"] == ["a", "b"]
+    assert n.args_data["var_args"] is None
+    assert n.args_data["var_kwargs"] == "c"
     assert set(n.get_output_names()) == set(["_outputs", "_wait"])
 
 

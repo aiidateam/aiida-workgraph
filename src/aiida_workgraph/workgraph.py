@@ -35,6 +35,7 @@ class WorkGraph(node_graph.NodeGraph):
     """
 
     NodePool = TaskPool
+    platform: str = "aiida_workgraph"
 
     def __init__(self, name: str = "WorkGraph", **kwargs) -> None:
         """
@@ -46,8 +47,6 @@ class WorkGraph(node_graph.NodeGraph):
         """
         super().__init__(name, **kwargs)
         self.context = {}
-        self.workgraph_type = "NORMAL"
-        self.sequence = []
         self.conditions = []
         self.process = None
         self.restart_process = None
@@ -175,8 +174,6 @@ class WorkGraph(node_graph.NodeGraph):
         from aiida_workgraph.utils import store_nodes_recursely
 
         wgdata = super().to_dict()
-        # save the sequence and context
-        self.context["_sequence"] = self.sequence
         # only alphanumeric and underscores are allowed
         wgdata["context"] = {
             key.replace(".", "__"): value for key, value in self.context.items()
@@ -188,7 +185,6 @@ class WorkGraph(node_graph.NodeGraph):
                 else None,
                 "max_iteration": self.max_iteration,
                 "execution_count": self.execution_count,
-                "workgraph_type": self.workgraph_type,
                 "conditions": self.conditions,
                 "max_number_jobs": self.max_number_jobs,
             }
@@ -309,7 +305,6 @@ class WorkGraph(node_graph.NodeGraph):
         for key in [
             "max_iteration",
             "execution_count",
-            "workgraph_type",
             "conditions",
             "max_number_jobs",
             "connectivity",
@@ -332,9 +327,12 @@ class WorkGraph(node_graph.NodeGraph):
     def from_yaml(cls, filename: str = None, string: str = None) -> "WorkGraph":
         """Build WrokGraph from yaml file."""
         import yaml
+        import json
+        from aiida_workgraph.utils import make_json_serializable
         from node_graph.utils import yaml_to_dict
+        import importlib.resources
+        import jsonschema
 
-        # load data
         if filename:
             with open(filename, "r") as f:
                 wgdata = yaml.safe_load(f)
@@ -344,6 +342,14 @@ class WorkGraph(node_graph.NodeGraph):
             raise Exception("Please specific a filename or yaml string.")
         wgdata["nodes"] = wgdata.pop("tasks")
         wgdata = yaml_to_dict(wgdata)
+        wgdata["tasks"] = wgdata.pop("nodes")
+        serialized_data = make_json_serializable(wgdata)
+        with importlib.resources.open_text(
+            "aiida_workgraph.schemas", "aiida_workgraph.schema.json"
+        ) as f:
+            schema = json.load(f)
+            jsonschema.validate(instance=serialized_data, schema=schema)
+
         nt = cls.from_dict(wgdata)
         return nt
 
@@ -465,7 +471,6 @@ class WorkGraph(node_graph.NodeGraph):
         self.process = None
         for task in self.tasks:
             task.reset()
-        self.sequence = []
         self.conditions = []
         self.context = {}
         self.state = "PLANNED"
@@ -478,7 +483,6 @@ class WorkGraph(node_graph.NodeGraph):
             task.name = prefix + task.name
             task.parent = self
             self.tasks._append(task)
-        # self.sequence.extend([prefix + task for task in wg.sequence])
         # self.conditions.extend(wg.conditions)
         self.context.update(wg.context)
         # links
@@ -503,6 +507,14 @@ class WorkGraph(node_graph.NodeGraph):
         self, identifier: Union[str, callable], name: str = None, **kwargs
     ) -> Task:
         """Add a task to the workgraph."""
+        from aiida_workgraph.decorator import build_task_from_callable
+        from aiida_workgraph.tasks.factory.workgraph_task import WorkGraphTaskFactory
+
+        if isinstance(identifier, WorkGraph):
+            identifier = WorkGraphTaskFactory.create_task(identifier)
+        # build the task on the fly if the identifier is a callable
+        elif callable(identifier):
+            identifier = build_task_from_callable(identifier)
         node = self.tasks._new(identifier, name, **kwargs)
         return node
 
