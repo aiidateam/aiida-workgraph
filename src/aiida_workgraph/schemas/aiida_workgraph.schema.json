@@ -1,6 +1,6 @@
 {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
-    "$id": "https://example.com/schemas/aiida_workgraph.schema.json",
+    "$id": "https://raw.githubusercontent.com/aiidateam/aiida-workgraph/main/src/aiida_workgraph/schemas/aiida_workgraph.schema.json",
     "title": "WorkGraph Export Schema",
     "description": "A JSON Schema describing WorkGraph output data",
     "type": "object",
