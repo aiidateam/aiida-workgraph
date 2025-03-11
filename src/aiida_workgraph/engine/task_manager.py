@@ -106,11 +106,8 @@ class TaskManager:
             ):
                 failed_tasks.append(task.name)
         if is_finished:
-            if self.process.wg.workgraph_type.upper() == "WHILE":
+            if self.process.wg.graph_type.upper() == "WHILE":
                 should_run = self.check_while_conditions()
-                is_finished = not should_run
-            if self.process.wg.workgraph_type.upper() == "FOR":
-                should_run = self.check_for_conditions()
                 is_finished = not should_run
         if is_finished and len(failed_tasks) > 0:
             message = f"WorkGraph finished, but tasks: {failed_tasks} failed. Thus all their child tasks are skipped."
@@ -534,20 +531,6 @@ class TaskManager:
         if should_run:
             self.reset()
             self.state_manager.set_tasks_state(condition_tasks, "SKIPPED")
-        return should_run
-
-    def check_for_conditions(self) -> bool:
-        condition_tasks = [c[0] for c in self.process.wg.conditions]
-        self.run_tasks(condition_tasks)
-        conditions = [self.ctx._count < len(self.ctx._sequence)] + [
-            self.ctx._tasks[c[0]]["results"][c[1]] for c in self.process.wg.conditions
-        ]
-        should_run = False not in conditions
-        if should_run:
-            self.reset()
-            self.state_manager.set_tasks_state(condition_tasks, "SKIPPED")
-            self.ctx["i"] = self.ctx._sequence[self.ctx._count]
-        self.ctx._count += 1
         return should_run
 
     def reset(self) -> None:

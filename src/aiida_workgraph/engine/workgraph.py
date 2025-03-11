@@ -303,7 +303,7 @@ class WorkGraphEngine(Process, metaclass=Protect):
         # init task results
         self.task_manager.set_task_results()
         # while workgraph
-        if self.wg.workgraph_type.upper() == "WHILE":
+        if self.wg.graph_type.upper() == "WHILE":
             self.ctx._max_iteration = self.wg.max_iteration
             should_run = self.task_manager.check_while_conditions()
             if not should_run:

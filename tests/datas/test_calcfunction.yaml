@@ -1,7 +1,7 @@
 name: test_calcfunction
 description: 'This is a test to run workgraph using yaml file.'
+version: workgraph@0.1.0
 metadata:
-  version: workgraph@0.1.0
   platform: aiida-workgraph
   worker_name: localhost
 tasks:

@@ -529,3 +529,21 @@ def shallow_copy_nested_dict(d):
     if isinstance(d, dict):
         return {key: shallow_copy_nested_dict(value) for key, value in d.items()}
     return d
+
+
+def make_json_serializable(data):
+    """Recursively convert AiiDA objects to JSON-serializable structures."""
+    from collections.abc import Mapping, Sequence
+
+    if isinstance(data, orm.Data):
+        # Return an int if it's an orm.Int, or a more general dict for other data
+        return {
+            "__aiida_class__": data.__class__.__name__,
+            "uuid": str(data.uuid),
+        }
+    elif isinstance(data, Mapping):
+        return {k: make_json_serializable(v) for k, v in data.items()}
+    elif isinstance(data, Sequence) and not isinstance(data, (str, bytes)):
+        return [make_json_serializable(item) for item in data]
+    else:
+        return data
