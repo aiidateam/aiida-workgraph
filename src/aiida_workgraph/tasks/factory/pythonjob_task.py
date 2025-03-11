@@ -121,16 +121,17 @@ class PythonJobTask(Task):
         # get the function from executor
         func = NodeExecutor(**self.get_executor()).executor
         function_outputs = []
-        for output in self.outputs:
+        for output_name in self.outputs._get_all_keys():
+            output = self.outputs[output_name]
             if output._metadata.get("is_function_output", False):
                 # if the output is WORKGRAPH.NAMESPACE, we need to change it to NAMESPACE
                 if output._identifier.upper() == "WORKGRAPH.NAMESPACE":
                     function_outputs.append(
-                        {"name": output._name, "identifier": "NAMESPACE"}
+                        {"name": output_name, "identifier": "NAMESPACE"}
                     )
                 else:
                     function_outputs.append(
-                        {"name": output._name, "identifier": output._identifier}
+                        {"name": output_name, "identifier": output._identifier}
                     )
         # delete workgraph related attributes of the func if exist
         for attr in ["task", "tdata", "node"]:
