@@ -1,4 +1,4 @@
-from typing import Any, Type
+from typing import Any, Type, Optional
 
 from aiida import orm
 from node_graph.socket import (
@@ -8,6 +8,8 @@ from node_graph.socket import (
 
 from aiida_workgraph.property import TaskProperty
 from aiida_workgraph.orm.mapping import type_mapping
+from aiida_workgraph.properties import PropertyPool
+from aiida_workgraph.sockets import SocketPool
 
 
 class TaskSocket(NodeSocket):
@@ -43,6 +45,34 @@ class TaskSocketNamespace(NodeSocketNamespace):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, entry_point="aiida_workgraph.socket", **kwargs)
+
+
+class ContextSocketNamespace(NodeSocketNamespace):
+    """Namespace used for the context"""
+
+    PropertyPool = PropertyPool
+    SocketPool = SocketPool
+
+    def __init__(
+        self,
+        name: str,
+        node: Optional["Node"] = None,
+        parent: Optional["NodeSocket"] = None,
+        link_limit: int = 1e6,
+        metadata: Optional[dict] = None,
+        sockets: Optional[dict[str, object]] = None,
+        entry_point: Optional[str] = "node_graph.socket",
+    ) -> None:
+        super().__init__(
+            name,
+            node,
+            parent,
+            link_limit,
+            metadata,
+            sockets,
+            self.SocketPool,
+            entry_point,
+        )
 
 
 def build_socket_from_AiiDA(DataClass: Type[Any]) -> Type[TaskSocket]:

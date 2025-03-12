@@ -169,6 +169,7 @@ class TaskStateManager:
 
         items = self.process.wg.tasks[name].context_mapping
         for key, result_name in items.items():
+            key = key.removeprefix("{{").removesuffix("}}")
             result = self.ctx._task_results[name][result_name]
             # for mapped tasks, should use dict to hold the results
             if self.process.wg.tasks[name].map_data:

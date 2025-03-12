@@ -295,7 +295,7 @@ class WorkGraphEngine(Process, metaclass=Protect):
         # read the latest workgraph data
         self.wg = WorkGraph.load(self.node)
         # update the context
-        for key, value in self.wg.context.items():
+        for key, value in self.wg.context.to_wgdata().items():
             key = key.replace("__", ".")
             update_nested_dict(self.ctx, key, value)
         #

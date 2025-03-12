@@ -3,8 +3,9 @@ from __future__ import annotations
 import aiida.orm
 import node_graph
 import aiida
+import enum
 from node_graph.link import NodeLink
-from aiida_workgraph.socket import TaskSocket
+from aiida_workgraph.socket import TaskSocket, ContextSocketNamespace
 from aiida_workgraph.tasks import TaskPool
 from aiida_workgraph.task import Task
 import time
@@ -15,9 +16,151 @@ from aiida_workgraph.utils.graph import (
     link_creation_hook,
     link_deletion_hook,
 )
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional, Union, assert_never
 
 from node_graph_widget import NodeGraphWidget
+from node_graph.socket import NodeSocket
+
+
+class ContextSocketNamespaceAccessor:
+    class SetattrMethod(enum.Enum):
+        """Specifies if the attributes of the object itself or the namespace are set.
+
+        This allows to set the internal attributes during init of the object and switching to set the namespace
+        variables after init.
+        """
+
+        SELF = "SELF"
+        NAMESPACE = "NAMESPACE"
+
+    def __init__(
+        self,
+        dictionary: Optional[dict] = None,
+    ) -> None:
+        """Recursively turn the `dict` and all its nested dictionaries into `AttributeDict` instance."""
+        self._setattr_method = self.SetattrMethod.SELF
+        self._namespace = ContextSocketNamespace("context")
+        self._setattr_method = self.SetattrMethod.NAMESPACE
+        if dictionary:
+            for key, value in dictionary.items():
+                self.__setattr__(key, value)
+
+    @classmethod
+    def from_namespace(
+        cls,
+        namespace: ContextSocketNamespace,
+    ) -> "ContextSocketNamespaceAccessor":
+        """Recursively turn the `dict` and all its nested dictionaries into `AttributeDict` instance."""
+        self = cls()
+        self._setattr_method = self.SetattrMethod.SELF
+        self._namespace = namespace
+        self._setattr_method = self.SetattrMethod.NAMESPACE
+        return self
+
+    def __getattr__(self, name):
+        try:
+            return self.__getattribute__(name)
+        except AttributeError:
+            socket = getattr(self.__getattribute__("_namespace"), name)
+            if isinstance(socket, ContextSocketNamespace):
+                return ContextSocketNamespaceAccessor.from_namespace(socket)
+            elif isinstance(socket, NodeSocket):
+                return socket.value
+            else:
+                return socket
+
+    def __setattr__(self, name, value):
+        """Set a key as an attribute."""
+        if name == "_setattr_method":
+            if not isinstance(value, self.SetattrMethod):
+                raise TypeError(
+                    f"The attribute '_setattr_method' was set to a value of type {type(value)}"
+                    "but it can only be set to SetattrMethod enum. This attribute is only for internal usage."
+                )
+            super().__setattr__(name, value)
+            return
+        if (
+            name == "_namespace"
+            and self._setattr_method == self.SetattrMethod.NAMESPACE
+        ):
+            raise ValueError(
+                "The attribute name '_namespace' is only for internal use."
+            )
+
+        if self._setattr_method == self.SetattrMethod.SELF:
+            return super().__setattr__(name, value)
+        elif self._setattr_method == self.SetattrMethod.NAMESPACE:
+            nested_names = name.split(".")
+
+            # In case of nested name we create the namespaces if they do not yet exist
+            last_nsn = (
+                self._namespace
+            )  # the node socket name space at that is populated with value
+            if len(nested_names) > 1:
+                nsn_parent = self._namespace
+                for nested_name in nested_names[:-1]:
+                    if nested_name in nsn_parent:
+                        nsn_parent = getattr(nsn_parent, nested_name)
+                    else:
+                        nsn = ContextSocketNamespace(
+                            name=nested_name, parent=nsn_parent
+                        )
+                        nsn_parent._append(nsn)
+                        nsn_parent = nsn
+                last_nsn = nsn_parent
+
+            socket_name = nested_names[-1]
+            if isinstance(value, ContextSocketNamespace) or isinstance(
+                value, NodeSocket
+            ):
+                if socket_name != value._name:
+                    raise ValueError(
+                        f"Cannot assign socket with name {value._name} to context name {socket_name!r}. "
+                        "Both names must agree."
+                    )
+                last_nsn._append(value)
+            else:
+                from aiida_workgraph.orm.mapping import type_mapping
+
+                identifier = type_mapping.get(type(value), "workgraph.any")
+                socket = last_nsn._new(identifier, socket_name)
+                socket.value = f"{{{{{name}}}}}" if value is None else value
+            return
+
+        assert_never(self._setattr_method)
+
+    def __getitem__(self, key: str) -> Any:
+        return self._namespace.__getitem__(key)
+
+    def __setitem__(self, key, value):
+        self.__setattr__(key, value)
+
+    def to_wgdata(self) -> dict[str, Any]:
+        """
+        csn = ContextSocketNamespaceAccessor()
+        csn["data.x"] = 1
+        csn["data.y"] = 2
+        csn["z"] = None
+        --> {"data.x": 1, "data.y": 2, "z": 3}
+        """
+        return self.flatten_dict(self._namespace._value)
+
+    @staticmethod
+    def flatten_dict(d: dict[str, Any]) -> dict[str, Any]:
+        """
+        {"data": {"x": 1, "y": 2}, "z": 3}
+        --> {"data.x": 1, "data.y": 2, "z": 3}
+        """
+        flattened_dict = {}
+        for key, value in d.items():
+            if isinstance(value, dict):
+                flattend_subdict = ContextSocketNamespaceAccessor.flatten_dict(value)
+                for flattened_key, flattened_value in flattend_subdict.items():
+                    merged_key = ".".join([key, flattened_key])
+                    flattened_dict[merged_key] = flattened_value
+            else:
+                flattened_dict[key] = value
+        return flattened_dict
 
 
 class WorkGraph(node_graph.NodeGraph):
@@ -45,7 +188,7 @@ class WorkGraph(node_graph.NodeGraph):
             **kwargs: Additional keyword arguments to be passed to the WorkGraph class.
         """
         super().__init__(name, **kwargs)
-        self.context = {}
+        self._context = ContextSocketNamespaceAccessor()
         self.workgraph_type = "NORMAL"
         self.sequence = []
         self.conditions = []
@@ -91,7 +234,7 @@ class WorkGraph(node_graph.NodeGraph):
         if inputs is not None:
             for name, input in inputs.items():
                 if name not in self.tasks:
-                    raise KeyError(f"Task {name} not found in WorkGraph.")
+                    raise KeyError(f"Task {name} not found in WorkGraph.")  # noqa: E713
                 self.tasks[name].set(input)
         # One can not run again if the process is alreay created. otherwise, a new process node will
         # be created again.
@@ -123,7 +266,7 @@ class WorkGraph(node_graph.NodeGraph):
         if inputs is not None:
             for name, input in inputs.items():
                 if name not in self.tasks:
-                    raise KeyError(f"Task {name} not found in WorkGraph.")
+                    raise KeyError(f"Task {name} not found in WorkGraph.")  # noqa: E713
                 self.tasks[name].set(input)
 
         # save the workgraph to the process node
@@ -179,7 +322,8 @@ class WorkGraph(node_graph.NodeGraph):
         self.context["_sequence"] = self.sequence
         # only alphanumeric and underscores are allowed
         wgdata["context"] = {
-            key.replace(".", "__"): value for key, value in self.context.items()
+            key.replace(".", "__"): value
+            for key, value in self.context.to_wgdata().items()
         }
         wgdata.update(
             {
@@ -298,6 +442,14 @@ class WorkGraph(node_graph.NodeGraph):
     @property
     def pk(self) -> Optional[int]:
         return self.process.pk if self.process else None
+
+    @property
+    def context(self) -> ContextSocketNamespaceAccessor:
+        return self._context
+
+    @context.setter
+    def context(self, context: dict) -> None:
+        self._context = ContextSocketNamespaceAccessor(context)
 
     @classmethod
     def from_dict(cls, wgdata: Dict[str, Any]) -> "WorkGraph":
@@ -480,7 +632,7 @@ class WorkGraph(node_graph.NodeGraph):
             self.tasks._append(task)
         # self.sequence.extend([prefix + task for task in wg.sequence])
         # self.conditions.extend(wg.conditions)
-        self.context.update(wg.context)
+        self.context.update(wg.context.to_wgdata())
         # links
         for link in wg.links:
             self.links._append(link)
