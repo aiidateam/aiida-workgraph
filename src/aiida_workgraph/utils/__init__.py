@@ -238,7 +238,7 @@ def get_workgraph_data(process: Union[int, orm.Node]) -> Optional[Dict[str, Any]
     return wgdata
 
 
-def get_parent_workgraphs(pk: int) -> list:
+def get_parent_workgraphs(pk: int) -> List[List[str, int]]:
     """Get the list of parent workgraphs.
     Use aiida incoming links to find the parent workgraphs.
     the parent workgraph is the workgraph that has a link (type CALL_WORK) to the current workgraph.
@@ -262,6 +262,8 @@ def get_processes_latest(
     from aiida_workgraph.orm.utils import deserialize_safe
 
     tasks = {}
+    if pk is None:
+        return tasks
     node = aiida.orm.load_node(pk)
     if item_type == "called_process":
         # fetch the process that called by the workgraph
@@ -417,10 +419,10 @@ def workgraph_to_short_json(
     """Export a workgraph to a rete js editor data."""
     wgdata_short = {
         "name": wgdata["name"],
-        "uuid": wgdata["uuid"],
-        "state": wgdata["state"],
+        "uuid": wgdata.get("uuid", ""),
+        "state": wgdata.get("state", ""),
         "nodes": {},
-        "links": wgdata["links"],
+        "links": wgdata.get("links", []),
     }
     #
     for name, task in wgdata["tasks"].items():

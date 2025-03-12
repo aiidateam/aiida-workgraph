@@ -322,16 +322,21 @@ class TaskManager:
         2. Mark this MAP node as running and schedule a continuation.
         """
         name = task.name
+        map_info = {"prefix": [], "children": [], "links": []}
         if self.state_manager.are_childen_finished(name)[0]:
             self.state_manager.update_zone_task_state(name)
         else:
             self.state_manager.set_task_runtime_info(name, "state", "RUNNING")
             source = kwargs["source"]
             placeholder = kwargs.get("placeholder", "map_input")
+            map_info["prefix"] = list(source.keys())
             for prefix, value in source.items():
-                self.generate_mapped_tasks(
+                new_tasks, new_links = self.generate_mapped_tasks(
                     task, prefix=prefix, placeholder=placeholder, value=value
                 )
+            map_info["children"] = list(new_tasks.keys())
+            map_info["links"] = new_links
+        self.state_manager.set_task_runtime_info(name, "map_info", map_info)
 
         self.continue_workgraph()
 
@@ -409,7 +414,7 @@ class TaskManager:
             for link in links:
                 item_name = f"{link.from_node.name}_{link.from_socket._scoped_name}"
                 # handle the special socket _wait, _outputs
-                if link.from_socket._scoped_name == "_wait":
+                if link.from_socket._scoped_name in ["_wait", "_outputs"]:
                     continue
                 if self.ctx._task_results[link.from_node.name] is None:
                     socket_value[item_name] = None
@@ -558,7 +563,7 @@ class TaskManager:
         """
         # keep track of the mapped tasks
         new_tasks = {}
-        new_links = []
+        all_links = []
         child_tasks = self.get_all_children(zone_task.name)
         for child_task in child_tasks:
             # since the child task is mapped, it should be skipped
@@ -566,12 +571,15 @@ class TaskManager:
             task = self.copy_task(child_task, prefix)
             new_tasks[child_task] = task
             links = self.process.wg.tasks[child_task].inputs._all_links
-            new_links.extend(links)
+            all_links.extend(links)
         # fix references in the newly mapped tasks (children, input_links, etc.)
-        self._patch_cloned_tasks(new_tasks, new_links, value, placeholder=placeholder)
+        new_links = self._patch_cloned_tasks(
+            new_tasks, all_links, value, placeholder=placeholder
+        )
 
         # update process.wg.connectivity so the new tasks are recognized in child_node, zone references, etc.
         self._patch_connectivity(new_tasks)
+        return new_tasks, new_links
 
     def copy_task(self, name: str, prefix: str) -> "Task":
         from aiida_workgraph.task import Task
@@ -602,7 +610,7 @@ class TaskManager:
     def _patch_cloned_tasks(
         self,
         new_tasks: dict[str, "Task"],
-        new_links: List[NodeLink],
+        all_links: List[NodeLink],
         value: any,
         placeholder: str = "map_input",
     ):
@@ -634,12 +642,14 @@ class TaskManager:
                 else:
                     task.parent_task = orginal_task.parent_task
         # fix links references
-        for link in new_links:
+        new_links = []
+        for link in all_links:
             if link.to_node.name in new_tasks:
                 to_node = new_tasks[link.to_node.name]
             else:
                 # if the to_node is not in the new_tasks, skip
                 continue
+            new_links.append(link.to_dict())
             if link.from_node.name in new_tasks:
                 from_node = new_tasks[link.from_node.name]
             else:
@@ -648,6 +658,7 @@ class TaskManager:
                 from_node.outputs[link.from_socket._scoped_name],
                 to_node.inputs[link.to_socket._scoped_name],
             )
+        return new_links
 
     def _patch_connectivity(self, new_tasks: dict[str, "Task"]) -> None:
         """

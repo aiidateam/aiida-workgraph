@@ -56,6 +56,8 @@ class TaskStateManager:
             self.process.node.set_task_action(name, value)
         elif key == "execution_count":
             self.process.node.set_task_execution_count(name, value)
+        elif key == "map_info":
+            self.process.node.set_task_map_info(name, value)
         else:
             raise ValueError(f"Invalid key: {key}")
 
