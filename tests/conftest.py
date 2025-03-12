@@ -28,15 +28,19 @@ def fixture_localhost(aiida_localhost):
 
 @pytest.fixture
 def add_code(fixture_localhost):
-    from aiida.orm import InstalledCode
+    from aiida.orm import InstalledCode, load_code
+    from aiida.common import NotExistent
 
-    code = InstalledCode(
-        label="add",
-        computer=fixture_localhost,
-        filepath_executable="/bin/bash",
-        default_calc_job_plugin="arithmetic.add",
-    )
-    code.store()
+    try:
+        code = load_code("add@localhost")
+    except NotExistent:
+        code = InstalledCode(
+            label="add",
+            computer=fixture_localhost,
+            filepath_executable="/bin/bash",
+            default_calc_job_plugin="arithmetic.add",
+        )
+        code.store()
     return code
 
 
