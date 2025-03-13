@@ -22,6 +22,10 @@ class Task(GraphNode):
 
     PropertyPool = PropertyPool
     SocketPool = SocketPool
+    InputCollectionClass = TaskSocketNamespace
+    OutputCollectionClass = TaskSocketNamespace
+    PropertyCollectionClass = WorkGraphPropertyCollection
+
     is_aiida_component = False
     _error_handlers = None
 
@@ -36,9 +40,6 @@ class Task(GraphNode):
         Initialize a Task instance.
         """
         super().__init__(
-            property_collection_class=WorkGraphPropertyCollection,
-            input_collection_class=TaskSocketNamespace,
-            output_collection_class=TaskSocketNamespace,
             **kwargs,
         )
         self.context_mapping = {} if context_mapping is None else context_mapping

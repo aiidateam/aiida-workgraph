@@ -20,7 +20,7 @@ def test_dynamic_inputs() -> None:
     For dynamic inputs, we allow the user to define the inputs manually.
     """
 
-    @task.calcfunction(inputs=[{"name": "x"}, {"name": "y"}])
+    @task.calcfunction()
     def add(**kwargs):
         return kwargs["x"] + kwargs["y"]
 

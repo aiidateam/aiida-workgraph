@@ -170,6 +170,17 @@ class WorkGraph(node_graph.NodeGraph):
         )
         saver.save()
 
+    def build_connectivity(self) -> None:
+        """Analyze the connectivity of workgraph and save it into dict."""
+        from node_graph.analysis import NodeGraphAnalysis
+
+        # NodeGraphAnalysis use nodes instead of tasks
+        analyzer = NodeGraphAnalysis(self)
+        connectivity = analyzer.build_connectivity()
+        connectivity["zone"] = {}
+        print("connectivity", connectivity)
+        return connectivity
+
     def to_dict(self, store_nodes=False) -> Dict[str, Any]:
         from aiida_workgraph.utils import store_nodes_recursely
 
@@ -192,6 +203,7 @@ class WorkGraph(node_graph.NodeGraph):
         # save error handlers
         wgdata["error_handlers"] = self.get_error_handlers()
         wgdata["tasks"] = wgdata.pop("nodes")
+        wgdata["connectivity"] = self.build_connectivity()
         if store_nodes:
             store_nodes_recursely(wgdata)
         return wgdata

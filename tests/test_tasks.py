@@ -159,12 +159,15 @@ def test_set_inputs(decorated_add: Callable) -> None:
     add1.set({"y": 2, "metadata.store_provenance": False})
     data = wg.prepare_inputs(metadata=None)
     assert (
-        data["workgraph_data"]["tasks"]["add1"]["inputs"]["y"]["property"]["value"] == 2
+        data["workgraph_data"]["tasks"]["add1"]["inputs"]["sockets"]["y"]["property"][
+            "value"
+        ]
+        == 2
     )
     assert (
-        data["workgraph_data"]["tasks"]["add1"]["inputs"]["metadata"]["sockets"][
-            "store_provenance"
-        ]["property"]["value"]
+        data["workgraph_data"]["tasks"]["add1"]["inputs"]["sockets"]["metadata"][
+            "sockets"
+        ]["store_provenance"]["property"]["value"]
         is False
     )
 

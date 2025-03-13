@@ -13,6 +13,7 @@ class WorkGraphSaver:
         self,
         process: ProcessNode,
         wgdata: Dict,
+        wg: Optional["WorkGraph"] = None,
         restart_process: Optional[ProcessNode] = None,
     ) -> None:
         """Init WorkGraphSaver.
@@ -29,7 +30,6 @@ class WorkGraphSaver:
         wgdata.setdefault("uuid", "")
         wgdata.setdefault("tasks", {})
         wgdata.setdefault("links", [])
-        wgdata.setdefault("ctrl_links", [])
         wgdata.setdefault("error_handlers", {})
         wgdata.setdefault("context", {})
         self.wgdata = wgdata
@@ -74,7 +74,6 @@ class WorkGraphSaver:
         """
         self.build_task_link()
         self.assign_zone()
-        self.build_connectivity()
         self.update_parent_task()
         self.find_all_zones_inputs()
         if self.exist_in_db() or self.restart_process is not None:
@@ -241,7 +240,7 @@ class WorkGraphSaver:
             self.task_actions[name] = task["action"]
             self.task_executors[name] = task.pop("executor", None)
             self.task_error_handlers[name] = task.pop("error_handlers", {})
-            for _, input in task["inputs"].items():
+            for _, input in task["inputs"]["sockets"].items():
                 if input.get("property"):
                     prop = input["property"]
                     if inspect.isfunction(prop["value"]):
@@ -302,13 +301,13 @@ class WorkGraphSaver:
             new_tasks: new tasks
             modified_tasks: modified tasks
         """
-        from node_graph.analysis import DifferenceAnalysis
+        from node_graph.analysis import NodeGraphAnalysis
 
         wg1 = self.get_wgdata_from_db(restart_process)
         # change tasks to nodes for DifferenceAnalysis
         wg1["nodes"] = wg1.pop("tasks")
         self.wgdata["nodes"] = self.wgdata.pop("tasks")
-        dc = DifferenceAnalysis(ng1=wg1, ng2=self.wgdata)
+        dc = NodeGraphAnalysis.compare_graphs(wg1, self.wgdata)
         (
             new_tasks,
             modified_tasks,
@@ -328,15 +327,3 @@ class WorkGraphSaver:
         if self.process and self.process.workgraph_data is not None:
             return True
         return False
-
-    def build_connectivity(self) -> None:
-        """Analyze the connectivity of workgraph and save it into dict."""
-        from node_graph.analysis import ConnectivityAnalysis
-
-        # ConnectivityAnalysis use nodes instead of tasks
-        self.wgdata["nodes"] = self.wgdata.pop("tasks")
-        nc = ConnectivityAnalysis(self.wgdata)
-        self.wgdata["connectivity"] = nc.build_connectivity()
-        self.wgdata["connectivity"]["zone"] = {}
-        # change nodes back to tasks
-        self.wgdata["tasks"] = self.wgdata.pop("nodes")

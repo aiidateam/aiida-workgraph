@@ -400,7 +400,7 @@ def process_properties(task: Dict) -> Dict:
             "value": get_raw_value(identifier, value),
         }
     #
-    for name, input in task["inputs"].items():
+    for name, input in task["inputs"]["sockets"].items():
         if input.get("property"):
             prop = input["property"]
             identifier = prop["identifier"]
@@ -428,7 +428,7 @@ def workgraph_to_short_json(
     for name, task in wgdata["tasks"].items():
         # Add required inputs to nodes
         inputs = []
-        for input in task["inputs"].values():
+        for input in task["inputs"]["sockets"].values():
             metadata = input.get("metadata", {}) or {}
             if metadata.get("required", False):
                 inputs.append(

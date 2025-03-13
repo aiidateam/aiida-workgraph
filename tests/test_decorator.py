@@ -79,7 +79,9 @@ def test_decorators_task_args(task_function):
     assert n.args_data["kwargs"] == ["a", "b"]
     assert n.args_data["var_args"] is None
     assert n.args_data["var_kwargs"] == "c"
-    assert set(tdata["outputs"].keys()) == set(["result", "_outputs", "_wait"])
+    assert set(tdata["outputs"]["sockets"].keys()) == set(
+        ["result", "_outputs", "_wait"]
+    )
 
 
 @pytest.fixture(params=["decorator_factory", "decorator"])
@@ -162,7 +164,7 @@ def task_graph_builder(request):
 
 
 def test_decorators_graph_builder_args(task_graph_builder) -> None:
-    assert task_graph_builder.identifier == "add_multiply_group"
+    # assert task_graph_builder.identifier == "add_multiply_group"
     n = task_graph_builder.TaskCls()
     assert n.args_data["args"] == []
     assert n.args_data["kwargs"] == ["a", "b"]

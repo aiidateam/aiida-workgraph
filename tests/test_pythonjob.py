@@ -35,12 +35,12 @@ def test_to_dict():
     )
     data = wg.tasks.make_supercell_1.to_dict()
     assert isinstance(
-        data["inputs"]["atoms"]["property"]["value"],
+        data["inputs"]["sockets"]["atoms"]["property"]["value"],
         orm.Data,
     )
     data = wg.tasks.make_supercell_1.to_dict()
     assert isinstance(
-        data["inputs"]["atoms"]["property"]["value"],
+        data["inputs"]["sockets"]["atoms"]["property"]["value"],
         orm.Data,
     )
 
@@ -113,7 +113,7 @@ def test_PythonJob_kwargs(fixture_localhost, python_executable_path):
         },
     )
     # data inside the kwargs should be serialized separately
-    wg.process.inputs.workgraph_data.tasks.add1.inputs.kwargs.sockets.m.property.value == 2
+    wg.process.inputs.workgraph_data.tasks.add1.inputs.sockets.kwargs.sockets.m.property.value == 2
     assert wg.tasks.add1.outputs.result.value.value == 8
     # load the workgraph
     wg = WorkGraph.load(wg.pk)
