@@ -16,9 +16,16 @@ task_types = {
 }
 
 builtin_inputs = [
-    {"name": "_wait", "link_limit": 1e6, "metadata": {"arg_type": "none"}}
+    {
+        "name": "_wait",
+        "link_limit": 1e6,
+        "metadata": {"arg_type": "none", "is_builtin": True},
+    },
 ]
-builtin_outputs = [{"name": "_wait"}, {"name": "_outputs"}]
+builtin_outputs = [
+    {"name": "_wait", "metadata": {"arg_type": "none", "is_builtin": True}},
+    {"name": "_outputs", "metadata": {"arg_type": "none", "is_builtin": True}},
+]
 
 
 def load_config() -> dict:

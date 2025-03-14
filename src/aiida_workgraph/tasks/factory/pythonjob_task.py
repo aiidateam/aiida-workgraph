@@ -2,7 +2,7 @@ from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 from .base import BaseTaskFactory
 from aiida_pythonjob import PythonJob
 from .function_task import DecoratedFunctionTaskFactory
-from .aiida_task import AiiDAComponentTaskFactory
+from aiida_workgraph.tasks.factory.aiida_task import AiiDAComponentTaskFactory
 from aiida_workgraph import Task
 from aiida import orm
 from aiida_pythonjob.data.serializer import general_serializer
@@ -12,11 +12,29 @@ from node_graph.executor import NodeExecutor
 
 
 additional_inputs = [
-    {"identifier": "workgraph.string", "name": "computer"},
-    {"identifier": "workgraph.any", "name": "command_info"},
-    {"identifier": "workgraph.any", "name": "register_pickle_by_value"},
+    {
+        "identifier": "workgraph.string",
+        "name": "computer",
+        "metadata": {"is_pythonjob_input": True},
+    },
+    {
+        "identifier": "workgraph.any",
+        "name": "command_info",
+        "metadata": {"is_pythonjob_input": True},
+    },
+    {
+        "identifier": "workgraph.any",
+        "name": "register_pickle_by_value",
+        "metadata": {"is_pythonjob_input": True},
+    },
 ]
-additional_outputs = [{"identifier": "workgraph.any", "name": "exit_code"}]
+additional_outputs = [
+    {
+        "identifier": "workgraph.any",
+        "name": "exit_code",
+        "metadata": {"is_pythonjob_output": True},
+    }
+]
 
 
 class PythonJobTask(Task):
@@ -39,24 +57,18 @@ class PythonJobTask(Task):
         super().update_from_dict(data)
 
     @classmethod
-    def serialize_pythonjob_data(
-        cls, input_data: Dict[str, Any], is_function_input: bool = False
-    ) -> None:
+    def serialize_pythonjob_data(cls, input_data: Dict[str, Any]) -> None:
         """Serialize the properties for PythonJob."""
 
         for input in input_data.values():
-            if is_function_input or input["metadata"].get("is_function_input", False):
+            if not input["metadata"].get("is_pythonjob_input", False):
                 if input["identifier"] == "workgraph.namespace":
-                    cls.serialize_pythonjob_data(
-                        input["sockets"], is_function_input=True
-                    )
+                    cls.serialize_pythonjob_data(input["sockets"])
                 elif input.get("property", {}).get("value") is not None:
                     cls.serialize_socket_data(input)
 
     @classmethod
-    def deserialize_pythonjob_data(
-        cls, input_data: Dict[str, Any], is_function_input: bool = False
-    ) -> None:
+    def deserialize_pythonjob_data(cls, input_data: Dict[str, Any]) -> None:
         """
         Process the task data dictionary for a PythonJob.
         It load the orignal Python data from the AiiDA Data node for the
@@ -70,12 +82,10 @@ class PythonJobTask(Task):
         """
 
         for input in input_data.values():
-            if is_function_input or input["metadata"].get("is_function_input", False):
+            if not input["metadata"].get("is_pythonjob_input", False):
                 if input["identifier"] == "workgraph.namespace":
                     # print("deserialize namespace: ", input["name"])
-                    cls.deserialize_pythonjob_data(
-                        input["sockets"], is_function_input=True
-                    )
+                    cls.deserialize_pythonjob_data(input["sockets"])
                 else:
                     # print("deserialize socket: ", input["name"])
                     cls.deserialize_socket_data(input)
@@ -99,7 +109,10 @@ class PythonJobTask(Task):
 
         function_inputs = kwargs.pop("function_inputs", {})
         for input in self.inputs:
-            if input._metadata.get("is_function_input", False):
+            if not (
+                input._metadata.get("is_pythonjob_input", False)
+                or input._metadata.get("is_builtin", False)
+            ):
                 # if the input is not in the function_inputs, we need try to retrieve it from kwargs
                 if input._name not in function_inputs:
                     function_inputs[input._name] = kwargs.pop(input._name, None)
@@ -235,9 +248,11 @@ class PythonJobTaskFactory(BaseTaskFactory):
             tdata["inputs"]["sockets"][input["name"]] = input.copy()
         for input in TaskCls._ndata["inputs"]["sockets"].values():
             if input["name"] not in tdata["inputs"]["sockets"]:
+                input["metadata"]["is_pythonjob_input"] = True
                 tdata["inputs"]["sockets"][input["name"]] = input
         for output in TaskCls._ndata["outputs"]["sockets"].values():
             if output["name"] not in tdata["outputs"]["sockets"]:
+                output["metadata"]["is_pythonjob_output"] = True
                 tdata["outputs"]["sockets"][output["name"]] = output
         for output in additional_outputs:
             tdata["outputs"]["sockets"][output["name"]] = output.copy()
