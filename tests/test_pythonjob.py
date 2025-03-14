@@ -1,6 +1,7 @@
 import pytest
 from aiida_workgraph import WorkGraph, task, Task, TaskPool
 from typing import Any
+import numpy as np
 
 
 def test_to_dict():
@@ -118,6 +119,21 @@ def test_PythonJob_kwargs(fixture_localhost, python_executable_path):
     # load the workgraph
     wg = WorkGraph.load(wg.pk)
     assert wg.tasks.add1.inputs["kwargs"]._value == {"m": 2, "n": 3}
+
+
+def test_dynamic_inputs() -> None:
+    """Test dynamic inputs.
+    For dynamic inputs, we allow the user to define the inputs manually.
+    """
+
+    @task.pythonjob()
+    def add(**kwargs):
+        return sum(kwargs.values())
+
+    wg = WorkGraph("test_dynamic_inputs")
+    wg.add_task(add, name="add1", x=np.array([1, 2]), y=np.array([3, 4]))
+    wg.run()
+    assert (wg.tasks.add1.outputs.result.value.value == np.array([4, 6])).all()
 
 
 def test_PythonJob_namespace_output_input(fixture_localhost, python_executable_path):
@@ -284,7 +300,6 @@ def test_load_pythonjob(fixture_localhost, python_executable_path):
 
 def test_exit_code(fixture_localhost, python_executable_path):
     """Test function with exit code."""
-    from numpy import array
 
     def handle_negative_sum(task: Task):
         """Handle the failure code 410 of the `add`.
@@ -306,7 +321,7 @@ def test_exit_code(fixture_localhost, python_executable_path):
             {"handler": handle_negative_sum, "exit_codes": [410], "max_retries": 5}
         ],
     )
-    def add(x: array, y: array) -> array:
+    def add(x: np.array, y: np.array) -> np.array:
         sum = x + y
         if (sum < 0).any():
             exit_code = {"status": 410, "message": "Some elements are negative"}
@@ -317,8 +332,8 @@ def test_exit_code(fixture_localhost, python_executable_path):
     wg.add_task(
         add,
         name="add1",
-        x=array([1, 1]),
-        y=array([1, -2]),
+        x=np.array([1, 1]),
+        y=np.array([1, -2]),
         computer="localhost",
         command_info={"label": python_executable_path},
     )
@@ -331,4 +346,4 @@ def test_exit_code(fixture_localhost, python_executable_path):
     )
     # the final task should have exit status 0
     assert wg.tasks.add1.node.exit_status == 0
-    assert (wg.tasks.add1.outputs.sum.value.value == array([2, 3])).all()
+    assert (wg.tasks.add1.outputs.sum.value.value == np.array([2, 3])).all()

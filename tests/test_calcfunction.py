@@ -1,4 +1,3 @@
-import pytest
 from aiida_workgraph import WorkGraph, task
 from aiida import orm
 
@@ -14,7 +13,6 @@ def test_run(wg_calcfunction: WorkGraph) -> None:
     assert wg.tasks["sumdiff2"].outputs.sum.value == 9
 
 
-@pytest.mark.usefixtures("started_daemon_client")
 def test_dynamic_inputs() -> None:
     """Test dynamic inputs.
     For dynamic inputs, we allow the user to define the inputs manually.
