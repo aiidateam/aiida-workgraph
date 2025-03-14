@@ -129,3 +129,25 @@ def kill_tasks(pk: int, tasks: list, timeout: int = 5, wait: bool = False):
                     except Exception as e:
                         print(f"Kill task {name} failed: {e}")
     return True, ""
+
+
+def reset_tasks(pk: int, tasks: list) -> None:
+    """Reset tasks
+    Args:
+        tasks (list): a list of task names.
+    """
+    node = orm.load_node(pk)
+    if node.is_finished:
+        message = "WorkGraph is finished. Cannot kill tasks."
+        print(message)
+        return False, message
+    elif node.process_state.value.upper() in [
+        "CREATED",
+        "RUNNING",
+        "WAITING",
+        "PAUSED",
+    ]:
+        for name in tasks:
+            create_task_action(pk, tasks, action="reset")
+
+    return True, ""

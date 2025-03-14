@@ -74,6 +74,7 @@ class DecoratedFunctionTaskFactory(BaseTaskFactory):
             "properties": properties,
             "inputs": task_inputs,
             "outputs": task_outputs,
+            "error_handlers": error_handlers,
         }
         tdata["executor"] = NodeExecutor.from_callable(func).to_dict()
         if node_class:
