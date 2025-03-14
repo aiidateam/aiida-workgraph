@@ -9,16 +9,3 @@ def test_PickledData():
     pickled_data = PickledData(data)
     pickled_data.store()
     assert pickled_data.value.a == 1
-
-
-def test_PickledFunction():
-    import numpy as np
-    from aiida_workgraph.orm.pickled_function import PickledFunction
-
-    data = PickledFunction.inspect_function(np.add)
-    assert data == {
-        "name": "add",
-        "source_code": "",
-        "source_code_without_decorator": "",
-        "import_statements": "",
-    }

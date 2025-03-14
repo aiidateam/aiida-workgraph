@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional, Tuple, Callable
+from typing import Any, Dict, List, Optional, Tuple
 from aiida_workgraph.task import Task
 from aiida_workgraph.utils import get_nested_dict
 from aiida.engine.processes.exit_code import ExitCode
@@ -43,16 +43,6 @@ class TaskManager:
             ctx_manager, logger, process, awaitable_manager
         )
         self.action_manager = TaskActionManager(self.state_manager, logger, process)
-
-    def get_task_executor_dict(self, name: str):
-        # if task is a mappped task, we need to get the executor from the parent task
-        # TODO: recursive get the parent task
-        if self.process.wg.tasks[name].map_data:
-            parent_task_name = self.process.wg.tasks[name].map_data["parent"]
-            executor_dict = self.process.node.task_executors[parent_task_name]
-        else:
-            executor_dict = self.process.node.task_executors[name]
-        return executor_dict
 
     def get_task(self, name: str):
         """Get task from the context."""
@@ -498,18 +488,6 @@ class TaskManager:
             return not flag
         return flag
 
-    def run_executor(
-        self,
-        executor: Callable,
-        args: List[Any],
-        kwargs: Dict[str, Any],
-        var_kwargs: Optional[Dict[str, Any]],
-    ) -> Any:
-        if var_kwargs is None:
-            return executor(*args, **kwargs)
-        else:
-            return executor(*args, **kwargs, **var_kwargs)
-
     def check_while_conditions(self) -> bool:
         """Check while conditions.
         Run all condition tasks and check if all the conditions are True.
@@ -585,8 +563,6 @@ class TaskManager:
         from aiida_workgraph.task import Task
         import uuid
 
-        # new_task_data = shallow_copy_nested_dict(task)
-        # new_task_data["input_links"] = deepcopy(task["input_links"])
         # keep track of the mapped tasks
         if not self.process.wg.tasks[name].mapped_tasks:
             self.process.wg.tasks[name].mapped_tasks = {}

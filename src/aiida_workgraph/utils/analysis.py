@@ -215,8 +215,6 @@ class WorkGraphSaver:
 
         """
         from aiida_workgraph.utils import workgraph_to_short_json
-        import inspect
-        from aiida_workgraph.orm.pickled_function import PickledLocalFunction
 
         self.task_states = {}
         self.task_processes = {}
@@ -231,11 +229,6 @@ class WorkGraphSaver:
             self.task_actions[name] = task["action"]
             self.task_executors[name] = task.pop("executor", None)
             self.task_error_handlers[name] = task.pop("error_handlers", {})
-            for _, input in task["inputs"]["sockets"].items():
-                if input.get("property"):
-                    prop = input["property"]
-                    if inspect.isfunction(prop["value"]):
-                        prop["value"] = PickledLocalFunction(prop["value"]).store()
             self.wgdata["tasks"][name] = serialize(task)
         self.workgraph_error_handlers = self.wgdata.pop("error_handlers")
         self.wgdata["context"] = serialize(self.wgdata["context"])

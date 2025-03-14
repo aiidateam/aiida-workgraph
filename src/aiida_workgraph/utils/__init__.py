@@ -29,41 +29,6 @@ def inspect_aiida_component_type(executor: Callable) -> str:
     return task_type
 
 
-def store_nodes_recursely(data: Any) -> None:
-    """Recurse through a data structure and store any unstored nodes that are found along the way
-    :param data: a data structure potentially containing unstored nodes
-    """
-    from aiida.orm import Node
-    import collections.abc
-
-    if isinstance(data, Node) and not data.is_stored:
-        data.store()
-    elif isinstance(data, collections.abc.Mapping):
-        for _, value in data.items():
-            store_nodes_recursely(value)
-    elif isinstance(data, collections.abc.Sequence) and not isinstance(data, str):
-        for value in data:
-            store_nodes_recursely(value)
-
-
-def create_data_node(executor: orm.Data, args: list, kwargs: dict) -> orm.Node:
-    """Create an AiiDA data node from the executor and args and kwargs."""
-    from aiida import orm
-
-    # print("Create data node: ", executor, args, kwargs)
-    extras = kwargs.pop("extras", {})
-    repository_metadata = kwargs.pop("repository_metadata", {})
-    if issubclass(executor, (orm.List, orm.Dict)):
-        data_node = executor(**kwargs)
-    else:
-        data_node = executor(*args)
-        data_node.base.attributes.set_many(kwargs)
-    data_node.base.extras.set_many(extras)
-    data_node.base.repository.repository_metadata = repository_metadata
-    data_node.store()
-    return data_node
-
-
 def get_nested_dict(d: Dict, name: str, **kwargs) -> Any:
     """Get the value from a nested dictionary.
     If default is provided, return the default value if the key is not found.
@@ -322,14 +287,6 @@ def get_or_create_code(
         return code
 
 
-def pickle_callable(data: dict):
-    """Pickle the callable."""
-    from aiida_workgraph.orm.pickled_function import PickledFunction
-
-    if not isinstance(data["callable"], PickledFunction):
-        data["callable"] = PickledFunction(data["callable"]).store()
-
-
 def create_and_pause_process(
     runner: Runner = None,
     process_class: Callable = None,
@@ -344,19 +301,6 @@ def create_and_pause_process(
     process_inited.close()
     runner.controller.continue_process(process_inited.pid, nowait=True, no_reply=True)
     return process_inited
-
-
-def recursive_to_dict(attr_dict):
-    """
-    Recursively convert an AttributeDict to a standard dictionary.
-    """
-    from aiida.common import AttributeDict
-    from plumpy.utils import AttributesFrozendict
-
-    if isinstance(attr_dict, (AttributesFrozendict, AttributeDict)):
-        return {k: recursive_to_dict(v) for k, v in attr_dict.items()}
-    else:
-        return attr_dict
 
 
 def get_raw_value(identifier, value: Any) -> Any:

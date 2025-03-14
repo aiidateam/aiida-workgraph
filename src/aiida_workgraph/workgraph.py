@@ -194,9 +194,8 @@ class WorkGraph(node_graph.NodeGraph):
         connectivity["zone"] = {}
         return connectivity
 
-    def to_dict(self, store_nodes=False) -> Dict[str, Any]:
-        from aiida_workgraph.utils import store_nodes_recursely
-
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert the workgraph to a dictionary."""
         wgdata = super().to_dict()
         # only alphanumeric and underscores are allowed
         wgdata["context"] = {
@@ -217,8 +216,6 @@ class WorkGraph(node_graph.NodeGraph):
         wgdata["error_handlers"] = self.get_error_handlers()
         wgdata["tasks"] = wgdata.pop("nodes")
         wgdata["connectivity"] = self.build_connectivity()
-        if store_nodes:
-            store_nodes_recursely(wgdata)
         return wgdata
 
     def get_error_handlers(self) -> Dict[str, Any]:
