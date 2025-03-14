@@ -61,11 +61,7 @@ def build_task_from_callable(
                 executor, inputs=inputs, outputs=outputs
             )
     else:
-        if issubclass(executor, CalcJob):
-            return AiiDAComponentTaskFactory.from_aiida_component(
-                executor, inputs=inputs, outputs=outputs
-            )
-        elif issubclass(executor, WorkChain):
+        if issubclass(executor, CalcJob) or issubclass(executor, WorkChain):
             return AiiDAComponentTaskFactory.from_aiida_component(
                 executor, inputs=inputs, outputs=outputs
             )

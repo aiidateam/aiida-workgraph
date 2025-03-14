@@ -549,9 +549,14 @@ class WorkGraph(node_graph.NodeGraph):
         """Add a task to the workgraph."""
         from aiida_workgraph.decorator import build_task_from_callable
         from aiida_workgraph.tasks.factory.workgraph_task import WorkGraphTaskFactory
+        from aiida.engine import ProcessBuilder
+        from aiida_workgraph.utils import get_dict_from_builder
 
         if isinstance(identifier, WorkGraph):
             identifier = WorkGraphTaskFactory.create_task(identifier)
+        elif isinstance(identifier, ProcessBuilder):
+            kwargs = {**kwargs, **get_dict_from_builder(identifier)}
+            identifier = build_task_from_callable(identifier.process_class)
         # build the task on the fly if the identifier is a callable
         elif callable(identifier):
             identifier = build_task_from_callable(identifier)
