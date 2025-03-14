@@ -46,7 +46,7 @@ def test_vector_socket() -> None:
     t.add_input(
         "workgraph.aiida_int_vector",
         "vector2d",
-        property_data={"size": 2, "default": [1, 2]},
+        property={"size": 2, "default": [1, 2]},
     )
     assert t.inputs["vector2d"].property.get_metadata() == {
         "size": 2,

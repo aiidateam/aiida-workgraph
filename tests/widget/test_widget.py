@@ -11,7 +11,7 @@ def test_workgraph_widget(wg_calcfunction, decorated_add):
     value = wg.to_widget_value()
     assert len(value["nodes"]) == 3
     # the waiting_on is also transformed to links
-    assert len(value["links"]) == 2
+    assert len(value["links"]) == 3
     # check required sockets
     # there are more than 2 inputs, but only 2 are required
     assert len(wg.tasks.add1.inputs) > 2

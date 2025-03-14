@@ -12,6 +12,8 @@ class ErrorHandlerManager:
     def run_error_handlers(self, task_name: str) -> None:
         """Run error handlers for a task."""
 
+        self.process.report(f"Run error handlers for {task_name}")
+
         node = self.process.task_manager.state_manager.get_task_runtime_info(
             task_name, "process"
         )

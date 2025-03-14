@@ -22,6 +22,10 @@ class Task(GraphNode):
 
     PropertyPool = PropertyPool
     SocketPool = SocketPool
+    InputCollectionClass = TaskSocketNamespace
+    OutputCollectionClass = TaskSocketNamespace
+    PropertyCollectionClass = WorkGraphPropertyCollection
+
     is_aiida_component = False
     _error_handlers = None
 
@@ -36,13 +40,10 @@ class Task(GraphNode):
         Initialize a Task instance.
         """
         super().__init__(
-            property_collection_class=WorkGraphPropertyCollection,
-            input_collection_class=TaskSocketNamespace,
-            output_collection_class=TaskSocketNamespace,
             **kwargs,
         )
         self.context_mapping = {} if context_mapping is None else context_mapping
-        self.waiting_on = TaskCollection(parent=self)
+        self.waiting_on = WaitingTaskCollection(parent=self)
         self.process = process
         self.pk = pk
         self._widget = NodeGraphWidget(
@@ -249,16 +250,17 @@ class Task(GraphNode):
         # Remove certain elements of the dict-representation of the Node that we don't want to show
         for key in ("properties", "executor", "node_class", "process"):
             tdata.pop(key, None)
-        for input in tdata["inputs"].values():
+
+        for input in tdata["inputs"]["sockets"].values():
             input.pop("property", None)
 
         tdata["label"] = tdata["identifier"]
 
         filtered_inputs = filter_keys_namespace_depth(
-            dict_=tdata["inputs"], max_depth=self.show_socket_depth
+            dict_=tdata["inputs"]["sockets"], max_depth=self.show_socket_depth
         )
         tdata["inputs"] = list(filtered_inputs.values())
-        tdata["outputs"] = list(tdata["outputs"].values())
+        tdata["outputs"] = list(tdata["outputs"]["sockets"].values())
         wgdata = {"name": self.name, "nodes": {self.name: tdata}, "links": []}
         return wgdata
 
@@ -361,3 +363,13 @@ class ChildTaskCollection(TaskCollection):
         super().add(tasks)
         for task in self.items:
             task.parent_task = self.parent
+
+
+class WaitingTaskCollection(TaskCollection):
+    def add(self, tasks: Union[List[Union[str, Task]], str, Task]) -> None:
+        """Add tasks to the collection. Tasks can be a list or a single Task or task name."""
+        super().add(tasks)
+        for task in self._normalize_tasks(tasks):
+            source = task.outputs._wait
+            target = self.parent.inputs._wait
+            self.graph.add_link(source, target)

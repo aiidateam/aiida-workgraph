@@ -192,6 +192,7 @@ class TaskStateManager:
         Reset the task's state to PLANNED, optionally clearing the process reference
         and recursing to children. If the task is a WHILE, reset its execution_count.
         """
+        self.logger.debug(f"Resetting task {name}.")
         self.set_task_runtime_info(name, "state", "PLANNED")
         if reset_process:
             self.set_task_runtime_info(name, "process", None)

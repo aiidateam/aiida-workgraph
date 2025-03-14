@@ -11,6 +11,14 @@ from aiida.common.extendeddicts import AttributeDict
 from node_graph.executor import NodeExecutor
 
 
+additional_inputs = [
+    {"identifier": "workgraph.string", "name": "computer"},
+    {"identifier": "workgraph.any", "name": "command_info"},
+    {"identifier": "workgraph.any", "name": "register_pickle_by_value"},
+]
+additional_outputs = [{"identifier": "workgraph.any", "name": "exit_code"}]
+
+
 class PythonJobTask(Task):
     """PythonJob Task."""
 
@@ -21,13 +29,13 @@ class PythonJobTask(Task):
         Because the data will be passed as input of the WorkGraphEngine,
         all raw data need to be serialized."""
         data = super().to_dict(short=short)
-        self.serialize_pythonjob_data(data["inputs"])
+        self.serialize_pythonjob_data(data["inputs"]["sockets"])
 
         return data
 
     def update_from_dict(self, data: Dict[str, Any], **kwargs) -> "PythonJobTask":
         """Overwrite the update_from_dict method to handle the PythonJob data."""
-        self.deserialize_pythonjob_data(data["inputs"])
+        self.deserialize_pythonjob_data(data["inputs"]["sockets"])
         super().update_from_dict(data)
 
     @classmethod
@@ -134,7 +142,7 @@ class PythonJobTask(Task):
                         {"name": output_name, "identifier": output._identifier}
                     )
         # delete workgraph related attributes of the func if exist
-        for attr in ["task", "tdata", "node"]:
+        for attr in ["TaskCls", "_ndata", "NodeCls"]:
             if hasattr(func, attr):
                 delattr(func, attr)
         inputs = prepare_pythonjob_inputs(
@@ -223,26 +231,21 @@ class PythonJobTaskFactory(BaseTaskFactory):
         tdata = TaskCls0._ndata
         # merge the inputs and outputs from the PythonJob task to the function task
         # skip the already existed inputs and outputs
-        tdata["inputs"].extend(
-            [
-                {"identifier": "workgraph.string", "name": "computer"},
-                {"identifier": "workgraph.any", "name": "command_info"},
-                {"identifier": "workgraph.any", "name": "register_pickle_by_value"},
-            ]
-        )
-        for input in TaskCls._ndata["inputs"]:
-            if input["name"] not in tdata["inputs"]:
-                tdata["inputs"].append(input)
-        for output in TaskCls._ndata["outputs"]:
-            if output["name"] not in tdata["outputs"]:
-                tdata["outputs"].append(output)
-        tdata["outputs"].append({"identifier": "workgraph.any", "name": "exit_code"})
+        for input in additional_inputs:
+            tdata["inputs"]["sockets"][input["name"]] = input.copy()
+        for input in TaskCls._ndata["inputs"]["sockets"].values():
+            if input["name"] not in tdata["inputs"]["sockets"]:
+                tdata["inputs"]["sockets"][input["name"]] = input
+        for output in TaskCls._ndata["outputs"]["sockets"].values():
+            if output["name"] not in tdata["outputs"]["sockets"]:
+                tdata["outputs"]["sockets"][output["name"]] = output
+        for output in additional_outputs:
+            tdata["outputs"]["sockets"][output["name"]] = output.copy()
         # change "copy_files" link_limit to 1e6
-        for input in tdata["inputs"]:
-            if input["name"] == "copy_files":
-                input["link_limit"] = 1e6
+        tdata["inputs"]["sockets"]["copy_files"]["link_limit"] = 1e6
         tdata["metadata"]["node_type"] = "PYTHONJOB"
         tdata["metadata"]["catalog"] = catalog
+        tdata["default_name"] = func.__name__
         tdata["identifier"] = "workgraph.pythonjob"
         tdata["metadata"]["node_class"] = PythonJobTask
         tdata["metadata"]["class_name"] = "PythonJobTask"

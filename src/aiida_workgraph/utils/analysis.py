@@ -1,6 +1,4 @@
-from typing import Optional, Dict, Tuple, List
-
-# import datetime
+from typing import Optional, Dict
 from aiida.orm import ProcessNode, load_node
 from aiida.orm.utils.serialize import serialize
 from aiida_workgraph.orm.utils import deserialize_safe
@@ -29,12 +27,10 @@ class WorkGraphSaver:
         wgdata.setdefault("uuid", "")
         wgdata.setdefault("tasks", {})
         wgdata.setdefault("links", [])
-        wgdata.setdefault("ctrl_links", [])
         wgdata.setdefault("error_handlers", {})
         wgdata.setdefault("context", {})
         self.wgdata = wgdata
         self.name = wgdata["name"]
-        self.wait_to_link()
         self.clean_hanging_links()
 
     def wait_to_link(self) -> None:
@@ -74,14 +70,8 @@ class WorkGraphSaver:
         """
         self.build_task_link()
         self.assign_zone()
-        self.build_connectivity()
         self.update_parent_task()
         self.find_all_zones_inputs()
-        if self.exist_in_db() or self.restart_process is not None:
-            new_tasks, modified_tasks, update_metadata = self.check_diff(
-                self.restart_process
-            )
-            self.reset_tasks(modified_tasks)
 
     def save(self) -> None:
         """Save workgraph."""
@@ -225,8 +215,6 @@ class WorkGraphSaver:
 
         """
         from aiida_workgraph.utils import workgraph_to_short_json
-        import inspect
-        from aiida_workgraph.orm.pickled_function import PickledLocalFunction
 
         self.task_states = {}
         self.task_processes = {}
@@ -241,38 +229,9 @@ class WorkGraphSaver:
             self.task_actions[name] = task["action"]
             self.task_executors[name] = task.pop("executor", None)
             self.task_error_handlers[name] = task.pop("error_handlers", {})
-            for _, input in task["inputs"].items():
-                if input.get("property"):
-                    prop = input["property"]
-                    if inspect.isfunction(prop["value"]):
-                        prop["value"] = PickledLocalFunction(prop["value"]).store()
             self.wgdata["tasks"][name] = serialize(task)
         self.workgraph_error_handlers = self.wgdata.pop("error_handlers")
         self.wgdata["context"] = serialize(self.wgdata["context"])
-
-    def reset_tasks(self, tasks: List[str]) -> None:
-        """Reset tasks
-
-        Args:
-            tasks (list): a list of task names.
-        """
-        from aiida_workgraph.utils.control import create_task_action
-
-        if (
-            self.process.process_state is None
-            or self.process.process_state.value.upper() == "CREATED"
-        ):
-            for name in tasks:
-                self.wgdata["tasks"][name]["state"] = "PLANNED"
-                self.wgdata["tasks"][name]["process"] = serialize(None)
-                self.wgdata["tasks"][name]["result"] = None
-                names = self.wgdata["connectivity"]["child_node"][name]
-                for name in names:
-                    self.wgdata["tasks"][name]["state"] = "PLANNED"
-                    self.wgdata["tasks"][name]["result"] = None
-                    self.wgdata["tasks"][name]["process"] = serialize(None)
-        else:
-            create_task_action(self.process.pk, tasks=tasks, action="reset")
 
     def set_tasks_action(self, action: str) -> None:
         """Set task action."""
@@ -292,51 +251,3 @@ class WorkGraphSaver:
             wgdata["tasks"][name] = deserialize_safe(task)
         wgdata["error_handlers"] = process.workgraph_error_handlers
         return wgdata
-
-    def check_diff(
-        self, restart_process: Optional[ProcessNode] = None
-    ) -> Tuple[List[str], List[str], Dict]:
-        """Find difference between workgraph and its database.
-
-        Returns:
-            new_tasks: new tasks
-            modified_tasks: modified tasks
-        """
-        from node_graph.analysis import DifferenceAnalysis
-
-        wg1 = self.get_wgdata_from_db(restart_process)
-        # change tasks to nodes for DifferenceAnalysis
-        wg1["nodes"] = wg1.pop("tasks")
-        self.wgdata["nodes"] = self.wgdata.pop("tasks")
-        dc = DifferenceAnalysis(ng1=wg1, ng2=self.wgdata)
-        (
-            new_tasks,
-            modified_tasks,
-            update_metadata,
-        ) = dc.build_difference()
-        # change nodes back to tasks
-        wg1["tasks"] = wg1.pop("nodes")
-        self.wgdata["tasks"] = self.wgdata.pop("nodes")
-        return new_tasks, modified_tasks, update_metadata
-
-    def exist_in_db(self) -> bool:
-        """Check workgraph exist in database or not.
-
-        Returns:
-            bool: _description_
-        """
-        if self.process and self.process.workgraph_data is not None:
-            return True
-        return False
-
-    def build_connectivity(self) -> None:
-        """Analyze the connectivity of workgraph and save it into dict."""
-        from node_graph.analysis import ConnectivityAnalysis
-
-        # ConnectivityAnalysis use nodes instead of tasks
-        self.wgdata["nodes"] = self.wgdata.pop("tasks")
-        nc = ConnectivityAnalysis(self.wgdata)
-        self.wgdata["connectivity"] = nc.build_connectivity()
-        self.wgdata["connectivity"]["zone"] = {}
-        # change nodes back to tasks
-        self.wgdata["tasks"] = self.wgdata.pop("nodes")

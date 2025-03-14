@@ -28,7 +28,7 @@ dependencies = [
     "numpy~=1.21",
     "scipy",
     "ase",
-    "node-graph==0.1.21",
+    "node-graph==0.1.22",
     "node-graph-widget>=0.0.4",
     "aiida-core>=2.3",
     "cloudpickle",
@@ -77,9 +77,6 @@ workgraph = "aiida_workgraph.cli.cmd_workgraph:workgraph"
 
 [project.entry-points."aiida.data"]
 "workgraph.pickled_data" = "aiida_workgraph.orm.pickled_data:PickledData"
-"workgraph.pickled_function" = "aiida_workgraph.orm.pickled_function:PickledFunction"
-"workgraph.pickled_local_function" = "aiida_workgraph.orm.pickled_function:PickledLocalFunction"
-
 
 [project.entry-points."aiida.node"]
 "process.workflow.workgraph" = "aiida_workgraph.orm.workgraph:WorkGraphNode"
