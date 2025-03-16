@@ -4,6 +4,7 @@ import aiida.orm
 import node_graph
 import aiida
 from node_graph.link import NodeLink
+from pydantic.type_adapter import TypeAdapterT
 from aiida_workgraph.socket import TaskSocket
 from aiida_workgraph.tasks import TaskPool
 from aiida_workgraph.task import Task
@@ -15,7 +16,9 @@ from aiida_workgraph.utils.graph import (
     link_creation_hook,
     link_deletion_hook,
 )
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional, Union, TYPE_CHECKING
+if TYPE_CHECKING:
+    from aiida_workgraph.schemas.workgraph_data import WorkGraphData
 
 from node_graph_widget import NodeGraphWidget
 from node_graph.analysis import NodeGraphAnalysis
@@ -193,6 +196,15 @@ class WorkGraph(node_graph.NodeGraph):
         connectivity = self.analyzer.build_connectivity()
         connectivity["zone"] = {}
         return connectivity
+
+    def serialize(self) -> WorkGraphData:
+        # Just a demo, I do not suggest to add this to API but replace to_dict usage by it
+        from aiida_workgraph.schemas.workgraph_data import WorkGraphData
+        return WorkGraphData.model_validate(self.to_dict())
+
+    def deserialize(self, wgdata: WorkGraphData) -> dict:
+        # Just a demo, I do not suggest to add this to API but replace to_dict usage by it
+        return wgdata.model_dump()
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert the workgraph to a dictionary."""
