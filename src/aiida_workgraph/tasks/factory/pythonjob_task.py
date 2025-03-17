@@ -157,10 +157,6 @@ class PythonJobTask(Task):
                     function_outputs.append(
                         {"name": output_name, "identifier": output._identifier}
                     )
-        # delete workgraph related attributes of the func if exist
-        for attr in ["TaskCls", "_ndata", "NodeCls"]:
-            if hasattr(func, attr):
-                delattr(func, attr)
         inputs = prepare_pythonjob_inputs(
             function=func,
             function_inputs=function_inputs,
@@ -227,7 +223,7 @@ class PythonJobTaskFactory(BaseTaskFactory):
     ):
         """PythonJobTask is a combination of function task and AiiDA component task."""
 
-        if not hasattr(func, "TaskCls"):
+        if not hasattr(func, "_TaskCls"):
             outputs = outputs or [{"identifier": "workgraph.any", "name": "result"}]
             TaskCls0 = DecoratedFunctionTaskFactory.from_function(
                 func,
@@ -238,7 +234,7 @@ class PythonJobTaskFactory(BaseTaskFactory):
                 error_handlers=error_handlers,
             )
         else:
-            TaskCls0 = func.TaskCls
+            TaskCls0 = func._TaskCls
         if TaskCls0.node_type.upper() == "GRAPH_BUILDER":
             raise ValueError(
                 "GraphBuilder task cannot be run remotely. Please remove 'PythonJob'."

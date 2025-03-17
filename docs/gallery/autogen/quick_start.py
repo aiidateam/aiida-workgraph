@@ -75,10 +75,10 @@ def multiply(x, y):
 
 
 # export the task to html file so that it can be visualized in a browser
-add.TaskCls().to_html()
+add._TaskCls().to_html()
 
 # comment out the following line to visualize the task in Jupyter Notebook
-# add.TaskCls()
+# add._TaskCls()
 
 
 ######################################################################

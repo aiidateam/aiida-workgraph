@@ -34,10 +34,10 @@ def multiply(x, y):
 
 
 # export the task to html file so that it can be visualized in a browser
-add.TaskCls().to_html()
+add._TaskCls().to_html()
 
 # visualize the task in jupyter-notebook
-# add.TaskCls()
+# add._TaskCls()
 
 
 ######################################################################
@@ -48,7 +48,7 @@ add.TaskCls().to_html()
 # outputs:
 #
 
-add1 = add.TaskCls()
+add1 = add._TaskCls()
 print("Inputs:", add1.get_input_names())
 print("Outputs:", add1.get_output_names())
 
@@ -64,8 +64,8 @@ def add_minus(x, y):
     return {"sum": x + y, "difference": x - y}
 
 
-print("Inputs:", add_minus.TaskCls().get_input_names())
-print("Outputs:", add_minus.TaskCls().get_output_names())
+print("Inputs:", add_minus._TaskCls().get_input_names())
+print("Outputs:", add_minus._TaskCls().get_output_names())
 
 ######################################################################
 # One can also add an ``identifier`` to indicates the data type. The data
