@@ -1,6 +1,5 @@
 import pytest
 from aiida_workgraph import task, WorkGraph
-from aiida.engine import calcfunction, workfunction
 from aiida.orm import Int, StructureData
 from aiida.calculations.arithmetic.add import ArithmeticAddCalculation
 from typing import Callable, Any, Union
@@ -136,7 +135,7 @@ def decorated_normal_add() -> Callable:
 def decorated_add() -> Callable:
     """Generate a decorated node for test."""
 
-    @calcfunction
+    @task.calcfunction()
     def add(
         x: Union[int, float], y: Union[int, float], t: Union[int, float] = 1.0
     ) -> Union[int, float]:
@@ -151,7 +150,7 @@ def decorated_add() -> Callable:
 def decorated_multiply() -> Callable:
     """Generate a decorated node for test."""
 
-    @calcfunction
+    @task.calcfunction
     def multiply(
         x: Union[int, float], y: Union[int, float], t: Union[int, float] = 1.0
     ) -> Union[int, float]:
@@ -166,7 +165,7 @@ def decorated_multiply() -> Callable:
 def decorated_sqrt() -> Callable:
     """Generate a decorated node for test."""
 
-    @calcfunction
+    @task.calcfunction
     def mysqrt(x: Union[int, float]) -> Union[int, float]:
         from math import sqrt
 
@@ -191,11 +190,12 @@ def decorated_smaller_than() -> Callable:
 def decorated_add_multiply(decorated_add, decorated_multiply) -> Callable:
     """Generate a decorated node for test."""
 
-    @workfunction
+    @task.workfunction
     def add_multiply(x, y, z):
         """Add two numbers and multiply it with a third."""
-        addition = decorated_add(x, y)
-        product = decorated_multiply(addition, z)
+        # we need use the calcfunction to get the result, instead of the wrapped function
+        addition = decorated_add._func(x, y)
+        product = decorated_multiply._func(addition, z)
         return {"result": product}
 
     return add_multiply

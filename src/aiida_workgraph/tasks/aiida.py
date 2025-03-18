@@ -14,6 +14,9 @@ class AiiDAFunctionTask(Task):
         from node_graph.executor import NodeExecutor
 
         executor = NodeExecutor(**self.get_executor()).executor
+        # the imported executor could be a wrapped function
+        if hasattr(executor, "_NodeCls") and hasattr(executor, "_func"):
+            executor = getattr(executor, "_func")
         kwargs.setdefault("metadata", {})
         kwargs["metadata"].update({"call_link_label": self.name})
         # since aiida 2.5.0, we need to use args_dict to pass the args to the run_get_node

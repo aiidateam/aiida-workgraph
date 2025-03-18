@@ -25,10 +25,10 @@ def multiply(x, y):
     return x * y
 
 
-print("Input ports: ", multiply.TaskCls().get_input_names())
-print("Output ports: ", multiply.TaskCls().get_output_names())
+print("Input ports: ", multiply._TaskCls().get_input_names())
+print("Output ports: ", multiply._TaskCls().get_output_names())
 
-multiply.TaskCls().to_html()
+multiply._TaskCls().to_html()
 
 
 ######################################################################
@@ -49,9 +49,9 @@ def add_minus(x, y):
     return {"sum": x + y, "difference": x - y}
 
 
-print("Input ports: ", add_minus.TaskCls().get_input_names())
-print("Ouput ports: ", add_minus.TaskCls().get_output_names())
-add_minus.TaskCls().to_html()
+print("Input ports: ", add_minus._TaskCls().get_input_names())
+print("Ouput ports: ", add_minus._TaskCls().get_output_names())
+add_minus._TaskCls().to_html()
 
 
 ######################################################################
@@ -85,7 +85,7 @@ def add(x: int, y: float) -> float:
     return x + y
 
 
-print("inputs: ", add.TaskCls().inputs)
+print("inputs: ", add._TaskCls().inputs)
 
 
 ######################################################################

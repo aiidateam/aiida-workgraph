@@ -236,6 +236,9 @@ class Task(GraphNode):
         from node_graph.executor import NodeExecutor
 
         executor = NodeExecutor(**self.get_executor()).executor
+        # the imported executor could be a wrapped function
+        if hasattr(executor, "_NodeCls") and hasattr(executor, "_func"):
+            executor = getattr(executor, "_func")
         if var_kwargs is None:
             result = executor(*args, **kwargs)
         else:

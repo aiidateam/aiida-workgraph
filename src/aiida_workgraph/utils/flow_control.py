@@ -98,8 +98,14 @@ def _add_tasks_to_zone(zone, tasks):
     if_ objects). It dispatches them to the zone accordingly.
     """
     from aiida_workgraph.task import Task
+    from node_graph.socket import NodeSocket
 
-    normal_tasks = [t for t in tasks if isinstance(t, Task)]
+    normal_tasks = []
+    for t in tasks:
+        if isinstance(t, Task):
+            normal_tasks.append(t)
+        elif isinstance(t, NodeSocket):
+            normal_tasks.append(t._node)
     zone.children.add(normal_tasks)
 
     while_tasks = [t for t in tasks if isinstance(t, While_)]

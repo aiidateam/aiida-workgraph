@@ -40,7 +40,8 @@ class DecoratedFunctionTaskFactory(BaseTaskFactory):
         identifier = identifier or func.__name__
         inputs = inputs or []
         properties = properties or []
-        task_outputs = outputs or []
+        # at least one output is required
+        task_outputs = outputs or [{"identifier": "workgraph.any", "name": "result"}]
         error_handlers = error_handlers or []
         inputs = validate_task_inout(inputs, "inputs")
         task_outputs = validate_task_inout(task_outputs, "outputs")
@@ -48,7 +49,6 @@ class DecoratedFunctionTaskFactory(BaseTaskFactory):
             func, inputs, properties, type_mapping=type_mapping
         )
         # Mark function inputs and outputs
-        print("outputs", outputs)
         task_outputs = {
             "name": "outputs",
             "identifier": node_class.SocketPool.any,
@@ -79,6 +79,7 @@ class DecoratedFunctionTaskFactory(BaseTaskFactory):
         tdata["executor"] = NodeExecutor.from_callable(func).to_dict()
         if node_class:
             tdata["metadata"]["node_class"] = node_class
+        tdata["default_name"] = func.__name__
         additional_data = additional_data or {}
         tdata.update(additional_data)
 

@@ -162,6 +162,7 @@ def get_task_data_from_aiida_component(
             if not outputs
             else outputs
         )
+        tdata["default_name"] = callable.__name__
     # add built-in sockets
     for output in builtin_outputs:
         outputs.append(output.copy())

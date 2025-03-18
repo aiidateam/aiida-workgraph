@@ -559,7 +559,10 @@ class WorkGraph(node_graph.NodeGraph):
             identifier = build_task_from_callable(identifier.process_class)
         # build the task on the fly if the identifier is a callable
         elif callable(identifier):
-            identifier = build_task_from_callable(identifier)
+            if hasattr(identifier, "_TaskCls"):
+                identifier = identifier._TaskCls
+            else:
+                identifier = build_task_from_callable(identifier)
         node = self.tasks._new(identifier, name, **kwargs)
         self._version += 1
         return node

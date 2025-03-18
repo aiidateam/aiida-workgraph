@@ -1,5 +1,5 @@
 from __future__ import annotations
-
+import functools
 from typing import Any, Callable, Dict, List, Optional, Union, Tuple
 from aiida.engine import calcfunction, workfunction, CalcJob, WorkChain
 from aiida_workgraph.task import Task
@@ -10,6 +10,7 @@ from aiida_workgraph.tasks.factory import (
     AiiDAComponentTaskFactory,
     WorkGraphTaskFactory,
 )
+from node_graph.decorator import set_node_arguments
 
 
 def build_task(
@@ -43,9 +44,9 @@ def build_task_from_callable(
 
     # if it is already a task, return it
     if (
-        hasattr(executor, "TaskCls")
-        and inspect.isclass(executor.TaskCls)
-        and issubclass(executor.TaskCls, Task)
+        hasattr(executor, "_TaskCls")
+        and inspect.isclass(executor._TaskCls)
+        and issubclass(executor._TaskCls, Task)
         or inspect.isclass(executor)
         and issubclass(executor, Task)
     ):
@@ -66,6 +67,35 @@ def build_task_from_callable(
                 executor, inputs=inputs, outputs=outputs
             )
     raise ValueError(f"The executor {executor} is not supported.")
+
+
+def _make_wrapper(TaskCls, original_callable):
+    """
+    Common wrapper that, when called, adds a node to the current graph
+    and returns the outputs.
+    """
+
+    @functools.wraps(original_callable)
+    def wrapper(*call_args, **call_kwargs):
+        from aiida_workgraph.manager import get_current_graph
+
+        graph = get_current_graph()
+        if graph is None:
+            raise RuntimeError(
+                f"No active Graph available for {original_callable.__name__}."
+            )
+        task = graph.add_task(TaskCls)
+        active_zone = getattr(graph, "_active_zone", None)
+        if active_zone:
+            active_zone.children.add(task)
+
+        outputs = set_node_arguments(call_args, call_kwargs, task)
+        return outputs
+
+    # Expose the TaskCls on the wrapper if you want
+    wrapper._TaskCls = wrapper._NodeCls = TaskCls
+    wrapper._func = original_callable
+    return wrapper
 
 
 def nonfunctional_usage(callable: Callable):
@@ -124,25 +154,32 @@ class TaskDecoratorCollection:
             outputs (list): task outputs
         """
 
-        def decorator(func):
-            # at least one output is required
-            task_outputs = outputs or [
-                {"identifier": "workgraph.any", "name": "result"}
-            ]
-            TaskCls = DecoratedFunctionTaskFactory.from_function(
-                func=func,
-                identifier=identifier,
-                task_type=task_type,
-                properties=properties,
-                inputs=inputs,
-                outputs=task_outputs,
-                error_handlers=error_handlers,
-                catalog=catalog,
-            )
+        def decorator(callable):
+            # function or builtin function
+            if inspect.isfunction(callable) or callable.__module__ == "builtins":
+                # calcfunction and workfunction
+                if getattr(callable, "node_class", False):
+                    TaskCls = AiiDAComponentTaskFactory.from_aiida_component(
+                        callable, inputs=inputs, outputs=outputs
+                    )
+                else:
+                    TaskCls = DecoratedFunctionTaskFactory.from_function(
+                        func=callable,
+                        identifier=identifier,
+                        task_type=task_type,
+                        properties=properties,
+                        inputs=inputs,
+                        outputs=outputs,
+                        error_handlers=error_handlers,
+                        catalog=catalog,
+                    )
+            else:
+                if issubclass(callable, CalcJob) or issubclass(callable, WorkChain):
+                    TaskCls = AiiDAComponentTaskFactory.from_aiida_component(
+                        callable, inputs=inputs, outputs=outputs
+                    )
 
-            func.identifier = TaskCls.identifier
-            func.TaskCls = func.NodeCls = TaskCls
-            return func
+            return _make_wrapper(TaskCls, callable)
 
         return decorator
 
@@ -183,7 +220,8 @@ class TaskDecoratorCollection:
                 group_outputs=outputs,
                 node_class=GraphBuilderTask,
             )
-            func.TaskCls = func.NodeCls = TaskCls
+
+            func._TaskCls = func._NodeCls = TaskCls
             return func
 
         return decorator
@@ -203,9 +241,8 @@ class TaskDecoratorCollection:
                 outputs=outputs,
                 error_handlers=error_handlers,
             )
-            func_decorated.identifier = TaskCls.identifier
-            func_decorated.TaskCls = func_decorated.NodeCls = TaskCls
-            return func_decorated
+
+            return _make_wrapper(TaskCls, func_decorated)
 
         return decorator
 
@@ -224,10 +261,8 @@ class TaskDecoratorCollection:
                 outputs=outputs,
                 error_handlers=error_handlers,
             )
-            func_decorated.identifier = TaskCls.identifier
-            func_decorated.TaskCls = func_decorated.NodeCls = TaskCls
 
-            return func_decorated
+            return _make_wrapper(TaskCls, func_decorated)
 
         return decorator
 
@@ -246,9 +281,8 @@ class TaskDecoratorCollection:
             TaskCls = PythonJobTaskFactory.from_function(
                 func, inputs=inputs, outputs=outputs, error_handlers=error_handlers
             )
-            func.TaskCls = func.NodeCls = TaskCls
 
-            return func
+            return _make_wrapper(TaskCls, func)
 
         return decorator
 
@@ -272,8 +306,8 @@ class TaskDecoratorCollection:
                 inputs=inputs,
                 outputs=task_outputs,
             )
-            func.TaskCls = func.NodeCls = TaskCls
-            return func
+
+            return _make_wrapper(TaskCls, func)
 
         return decorator
 
@@ -297,9 +331,8 @@ class TaskDecoratorCollection:
                 inputs=inputs,
                 outputs=task_outputs,
             )
-            # add an input: interval
-            func.TaskCls = func.NodeCls = TaskCls
-            return func
+
+            return _make_wrapper(TaskCls, func)
 
         return decorator
 
