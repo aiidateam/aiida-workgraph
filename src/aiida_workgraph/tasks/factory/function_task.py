@@ -49,7 +49,6 @@ class DecoratedFunctionTaskFactory(BaseTaskFactory):
             func, inputs, properties, type_mapping=type_mapping
         )
         # Mark function inputs and outputs
-        print("outputs", outputs)
         task_outputs = {
             "name": "outputs",
             "identifier": node_class.SocketPool.any,

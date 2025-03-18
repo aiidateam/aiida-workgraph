@@ -7,6 +7,10 @@ Note pitfalls:
     - etc.
 """
 from contextlib import contextmanager
+from aiida_workgraph.socket import TaskSocket
+from aiida_workgraph.tasks.task_pool import TaskPool
+
+DEFAULT_MAP_PLACEHOLDER = "map_input"
 
 
 class CurrentGraphManager:
@@ -80,3 +84,89 @@ def active_graph(graph):
     """
     with _manager.active_graph(graph) as g:
         yield g
+
+
+@contextmanager
+def active_if_zone(condition_socket: TaskSocket, invert_condition: bool = False):
+    """
+    Context manager to create a "conditional zone" in the current graph.
+
+    :param condition_socket: A TaskSocket or boolean-like object (e.g. sum_ > 0)
+    :param invert_condition: Whether to invert the condition (useful for else-zones)
+    """
+
+    wg = get_current_graph()
+
+    zone_task = wg.add_task(
+        TaskPool.workgraph.if_zone,
+        conditions=condition_socket,
+        invert_condition=invert_condition,
+    )
+
+    old_zone = getattr(wg, "_active_zone", None)
+    if old_zone:
+        old_zone.children.add(zone_task)
+    wg._active_zone = zone_task
+
+    try:
+        yield zone_task
+    finally:
+        wg._active_zone = old_zone
+
+
+@contextmanager
+def active_while_zone(condition_socket: TaskSocket, max_iterations: int = 10000):
+    """
+    Context manager to create a "while zone" in the current graph.
+
+    :param condition_socket: A TaskSocket or boolean-like object (e.g. sum_ > 0)
+    :param max_iterations: Maximum number of iterations before breaking the loop
+    """
+
+    wg = get_current_graph()
+
+    zone_task = wg.add_task(
+        TaskPool.workgraph.while_zone,
+        conditions=condition_socket,
+        max_iterations=max_iterations,
+    )
+
+    old_zone = getattr(wg, "_active_zone", None)
+    if old_zone:
+        old_zone.children.add(zone_task)
+    wg._active_zone = zone_task
+
+    try:
+        yield zone_task
+    finally:
+        wg._active_zone = old_zone
+
+
+@contextmanager
+def active_map_zone(
+    source_socket: TaskSocket, placeholder: str = DEFAULT_MAP_PLACEHOLDER
+):
+    """
+    Context manager to create a "map zone" in the current graph.
+
+    :param source_socket: A TaskSocket or boolean-like object (e.g. sum_ > 0)
+    :param placeholder: The placeholder string to use as the input for the mapped tasks
+    """
+
+    wg = get_current_graph()
+
+    zone_task = wg.add_task(
+        TaskPool.workgraph.map_zone,
+        source=source_socket,
+        placeholder=placeholder,
+    )
+
+    old_zone = getattr(wg, "_active_zone", None)
+    if old_zone:
+        old_zone.children.add(zone_task)
+    wg._active_zone = zone_task
+
+    try:
+        yield zone_task
+    finally:
+        wg._active_zone = old_zone

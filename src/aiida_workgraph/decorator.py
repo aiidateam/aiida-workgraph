@@ -84,8 +84,12 @@ def _make_wrapper(TaskCls, original_callable):
             raise RuntimeError(
                 f"No active Graph available for {original_callable.__name__}."
             )
-        node = graph.add_node(TaskCls)
-        outputs = set_node_arguments(call_args, call_kwargs, node, TaskCls)
+        task = graph.add_task(TaskCls)
+        active_zone = getattr(graph, "_active_zone", None)
+        if active_zone:
+            active_zone.children.add(task)
+
+        outputs = set_node_arguments(call_args, call_kwargs, task)
         return outputs
 
     # Expose the TaskCls on the wrapper if you want
@@ -151,7 +155,8 @@ class TaskDecoratorCollection:
         """
 
         def decorator(callable):
-            if inspect.isfunction(callable):
+            # function or builtin function
+            if inspect.isfunction(callable) or callable.__module__ == "builtins":
                 # calcfunction and workfunction
                 if getattr(callable, "node_class", False):
                     TaskCls = AiiDAComponentTaskFactory.from_aiida_component(
