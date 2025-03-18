@@ -30,9 +30,9 @@ def test_type_mapping(data_type, data, identifier) -> None:
     def add(x: data_type):
         pass
 
-    assert add.TaskCls().inputs.x._identifier == identifier
-    assert add.TaskCls().inputs.x.property.identifier == identifier
-    add_task = add.TaskCls()
+    assert add._TaskCls().inputs.x._identifier == identifier
+    assert add._TaskCls().inputs.x.property.identifier == identifier
+    add_task = add._TaskCls()
     add_task.set({"x": data})
     # test set data from context
     add_task.set({"x": "{{variable}}"})
@@ -46,7 +46,7 @@ def test_vector_socket() -> None:
     t.add_input(
         "workgraph.aiida_int_vector",
         "vector2d",
-        property_data={"size": 2, "default": [1, 2]},
+        property={"size": 2, "default": [1, 2]},
     )
     assert t.inputs["vector2d"].property.get_metadata() == {
         "size": 2,
@@ -71,9 +71,9 @@ def test_aiida_data_socket() -> None:
         def add(x: data_type):
             pass
 
-        assert add.TaskCls().inputs.x._identifier == identifier
-        assert add.TaskCls().inputs.x.property.identifier == identifier
-        add_task = add.TaskCls()
+        assert add._TaskCls().inputs.x._identifier == identifier
+        assert add._TaskCls().inputs.x.property.identifier == identifier
+        add_task = add._TaskCls()
         add_task.set({"x": data})
         # test set data from context
         add_task.set({"x": "{{variable}}"})
@@ -98,7 +98,7 @@ def test_socket_validate(data_type, data) -> None:
     def add(x: data_type):
         """"""
 
-    add_task = add.TaskCls()
+    add_task = add._TaskCls()
     # Test setting a value that should raise an exception
     with pytest.raises(Exception) as excinfo:
         add_task.set({"x": data})
@@ -127,7 +127,7 @@ def test_kwargs() -> None:
     def test(a, b=1, **kwargs):
         return {"sum": a + b, "product": a * b}
 
-    test1 = test.TaskCls()
+    test1 = test._TaskCls()
     assert test1.inputs["kwargs"]._link_limit == 1e6
     assert test1.inputs["kwargs"]._identifier == "workgraph.namespace"
 

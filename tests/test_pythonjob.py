@@ -1,6 +1,7 @@
 import pytest
 from aiida_workgraph import WorkGraph, task, Task, TaskPool
 from typing import Any
+import numpy as np
 
 
 def test_to_dict():
@@ -35,12 +36,12 @@ def test_to_dict():
     )
     data = wg.tasks.make_supercell_1.to_dict()
     assert isinstance(
-        data["inputs"]["atoms"]["property"]["value"],
+        data["inputs"]["sockets"]["atoms"]["property"]["value"],
         orm.Data,
     )
     data = wg.tasks.make_supercell_1.to_dict()
     assert isinstance(
-        data["inputs"]["atoms"]["property"]["value"],
+        data["inputs"]["sockets"]["atoms"]["property"]["value"],
         orm.Data,
     )
 
@@ -113,11 +114,26 @@ def test_PythonJob_kwargs(fixture_localhost, python_executable_path):
         },
     )
     # data inside the kwargs should be serialized separately
-    wg.process.inputs.workgraph_data.tasks.add1.inputs.kwargs.sockets.m.property.value == 2
+    wg.process.inputs.workgraph_data.tasks.add1.inputs.sockets.kwargs.sockets.m.property.value == 2
     assert wg.tasks.add1.outputs.result.value.value == 8
     # load the workgraph
     wg = WorkGraph.load(wg.pk)
     assert wg.tasks.add1.inputs["kwargs"]._value == {"m": 2, "n": 3}
+
+
+def test_dynamic_inputs() -> None:
+    """Test dynamic inputs.
+    For dynamic inputs, we allow the user to define the inputs manually.
+    """
+
+    @task.pythonjob()
+    def add(**kwargs):
+        return sum(kwargs.values())
+
+    wg = WorkGraph("test_dynamic_inputs")
+    wg.add_task(add, name="add1", x=np.array([1, 2]), y=np.array([3, 4]))
+    wg.run()
+    assert (wg.tasks.add1.outputs.result.value.value == np.array([4, 6])).all()
 
 
 def test_PythonJob_namespace_output_input(fixture_localhost, python_executable_path):
@@ -126,28 +142,32 @@ def test_PythonJob_namespace_output_input(fixture_localhost, python_executable_p
     # output namespace
     @task(
         outputs=[
-            {"identifier": "workgraph.namespace", "name": "add_multiply"},
-            {"name": "add_multiply.add"},
+            {"name": "add_multiply", "identifier": "workgraph.namespace"},
+            {
+                "name": "add_multiply.add",
+                "identifier": "workgraph.namespace",
+                "metadata": {"dynamic": True},
+            },
             {"name": "add_multiply.multiply"},
             {"name": "minus"},
         ]
     )
     def myfunc(x, y):
         return {
-            "add_multiply": {"add": x + y, "multiply": x * y},
+            "add_multiply": {"add": {"sum": x + y, "total": x + y}, "multiply": x * y},
             "minus": x - y,
         }
 
     # input namespace
     @task()
     def myfunc2(x, y):
-        add = x["add"]
+        add = x["add"]["sum"]
         multiply = x["multiply"]
         return y + add + multiply
 
     @task()
     def myfunc3(x, y):
-        return x + y
+        return x["sum"] + y
 
     wg = WorkGraph("test_namespace_outputs")
     wg.add_task(TaskPool.workgraph.pythonjob, function=myfunc, name="myfunc")
@@ -155,13 +175,13 @@ def test_PythonJob_namespace_output_input(fixture_localhost, python_executable_p
         TaskPool.workgraph.pythonjob,
         function=myfunc2,
         name="myfunc2",
-        x=wg.tasks["myfunc"].outputs["add_multiply"],
+        x=wg.tasks.myfunc.outputs.add_multiply,
     )
     wg.add_task(
         TaskPool.workgraph.pythonjob,
         function=myfunc3,
         name="myfunc3",
-        x=wg.tasks["myfunc"].outputs["add_multiply.add"],
+        x=wg.tasks.myfunc.outputs.add_multiply.add,
     )
 
     inputs = {
@@ -183,7 +203,7 @@ def test_PythonJob_namespace_output_input(fixture_localhost, python_executable_p
         },
     }
     wg.run(inputs=inputs)
-    assert wg.tasks.myfunc.outputs.add_multiply.add.value == 3
+    assert wg.tasks.myfunc.outputs.add_multiply.add.sum.value == 3
     assert wg.tasks.myfunc.outputs.add_multiply.multiply.value == 2
     assert wg.tasks.myfunc2.outputs.result.value == 8
     assert wg.tasks.myfunc3.outputs.result.value == 7
@@ -280,7 +300,6 @@ def test_load_pythonjob(fixture_localhost, python_executable_path):
 
 def test_exit_code(fixture_localhost, python_executable_path):
     """Test function with exit code."""
-    from numpy import array
 
     def handle_negative_sum(task: Task):
         """Handle the failure code 410 of the `add`.
@@ -302,7 +321,7 @@ def test_exit_code(fixture_localhost, python_executable_path):
             {"handler": handle_negative_sum, "exit_codes": [410], "max_retries": 5}
         ],
     )
-    def add(x: array, y: array) -> array:
+    def add(x: np.array, y: np.array) -> np.array:
         sum = x + y
         if (sum < 0).any():
             exit_code = {"status": 410, "message": "Some elements are negative"}
@@ -313,8 +332,8 @@ def test_exit_code(fixture_localhost, python_executable_path):
     wg.add_task(
         add,
         name="add1",
-        x=array([1, 1]),
-        y=array([1, -2]),
+        x=np.array([1, 1]),
+        y=np.array([1, -2]),
         computer="localhost",
         command_info={"label": python_executable_path},
     )
@@ -327,4 +346,4 @@ def test_exit_code(fixture_localhost, python_executable_path):
     )
     # the final task should have exit status 0
     assert wg.tasks.add1.node.exit_status == 0
-    assert (wg.tasks.add1.outputs.sum.value.value == array([2, 3])).all()
+    assert (wg.tasks.add1.outputs.sum.value.value == np.array([2, 3])).all()

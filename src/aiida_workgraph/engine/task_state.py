@@ -56,6 +56,8 @@ class TaskStateManager:
             self.process.node.set_task_action(name, value)
         elif key == "execution_count":
             self.process.node.set_task_execution_count(name, value)
+        elif key == "map_info":
+            self.process.node.set_task_map_info(name, value)
         else:
             raise ValueError(f"Invalid key: {key}")
 
@@ -191,6 +193,7 @@ class TaskStateManager:
         Reset the task's state to PLANNED, optionally clearing the process reference
         and recursing to children. If the task is a WHILE, reset its execution_count.
         """
+        self.logger.debug(f"Resetting task {name}.")
         self.set_task_runtime_info(name, "state", "PLANNED")
         if reset_process:
             self.set_task_runtime_info(name, "process", None)

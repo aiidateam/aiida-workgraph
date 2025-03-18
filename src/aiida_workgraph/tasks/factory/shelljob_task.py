@@ -6,6 +6,15 @@ from aiida_workgraph.utils import validate_task_inout
 from aiida_workgraph import Task
 from node_graph.executor import NodeExecutor
 
+additional_inputs = [
+    {"identifier": "workgraph.any", "name": "command"},
+    {"identifier": "workgraph.any", "name": "resolve_command"},
+]
+additional_outputs = [
+    {"identifier": "workgraph.any", "name": "stdout"},
+    {"identifier": "workgraph.any", "name": "stderr"},
+]
+
 
 def prepare_for_shell_task(inputs: dict) -> dict:
     """Prepare the inputs for ShellJob"""
@@ -55,11 +64,11 @@ class ShellJobTask(Task):
         """Overwrite the to_dict method to handle the parser function."""
         import inspect
 
+        if self.inputs.parser.property.value is not None:
+            prop = self.inputs.parser.property
+            if inspect.isfunction(prop.value):
+                prop.value = NodeExecutor.from_callable(prop.value).to_dict()
         data = super().to_dict(short=short)
-        if data["inputs"]["parser"]["property"]["value"] is not None:
-            prop = data["inputs"]["parser"]["property"]
-            if inspect.isfunction(prop["value"]):
-                prop["value"] = NodeExecutor.from_callable(prop["value"]).to_dict()
         return data
 
     def execute(self, engine_process, args=None, kwargs=None, var_kwargs=None):
@@ -108,12 +117,9 @@ class ShellJobTaskFactory(BaseTaskFactory):
         parser_outputs = validate_task_inout(parser_outputs, "parser_outputs")
         TaskCls = AiiDAComponentTaskFactory.from_aiida_component(ShellJob)
         tdata = TaskCls._ndata
-        tdata["outputs"].extend(
-            [
-                {"identifier": "workgraph.any", "name": "stdout"},
-                {"identifier": "workgraph.any", "name": "stderr"},
-            ]
-        )
+        for output in additional_outputs:
+            tdata["outputs"]["sockets"][output["name"]] = output.copy()
+
         outputs = [
             {
                 "identifier": "workgraph.any",
@@ -123,16 +129,12 @@ class ShellJobTaskFactory(BaseTaskFactory):
         ]
         outputs.extend(parser_outputs)
         for output in outputs:
-            if output["name"] not in tdata["outputs"]:
-                tdata["outputs"].append(output)
+            if output["name"] not in tdata["outputs"]["sockets"]:
+                tdata["outputs"]["sockets"][output["name"]] = output.copy()
         #
         tdata["identifier"] = "ShellJob"
-        tdata["inputs"].extend(
-            [
-                {"identifier": "workgraph.any", "name": "command"},
-                {"identifier": "workgraph.any", "name": "resolve_command"},
-            ]
-        )
+        for input in additional_inputs:
+            tdata["inputs"]["sockets"][input["name"]] = input.copy()
         tdata["metadata"]["node_type"] = "SHELLJOB"
         tdata["metadata"]["node_class"] = ShellJobTask
 

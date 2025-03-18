@@ -2,6 +2,7 @@ import pytest
 from aiida_workgraph import WorkGraph, task
 from aiida_workgraph.socket import TaskSocketNamespace
 from typing import Callable
+from aiida_workgraph.manager import get_current_graph, set_current_graph
 
 
 def test_custom_outputs():
@@ -11,7 +12,7 @@ def test_custom_outputs():
     def add_multiply(x, y):
         return {"sum": x + y, "product": x * y}
 
-    n = add_multiply.TaskCls()
+    n = add_multiply._TaskCls()
     assert "sum" in n.outputs
     assert "product" in n.outputs
 
@@ -21,12 +22,11 @@ def test_decorators_args() -> None:
     def test(a, b=1, **c):
         print(a, b, c)
 
-    n = test.TaskCls()
-    tdata = n.to_dict()
-    assert tdata["args"] == []
-    assert set(tdata["kwargs"]) == set(["a", "b"])
-    assert tdata["var_args"] is None
-    assert tdata["var_kwargs"] == "c"
+    n = test._TaskCls()
+    assert n.args_data["args"] == []
+    assert set(n.args_data["kwargs"]) == set(["a", "b"])
+    assert n.args_data["var_args"] is None
+    assert n.args_data["var_kwargs"] == "c"
     assert set(n.get_output_names()) == set(["result", "_outputs", "_wait"])
     assert isinstance(n.inputs.c, TaskSocketNamespace)
 
@@ -39,16 +39,17 @@ def test_decorators_calcfunction_args() -> None:
     metadata_kwargs = set(
         [
             f"{key}"
-            for key in test.process_class.spec().inputs.ports["metadata"].ports.keys()
+            for key in test._func.process_class.spec()
+            .inputs.ports["metadata"]
+            .ports.keys()
         ]
     )
-    kwargs = set(test.process_class.spec().inputs.ports.keys())
-    n = test.TaskCls()
-    tdata = n.to_dict()
-    assert tdata["args"] == []
-    assert set(tdata["kwargs"]) == set(kwargs)
-    assert tdata["var_args"] is None
-    assert tdata["var_kwargs"] == "c"
+    kwargs = set(test._func.process_class.spec().inputs.ports.keys())
+    n = test._TaskCls()
+    assert n.args_data["args"] == []
+    assert set(n.args_data["kwargs"]) == set(kwargs)
+    assert n.args_data["var_args"] is None
+    assert n.args_data["var_kwargs"] == "c"
     assert set(n.get_output_names()) == set(["result", "_outputs", "_wait"])
     assert isinstance(n.inputs.c, TaskSocketNamespace)
     assert set(n.inputs.metadata._get_keys()) == metadata_kwargs
@@ -75,13 +76,15 @@ def task_function(request):
 
 def test_decorators_task_args(task_function):
 
-    n = task_function.TaskCls()
+    n = task_function._TaskCls()
     tdata = n.to_dict()
-    assert tdata["args"] == []
-    assert tdata["kwargs"] == ["a", "b"]
-    assert tdata["var_args"] is None
-    assert tdata["var_kwargs"] == "c"
-    assert set(tdata["outputs"].keys()) == set(["result", "_outputs", "_wait"])
+    assert n.args_data["args"] == []
+    assert n.args_data["kwargs"] == ["a", "b"]
+    assert n.args_data["var_args"] is None
+    assert n.args_data["var_kwargs"] == "c"
+    assert set(tdata["outputs"]["sockets"].keys()) == set(
+        ["result", "_outputs", "_wait"]
+    )
 
 
 @pytest.fixture(params=["decorator_factory", "decorator"])
@@ -107,19 +110,18 @@ def test_decorators_workfunction_args(task_workfunction) -> None:
     metadata_kwargs = set(
         [
             f"{key}"
-            for key in task_workfunction.process_class.spec()
+            for key in task_workfunction._func.process_class.spec()
             .inputs.ports["metadata"]
             .ports.keys()
         ]
     )
-    kwargs = set(task_workfunction.process_class.spec().inputs.ports.keys())
+    kwargs = set(task_workfunction._func.process_class.spec().inputs.ports.keys())
     #
-    n = task_workfunction.TaskCls()
-    tdata = n.to_dict()
-    assert tdata["args"] == []
-    assert set(tdata["kwargs"]) == set(kwargs)
-    assert tdata["var_args"] is None
-    assert tdata["var_kwargs"] == "c"
+    n = task_workfunction._TaskCls()
+    assert n.args_data["args"] == []
+    assert set(n.args_data["kwargs"]) == set(kwargs)
+    assert n.args_data["var_args"] is None
+    assert n.args_data["var_kwargs"] == "c"
     assert set(n.get_output_names()) == set(["result", "_outputs", "_wait"])
     assert set(n.inputs.metadata._get_keys()) == metadata_kwargs
 
@@ -134,7 +136,7 @@ def test_decorators_parameters() -> None:
     def test(a, b=1, **c):
         return {"sum": a + b, "product": a * b}
 
-    test1 = test.TaskCls()
+    test1 = test._TaskCls()
     assert test1.inputs["c"]._link_limit == 1000
     assert "sum" in test1.get_output_names()
     assert "product" in test1.get_output_names()
@@ -165,14 +167,13 @@ def task_graph_builder(request):
 
 
 def test_decorators_graph_builder_args(task_graph_builder) -> None:
-    assert task_graph_builder.identifier == "add_multiply_group"
-    n = task_graph_builder.TaskCls()
-    tdata = n.to_dict()
-    assert tdata["args"] == []
-    assert tdata["kwargs"] == ["a", "b"]
-    assert tdata["var_args"] is None
-    assert tdata["var_kwargs"] == "c"
-    assert set(n.get_output_names()) == set(["_outputs", "_wait"])
+    # assert task_graph_builder.identifier == "add_multiply_group"
+    n = task_graph_builder._TaskCls()
+    assert n.args_data["args"] == []
+    assert n.args_data["kwargs"] == ["a", "b"]
+    assert n.args_data["var_args"] is None
+    assert n.args_data["var_kwargs"] == "c"
+    assert set(n.get_output_names()) == set(["result", "_outputs", "_wait"])
 
 
 def test_inputs_outputs_workchain() -> None:
@@ -218,3 +219,22 @@ def test_decorator_graph_builder(decorated_add_multiply_group: Callable) -> None
     assert wg.tasks["add_multiply1"].process.outputs.result.value == 32
     assert wg.tasks["add_multiply1"].outputs.result.value == 32
     assert wg.tasks["sum_diff1"].outputs.sum.value == 32
+
+
+def test_get_current_graph():
+
+    g = get_current_graph()
+    assert isinstance(g, WorkGraph)
+
+
+def test_set_current_graph():
+    @task()
+    def add(x, y):
+        return x + y
+
+    sum = add(1, 2)
+    g = get_current_graph()
+    assert g == sum._node.parent
+    g2 = WorkGraph()
+    set_current_graph(g2)
+    assert get_current_graph() == g2

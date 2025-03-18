@@ -4,6 +4,7 @@ from aiida_workgraph.config import builtin_inputs, builtin_outputs
 from node_graph.executor import NodeExecutor
 from aiida_workgraph.utils import validate_task_inout
 from .base import BaseTaskFactory
+from node_graph.utils import list_to_dict
 
 
 class DecoratedFunctionTaskFactory(BaseTaskFactory):
@@ -33,11 +34,14 @@ class DecoratedFunctionTaskFactory(BaseTaskFactory):
         """
         from node_graph.decorator import generate_input_sockets
 
+        node_class = node_class or cls.default_base_class
+
         task_type = task_type or cls.default_task_type
         identifier = identifier or func.__name__
         inputs = inputs or []
         properties = properties or []
-        task_outputs = outputs or []
+        # at least one output is required
+        task_outputs = outputs or [{"identifier": "workgraph.any", "name": "result"}]
         error_handlers = error_handlers or []
         inputs = validate_task_inout(inputs, "inputs")
         task_outputs = validate_task_inout(task_outputs, "outputs")
@@ -45,17 +49,20 @@ class DecoratedFunctionTaskFactory(BaseTaskFactory):
             func, inputs, properties, type_mapping=type_mapping
         )
         # Mark function inputs and outputs
-        for input in task_inputs:
-            input.setdefault("metadata", {})
-            input["metadata"]["is_function_input"] = True
-        for out in task_outputs:
+        task_outputs = {
+            "name": "outputs",
+            "identifier": node_class.SocketPool.any,
+            "sockets": list_to_dict(task_outputs),
+        }
+        for out in task_outputs["sockets"].values():
             out.setdefault("metadata", {})
             out["metadata"]["is_function_output"] = True
         # add built-in sockets
         for input in builtin_inputs:
-            task_inputs.append(input.copy())
+            task_inputs["sockets"][input["name"]] = input.copy()
         for output in builtin_outputs:
-            task_outputs.append(output.copy())
+            task_outputs["sockets"][output["name"]] = output.copy()
+
         tdata = {
             "identifier": identifier,
             "metadata": {
@@ -72,9 +79,9 @@ class DecoratedFunctionTaskFactory(BaseTaskFactory):
         tdata["executor"] = NodeExecutor.from_callable(func).to_dict()
         if node_class:
             tdata["metadata"]["node_class"] = node_class
+        tdata["default_name"] = func.__name__
         additional_data = additional_data or {}
         tdata.update(additional_data)
 
-        TaskCls = cls(tdata)
-        func.identifier = identifier
-        return TaskCls
+        NodeCls = cls(tdata)
+        return NodeCls

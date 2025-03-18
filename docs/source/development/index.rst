@@ -14,3 +14,4 @@ This section contains information for developers.
    test
    python_task
    engine
+   map_task

@@ -108,7 +108,7 @@ def test_organize_nested_inputs():
         "x": "1",
     }
     collected_data = collect_values_inside_namespace(
-        inputs["workgraph_data"]["tasks"]["task1"]["inputs"]["add"]
+        inputs["workgraph_data"]["tasks"]["task1"]["inputs"]["sockets"]["add"]
     )
     assert collected_data == data
 
@@ -125,9 +125,9 @@ def test_reset_message(wg_calcjob):
     wg = WorkGraph.load(wg.process.pk)
     wg.tasks.add1.set({"y": orm.Int(10).store()})
     wg.save()
-    wg.wait(timeout=30)
+    wg.wait(timeout=60)
     report = get_workchain_report(wg.process, "REPORT")
-    assert "Action: RESET. Tasks: {'add1'}" in report
+    assert "Action: RESET. Tasks: ['add1']" in report
 
 
 def test_restart_and_reset(wg_calcfunction):

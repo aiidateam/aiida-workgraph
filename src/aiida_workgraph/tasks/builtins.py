@@ -50,9 +50,7 @@ class While(Zone):
         self.add_input(
             "workgraph.any", "_wait", link_limit=100000, metadata={"arg_type": "none"}
         )
-        self.add_input(
-            "workgraph.int", "max_iterations", property_data={"default": 10000}
-        )
+        self.add_input("workgraph.int", "max_iterations", property={"default": 10000})
         self.add_input("workgraph.any", "conditions", link_limit=100000)
         self.add_output("workgraph.any", "_wait")
 
@@ -73,7 +71,7 @@ class If(Zone):
         )
         self.add_input("workgraph.any", "conditions")
         self.add_input(
-            "workgraph.bool", "invert_condition", property_data={"default": False}
+            "workgraph.bool", "invert_condition", property={"default": False}
         )
         self.add_output("workgraph.any", "_wait")
 
@@ -158,7 +156,7 @@ class AiiDAInt(Task):
     catalog = "Test"
 
     def create_sockets(self) -> None:
-        self.add_input("workgraph.any", "value", property_data={"default": 0.0})
+        self.add_input("workgraph.any", "value", property={"default": 0.0})
         self.add_input(
             "workgraph.any", "_wait", link_limit=100000, metadata={"arg_type": "none"}
         )
@@ -182,7 +180,7 @@ class AiiDAFloat(Task):
     def create_sockets(self) -> None:
         self.inputs._clear()
         self.outputs._clear()
-        self.add_input("workgraph.float", "value", property_data={"default": 0.0})
+        self.add_input("workgraph.float", "value", property={"default": 0.0})
         self.add_input(
             "workgraph.any", "_wait", link_limit=100000, metadata={"arg_type": "none"}
         )
@@ -206,7 +204,7 @@ class AiiDAString(Task):
     def create_sockets(self) -> None:
         self.inputs._clear()
         self.outputs._clear()
-        self.add_input("workgraph.string", "value", property_data={"default": ""})
+        self.add_input("workgraph.string", "value", property={"default": ""})
         self.add_input(
             "workgraph.any", "_wait", link_limit=100000, metadata={"arg_type": "none"}
         )
@@ -230,7 +228,7 @@ class AiiDAList(Task):
     def create_sockets(self) -> None:
         self.inputs._clear()
         self.outputs._clear()
-        self.add_input("workgraph.any", "value", property_data={"default": []})
+        self.add_input("workgraph.any", "value", property={"default": []})
         self.add_input(
             "workgraph.any", "_wait", link_limit=100000, metadata={"arg_type": "none"}
         )
@@ -254,7 +252,7 @@ class AiiDADict(Task):
     def create_sockets(self) -> None:
         self.inputs._clear()
         self.outputs._clear()
-        self.add_input("workgraph.any", "value", property_data={"default": {}})
+        self.add_input("workgraph.any", "value", property={"default": {}})
         self.add_input(
             "workgraph.any", "_wait", link_limit=100000, metadata={"arg_type": "none"}
         )

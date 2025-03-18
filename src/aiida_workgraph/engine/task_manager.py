@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional, Tuple, Callable
+from typing import Any, Dict, List, Optional, Tuple
 from aiida_workgraph.task import Task
 from aiida_workgraph.utils import get_nested_dict
 from aiida.engine.processes.exit_code import ExitCode
@@ -43,16 +43,6 @@ class TaskManager:
             ctx_manager, logger, process, awaitable_manager
         )
         self.action_manager = TaskActionManager(self.state_manager, logger, process)
-
-    def get_task_executor_dict(self, name: str):
-        # if task is a mappped task, we need to get the executor from the parent task
-        # TODO: recursive get the parent task
-        if self.process.wg.tasks[name].map_data:
-            parent_task_name = self.process.wg.tasks[name].map_data["parent"]
-            executor_dict = self.process.node.task_executors[parent_task_name]
-        else:
-            executor_dict = self.process.node.task_executors[name]
-        return executor_dict
 
     def get_task(self, name: str):
         """Get task from the context."""
@@ -106,11 +96,8 @@ class TaskManager:
             ):
                 failed_tasks.append(task.name)
         if is_finished:
-            if self.process.wg.workgraph_type.upper() == "WHILE":
+            if self.process.wg.graph_type.upper() == "WHILE":
                 should_run = self.check_while_conditions()
-                is_finished = not should_run
-            if self.process.wg.workgraph_type.upper() == "FOR":
-                should_run = self.check_for_conditions()
                 is_finished = not should_run
         if is_finished and len(failed_tasks) > 0:
             message = f"WorkGraph finished, but tasks: {failed_tasks} failed. Thus all their child tasks are skipped."
@@ -325,16 +312,21 @@ class TaskManager:
         2. Mark this MAP node as running and schedule a continuation.
         """
         name = task.name
+        map_info = {"prefix": [], "children": [], "links": []}
         if self.state_manager.are_childen_finished(name)[0]:
             self.state_manager.update_zone_task_state(name)
         else:
             self.state_manager.set_task_runtime_info(name, "state", "RUNNING")
             source = kwargs["source"]
             placeholder = kwargs.get("placeholder", "map_input")
+            map_info["prefix"] = list(source.keys())
             for prefix, value in source.items():
-                self.generate_mapped_tasks(
+                new_tasks, new_links = self.generate_mapped_tasks(
                     task, prefix=prefix, placeholder=placeholder, value=value
                 )
+            map_info["children"] = list(new_tasks.keys())
+            map_info["links"] = new_links
+        self.state_manager.set_task_runtime_info(name, "map_info", map_info)
 
         self.continue_workgraph()
 
@@ -412,7 +404,7 @@ class TaskManager:
             for link in links:
                 item_name = f"{link.from_node.name}_{link.from_socket._scoped_name}"
                 # handle the special socket _wait, _outputs
-                if link.from_socket._scoped_name == "_wait":
+                if link.from_socket._scoped_name in ["_wait", "_outputs"]:
                     continue
                 if self.ctx._task_results[link.from_node.name] is None:
                     socket_value[item_name] = None
@@ -496,18 +488,6 @@ class TaskManager:
             return not flag
         return flag
 
-    def run_executor(
-        self,
-        executor: Callable,
-        args: List[Any],
-        kwargs: Dict[str, Any],
-        var_kwargs: Optional[Dict[str, Any]],
-    ) -> Any:
-        if var_kwargs is None:
-            return executor(*args, **kwargs)
-        else:
-            return executor(*args, **kwargs, **var_kwargs)
-
     def check_while_conditions(self) -> bool:
         """Check while conditions.
         Run all condition tasks and check if all the conditions are True.
@@ -536,20 +516,6 @@ class TaskManager:
             self.state_manager.set_tasks_state(condition_tasks, "SKIPPED")
         return should_run
 
-    def check_for_conditions(self) -> bool:
-        condition_tasks = [c[0] for c in self.process.wg.conditions]
-        self.run_tasks(condition_tasks)
-        conditions = [self.ctx._count < len(self.ctx._sequence)] + [
-            self.ctx._tasks[c[0]]["results"][c[1]] for c in self.process.wg.conditions
-        ]
-        should_run = False not in conditions
-        if should_run:
-            self.reset()
-            self.state_manager.set_tasks_state(condition_tasks, "SKIPPED")
-            self.ctx["i"] = self.ctx._sequence[self.ctx._count]
-        self.ctx._count += 1
-        return should_run
-
     def reset(self) -> None:
         self.ctx._execution_count += 1
         self.state_manager.set_tasks_state(self.process.wg.tasks._get_keys(), "PLANNED")
@@ -575,7 +541,7 @@ class TaskManager:
         """
         # keep track of the mapped tasks
         new_tasks = {}
-        new_links = []
+        all_links = []
         child_tasks = self.get_all_children(zone_task.name)
         for child_task in child_tasks:
             # since the child task is mapped, it should be skipped
@@ -583,19 +549,20 @@ class TaskManager:
             task = self.copy_task(child_task, prefix)
             new_tasks[child_task] = task
             links = self.process.wg.tasks[child_task].inputs._all_links
-            new_links.extend(links)
+            all_links.extend(links)
         # fix references in the newly mapped tasks (children, input_links, etc.)
-        self._patch_cloned_tasks(new_tasks, new_links, value, placeholder=placeholder)
+        new_links = self._patch_cloned_tasks(
+            new_tasks, all_links, value, placeholder=placeholder
+        )
 
         # update process.wg.connectivity so the new tasks are recognized in child_node, zone references, etc.
         self._patch_connectivity(new_tasks)
+        return new_tasks, new_links
 
     def copy_task(self, name: str, prefix: str) -> "Task":
         from aiida_workgraph.task import Task
         import uuid
 
-        # new_task_data = shallow_copy_nested_dict(task)
-        # new_task_data["input_links"] = deepcopy(task["input_links"])
         # keep track of the mapped tasks
         if not self.process.wg.tasks[name].mapped_tasks:
             self.process.wg.tasks[name].mapped_tasks = {}
@@ -619,7 +586,7 @@ class TaskManager:
     def _patch_cloned_tasks(
         self,
         new_tasks: dict[str, "Task"],
-        new_links: List[NodeLink],
+        all_links: List[NodeLink],
         value: any,
         placeholder: str = "map_input",
     ):
@@ -651,12 +618,14 @@ class TaskManager:
                 else:
                     task.parent_task = orginal_task.parent_task
         # fix links references
-        for link in new_links:
+        new_links = []
+        for link in all_links:
             if link.to_node.name in new_tasks:
                 to_node = new_tasks[link.to_node.name]
             else:
                 # if the to_node is not in the new_tasks, skip
                 continue
+            new_links.append(link.to_dict())
             if link.from_node.name in new_tasks:
                 from_node = new_tasks[link.from_node.name]
             else:
@@ -665,6 +634,7 @@ class TaskManager:
                 from_node.outputs[link.from_socket._scoped_name],
                 to_node.inputs[link.to_socket._scoped_name],
             )
+        return new_links
 
     def _patch_connectivity(self, new_tasks: dict[str, "Task"]) -> None:
         """

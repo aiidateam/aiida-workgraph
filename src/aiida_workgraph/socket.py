@@ -18,6 +18,12 @@ class TaskSocket(NodeSocket):
     _socket_property_class = TaskProperty
 
     @property
+    def _decorator(self):
+        from aiida_workgraph.decorator import task
+
+        return task
+
+    @property
     def node_value(self):
         return self.get_node_value()
 
@@ -40,6 +46,12 @@ class TaskSocketNamespace(NodeSocketNamespace):
     _identifier = "workgraph.namespace"
     _socket_property_class = TaskProperty
     _type_mapping: dict = type_mapping
+
+    @property
+    def _decorator(self):
+        from aiida_workgraph.decorator import task
+
+        return task
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, entry_point="aiida_workgraph.socket", **kwargs)

@@ -159,12 +159,15 @@ def test_set_inputs(decorated_add: Callable) -> None:
     add1.set({"y": 2, "metadata.store_provenance": False})
     data = wg.prepare_inputs(metadata=None)
     assert (
-        data["workgraph_data"]["tasks"]["add1"]["inputs"]["y"]["property"]["value"] == 2
+        data["workgraph_data"]["tasks"]["add1"]["inputs"]["sockets"]["y"]["property"][
+            "value"
+        ]
+        == 2
     )
     assert (
-        data["workgraph_data"]["tasks"]["add1"]["inputs"]["metadata"]["sockets"][
-            "store_provenance"
-        ]["property"]["value"]
+        data["workgraph_data"]["tasks"]["add1"]["inputs"]["sockets"]["metadata"][
+            "sockets"
+        ]["store_provenance"]["property"]["value"]
         is False
     )
 
@@ -211,3 +214,79 @@ def test_namespace_outputs():
     assert wg.tasks.myfunc.outputs.minus.value == -1
     assert wg.tasks.myfunc.outputs.add_multiply.add.value == 3
     assert wg.tasks.myfunc.outputs.add_multiply.multiply.value == 2
+
+
+def test_task_from_builder_add(add_code) -> None:
+    """Test adding a task from a ``ProcessBuilder`` for `ArithmeticAdd`."""
+    from aiida_workgraph.sockets.builtins import SocketAny
+    from aiida.calculations.arithmetic.add import ArithmeticAddCalculation
+
+    # Test with the ArithmeticAddCalculation
+
+    add_builder = ArithmeticAddCalculation.get_builder()
+
+    add_builder.code = add_code
+    add_builder.x = orm.Int(2)
+    add_builder.y = orm.Int(3)
+
+    add_wg = WorkGraph("add-builder")
+    add_task_name = "add_from_builder"
+    add_task = add_wg.add_task(add_builder, name=add_task_name)
+
+    assert add_task.name == add_task_name
+    assert add_task.identifier == "ArithmeticAddCalculation"
+    assert isinstance(add_task.inputs.x, SocketAny)
+    assert add_task.inputs.x.value == 2
+    assert add_wg.tasks[add_task_name].inputs["y"].value == 3
+    assert add_wg.tasks[add_task_name].inputs["code"].value == add_code
+
+
+def test_task_from_builder_multiply_add(add_code, decorated_add) -> None:
+    """Test adding a task from a ``ProcessBuilder`` for ``MultiplyAdd``."""
+    from aiida_workgraph.sockets.builtins import SocketAny
+    from aiida.workflows.arithmetic.multiply_add import MultiplyAddWorkChain
+
+    multiply_add_builder = MultiplyAddWorkChain.get_builder()
+
+    multiply_add_builder.code = orm.load_code("add@localhost")
+    multiply_add_builder.x = orm.Int(2)
+    multiply_add_builder.y = orm.Int(3)
+    multiply_add_builder.z = orm.Int(4)
+
+    wg = WorkGraph("multiply-add-builder")
+
+    multiply_add_task_name = "multiply_add_builder"
+    add_task_name = "decorated_add"
+
+    multiply_add_task = wg.add_task(multiply_add_builder, name=multiply_add_task_name)
+
+    assert multiply_add_task.name == multiply_add_task_name
+    assert multiply_add_task.identifier == "MultiplyAddWorkChain"
+    assert multiply_add_task.inputs.x.value == 2
+    assert wg.tasks[multiply_add_task_name].inputs.y.value == 3
+    assert wg.tasks[multiply_add_task_name].inputs["z"].value == 4
+    assert wg.tasks[multiply_add_task_name].inputs["code"].value == add_code
+
+    # Check if task coming from ProcessBuilder behaves as other Tasks
+    add_task = wg.add_task(
+        decorated_add, name=add_task_name, x=multiply_add_task.outputs.result, y=11
+    )
+
+    assert isinstance(add_task.inputs.x, SocketAny)
+    assert add_task.inputs.x.value is None
+
+    assert len(wg.tasks) == 2
+    assert len(wg.links) == 1
+    assert wg.links_to_dict() == [
+        {
+            "from_node": multiply_add_task_name,
+            "from_socket": "result",
+            "to_node": add_task_name,
+            "to_socket": "x",
+        }
+    ]
+
+    wg.run()
+
+    # Top-level test for the expected result
+    assert wg.tasks.decorated_add.outputs.result.value.value == 21

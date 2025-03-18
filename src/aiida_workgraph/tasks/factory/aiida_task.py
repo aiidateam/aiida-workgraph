@@ -14,6 +14,7 @@ from aiida_workgraph.tasks.aiida import (
     CalcJobTask,
     WorkChainTask,
 )
+from node_graph.utils import list_to_dict
 
 
 task_class_mapping = {
@@ -161,15 +162,28 @@ def get_task_data_from_aiida_component(
             if not outputs
             else outputs
         )
+        tdata["default_name"] = callable.__name__
     # add built-in sockets
     for output in builtin_outputs:
         outputs.append(output.copy())
     for input in builtin_inputs:
         inputs.append(input.copy())
+    final_inputs = {
+        "name": "inputs",
+        "identifier": "workgraph.namespace",
+        "sockets": list_to_dict(inputs),
+        "metadata": {"dynamic": spec.inputs.dynamic},
+    }
+    final_outputs = {
+        "name": "outputs",
+        "identifier": "workgraph.namespace",
+        "sockets": list_to_dict(outputs),
+        "metadata": {"dynamic": spec.outputs.dynamic},
+    }
     tdata["metadata"]["node_type"] = task_type
     tdata["metadata"]["node_class"] = task_class_mapping.get(task_type.upper(), Task)
-    tdata["inputs"] = inputs
-    tdata["outputs"] = outputs
+    tdata["inputs"] = final_inputs
+    tdata["outputs"] = final_outputs
     return tdata
 
 

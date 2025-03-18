@@ -38,32 +38,32 @@ def test_while_task(decorated_add, decorated_smaller_than):
     Also test the max_iteration parameter."""
 
     def raw_python_code():
-        n01 = decorated_add(1, 1)
+        n01 = decorated_add._func(1, 1)
         m = 1
         n = n01
         l1 = 1
         while m < 10:
-            n11 = decorated_add(1, 1)
+            n11 = decorated_add._func(1, 1)
             print("n11", n11)
             while n < 5:
-                n21 = decorated_add(n, n11)
-                n22 = decorated_add(n21, 1)
+                n21 = decorated_add._func(n, n11)
+                n22 = decorated_add._func(n21, 1)
                 n = n22
                 print("n21", n21)
                 print("n22", n22)
             niter = 0
             while l1 < 5 and niter < 1:
-                n31 = decorated_add(l1, 1)
-                n32 = decorated_add(n31, 1)
+                n31 = decorated_add._func(l1, 1)
+                n32 = decorated_add._func(n31, 1)
                 l1 = n32
                 niter += 1
                 print("n31", n31)
                 print("n32", n32)
-            n12 = decorated_add(m, n32)
+            n12 = decorated_add._func(m, n32)
             print("n12", n12)
             m = n12
 
-        m = decorated_add(m, n31)
+        m = decorated_add._func(m, n31)
         return m
 
     wg = WorkGraph("test_while_task")
@@ -115,9 +115,11 @@ def test_while_task(decorated_add, decorated_smaller_than):
     # wg.submit(wait=True, timeout=100)
     wg.run()
     # print out the node labels and the results for debugging
+    print("link node label, result")
     for link in wg.process.base.links.get_outgoing().all():
         if isinstance(link.node, orm.ProcessNode):
             print(link.node.label, link.node.outputs.result)
+    print("assert check")
     assert add2.outputs.result.value.value == raw_python_code().value
 
 
@@ -125,7 +127,7 @@ def test_while_task(decorated_add, decorated_smaller_than):
 def test_while_workgraph(decorated_add, decorated_multiply, decorated_smaller_than):
     # Create a WorkGraph will repeat itself based on the conditions
     wg = WorkGraph("while_workgraph")
-    wg.workgraph_type = "WHILE"
+    wg.graph_type = "WHILE"
     wg.conditions = ["compare1.result"]
     wg.context = {"n": 1}
     wg.max_iteration = 5
@@ -149,7 +151,7 @@ def test_while_graph_builder(decorated_add, decorated_multiply, decorated_smalle
     @task.graph_builder(outputs=[{"name": "result", "from": "context.n"}])
     def my_while(n=0, limit=100):
         wg = WorkGraph("while_workgraph")
-        wg.workgraph_type = "WHILE"
+        wg.graph_type = "WHILE"
         wg.max_iteration = 2
         wg.conditions = ["compare1.result"]
         wg.context = {"n": n}

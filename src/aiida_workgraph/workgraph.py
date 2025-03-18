@@ -18,6 +18,7 @@ from aiida_workgraph.utils.graph import (
 from typing import Any, Dict, List, Optional, Union
 
 from node_graph_widget import NodeGraphWidget
+from node_graph.analysis import NodeGraphAnalysis
 
 
 class WorkGraph(node_graph.NodeGraph):
@@ -35,6 +36,7 @@ class WorkGraph(node_graph.NodeGraph):
     """
 
     NodePool = TaskPool
+    platform: str = "aiida_workgraph"
 
     def __init__(self, name: str = "WorkGraph", **kwargs) -> None:
         """
@@ -46,8 +48,6 @@ class WorkGraph(node_graph.NodeGraph):
         """
         super().__init__(name, **kwargs)
         self._context = None
-        self.workgraph_type = "NORMAL"
-        self.sequence = []
         self.conditions = []
         self.process = None
         self.restart_process = None
@@ -61,6 +61,7 @@ class WorkGraph(node_graph.NodeGraph):
         self.links.post_deletion_hooks = [link_deletion_hook]
         self._error_handlers = {}
         self._widget = NodeGraphWidget(parent=self)
+        self.analyzer = NodeGraphAnalysis(self)
 
     @property
     def tasks(self) -> TaskCollection:
@@ -75,6 +76,12 @@ class WorkGraph(node_graph.NodeGraph):
         metadata = metadata or {}
         inputs = {"workgraph_data": wgdata, "metadata": metadata}
         return inputs
+
+    def check_before_run(self) -> bool:
+        existing_process = self._load_existing_process()
+        if existing_process:
+            diffs = self.analyzer.compare_graphs(existing_process, self)
+            self.reset_tasks(diffs["modified_nodes"])
 
     def run(
         self,
@@ -98,6 +105,7 @@ class WorkGraph(node_graph.NodeGraph):
         if self.process is not None:
             print("Your workgraph is already created. Please use the submit() method.")
             return
+        self.check_before_run()
         inputs = self.prepare_inputs(metadata=metadata)
         result, node = aiida.engine.run_get_node(WorkGraphEngine, inputs=inputs)
         self.process = node
@@ -146,6 +154,7 @@ class WorkGraph(node_graph.NodeGraph):
         from aiida.engine.utils import instantiate_process
         from aiida_workgraph.engine.workgraph import WorkGraphEngine
 
+        self.check_before_run()
         inputs = self.prepare_inputs(metadata)
         if self.process is None:
             runner = manager.get_manager().get_runner()
@@ -171,13 +180,24 @@ class WorkGraph(node_graph.NodeGraph):
         )
         saver.save()
 
-    def to_dict(self, store_nodes=False) -> Dict[str, Any]:
-        from aiida_workgraph.utils import store_nodes_recursely
+    def _load_existing_process(self):
+        """Load an existing workgraph process if available."""
+        if self.process:
+            return WorkGraph.load(self.process)
+        if self.restart_process:
+            return WorkGraph.load(self.restart_process)
+        return None
 
+    def build_connectivity(self) -> None:
+        """Analyze the connectivity of workgraph and save it into dict."""
+        connectivity = self.analyzer.build_connectivity()
+        connectivity["zone"] = {}
+        return connectivity
+
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert the workgraph to a dictionary."""
         wgdata = super().to_dict()
-        # save the sequence and context
-        self.context["_sequence"] = self.sequence
-        wgdata["context"] = self.context._to_dict()
+        wgdata["context"] = self.context._value
         wgdata.update(
             {
                 "restart_process": self.restart_process.pk
@@ -185,7 +205,6 @@ class WorkGraph(node_graph.NodeGraph):
                 else None,
                 "max_iteration": self.max_iteration,
                 "execution_count": self.execution_count,
-                "workgraph_type": self.workgraph_type,
                 "conditions": self.conditions,
                 "max_number_jobs": self.max_number_jobs,
             }
@@ -193,8 +212,7 @@ class WorkGraph(node_graph.NodeGraph):
         # save error handlers
         wgdata["error_handlers"] = self.get_error_handlers()
         wgdata["tasks"] = wgdata.pop("nodes")
-        if store_nodes:
-            store_nodes_recursely(wgdata)
+        wgdata["connectivity"] = self.build_connectivity()
         return wgdata
 
     def get_error_handlers(self) -> Dict[str, Any]:
@@ -322,7 +340,6 @@ class WorkGraph(node_graph.NodeGraph):
         for key in [
             "max_iteration",
             "execution_count",
-            "workgraph_type",
             "conditions",
             "max_number_jobs",
             "connectivity",
@@ -345,9 +362,12 @@ class WorkGraph(node_graph.NodeGraph):
     def from_yaml(cls, filename: str = None, string: str = None) -> "WorkGraph":
         """Build WrokGraph from yaml file."""
         import yaml
+        import json
+        from aiida_workgraph.utils import make_json_serializable
         from node_graph.utils import yaml_to_dict
+        import importlib.resources
+        import jsonschema
 
-        # load data
         if filename:
             with open(filename, "r") as f:
                 wgdata = yaml.safe_load(f)
@@ -357,6 +377,15 @@ class WorkGraph(node_graph.NodeGraph):
             raise Exception("Please specific a filename or yaml string.")
         wgdata["nodes"] = wgdata.pop("tasks")
         wgdata = yaml_to_dict(wgdata)
+        wgdata["tasks"] = wgdata.pop("nodes")
+        serialized_data = make_json_serializable(wgdata)
+        print(serialized_data)
+        with importlib.resources.open_text(
+            "aiida_workgraph.schemas", "aiida_workgraph.schema.json"
+        ) as f:
+            schema = json.load(f)
+            jsonschema.validate(instance=serialized_data, schema=schema)
+
         nt = cls.from_dict(wgdata)
         return nt
 
@@ -448,6 +477,23 @@ class WorkGraph(node_graph.NodeGraph):
             _, msg = kill_tasks(self.process.pk, tasks)
         return "Send message to kill tasks."
 
+    def reset_tasks(self, tasks: List[str]) -> None:
+        from aiida_workgraph.utils.control import reset_tasks
+
+        print(f"Reset tasks: {tasks}")
+
+        if self.process is None:
+            for name in tasks:
+                self.tasks[name].state = "PLANNED"
+                self.tasks[name].process = None
+                child_tasks = self.analyzer.get_all_descendants(self.tasks[name])
+                for name in child_tasks:
+                    self.tasks[name].state = "PLANNED"
+                    self.tasks[name].process = None
+        else:
+            _, msg = reset_tasks(self.process.pk, tasks)
+        return "Send message to reset tasks."
+
     def continue_process(self):
         """Continue a saved process by sending the task to RabbitMA.
         Use with caution, this may launch duplicate processes."""
@@ -478,7 +524,6 @@ class WorkGraph(node_graph.NodeGraph):
         self.process = None
         for task in self.tasks:
             task.reset()
-        self.sequence = []
         self.conditions = []
         self.context = {}
         self.state = "PLANNED"
@@ -491,7 +536,6 @@ class WorkGraph(node_graph.NodeGraph):
             task.name = prefix + task.name
             task.parent = self
             self.tasks._append(task)
-        # self.sequence.extend([prefix + task for task in wg.sequence])
         # self.conditions.extend(wg.conditions)
         self.update_context(wg.context._value)
         # links
@@ -516,14 +560,37 @@ class WorkGraph(node_graph.NodeGraph):
         self, identifier: Union[str, callable], name: str = None, **kwargs
     ) -> Task:
         """Add a task to the workgraph."""
+        from aiida_workgraph.decorator import build_task_from_callable
+        from aiida_workgraph.tasks.factory.workgraph_task import WorkGraphTaskFactory
+        from aiida.engine import ProcessBuilder
+        from aiida_workgraph.utils import get_dict_from_builder
+
+        if isinstance(identifier, WorkGraph):
+            identifier = WorkGraphTaskFactory.create_task(identifier)
+        elif isinstance(identifier, ProcessBuilder):
+            kwargs = {**kwargs, **get_dict_from_builder(identifier)}
+            identifier = build_task_from_callable(identifier.process_class)
+        # build the task on the fly if the identifier is a callable
+        elif callable(identifier):
+            if hasattr(identifier, "_TaskCls"):
+                identifier = identifier._TaskCls
+            else:
+                identifier = build_task_from_callable(identifier)
         node = self.tasks._new(identifier, name, **kwargs)
+        self._version += 1
         return node
 
     def add_link(self, source: TaskSocket | Task, target: TaskSocket) -> NodeLink:
         """Add a link between two tasks."""
         if isinstance(source, Task):
             source = source.outputs["_outputs"]
+        key = (
+            f"{source._node.name}.{source._name} -> {target._node.name}.{target._name}"
+        )
+        if key in self.links:
+            return self.links[key]
         link = self.links._new(source, target)
+        self._version += 1
         return link
 
     def to_widget_value(self) -> Dict[str, Any]:

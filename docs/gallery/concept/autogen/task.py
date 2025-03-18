@@ -4,15 +4,17 @@ Task
 
 Task is the basic building block of the WorkGraph. A task has inputs,
 outputs, and the executor. A task executor can be a ``calcfunction``,
-``workfunction``, ``calcjob``, ``Workchain`` or any other Python
-function. A task can be created in three ways.
+``workfunction``, ``calcjob``, ``Workchain``, a ``ProcessBuilder``,
+or any other Python function. A task can be created in three ways.
 
 Decorator
 ---------
 
 Decorate any Python function using the ``task`` decorator. To use the
-power of AiiDA (e.g. save the results to a database, keep provenance),
-one can use the ``task.calcfunction`` decorator.
+power of AiiDA (e.g. save the results to a database, keep provenance),
+one can use the ``task.calcfunction`` decorator (note that this will,
+however, require that the inputs and outputs of your function have to
+be instances of ``orm.Node``).
 
 """
 
@@ -32,10 +34,10 @@ def multiply(x, y):
 
 
 # export the task to html file so that it can be visualized in a browser
-add.TaskCls().to_html()
+add._TaskCls().to_html()
 
 # visualize the task in jupyter-notebook
-# add.TaskCls()
+# add._TaskCls()
 
 
 ######################################################################
@@ -46,7 +48,7 @@ add.TaskCls().to_html()
 # outputs:
 #
 
-add1 = add.TaskCls()
+add1 = add._TaskCls()
 print("Inputs:", add1.get_input_names())
 print("Outputs:", add1.get_output_names())
 
@@ -62,8 +64,8 @@ def add_minus(x, y):
     return {"sum": x + y, "difference": x - y}
 
 
-print("Inputs:", add_minus.TaskCls().get_input_names())
-print("Outputs:", add_minus.TaskCls().get_output_names())
+print("Inputs:", add_minus._TaskCls().get_input_names())
+print("Outputs:", add_minus._TaskCls().get_output_names())
 
 ######################################################################
 # One can also add an ``identifier`` to indicates the data type. The data

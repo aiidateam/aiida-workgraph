@@ -26,7 +26,7 @@ load_profile()
 
 # %%
 # Dynamic input ports vs orm.Dict
-# --------------------------
+# ---------------------------------
 # We want to first focus shortly on the difference between a dynamic input ports and a orm.Dict as input
 # as this is essential for understanding the aggregation mechanism. For that we firstly
 # imitate the `aggregate` function using a Dict as input.
@@ -34,9 +34,10 @@ load_profile()
 from aiida.orm import Int, Dict
 from aiida_workgraph.utils import generate_node_graph
 from aiida_workgraph import task, WorkGraph
+from aiida.engine import calcfunction
 
 
-@task.calcfunction()
+@calcfunction
 def aggregate(
     **collected_values,
 ):  # We use the double asterisk to mark it as an dynamic input port
@@ -45,7 +46,7 @@ def aggregate(
     return Int(sum(collected_values.values()))
 
 
-@task.calcfunction
+@calcfunction
 def aggregate_dict(
     collected_values,
 ):  # We use the double asterisk to mark it as an dynamic input port
