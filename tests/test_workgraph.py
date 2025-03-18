@@ -9,8 +9,11 @@ def test_from_dict(decorated_add):
     wg = WorkGraph("test_from_dict")
     task1 = wg.add_task(decorated_add, x=2, y=3)
     wg.add_task("workgraph.test_sum_diff", name="sumdiff2", x=4, y=task1.outputs.result)
-    wgdata = wg.to_dict()
-    wg1 = WorkGraph.from_dict(wgdata)
+    
+    from aiida_workgraph.schemas.workgraph_data import WorkGraphData
+    # this does not need to be tested anymore since this is tested in pydantic
+    wgdata = WorkGraphData.model_validate(wg.to_dict())
+    wg1 = WorkGraphData.model_validate(wgdata)
     assert len(wg.tasks) == len(wg1.tasks)
     assert len(wg.links) == len(wg1.links)
 
