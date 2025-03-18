@@ -315,7 +315,7 @@ wg.add_link(paras_task.outputs[0], pw_relax1.inputs.base.pw.parameters)
 
 # %%
 # Use `protocol` to set input parameters (Experimental)
-# ====================================================
+# ======================================================
 # The aiida-quantumespresso package supports setting input parameters from protocol. For example, the PwRelaxWorkChain has a `get_builder_from_protocol` method. In this tutorial, we will show how to use the `protocol` to set the input parameters inside the WorkGraph.
 #
 
