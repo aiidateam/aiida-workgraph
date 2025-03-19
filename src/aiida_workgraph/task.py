@@ -41,7 +41,7 @@ class Task(GraphNode):
         super().__init__(
             **kwargs,
         )
-        self.waiting_on = WaitingTaskCollection(parent=self)
+        self.waiting_on = WaitingTaskSet(parent=self)
         self.process = process
         self.pk = pk
         self._widget = NodeGraphWidget(
@@ -270,14 +270,23 @@ class Task(GraphNode):
         return self._widget.to_html(output=output, **kwargs)
 
 
-class TaskCollection:
+class TaskSet:
+    """
+    A collection of tasks that belong to a specific parent task.
+
+    This class provides an interface for managing a set of tasks, allowing
+    tasks to be added, removed, and iterated over while maintaining a reference
+    to their parent task and ensuring they exist within a valid task graph.
+
+    """
+
     def __init__(self, parent: "Task"):
         self._items: Set[str] = set()
         self.parent = parent
 
     @property
     def graph(self) -> "WorkGraph":
-        """Cache and return the top parent of the collection."""
+        """Cache and return the graph of the parent task."""
         return self.parent.graph
 
     @property
@@ -342,7 +351,7 @@ class TaskCollection:
 
 
 # collection of child tasks
-class ChildTaskCollection(TaskCollection):
+class ChildTaskSet(TaskSet):
     def add(self, tasks: Union[List[Union[str, Task]], str, Task]) -> None:
         """Add tasks to the collection. Tasks can be a list or a single Task or task name."""
         normalize_tasks = super().add(tasks)
@@ -354,7 +363,7 @@ class ChildTaskCollection(TaskCollection):
             task.parent_task = self.parent
 
 
-class WaitingTaskCollection(TaskCollection):
+class WaitingTaskSet(TaskSet):
     def add(self, tasks: Union[List[Union[str, Task]], str, Task]) -> None:
         """Add tasks to the collection. Tasks can be a list or a single Task or task name."""
         normalize_tasks = super().add(tasks)

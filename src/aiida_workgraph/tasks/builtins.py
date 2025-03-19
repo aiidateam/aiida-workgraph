@@ -1,5 +1,5 @@
 from typing import Any, Dict
-from aiida_workgraph.task import Task, ChildTaskCollection
+from aiida_workgraph.task import Task, ChildTaskSet
 
 
 class Zone(Task):
@@ -14,7 +14,7 @@ class Zone(Task):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.children = ChildTaskCollection(parent=self)
+        self.children = ChildTaskSet(parent=self)
 
     def add_task(self, *args, **kwargs):
         """Syntactic sugar to add a task to the zone."""
