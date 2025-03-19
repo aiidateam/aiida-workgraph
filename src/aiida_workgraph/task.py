@@ -344,6 +344,10 @@ class ChildTaskCollection(TaskCollection):
         """Add tasks to the collection. Tasks can be a list or a single Task or task name."""
         super().add(tasks)
         for task in self.items:
+            if task.parent_task is not None:
+                raise ValueError(
+                    "Task is already a child of the task: {task.parent_task}"
+                )
             task.parent_task = self.parent
 
 

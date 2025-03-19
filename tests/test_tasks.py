@@ -290,3 +290,13 @@ def test_task_from_builder_multiply_add(add_code, decorated_add) -> None:
 
     # Top-level test for the expected result
     assert wg.tasks.decorated_add.outputs.result.value.value == 21
+
+
+def test_task_children():
+    wg = WorkGraph()
+    zone1 = wg.add_task("workgraph.zone", "zone1")
+    zone2 = wg.add_task("workgraph.zone", "zone2")
+    zone3 = wg.add_task("workgraph.zone", "zone3")
+    zone2.children.add(zone1)
+    with pytest.raises(ValueError, match="Task is already a child of the task: "):
+        zone3.children.add(zone1)
