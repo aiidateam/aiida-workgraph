@@ -309,8 +309,11 @@ class TaskCollection:
         # If the task does not belong to any graph, skip adding it
         if isinstance(self.graph, Task):
             return
+        normalize_tasks = []
         for task in self._normalize_tasks(tasks):
             self._items.add(task)
+            normalize_tasks.append(task)
+        return normalize_tasks
 
     def remove(self, tasks: Union[List[Union[str, Task]], str, Task]) -> None:
         """Remove tasks from the collection. Tasks can be a list or a single Task or task name."""
@@ -342,16 +345,20 @@ class TaskCollection:
 class ChildTaskCollection(TaskCollection):
     def add(self, tasks: Union[List[Union[str, Task]], str, Task]) -> None:
         """Add tasks to the collection. Tasks can be a list or a single Task or task name."""
-        super().add(tasks)
-        for task in self.items:
+        normalize_tasks = super().add(tasks)
+        for task in normalize_tasks:
+            if task.parent_task is not None:
+                raise ValueError(
+                    "Task is already a child of the task: {task.parent_task}"
+                )
             task.parent_task = self.parent
 
 
 class WaitingTaskCollection(TaskCollection):
     def add(self, tasks: Union[List[Union[str, Task]], str, Task]) -> None:
         """Add tasks to the collection. Tasks can be a list or a single Task or task name."""
-        super().add(tasks)
-        for task in self._normalize_tasks(tasks):
+        normalize_tasks = super().add(tasks)
+        for task in normalize_tasks:
             source = task.outputs._wait
             target = self.parent.inputs._wait
             self.graph.add_link(source, target)
