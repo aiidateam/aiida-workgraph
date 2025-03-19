@@ -24,5 +24,6 @@ def test_dynamic_inputs() -> None:
 
     wg = WorkGraph("test_dynamic_inputs")
     wg.add_task(add, name="add1", x=orm.Int(1), y=orm.Int(2))
+    assert wg.tasks.add1.inputs.kwargs._link_limit == 1e6
     wg.run()
     assert wg.tasks.add1.outputs.result.value == 3
