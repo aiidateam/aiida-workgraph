@@ -169,11 +169,11 @@ class TaskStateManager:
         """Export task results to the context based on context mapping."""
 
         for link in self.process.wg.links:
-            if link.from_node.name == name and link.to_node.name == "_context":
+            if link.from_node.name == name and link.to_node.name == "ctx":
                 key = link.to_socket._name
                 result_name = link.from_socket._name
                 result = self.ctx._task_results[name][result_name]
-                self.ctx._task_results["_context"][key] = result
+                self.ctx._task_results["ctx"][key] = result
 
     # --------------------------------------------------
     # Reset & removing from executed tasks

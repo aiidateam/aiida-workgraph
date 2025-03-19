@@ -201,7 +201,7 @@ class WorkGraph(node_graph.NodeGraph):
         # separate the links connected to the context from the main links
         wgdata["ctx_links"] = []
         for link in wgdata["links"][:]:
-            if link["from_node"] == "_context" or link["to_node"] == "_context":
+            if link["from_node"] == "ctx" or link["to_node"] == "ctx":
                 wgdata["ctx_links"].append(link)
                 wgdata["links"].remove(link)
         wgdata.update(
@@ -363,14 +363,14 @@ class WorkGraph(node_graph.NodeGraph):
                 task.children.add(wgdata["nodes"][task.name].get("children", []))
         # add links to the context
         for link in wgdata.get("ctx_links", []):
-            if link["from_node"] == "_context":
+            if link["from_node"] == "ctx":
                 if link["from_socket"] not in wg.ctx:
                     wg.update_ctx({link["from_socket"]: None})
                 wg.add_link(
                     wg.ctx[link["from_socket"]],
                     wg.tasks[link["to_node"]].inputs[link["to_socket"]],
                 )
-            elif link["to_node"] == "_context":
+            elif link["to_node"] == "ctx":
                 wg.update_ctx(
                     {
                         link["to_socket"]: wg.tasks[link["from_node"]].outputs[
@@ -587,10 +587,8 @@ class WorkGraph(node_graph.NodeGraph):
         from aiida.engine import ProcessBuilder
         from aiida_workgraph.utils import get_dict_from_builder
 
-        if name in ["ctx", "_context"]:
-            raise ValueError(
-                "Task name can not be 'ctx' or '_context', it is reserved."
-            )
+        if name == "ctx":
+            raise ValueError("Task name can not be 'ctx', it is reserved.")
 
         if isinstance(identifier, WorkGraph):
             identifier = WorkGraphTaskFactory.create_task(identifier)
