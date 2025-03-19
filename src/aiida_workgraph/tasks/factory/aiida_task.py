@@ -150,6 +150,7 @@ def get_task_data_from_aiida_component(
                 {
                     "identifier": "workgraph.namespace",
                     "name": name,
+                    "link_limit": 1e6,
                     "metadata": {"arg_type": "var_kwargs", "dynamic": True},
                 }
             )
