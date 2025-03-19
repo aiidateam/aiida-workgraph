@@ -18,8 +18,9 @@ class Zone(Task):
 
     def add_task(self, *args, **kwargs):
         """Syntactic sugar to add a task to the zone."""
-        task = self.parent.add_task(*args, **kwargs)
+        task = self.graph.add_task(*args, **kwargs)
         self.children.add(task)
+        task.parent_task = self
         return task
 
     def create_sockets(self) -> None:

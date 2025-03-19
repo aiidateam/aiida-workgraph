@@ -556,7 +556,7 @@ class WorkGraph(node_graph.NodeGraph):
         """
         for task in wg.tasks:
             task.name = prefix + task.name
-            task.parent = self
+            task.graph = self
             self.tasks._append(task)
         # self.conditions.extend(wg.conditions)
         self.update_ctx(wg.ctx._value)

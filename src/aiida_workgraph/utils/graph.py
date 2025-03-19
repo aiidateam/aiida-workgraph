@@ -1,7 +1,8 @@
 from typing import Any
+from node_graph.collection import NodeCollection
 
 
-def task_creation_hook(self, task: Any) -> None:
+def task_creation_hook(self: NodeCollection, task: Any) -> None:
     """Hook for task creation.
 
     Args:
@@ -17,7 +18,7 @@ def task_creation_hook(self, task: Any) -> None:
         )
 
 
-def task_deletion_hook(self, task: Any) -> None:
+def task_deletion_hook(self: NodeCollection, task: Any) -> None:
     """Hook for task deletion.
 
     Args:
@@ -33,7 +34,7 @@ def task_deletion_hook(self, task: Any) -> None:
         self.parent._widget.send({"type": "delete_node", "data": {"name": task.name}})
 
 
-def link_creation_hook(self, link: Any) -> None:
+def link_creation_hook(self: NodeCollection, link: Any) -> None:
     """Hook for link creation.
 
     Args:
@@ -53,7 +54,7 @@ def link_creation_hook(self, link: Any) -> None:
         )
 
 
-def link_deletion_hook(self, link: Any) -> None:
+def link_deletion_hook(self: NodeCollection, link: Any) -> None:
     """Hook for link deletion.
 
     Args:

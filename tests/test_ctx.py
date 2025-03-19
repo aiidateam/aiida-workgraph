@@ -42,7 +42,7 @@ def test_task_set_ctx(decorated_add: Callable) -> None:
     wg = WorkGraph(name="test_node_set_ctx")
     add1 = wg.add_task(decorated_add, "add1", x=Float(2).store(), y=Float(3).store())
     with pytest.raises(
-        AttributeError, match="'TaskSocketNamespace' object has no attribute 'resul'"
+        AttributeError, match="TaskSocketNamespace has no attribute 'resul'"
     ):
         wg.update_ctx({"sum": add1.outputs.resul})
     wg.update_ctx({"sum": add1.outputs.result})

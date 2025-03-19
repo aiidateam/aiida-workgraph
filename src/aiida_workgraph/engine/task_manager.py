@@ -574,7 +574,7 @@ class TaskManager:
         self.state_manager.set_task_runtime_info(new_name, "action", "")
         # Insert new_data in ctx._tasks
         task = Task.from_dict(task_data)
-        task.parent = self.process.wg
+        task.graph = self.process.wg
         self.process.wg.tasks._append(task)
 
         self.process.wg.tasks[name].mapped_tasks[prefix] = task

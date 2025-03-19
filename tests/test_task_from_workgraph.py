@@ -1,4 +1,3 @@
-import pytest
 from aiida_workgraph import WorkGraph
 from typing import Callable
 
@@ -20,7 +19,6 @@ def test_inputs_outptus(wg_calcfunction: WorkGraph) -> None:
     assert "sumdiff1.sum" in task1.outputs
 
 
-@pytest.mark.usefixtures("started_daemon_client")
 def test_build_task_from_workgraph(decorated_add: Callable) -> None:
     # create a sub workgraph
     from aiida_workgraph.collection import TaskCollection
@@ -38,7 +36,7 @@ def test_build_task_from_workgraph(decorated_add: Callable) -> None:
     assert hasattr(wg.tasks.sub_wg, "links")
     assert hasattr(wg.tasks.sub_wg, "tasks")
     assert isinstance(wg.tasks.sub_wg.tasks, TaskCollection)
-    assert wg.tasks.sub_wg.tasks.parent.name == "build_task_from_workgraph"
+    assert wg.tasks.sub_wg.tasks.add1.graph.name == "build_task_from_workgraph"
 
     wg.add_task(decorated_add, name="add2", y=3)
     wg.add_link(add1_task.outputs.result, wg_task.inputs["add1.x"])

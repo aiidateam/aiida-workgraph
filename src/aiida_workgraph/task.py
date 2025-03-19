@@ -274,17 +274,11 @@ class TaskCollection:
     def __init__(self, parent: "Task"):
         self._items: Set[str] = set()
         self.parent = parent
-        self._top_parent = None
 
     @property
     def graph(self) -> "WorkGraph":
         """Cache and return the top parent of the collection."""
-        if not self._top_parent:
-            parent = self.parent
-            while getattr(parent, "parent", None):
-                parent = parent.parent
-            self._top_parent = parent
-        return self._top_parent
+        return self.parent.graph
 
     @property
     def items(self) -> Set[str]:
