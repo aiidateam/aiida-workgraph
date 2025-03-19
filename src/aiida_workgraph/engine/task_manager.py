@@ -373,16 +373,13 @@ class TaskManager:
         socket_value = None
         if socket._identifier == "workgraph.namespace":
             socket_value = {}
-            # inputs[name] = self.ctx_manager.update_context_variable(input["value"])
             for name, sub_socket in socket._sockets.items():
                 value = self.get_socket_value(sub_socket)
                 if value is None or (isinstance(value, dict) and value == {}):
                     continue
                 socket_value[name] = value
         else:
-            socket_value = self.ctx_manager.update_context_variable(
-                socket.property.value
-            )
+            socket_value = socket.property.value
         links = socket._links
         if len(links) == 1:
             link = links[0]
@@ -432,7 +429,7 @@ class TaskManager:
         task = self.process.wg.tasks[name]
         inputs = {}
         for prop in task.properties:
-            inputs[prop.name] = self.ctx_manager.update_context_variable(prop.value)
+            inputs[prop.name] = prop.value
 
         inputs.update(self.get_socket_value(task.inputs))
 

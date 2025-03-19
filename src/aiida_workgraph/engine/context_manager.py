@@ -55,10 +55,10 @@ class ContextManager:
 
         return ctx, ctx_path[-1]
 
-    def update_context_variable(self, value: Any) -> Any:
+    def update_ctx_variable(self, value: Any) -> Any:
         """Replace placeholders in the value with actual context values."""
         if isinstance(value, dict):
-            return {k: self.update_context_variable(v) for k, v in value.items()}
+            return {k: self.update_ctx_variable(v) for k, v in value.items()}
         elif (
             isinstance(value, str)
             and value.strip().startswith("{{")

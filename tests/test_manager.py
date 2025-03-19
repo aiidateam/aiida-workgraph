@@ -18,15 +18,15 @@ def test_while_and_if(decorated_smaller_than, decorated_add):
 
     N = 5
     with active_graph(WorkGraph()) as wg:
-        wg.context = {"n": 1, "total": 0}
-        result = decorated_smaller_than(x="{{n}}", y=N)
+        wg.ctx = {"n": 1, "total": 0}
+        result = decorated_smaller_than(x=wg.ctx.n, y=N)
         with active_while_zone(result):
-            result = is_even(x="{{n}}")
+            result = is_even(x=wg.ctx.n)
             with active_if_zone(result):
-                total = decorated_add(x="{{total}}", y="{{n}}")
-                total._node.set_context({"total": "result"})
-            n = decorated_add(x="{{n}}", y=1)
-            n._node.set_context({"n": "result"})
+                total = decorated_add(x=wg.ctx.total, y=wg.ctx.n)
+                wg.update_ctx({"total": total})
+            n = decorated_add(x=wg.ctx.n, y=1)
+            wg.update_ctx({"n": n})
             n._node.waiting_on.add(total._node)
         wg.run()
 

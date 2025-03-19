@@ -4,7 +4,7 @@ import aiida.orm
 import node_graph
 import aiida
 from node_graph.link import NodeLink
-from aiida_workgraph.socket import TaskSocket
+from aiida_workgraph.socket import TaskSocket, ContextSocketNamespace
 from aiida_workgraph.tasks import TaskPool
 from aiida_workgraph.task import Task
 import time
@@ -47,7 +47,7 @@ class WorkGraph(node_graph.NodeGraph):
             **kwargs: Additional keyword arguments to be passed to the WorkGraph class.
         """
         super().__init__(name, **kwargs)
-        self.context = {}
+        self._ctx = None
         self.conditions = []
         self.process = None
         self.restart_process = None
@@ -98,7 +98,7 @@ class WorkGraph(node_graph.NodeGraph):
         if inputs is not None:
             for name, input in inputs.items():
                 if name not in self.tasks:
-                    raise KeyError(f"Task {name} not found in WorkGraph.")
+                    raise KeyError(f"Task {name} not found in WorkGraph.")  # noqa: E713
                 self.tasks[name].set(input)
         # One can not run again if the process is alreay created. otherwise, a new process node will
         # be created again.
@@ -131,7 +131,7 @@ class WorkGraph(node_graph.NodeGraph):
         if inputs is not None:
             for name, input in inputs.items():
                 if name not in self.tasks:
-                    raise KeyError(f"Task {name} not found in WorkGraph.")
+                    raise KeyError(f"Task {name} not found in WorkGraph.")  # noqa: E713
                 self.tasks[name].set(input)
 
         # save the workgraph to the process node
@@ -197,10 +197,13 @@ class WorkGraph(node_graph.NodeGraph):
     def to_dict(self) -> Dict[str, Any]:
         """Convert the workgraph to a dictionary."""
         wgdata = super().to_dict()
-        # only alphanumeric and underscores are allowed
-        wgdata["context"] = {
-            key.replace(".", "__"): value for key, value in self.context.items()
-        }
+        wgdata["context"] = self.ctx._value
+        # separate the links connected to the context from the main links
+        wgdata["ctx_links"] = []
+        for link in wgdata["links"][:]:
+            if link["from_node"] == "ctx" or link["to_node"] == "ctx":
+                wgdata["ctx_links"].append(link)
+                wgdata["links"].remove(link)
         wgdata.update(
             {
                 "restart_process": self.restart_process.pk
@@ -317,6 +320,24 @@ class WorkGraph(node_graph.NodeGraph):
     def pk(self) -> Optional[int]:
         return self.process.pk if self.process else None
 
+    @property
+    def ctx(self) -> ContextSocketNamespace:
+        from aiida_workgraph.sockets import SocketPool
+
+        if self._ctx is None:
+            self._ctx = ContextSocketNamespace(
+                name="ctx", pool=SocketPool, graph=self, metadata={"dynamic": True}
+            )
+        return self._ctx
+
+    @ctx.setter
+    def ctx(self, value: Dict[str, Any]) -> None:
+        self.ctx._clear()
+        self.ctx._set_socket_value(value, link_limit=100000)
+
+    def update_ctx(self, value: Dict[str, Any]) -> None:
+        self.ctx._set_socket_value(value, link_limit=100000)
+
     @classmethod
     def from_dict(cls, wgdata: Dict[str, Any]) -> "WorkGraph":
         from aiida_workgraph.tasks.factory.base import BaseTaskFactory
@@ -335,14 +356,29 @@ class WorkGraph(node_graph.NodeGraph):
                 setattr(wg, key, wgdata[key])
         if "error_handlers" in wgdata:
             wg._error_handlers = wgdata["error_handlers"]
-        wg.context = {
-            key.replace("__", "."): value
-            for key, value in wgdata.get("context", {}).items()
-        }
+        wg.ctx = wgdata.get("context", {})
         # for zone tasks, add their children
         for task in wg.tasks:
             if hasattr(task, "children"):
                 task.children.add(wgdata["nodes"][task.name].get("children", []))
+        # add links to the context
+        for link in wgdata.get("ctx_links", []):
+            if link["from_node"] == "ctx":
+                if link["from_socket"] not in wg.ctx:
+                    wg.update_ctx({link["from_socket"]: None})
+                wg.add_link(
+                    wg.ctx[link["from_socket"]],
+                    wg.tasks[link["to_node"]].inputs[link["to_socket"]],
+                )
+            elif link["to_node"] == "ctx":
+                wg.update_ctx(
+                    {
+                        link["to_socket"]: wg.tasks[link["from_node"]].outputs[
+                            link["from_socket"]
+                        ]
+                    }
+                )
+
         return wg
 
     @classmethod
@@ -366,7 +402,6 @@ class WorkGraph(node_graph.NodeGraph):
         wgdata = yaml_to_dict(wgdata)
         wgdata["tasks"] = wgdata.pop("nodes")
         serialized_data = make_json_serializable(wgdata)
-        print(serialized_data)
         with importlib.resources.open_text(
             "aiida_workgraph.schemas", "aiida_workgraph.schema.json"
         ) as f:
@@ -512,7 +547,7 @@ class WorkGraph(node_graph.NodeGraph):
         for task in self.tasks:
             task.reset()
         self.conditions = []
-        self.context = {}
+        self.ctx = {}
         self.state = "PLANNED"
 
     def extend(self, wg: "WorkGraph", prefix: str = "") -> None:
@@ -524,7 +559,7 @@ class WorkGraph(node_graph.NodeGraph):
             task.parent = self
             self.tasks._append(task)
         # self.conditions.extend(wg.conditions)
-        self.context.update(wg.context)
+        self.update_ctx(wg.ctx._value)
         # links
         for link in wg.links:
             self.links._append(link)
@@ -551,6 +586,9 @@ class WorkGraph(node_graph.NodeGraph):
         from aiida_workgraph.tasks.factory.workgraph_task import WorkGraphTaskFactory
         from aiida.engine import ProcessBuilder
         from aiida_workgraph.utils import get_dict_from_builder
+
+        if name == "ctx":
+            raise ValueError("Task name can not be 'ctx', it is reserved.")
 
         if isinstance(identifier, WorkGraph):
             identifier = WorkGraphTaskFactory.create_task(identifier)

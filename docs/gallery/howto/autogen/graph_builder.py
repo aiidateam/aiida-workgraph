@@ -197,7 +197,7 @@ def add_one(x):
     return x + 1
 
 
-@task.graph_builder(outputs=[{"name": "result", "from": "context.task_out"}])
+@task.graph_builder(outputs=[{"name": "result", "from": "ctx.task_out"}])
 def for_loop(nb_iterations: Int):
     wg = WorkGraph()
     for i in range(nb_iterations.value):
@@ -211,7 +211,7 @@ def for_loop(nb_iterations: Int):
     # of the graph builder decorator.
 
     # Put result of the task to the context under the name task_out
-    task.set_context({"task_out": "result"})
+    wg.update_ctx({"task_out": task.outputs.result})
     # If want to know more about the usage of the context please refer to the
     # context howto in the documentation
     return wg
@@ -249,7 +249,7 @@ def modulo_two(x):
     return x % 2
 
 
-@task.graph_builder(outputs=[{"name": "result", "from": "context.task_out"}])
+@task.graph_builder(outputs=[{"name": "result", "from": "ctx.task_out"}])
 def if_then_else(i: Int):
     wg = WorkGraph()
     if i.value < 2:
@@ -258,7 +258,7 @@ def if_then_else(i: Int):
         task = wg.add_task(modulo_two, x=i)
 
     # same concept as before, please read the for loop example for explanation
-    task.set_context({"task_out": "result"})
+    wg.update_ctx({"task_out": task.outputs.result})
     return wg
 
 
