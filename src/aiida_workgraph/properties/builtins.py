@@ -16,21 +16,21 @@ class PropertyInt(TaskProperty):
     """A new class for integer type."""
 
     identifier: str = "workgraph.int"
-    allowed_types = (int, str, type(None))
+    allowed_types = (int, type(None))
 
 
 class PropertyFloat(TaskProperty):
     """A new class for float type."""
 
     identifier: str = "workgraph.float"
-    allowed_types = (int, float, str, type(None))
+    allowed_types = (int, float, type(None))
 
 
 class PropertyBool(TaskProperty):
     """A new class for bool type."""
 
     identifier: str = "workgraph.bool"
-    allowed_types = (bool, int, str, type(None))
+    allowed_types = (bool, int, type(None))
 
 
 class PropertyString(TaskProperty):
@@ -50,7 +50,7 @@ class PropertyAiiDAInt(TaskProperty):
     """A new class for integer type."""
 
     identifier: str = "workgraph.aiida_int"
-    allowed_types = (int, str, orm.Int, type(None))
+    allowed_types = (int, orm.Int, type(None))
 
     def set_value(self, value: Union[int, orm.Int, str] = None) -> None:
         if isinstance(value, int):
@@ -62,7 +62,7 @@ class PropertyAiiDAFloat(TaskProperty):
     """A new class for float type."""
 
     identifier: str = "workgraph.aiida_float"
-    allowed_types = (int, float, orm.Int, orm.Float, str, type(None))
+    allowed_types = (int, float, orm.Int, orm.Float, type(None))
 
     def set_value(
         self, value: Union[int, float, orm.Int, orm.Float, str] = None
@@ -76,7 +76,7 @@ class PropertyAiiDABool(TaskProperty):
     """A new class for bool type."""
 
     identifier: str = "workgraph.aiida_bool"
-    allowed_types = (int, bool, orm.Int, orm.Bool, str, type(None))
+    allowed_types = (int, bool, orm.Int, orm.Bool, type(None))
 
     def set_value(self, value: Union[int, bool, orm.Int, orm.Bool, str] = None) -> None:
         if isinstance(value, int):
@@ -106,7 +106,7 @@ class PropertyAiiDAList(TaskProperty):
     """A new class for List type."""
 
     identifier: str = "workgraph.aiida_list"
-    allowed_types = (list, orm.List, str, type(None))
+    allowed_types = (list, orm.List, type(None))
 
     def set_value(self, value: Union[list, orm.List, str] = None) -> None:
         if isinstance(value, (list)):
@@ -118,7 +118,7 @@ class PropertyAiiDADict(TaskProperty):
     """A new class for Dict type."""
 
     identifier: str = "workgraph.aiida_dict"
-    allowed_types = (dict, orm.Dict, str, type(None))
+    allowed_types = (dict, orm.Dict, type(None))
 
     def set_value(self, value: Union[dict, orm.Dict, str] = None) -> None:
         if isinstance(value, (dict)):
@@ -176,7 +176,7 @@ class PropertyAiiDAIntVector(PropertyVector):
 
     identifier: str = "workgraph.aiida_int_vector"
     allowed_types = (list, orm.List, type(None))
-    allowed_item_types = (int, str, type(None))
+    allowed_item_types = (int, type(None))
 
 
 class PropertyAiiDAFloatVector(PropertyVector):
@@ -184,14 +184,14 @@ class PropertyAiiDAFloatVector(PropertyVector):
 
     identifier: str = "workgraph.aiida_float_vector"
     allowed_types = (list, orm.List, type(None))
-    allowed_item_types = (int, float, str, type(None))
+    allowed_item_types = (int, float, type(None))
 
 
 class PropertyStructureData(TaskProperty):
     """A new class for Any type."""
 
     identifier: str = "workgraph.aiida_structuredata"
-    allowed_types = (orm.StructureData, str, type(None))
+    allowed_types = (orm.StructureData, type(None))
 
 
 __all__ = [
