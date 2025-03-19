@@ -234,7 +234,7 @@ def test_set_current_graph():
 
     sum = add(1, 2)
     g = get_current_graph()
-    assert g == sum._node.parent
+    assert g == sum._node.graph
     g2 = WorkGraph()
     set_current_graph(g2)
     assert get_current_graph() == g2

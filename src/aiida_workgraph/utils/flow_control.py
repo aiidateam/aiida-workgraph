@@ -8,7 +8,7 @@ class BaseFlowBlock:
     def __init__(self, condition: TaskSocket):
         self.condition = condition
         # The "work graph" is always the parent of the node in question
-        self.wg = condition._parent._node.parent
+        self.wg = condition._parent._node.graph
 
     def _generate_name(self, prefix: str) -> str:
         # Subclasses can define their own identifier (e.g. "workgraph.if_zone" or "workgraph.while_zone")
