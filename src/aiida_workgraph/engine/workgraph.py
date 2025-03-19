@@ -291,13 +291,10 @@ class WorkGraphEngine(Process, metaclass=Protect):
         self.ctx._awaitable_actions = []
         self.ctx._new_data = {}
         self.ctx._executed_tasks = []
-        self.ctx._task_results = {}
         # read the latest workgraph data
         self.wg = WorkGraph.load(self.node)
-        # update the context
-        for key, value in self.wg.context.to_wgdata().items():
-            key = key.replace("__", ".")
-            update_nested_dict(self.ctx, key, value)
+        # create a builtin `_context` task with its results as the context variables
+        self.ctx._task_results = {"_context": self.wg.ctx._value}
         #
         self.ctx._execution_count = 1
         # init task results
@@ -362,13 +359,13 @@ class WorkGraphEngine(Process, metaclass=Protect):
         group_outputs = {}
         for output in self.wg.group_outputs:
             names = output["from"].split(".", 1)
-            if names[0] == "context":
+            if names[0] == "ctx":
                 if len(names) == 1:
-                    raise ValueError("The output name should be context.key")
+                    raise ValueError("The output name should be ctx.key")
                 update_nested_dict(
                     group_outputs,
                     output["name"],
-                    get_nested_dict(self.ctx, names[1]),
+                    get_nested_dict(self.ctx._task_results["_context"], names[1]),
                 )
             else:
                 # expose the whole outputs of the tasks

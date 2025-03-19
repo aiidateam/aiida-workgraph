@@ -68,7 +68,7 @@ class ContextSocketNamespace(TaskSocketNamespace):
         super().__init__(*args, **kwargs)
         # Add a temporary node, but not in the WorkGraph
         # we should disable users adding task with name `_context`
-        self._node = Task(name="_context", parent=self)
+        self._node = Task(name="_context", parent=self._graph)
 
 
 def build_socket_from_AiiDA(DataClass: Type[Any]) -> Type[TaskSocket]:

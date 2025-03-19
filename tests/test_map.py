@@ -44,7 +44,7 @@ def test_map_instruction(add_code, decorated_smaller_than):
                 y=wg.tasks.add1.outputs.sum,
                 code=add_code,
             ),
-            wg.tasks.add2.set_context({"sum": "sum"}),
+            wg.update_ctx({"sum": wg.tasks.add2.outputs.sum}),
         ).else_(
             wg.add_task(
                 ArithmeticAddCalculation,
@@ -53,9 +53,11 @@ def test_map_instruction(add_code, decorated_smaller_than):
                 y=wg.tasks.add1.outputs.sum,
                 code=add_code,
             ),
-            wg.tasks.add2.set_context({"sum": "sum"}),
+            wg.update_ctx({"sum": wg.tasks.add3.outputs.sum}),
         ),
     )
     wg.add_task(calc_sum, name="calc_sum1", kwargs=wg.tasks.add2.outputs.sum)
+    # wg.add_task(calc_sum, name="calc_sum1", kwargs=wg.ctx.sum)
+    wg.tasks.calc_sum1.waiting_on.add([wg.tasks.add2, wg.tasks.add3])
     wg.run()
     assert wg.tasks.calc_sum1.outputs.sum.value == 7

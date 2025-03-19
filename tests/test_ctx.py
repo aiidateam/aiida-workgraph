@@ -5,6 +5,15 @@ import numpy as np
 import pytest
 
 
+def test_ctx_update():
+    wg = WorkGraph()
+    wg.ctx = {"x": 1, "data.x": 5}
+    assert wg.ctx.x.value == 1
+    wg.update_ctx({"data.y": 10})
+    assert wg.ctx.data.y.value == 10
+    assert wg.ctx.x._link_limit > 1
+
+
 def test_workgraph_ctx(decorated_add: Callable) -> None:
     """Set/get data to/from context."""
 
@@ -13,8 +22,8 @@ def test_workgraph_ctx(decorated_add: Callable) -> None:
     # the workgraph should be able to serialize it
     array = ArrayData()
     array.set_array("matrix", np.array([[1, 2], [3, 4]]))
-    wg.context = {"x": Float(2), "data.y": Float(3), "array": array}
-    add1 = wg.add_task(decorated_add, "add1", x="{{ x }}", y="{{ data.y }}")
+    wg.ctx = {"x": Float(2), "data.y": Float(3), "array": array}
+    add1 = wg.add_task(decorated_add, "add1", x=wg.ctx.x, y=wg.ctx.data.y)
     wg.add_task(
         "workgraph.set_context", name="set_ctx1", key="x", value=add1.outputs.result
     )
@@ -32,12 +41,11 @@ def test_task_set_ctx(decorated_add: Callable) -> None:
 
     wg = WorkGraph(name="test_node_set_ctx")
     add1 = wg.add_task(decorated_add, "add1", x=Float(2).store(), y=Float(3).store())
-    try:
-        add1.set_context({"sum": "resul"})
-    except ValueError as e:
-        assert str(e) == "Keys {'resul'} are not in the outputs of this task."
-    add1.set_context({"sum": "result"})
-    add2 = wg.add_task(decorated_add, "add2", y="{{ sum }}")
-    wg.add_link(add1.outputs[0], add2.inputs.x)
-    wg.submit(wait=True)
+    with pytest.raises(
+        AttributeError, match="'TaskSocketNamespace' object has no attribute 'resul'"
+    ):
+        wg.update_ctx({"sum": add1.outputs.resul})
+    wg.update_ctx({"sum": add1.outputs.result})
+    add2 = wg.add_task(decorated_add, "add2", x=add1.outputs[0], y=wg.ctx.sum)
+    wg.run()
     assert add2.outputs.result.value == 10

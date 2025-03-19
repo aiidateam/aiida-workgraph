@@ -98,7 +98,7 @@ class TaskStateManager:
                         self.ctx._task_results[name] = node.outputs
                         # self.ctx._new_data[name] = self.ctx._task_results[name]
                     self.set_task_runtime_info(task.name, "state", "FINISHED")
-                    self.task_set_context(name)
+                    self.task_update_ctx(name)
                     self.process.report(f"Task: {name} finished.")
                 # all other states are considered as failed
                 else:
@@ -113,7 +113,7 @@ class TaskStateManager:
                 ][0]
                 self.ctx._task_results[name] = {output_name: node}
                 self.set_task_runtime_info(task.name, "state", "FINISHED")
-                self.task_set_context(name)
+                self.task_update_ctx(name)
                 self.process.report(f"Task: {name} finished.")
         else:
             self.on_task_failed(name)
@@ -158,26 +158,22 @@ class TaskStateManager:
                         self.set_task_runtime_info(task.name, "process", results)
                 elif len(output_names) > 1:
                     self.process.exit_codes.OUTPUS_NOT_MATCH_RESULTS
-            self.task_set_context(name)
+            self.task_update_ctx(name)
             self.set_task_runtime_info(name, "state", "FINISHED")
             self.process.report(f"Task: {name} finished.")
         else:
             self.on_task_failed(name)
         self.update_parent_task_state(name)
 
-    def task_set_context(self, name: str) -> None:
+    def task_update_ctx(self, name: str) -> None:
         """Export task results to the context based on context mapping."""
-        from aiida_workgraph.utils import update_nested_dict
 
-        items = self.process.wg.tasks[name].context_mapping
-        for key, result_name in items.items():
-            key = key.removeprefix("{{").removesuffix("}}")
-            result = self.ctx._task_results[name][result_name]
-            # for mapped tasks, should use dict to hold the results
-            if self.process.wg.tasks[name].map_data:
-                prefix = self.process.wg.tasks[name].map_data["prefix"]
-                key = f"{key}.{prefix}"
-            update_nested_dict(self.ctx, key, result)
+        for link in self.process.wg.links:
+            if link.from_node.name == name and link.to_node.name == "_context":
+                key = link.to_socket._name
+                result_name = link.from_socket._name
+                result = self.ctx._task_results[name][result_name]
+                self.ctx._task_results["_context"][key] = result
 
     # --------------------------------------------------
     # Reset & removing from executed tasks
@@ -332,6 +328,7 @@ class TaskStateManager:
                         ][output._name]
             self.ctx._task_results[name] = results
             self.set_task_runtime_info(name, "state", "FINISHED")
+            self.task_update_ctx(name)
             self.process.report(f"Task: {name} finished.")
             self.update_parent_task_state(name)
 

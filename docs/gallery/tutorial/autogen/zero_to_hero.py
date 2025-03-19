@@ -342,17 +342,17 @@ generate_node_graph(wg.pk)
 from aiida_workgraph import task
 
 #
-@task.graph_builder(outputs=[{"name": "result", "from": "context.result"}])
+@task.graph_builder(outputs=[{"name": "result", "from": "ctx.result"}])
 def add_multiply_if_generator(x, y):
     wg = WorkGraph()
     if x.value > 0:
         add1 = wg.add_task(add, name="add1", x=x, y=y)
         # export the result of add1 to the context, so that context.result = add1.results
-        add1.set_context({"result": "result"})
+        add1.update_ctx({"result": "result"})
     else:
         multiply1 = wg.add_task(multiply, name="multiply1", x=x, y=y)
         # export the result of multiply1 to the context
-        multiply1.set_context({"result": "result"})
+        multiply1.update_ctx({"result": "result"})
     return wg
 
 
@@ -413,7 +413,7 @@ def scale_structure(structure, scales):
 
 #
 # Output result from context to the output socket
-@task.graph_builder(outputs=[{"name": "result", "from": "context.result"}])
+@task.graph_builder(outputs=[{"name": "result", "from": "ctx.result"}])
 def all_scf(structures, scf_inputs):
     """Run the scf calculation for each structure."""
     from aiida_workgraph import WorkGraph
@@ -424,7 +424,7 @@ def all_scf(structures, scf_inputs):
         pw1 = wg.add_task(PwCalculation, name=f"pw1_{key}", structure=structure)
         pw1.set(scf_inputs)
         # save the output parameters to the context
-        pw1.set_context({f"result.{key}": "output_parameters"})
+        pw1.update_ctx({f"result.{key}": "output_parameters"})
     return wg
 
 

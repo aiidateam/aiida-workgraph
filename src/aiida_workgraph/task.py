@@ -31,7 +31,6 @@ class Task(GraphNode):
 
     def __init__(
         self,
-        context_mapping: Optional[List[Any]] = None,
         process: Optional[aiida.orm.ProcessNode] = None,
         pk: Optional[int] = None,
         **kwargs: Any,
@@ -42,7 +41,6 @@ class Task(GraphNode):
         super().__init__(
             **kwargs,
         )
-        self.context_mapping = {} if context_mapping is None else context_mapping
         self.waiting_on = WaitingTaskCollection(parent=self)
         self.process = process
         self.pk = pk
@@ -65,7 +63,6 @@ class Task(GraphNode):
         # clear unused keys
         for key in ["ctrl_inputs", "ctrl_outputs"]:
             tdata.pop(key, None)
-        tdata["context_mapping"] = self.context_mapping
         tdata["wait"] = [task.name for task in self.waiting_on]
         tdata["children"] = []
         tdata["execution_count"] = self.execution_count
@@ -76,17 +73,6 @@ class Task(GraphNode):
         tdata["error_handlers"] = self.get_error_handlers()
 
         return tdata
-
-    def set_context(self, context: Dict[str, Any]) -> None:
-        """Set the output of the task as a value in the context.
-        key is the context key, value is the output key.
-        """
-        # all values should belong to the outputs.keys()
-        remain_keys = set(context.values()).difference(self.get_output_names())
-        if remain_keys:
-            msg = f"Keys {remain_keys} are not in the outputs of this task."
-            raise ValueError(msg)
-        self.context_mapping.update(context)
 
     def set_from_builder(self, builder: Any) -> None:
         """Set the task inputs from a AiiDA ProcessBuilder."""
@@ -141,7 +127,6 @@ class Task(GraphNode):
         from aiida_workgraph.orm.utils import deserialize_safe
 
         super().update_from_dict(data)
-        self.context_mapping = data.get("context_mapping", {})
         process = data.get("process", None)
         if process and isinstance(process, str):
             process = deserialize_safe(process)

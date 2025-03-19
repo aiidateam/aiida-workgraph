@@ -117,7 +117,7 @@ class SetContext(Task):
     def get_executor(self):
         executor = {
             "module_path": "aiida_workgraph.executors.builtins",
-            "callable_name": "set_context",
+            "callable_name": "update_ctx",
         }
         return executor
 
