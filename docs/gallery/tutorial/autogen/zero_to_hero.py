@@ -348,11 +348,11 @@ def add_multiply_if_generator(x, y):
     if x.value > 0:
         add1 = wg.add_task(add, name="add1", x=x, y=y)
         # export the result of add1 to the context, so that context.result = add1.results
-        add1.update_ctx({"result": "result"})
+        wg.update_ctx({"result": add1.outputs.result})
     else:
         multiply1 = wg.add_task(multiply, name="multiply1", x=x, y=y)
         # export the result of multiply1 to the context
-        multiply1.update_ctx({"result": "result"})
+        wg.update_ctx({"result": multiply1.outputs.result})
     return wg
 
 
@@ -424,7 +424,7 @@ def all_scf(structures, scf_inputs):
         pw1 = wg.add_task(PwCalculation, name=f"pw1_{key}", structure=structure)
         pw1.set(scf_inputs)
         # save the output parameters to the context
-        pw1.update_ctx({f"result.{key}": "output_parameters"})
+        wg.update_ctx({f"result.{key}": pw1.outputs.output_parameters})
     return wg
 
 

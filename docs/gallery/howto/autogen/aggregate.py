@@ -256,7 +256,7 @@ def generator_loop(nb_iterations: Int):
     wg = WorkGraph()
     for i in range(nb_iterations.value):  # this can be chosen as wanted
         generator_task = wg.add_task(generator, name=f"generator{i}", seed=Int(i))
-        generator_task.update_ctx({f"generated.seed{i}": "result"})
+        wg.update_ctx({f"generated.seed{i}": generator_task.outputs.result})
     return wg
 
 
