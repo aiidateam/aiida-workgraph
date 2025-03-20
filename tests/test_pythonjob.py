@@ -18,7 +18,6 @@ def test_to_dict():
         return atoms * (dim, dim, dim)
 
     atoms = bulk("Si")
-    structure = orm.StructureData(ase=atoms)
     wg = WorkGraph("test_PythonJob_retrieve_files")
     # atoms will be converted to AtomsData automatically
     wg.add_task(
@@ -27,19 +26,12 @@ def test_to_dict():
         dim=2,
         name="make_supercell_1",
     )
-    # structure will be converted to AtomsData automatically
-    wg.add_task(
-        make_supercell,
-        atoms=structure,
-        dim=2,
-        name="make_supercell_2",
-    )
     data = wg.tasks.make_supercell_1.to_dict()
-    assert isinstance(
+    assert not isinstance(
         data["inputs"]["sockets"]["atoms"]["property"]["value"],
         orm.Data,
     )
-    data = wg.tasks.make_supercell_1.to_dict()
+    data = wg.tasks.make_supercell_1.to_dict(serialize_for_db=True)
     assert isinstance(
         data["inputs"]["sockets"]["atoms"]["property"]["value"],
         orm.Data,

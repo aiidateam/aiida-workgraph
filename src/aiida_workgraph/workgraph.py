@@ -72,7 +72,7 @@ class WorkGraph(node_graph.NodeGraph):
         self, metadata: Optional[Dict[str, Any]] = None
     ) -> Dict[str, Any]:
 
-        wgdata = self.to_dict()
+        wgdata = self.to_dict(serialize_for_db=True)
         metadata = metadata or {}
         inputs = {"workgraph_data": wgdata, "metadata": metadata}
         return inputs
@@ -194,9 +194,9 @@ class WorkGraph(node_graph.NodeGraph):
         connectivity["zone"] = {}
         return connectivity
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self, serialize_for_db: bool = False) -> Dict[str, Any]:
         """Convert the workgraph to a dictionary."""
-        wgdata = super().to_dict()
+        wgdata = super().to_dict(serialize_for_db=serialize_for_db)
         wgdata["context"] = self.ctx._value
         # separate the links connected to the context from the main links
         wgdata["ctx_links"] = []
