@@ -312,18 +312,20 @@ class TaskManager:
         2. Mark this MAP node as running and schedule a continuation.
         """
         name = task.name
+        # we also store the links, so that we can load it in the GUI
         map_info = {"prefix": [], "children": [], "links": []}
         if self.state_manager.are_childen_finished(name)[0]:
             self.state_manager.update_zone_task_state(name)
         else:
             self.state_manager.set_task_runtime_info(name, "state", "RUNNING")
             source = kwargs["source"]
-            placeholder = kwargs.get("placeholder", "map_input")
             map_info["prefix"] = list(source.keys())
             for prefix, value in source.items():
-                new_tasks, new_links = self.generate_mapped_tasks(
-                    task, prefix=prefix, placeholder=placeholder, value=value
-                )
+                key = f"map_zone_{name}_item_{prefix}"
+                # add a new item to the wg.ctx, as well as the results of the ctx node
+                self.process.wg.update_ctx({key: value})
+                self.ctx._task_results["ctx"][key] = value
+                new_tasks, new_links = self.generate_mapped_tasks(task, prefix=prefix)
             map_info["children"] = list(new_tasks.keys())
             map_info["links"] = new_links
         self.state_manager.set_task_runtime_info(name, "map_info", map_info)
@@ -529,9 +531,7 @@ class TaskManager:
             child_tasks.extend(self.get_all_children(child_task.name))
         return child_tasks
 
-    def generate_mapped_tasks(
-        self, zone_task: dict, prefix: str, value: any, placeholder: str = "map_input"
-    ) -> None:
+    def generate_mapped_tasks(self, zone_task: Task, prefix: str) -> None:
         """
         Recursively clone the subgraph starting from zone_children,
         rewriting references to old tasks with new task names.
@@ -548,9 +548,7 @@ class TaskManager:
             links = self.process.wg.tasks[child_task].inputs._all_links
             all_links.extend(links)
         # fix references in the newly mapped tasks (children, input_links, etc.)
-        new_links = self._patch_cloned_tasks(
-            new_tasks, all_links, value, placeholder=placeholder
-        )
+        new_links = self._patch_cloned_tasks(zone_task, prefix, new_tasks, all_links)
 
         # update process.wg.connectivity so the new tasks are recognized in child_node, zone references, etc.
         self._patch_connectivity(new_tasks)
@@ -582,10 +580,10 @@ class TaskManager:
 
     def _patch_cloned_tasks(
         self,
+        zone_task: Task,
+        prefix: str,
         new_tasks: dict[str, "Task"],
         all_links: List[NodeLink],
-        value: any,
-        placeholder: str = "map_input",
     ):
         """
         For each newly mapped task, fix references (children, input_links, etc.)
@@ -593,15 +591,6 @@ class TaskManager:
         """
         for orginal_name, task in new_tasks.items():
             orginal_task = self.process.wg.tasks[orginal_name]
-            # update input
-            for input in task.inputs:
-                if not hasattr(input, "property"):
-                    continue
-                if (
-                    isinstance(input.property.value, str)
-                    and placeholder in input.property.value
-                ):
-                    input.property.value = value
             # fix children references
             if hasattr(orginal_task, "children"):
                 for child_task in orginal_task.children:
@@ -616,20 +605,26 @@ class TaskManager:
                     task.parent_task = orginal_task.parent_task
         # fix links references
         new_links = []
+        share_key = f"map_zone_{zone_task.name}_item"
+        item_key = f"map_zone_{zone_task.name}_item_{prefix}"
         for link in all_links:
             if link.to_node.name in new_tasks:
                 to_node = new_tasks[link.to_node.name]
+                to_socket = to_node.inputs[link.to_socket._scoped_name]
             else:
                 # if the to_node is not in the new_tasks, skip
                 continue
             new_links.append(link.to_dict())
             if link.from_node.name in new_tasks:
                 from_node = new_tasks[link.from_node.name]
+                from_socket = from_node.outputs[link.from_socket._scoped_name]
+            elif link.from_node.name == "ctx" and link.from_socket._name == share_key:
+                from_socket = self.process.wg.ctx[item_key]
             else:
-                from_node = link.from_node
+                from_socket = link.from_socket
             self.process.wg.add_link(
-                from_node.outputs[link.from_socket._scoped_name],
-                to_node.inputs[link.to_socket._scoped_name],
+                from_socket,
+                to_socket,
             )
         return new_links
 

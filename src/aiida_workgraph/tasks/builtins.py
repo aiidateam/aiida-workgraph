@@ -85,6 +85,16 @@ class Map(Zone):
     node_type = "MAP"
     catalog = "Control"
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if self.graph is not None:
+            # init a ctx variable to placeholder the item
+            key = f"map_zone_{self.name}_item"
+            self.graph.update_ctx({key: None})
+            self.item = self.graph.ctx[key]
+        else:
+            raise ValueError("Map zone must be added to a graph.")
+
     def create_sockets(self) -> None:
         self.inputs._clear()
         self.outputs._clear()
