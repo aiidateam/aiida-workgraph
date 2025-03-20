@@ -53,6 +53,7 @@ docs = [
     "sphinx-gallery",
     "myst-nb~=1.0.0",
     "nbsphinx",
+    "sphinx-autobuild",
 ]
 pre-commit = [
     "pre-commit~=2.2",
