@@ -121,11 +121,12 @@ def test_reset_message(wg_calcjob):
 
     wg = wg_calcjob
     wg.submit()
-    wg.wait(tasks={"add1": ["RUNNING"]}, timeout=30, interval=1)
+    timeout = 30
+    wg.wait(tasks={"add1": ["RUNNING"]}, timeout=timeout, interval=1)
     wg = WorkGraph.load(wg.process.pk)
     wg.tasks.add1.set({"y": orm.Int(10).store()})
     wg.save()
-    wg.wait(timeout=60)
+    wg.wait(timeout=timeout * 2)
     report = get_workchain_report(wg.process, "REPORT")
     assert "Action: RESET. Tasks: ['add1']" in report
 
