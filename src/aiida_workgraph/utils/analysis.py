@@ -1,7 +1,6 @@
 from typing import Optional, Dict
 from aiida.orm import ProcessNode, load_node
 from aiida.orm.utils.serialize import serialize
-from aiida_workgraph.orm.utils import deserialize_safe
 
 
 class WorkGraphSaver:
@@ -32,24 +31,6 @@ class WorkGraphSaver:
         self.wgdata = wgdata
         self.name = wgdata["name"]
         self.clean_hanging_links()
-
-    def wait_to_link(self) -> None:
-        """Convert wait attribute to link."""
-        for name, task in self.wgdata["tasks"].items():
-            for wait_task in task["wait"]:
-                if wait_task in self.wgdata["tasks"]:
-                    self.wgdata["links"].append(
-                        {
-                            "from_node": wait_task,
-                            "from_socket": "_wait",
-                            "to_node": name,
-                            "to_socket": "_wait",
-                        }
-                    )
-                else:
-                    raise ValueError(
-                        "Task {} wait for a non-exist task {}".format(name, wait_task)
-                    )
 
     def clean_hanging_links(self) -> None:
         """Clean hanging links in the workgraph."""
@@ -232,22 +213,3 @@ class WorkGraphSaver:
             self.wgdata["tasks"][name] = serialize(task)
         self.workgraph_error_handlers = self.wgdata.pop("error_handlers")
         self.wgdata["context"] = serialize(self.wgdata["context"])
-
-    def set_tasks_action(self, action: str) -> None:
-        """Set task action."""
-        for name, task in self.wgdata["tasks"].items():
-            task["action"] = action
-
-    def get_wgdata_from_db(
-        self, process: Optional[ProcessNode] = None
-    ) -> Optional[Dict]:
-
-        process = self.process if process is None else process
-        wgdata = process.workgraph_data
-        if wgdata is None:
-            print("No workgraph data found in the process node.")
-            return
-        for name, task in wgdata["tasks"].items():
-            wgdata["tasks"][name] = deserialize_safe(task)
-        wgdata["error_handlers"] = process.workgraph_error_handlers
-        return wgdata

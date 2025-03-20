@@ -1,8 +1,6 @@
 from __future__ import annotations
 
 from aiida.common.extendeddicts import AttributeDict
-from typing import Any
-from aiida_workgraph.utils import get_nested_dict
 import logging
 
 
@@ -54,16 +52,3 @@ class ContextManager:
                 )
 
         return ctx, ctx_path[-1]
-
-    def update_ctx_variable(self, value: Any) -> Any:
-        """Replace placeholders in the value with actual context values."""
-        if isinstance(value, dict):
-            return {k: self.update_ctx_variable(v) for k, v in value.items()}
-        elif (
-            isinstance(value, str)
-            and value.strip().startswith("{{")
-            and value.strip().endswith("}}")
-        ):
-            name = value[2:-2].strip()
-            return get_nested_dict(self.ctx, name)
-        return value
