@@ -200,8 +200,11 @@ def add_one(x):
 @task.graph_builder(outputs=[{"name": "result", "from": "ctx.task_out"}])
 def for_loop(nb_iterations: Int):
     wg = WorkGraph()
+    results = []
     for i in range(nb_iterations.value):
         task = wg.add_task(add_one, x=i)
+        # Collect all results
+        results.append(task.outputs.result)
 
     # We cannot refer to a specific task as output in the graph builder decorator
     # as in the examples before since the name of the last task depends on the input.
@@ -211,7 +214,7 @@ def for_loop(nb_iterations: Int):
     # of the graph builder decorator.
 
     # Put result of the task to the context under the name task_out
-    wg.update_ctx({"task_out": task.outputs.result})
+    wg.update_ctx({"task_out": results})
     # If want to know more about the usage of the context please refer to the
     # context howto in the documentation
     return wg
