@@ -46,6 +46,24 @@ def test_to_dict():
     )
 
 
+def test_imported_pythonjob(fixture_localhost, python_executable_path):
+    from aiida_workgraph.executors.test import add_pythonjob
+    from aiida import orm
+
+    wg = WorkGraph("test_imported_pythonjob")
+    wg.add_task(
+        add_pythonjob,
+        name="add1",
+        x=1,
+        y=2,
+        computer="localhost",
+        command_info={"label": python_executable_path},
+    )
+    wg.run()
+    assert isinstance(wg.tasks.add1.outputs.result.value, orm.Data)
+    assert wg.tasks.add1.outputs.result.value == 3
+
+
 @pytest.mark.usefixtures("started_daemon_client")
 def test_decorator(fixture_localhost, python_executable_path):
     """Test decorator."""

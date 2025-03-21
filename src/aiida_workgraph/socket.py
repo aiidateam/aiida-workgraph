@@ -70,6 +70,19 @@ class ContextSocketNamespace(TaskSocketNamespace):
         # we should disable users adding task with name `_context`
         self._node = Task(name="ctx", graph=self._graph)
 
+    def __setattr__(self, name: str, value: Any) -> None:
+        """
+        Override __setattr__ so that doing `namespace_socket.some_name = x`
+        either sets the property or links to another socket, rather than
+        replacing the entire sub-socket object.
+        """
+        # If the attribute name is "private" or reserved, do normal attribute setting
+        if name.startswith("_"):
+            object.__setattr__(self, name, value)
+            return
+
+        self._set_socket_value({name: value}, link_limit=1e6)
+
 
 def build_socket_from_AiiDA(DataClass: Type[Any]) -> Type[TaskSocket]:
     """Create a socket class from AiiDA DataClass."""

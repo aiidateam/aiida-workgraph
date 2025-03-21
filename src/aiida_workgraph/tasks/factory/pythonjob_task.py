@@ -141,6 +141,9 @@ class PythonJobTask(Task):
         metadata.update({"call_link_label": self.name})
         # get the function from executor
         func = NodeExecutor(**self.get_executor()).executor
+        # in case this is a wrapped function
+        if hasattr(func, "_TaskCls") and hasattr(func, "_func"):
+            func = func._func
         function_outputs = []
         for output_name in self.outputs._get_all_keys():
             output = self.outputs[output_name]
