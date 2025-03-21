@@ -95,10 +95,6 @@ class TaskManager:
                 self.state_manager.get_task_runtime_info(task.name, "state") == "FAILED"
             ):
                 failed_tasks.append(task.name)
-        if is_finished:
-            if self.process.wg.graph_type.upper() == "WHILE":
-                should_run = self.check_while_conditions()
-                is_finished = not should_run
         if is_finished and len(failed_tasks) > 0:
             message = f"WorkGraph finished, but tasks: {failed_tasks} failed. Thus all their child tasks are skipped."
             self.process.report(message)
@@ -112,7 +108,7 @@ class TaskManager:
         """
         Resume the WorkGraph by looking for tasks that are ready to run.
         """
-        self.process.report("Continue workgraph.")
+        # self.process.report("Continue workgraph.")
         task_to_run = []
         for task in self.process.wg.tasks:
             # update task state
@@ -169,13 +165,11 @@ class TaskManager:
                 continue
 
             self.ctx._executed_tasks.append(name)
-            print("-" * 60)
+            # print("-" * 60)
 
-            self.process.report(f"Run task: {name}, type: {task.node_type}")
+            self.logger.info(f"Run task: {name}, type: {task.node_type}")
             inputs = self.get_inputs(name)
-            print("kwargs: ", inputs["kwargs"])
-            # kwargs["meta.label"] = name
-            # output must be a Data type or a mapping of {string: Data}
+            # print("kwargs: ", inputs["kwargs"])
             self.ctx._task_results[task.name] = {}
             task_type = task.node_type.upper()
             if task_type in ["CALCFUNCTION", "WORKFUNCTION"]:
@@ -486,39 +480,6 @@ class TaskManager:
         if kwargs["invert_condition"]:
             return not flag
         return flag
-
-    def check_while_conditions(self) -> bool:
-        """Check while conditions.
-        Run all condition tasks and check if all the conditions are True.
-        """
-        self.process.report("Check while conditions.")
-        if self.ctx._execution_count >= self.ctx._max_iteration:
-            self.process.report("Max iteration reached.")
-            return False
-        condition_tasks = []
-        for c in self.process.wg.conditions:
-            task_name, socket_name = c.split(".")
-            if "task_name" != "context":
-                condition_tasks.append(task_name)
-                self.state_manager.reset_task(task_name)
-        self.run_tasks(condition_tasks, continue_workgraph=False)
-        conditions = []
-        for c in self.process.wg.conditions:
-            task_name, socket_name = c.split(".")
-            if task_name == "context":
-                conditions.append(self.ctx[socket_name])
-            else:
-                conditions.append(self.ctx._task_results[task_name][socket_name])
-        should_run = False not in conditions
-        if should_run:
-            self.reset()
-            self.state_manager.set_tasks_state(condition_tasks, "SKIPPED")
-        return should_run
-
-    def reset(self) -> None:
-        self.ctx._execution_count += 1
-        self.state_manager.set_tasks_state(self.process.wg.tasks._get_keys(), "PLANNED")
-        self.ctx._executed_tasks = []
 
     def get_all_children(self, name: str) -> List[str]:
         """Find all children of the zone_task, and their children recursively"""
