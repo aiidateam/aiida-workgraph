@@ -52,7 +52,6 @@ class WorkGraph(node_graph.NodeGraph):
         self.process = None
         self.restart_process = None
         self.max_number_jobs = 1000000
-        self.execution_count = 0
         self.max_iteration = 1000000
         self.nodes = TaskCollection(self, pool=self.NodePool)
         self.nodes.post_deletion_hooks = [task_deletion_hook]
@@ -107,10 +106,9 @@ class WorkGraph(node_graph.NodeGraph):
             return
         self.check_before_run()
         inputs = self.prepare_inputs(metadata=metadata)
-        result, node = aiida.engine.run_get_node(WorkGraphEngine, inputs=inputs)
+        _, node = aiida.engine.run_get_node(WorkGraphEngine, inputs=inputs)
         self.process = node
         self.update()
-        return result
 
     def submit(
         self,
@@ -210,7 +208,6 @@ class WorkGraph(node_graph.NodeGraph):
                 if self.restart_process
                 else None,
                 "max_iteration": self.max_iteration,
-                "execution_count": self.execution_count,
                 "conditions": self.conditions,
                 "max_number_jobs": self.max_number_jobs,
             }
@@ -310,8 +307,6 @@ class WorkGraph(node_graph.NodeGraph):
                 continue
             self.tasks[name].update_state(data)
 
-        execution_count = getattr(self.process.outputs, "execution_count", None)
-        self.execution_count = execution_count if execution_count else 0
         if self._widget is not None:
             states = {name: data["state"] for name, data in processes_data.items()}
             self._widget.states = states
@@ -347,7 +342,6 @@ class WorkGraph(node_graph.NodeGraph):
         wg = super().from_dict(wgdata, class_factory=BaseTaskFactory)
         for key in [
             "max_iteration",
-            "execution_count",
             "conditions",
             "max_number_jobs",
             "connectivity",

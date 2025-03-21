@@ -99,7 +99,9 @@ class TaskStateManager:
                         # self.ctx._new_data[name] = self.ctx._task_results[name]
                     self.set_task_runtime_info(task.name, "state", "FINISHED")
                     self.task_update_ctx(name)
-                    self.process.report(f"Task: {name} finished.")
+                    self.process.report(
+                        f"Task: {name}, type: {task.node_type}, finished."
+                    )
                 # all other states are considered as failed
                 else:
                     self.ctx._task_results[name] = node.outputs
@@ -256,11 +258,12 @@ class TaskStateManager:
         """
         Mark a task as FAILED, skip its children, and run any error handlers.
         """
+        task_type = self.process.wg.tasks[name].node_type
         self.set_task_runtime_info(name, "state", "FAILED")
         self.set_tasks_state(
             self.process.wg.connectivity["child_node"][name], "SKIPPED"
         )
-        self.process.report(f"Task {name} failed.")
+        self.process.report(f"Task, {name}, type: {task_type}, failed.")
         self.process.error_handler_manager.run_error_handlers(name)
 
     def update_parent_task_state(self, name: str) -> None:
