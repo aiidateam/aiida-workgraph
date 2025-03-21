@@ -176,4 +176,4 @@ def test_while_graph_builder(decorated_add, decorated_multiply, decorated_smalle
     wg.add_link(my_while1.outputs.result, add2.inputs.x)
     wg.run()
     assert add2.outputs.result.value < 31
-    assert my_while1.node.outputs.execution_count == 2
+    assert my_while1.process.outputs.execution_count == 2

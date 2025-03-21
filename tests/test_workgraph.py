@@ -140,23 +140,23 @@ def test_restart_and_reset(wg_calcfunction):
         "workgraph.test_sum_diff",
         "sumdiff3",
         x=4,
-        y=wg.tasks["sumdiff2"].outputs.sum,
+        y=wg.tasks.sumdiff2.outputs.sum,
     )
     wg.name = "test_restart_0"
     wg.run()
     wg1 = WorkGraph.load(wg.process.pk)
     wg1.restart()
     wg1.name = "test_restart_1"
-    wg1.tasks["sumdiff2"].set({"x": orm.Int(10).store()})
+    wg1.tasks.sumdiff2.set({"x": orm.Int(10).store()})
     wg1.run()
-    assert wg1.tasks["sumdiff1"].node.pk == wg.tasks["sumdiff1"].pk
-    assert wg1.tasks["sumdiff2"].node.pk != wg.tasks["sumdiff2"].pk
-    assert wg1.tasks["sumdiff3"].node.pk != wg.tasks["sumdiff3"].pk
-    assert wg1.tasks["sumdiff3"].node.outputs.sum == 19
+    assert wg1.tasks.sumdiff1.pk == wg.tasks.sumdiff1.pk
+    assert wg1.tasks.sumdiff2.pk != wg.tasks.sumdiff2.pk
+    assert wg1.tasks.sumdiff3.pk != wg.tasks.sumdiff3.pk
+    assert wg1.tasks.sumdiff3.outputs.sum == 19
     wg1.reset()
     assert wg1.process is None
-    assert wg1.tasks["sumdiff3"].process is None
-    assert wg1.tasks["sumdiff3"].state == "PLANNED"
+    assert wg1.tasks.sumdiff3.process is None
+    assert wg1.tasks.sumdiff3.state == "PLANNED"
 
 
 def test_extend_workgraph(decorated_add_multiply_group):
@@ -166,15 +166,13 @@ def test_extend_workgraph(decorated_add_multiply_group):
     add1 = wg.add_task("workgraph.test_add", "add1", x=2, y=3)
     add_multiply_wg = decorated_add_multiply_group(x=0, y=4, z=5)
     # test wait
-    add_multiply_wg.tasks["multiply1"].waiting_on.add("add1")
+    add_multiply_wg.tasks.multiply1.waiting_on.add("add1")
     # extend workgraph
     wg.extend(add_multiply_wg, prefix="group_")
-    assert "group_add1" in [
-        task.name for task in wg.tasks["group_multiply1"].waiting_on
-    ]
-    wg.add_link(add1.outputs[0], wg.tasks["group_add1"].inputs.x)
+    assert "group_add1" in [task.name for task in wg.tasks.group_multiply1.waiting_on]
+    wg.add_link(add1.outputs[0], wg.tasks.group_add1.inputs.x)
     wg.run()
-    assert wg.tasks["group_multiply1"].node.outputs.result == 45
+    assert wg.tasks.group_multiply1.outputs.result == 45
 
 
 def test_workgraph_group_outputs(decorated_add):

@@ -26,4 +26,4 @@ def test_multiply_link() -> None:
     wg.add_link(float3.outputs[0], sum1.inputs.datas)
     # wg.submit(wait=True)
     wg.run()
-    assert sum1.node.outputs.result.value == 6
+    assert sum1.outputs.result.value == 6

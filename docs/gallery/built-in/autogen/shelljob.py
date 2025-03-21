@@ -170,7 +170,7 @@ wg.to_html()
 
 wg.submit(wait=True, timeout=100)
 print("State of WorkGraph    : {}".format(wg.state))
-print("Result               : {}".format(expr_2.node.outputs.result.value))
+print("Result               : {}".format(expr_2.outputs.result.value))
 
 
 # %%
