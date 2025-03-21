@@ -72,7 +72,7 @@ class WorkGraph(node_graph.NodeGraph):
         self, metadata: Optional[Dict[str, Any]] = None
     ) -> Dict[str, Any]:
 
-        wgdata = self.to_dict()
+        wgdata = self.to_dict(should_serialize=True)
         metadata = metadata or {}
         inputs = {"workgraph_data": wgdata, "metadata": metadata}
         return inputs
@@ -194,9 +194,9 @@ class WorkGraph(node_graph.NodeGraph):
         connectivity["zone"] = {}
         return connectivity
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self, should_serialize: bool = False) -> Dict[str, Any]:
         """Convert the workgraph to a dictionary."""
-        wgdata = super().to_dict()
+        wgdata = super().to_dict(should_serialize=should_serialize)
         wgdata["context"] = self.ctx._value
         # separate the links connected to the context from the main links
         wgdata["ctx_links"] = []
@@ -645,3 +645,19 @@ class WorkGraph(node_graph.NodeGraph):
 
     def __str__(self) -> str:
         return f'WorkGraph(name="{self.name}", uuid="{self.uuid}")'
+
+    def __enter__(self):
+        """Called when entering the `with NodeGraph() as ng:` block."""
+        from aiida_workgraph.manager import get_current_graph, set_current_graph
+
+        self._previous_graph = get_current_graph()
+        set_current_graph(self)
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        """Called upon leaving the `with NodeGraph() as ng:` block."""
+        from aiida_workgraph.manager import set_current_graph
+
+        set_current_graph(self._previous_graph)
+        self._previous_graph = None
+        return None

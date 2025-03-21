@@ -1,7 +1,6 @@
 from aiida_workgraph import WorkGraph, task
 from aiida import orm
 from aiida_workgraph.manager import (
-    active_graph,
     active_if_zone,
     active_while_zone,
     active_map_zone,
@@ -17,7 +16,7 @@ def test_while_and_if(decorated_add):
     """Sum of even numbers up to N."""
 
     N = 5
-    with active_graph(WorkGraph()) as wg:
+    with WorkGraph() as wg:
         wg.ctx = {"n": 1, "total": 0}
         with active_while_zone(wg.ctx.n < N):
             with active_if_zone(wg.ctx.n % 2 == 0):
@@ -43,7 +42,7 @@ def test_map(decorated_add):
         return sum(items.values())
 
     N = 5
-    with active_graph(WorkGraph()) as wg:
+    with WorkGraph() as wg:
         result = generate_list(N)
         with active_map_zone(source_socket=result) as map_zone:
             result = decorated_add(x=map_zone.item, y=1)

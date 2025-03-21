@@ -1,4 +1,4 @@
-from typing import List, Union, Any
+from typing import List, Any
 from aiida_workgraph.property import TaskProperty
 from aiida import orm
 
@@ -16,114 +16,42 @@ class PropertyInt(TaskProperty):
     """A new class for integer type."""
 
     identifier: str = "workgraph.int"
-    allowed_types = (int, type(None))
+    allowed_types = (int, orm.Int, type(None))
 
 
 class PropertyFloat(TaskProperty):
     """A new class for float type."""
 
     identifier: str = "workgraph.float"
-    allowed_types = (int, float, type(None))
+    allowed_types = (int, float, orm.Int, orm.Float, type(None))
 
 
 class PropertyBool(TaskProperty):
     """A new class for bool type."""
 
     identifier: str = "workgraph.bool"
-    allowed_types = (bool, int, type(None))
+    allowed_types = (bool, int, orm.Bool, orm.Int, type(None))
 
 
 class PropertyString(TaskProperty):
     """A new class for string type."""
 
     identifier: str = "workgraph.string"
-    allowed_types = (str, type(None))
-
-    def validate(self, value: any) -> None:
-        if not isinstance(value, self.allowed_types):
-            raise TypeError(
-                f"Expected value of type {self.allowed_types}, got {type(value).__name__} instead."
-            )
+    allowed_types = (str, orm.Str, type(None))
 
 
-class PropertyAiiDAInt(TaskProperty):
-    """A new class for integer type."""
-
-    identifier: str = "workgraph.aiida_int"
-    allowed_types = (int, orm.Int, type(None))
-
-    def set_value(self, value: Union[int, orm.Int, str] = None) -> None:
-        if isinstance(value, int):
-            value = orm.Int(value)
-        super().set_value(value)
-
-
-class PropertyAiiDAFloat(TaskProperty):
-    """A new class for float type."""
-
-    identifier: str = "workgraph.aiida_float"
-    allowed_types = (int, float, orm.Int, orm.Float, type(None))
-
-    def set_value(
-        self, value: Union[int, float, orm.Int, orm.Float, str] = None
-    ) -> None:
-        if isinstance(value, (int, float)):
-            value = orm.Float(value)
-        super().set_value(value)
-
-
-class PropertyAiiDABool(TaskProperty):
-    """A new class for bool type."""
-
-    identifier: str = "workgraph.aiida_bool"
-    allowed_types = (int, bool, orm.Int, orm.Bool, type(None))
-
-    def set_value(self, value: Union[int, bool, orm.Int, orm.Bool, str] = None) -> None:
-        if isinstance(value, int):
-            value = orm.Bool(value)
-        super().set_value(value)
-
-
-class PropertyAiiDAString(TaskProperty):
-    """A new class for string type."""
-
-    identifier: str = "workgraph.aiida_string"
-    allowed_types = (int, float, str, orm.Str, type(None))
-
-    def set_value(self, value: Union[int, float, str, orm.Str] = None) -> None:
-        if isinstance(value, (int, float)):
-            value = orm.Str(value)
-        super().set_value(value)
-
-    def validate(self, value: any) -> None:
-        if not isinstance(value, self.allowed_types):
-            raise TypeError(
-                f"Expected value of type {self.allowed_types}, got {type(value).__name__} instead."
-            )
-
-
-class PropertyAiiDAList(TaskProperty):
+class PropertyList(TaskProperty):
     """A new class for List type."""
 
-    identifier: str = "workgraph.aiida_list"
+    identifier: str = "workgraph.list"
     allowed_types = (list, orm.List, type(None))
 
-    def set_value(self, value: Union[list, orm.List, str] = None) -> None:
-        if isinstance(value, (list)):
-            value = orm.List(list=value)
-        super().set_value(value)
 
-
-class PropertyAiiDADict(TaskProperty):
+class PropertyDict(TaskProperty):
     """A new class for Dict type."""
 
-    identifier: str = "workgraph.aiida_dict"
+    identifier: str = "workgraph.dict"
     allowed_types = (dict, orm.Dict, type(None))
-
-    def set_value(self, value: Union[dict, orm.Dict, str] = None) -> None:
-        if isinstance(value, (dict)):
-            value = orm.Dict(value)
-        super().set_value(value)
 
 
 # ====================================
@@ -192,15 +120,3 @@ class PropertyStructureData(TaskProperty):
 
     identifier: str = "workgraph.aiida_structuredata"
     allowed_types = (orm.StructureData, type(None))
-
-
-__all__ = [
-    PropertyAny,
-    PropertyAiiDAInt,
-    PropertyAiiDAFloat,
-    PropertyAiiDABool,
-    PropertyAiiDAString,
-    PropertyAiiDADict,
-    PropertyAiiDAIntVector,
-    PropertyAiiDAFloatVector,
-]

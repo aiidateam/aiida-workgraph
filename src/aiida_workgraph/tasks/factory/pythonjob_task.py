@@ -42,14 +42,12 @@ class PythonJobTask(Task):
 
     identifier = "workgraph.pythonjob"
 
-    def to_dict(self, short: bool = False) -> Dict[str, Any]:
+    def serialize_data(self, data: Dict[str, Any]) -> Dict[str, Any]:
         """Overwrite the to_dict method to handle the PythonJob data.
         Because the data will be passed as input of the WorkGraphEngine,
         all raw data need to be serialized."""
-        data = super().to_dict(short=short)
-        self.serialize_pythonjob_data(data["inputs"]["sockets"])
 
-        return data
+        self.serialize_pythonjob_data(data["inputs"]["sockets"])
 
     def update_from_dict(self, data: Dict[str, Any], **kwargs) -> "PythonJobTask":
         """Overwrite the update_from_dict method to handle the PythonJob data."""
