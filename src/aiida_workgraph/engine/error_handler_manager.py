@@ -63,3 +63,6 @@ class ErrorHandlerManager:
                 self.logger.error(
                     f"Error in running error handler for {task_name}: {e}\n{error_traceback}"
                 )
+                self.process.report(
+                    f"Error in running error handler for {task_name}: {e}\n{error_traceback}"
+                )

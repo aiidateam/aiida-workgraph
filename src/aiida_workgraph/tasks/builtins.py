@@ -171,7 +171,7 @@ class AiiDAInt(Task):
         self.add_input(
             "workgraph.any", "_wait", link_limit=100000, metadata={"arg_type": "none"}
         )
-        self.add_output("workgraph.aiida_int", "result")
+        self.add_output("workgraph.int", "result")
         self.add_output("workgraph.any", "_wait")
 
     def get_executor(self):
@@ -195,7 +195,7 @@ class AiiDAFloat(Task):
         self.add_input(
             "workgraph.any", "_wait", link_limit=100000, metadata={"arg_type": "none"}
         )
-        self.add_output("workgraph.aiida_float", "result")
+        self.add_output("workgraph.float", "result")
         self.add_output("workgraph.any", "_wait")
 
     def get_executor(self):
@@ -219,7 +219,7 @@ class AiiDAString(Task):
         self.add_input(
             "workgraph.any", "_wait", link_limit=100000, metadata={"arg_type": "none"}
         )
-        self.add_output("workgraph.aiida_string", "result")
+        self.add_output("workgraph.string", "result")
         self.add_output("workgraph.any", "_wait")
 
     def get_executor(self):
@@ -243,7 +243,7 @@ class AiiDAList(Task):
         self.add_input(
             "workgraph.any", "_wait", link_limit=100000, metadata={"arg_type": "none"}
         )
-        self.add_output("workgraph.aiida_list", "result")
+        self.add_output("workgraph.list", "result")
         self.add_output("workgraph.any", "_wait")
 
     def get_executor(self):
@@ -267,7 +267,7 @@ class AiiDADict(Task):
         self.add_input(
             "workgraph.any", "_wait", link_limit=100000, metadata={"arg_type": "none"}
         )
-        self.add_output("workgraph.aiida_dict", "result")
+        self.add_output("workgraph.dict", "result")
         self.add_output("workgraph.any", "_wait")
 
     def get_executor(self):

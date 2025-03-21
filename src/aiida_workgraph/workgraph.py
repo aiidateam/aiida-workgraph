@@ -645,3 +645,19 @@ class WorkGraph(node_graph.NodeGraph):
 
     def __str__(self) -> str:
         return f'WorkGraph(name="{self.name}", uuid="{self.uuid}")'
+
+    def __enter__(self):
+        """Called when entering the `with NodeGraph() as ng:` block."""
+        from aiida_workgraph.manager import get_current_graph, set_current_graph
+
+        self._previous_graph = get_current_graph()
+        set_current_graph(self)
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        """Called upon leaving the `with NodeGraph() as ng:` block."""
+        from aiida_workgraph.manager import set_current_graph
+
+        set_current_graph(self._previous_graph)
+        self._previous_graph = None
+        return None
