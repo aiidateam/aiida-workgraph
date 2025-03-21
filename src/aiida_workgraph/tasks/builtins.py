@@ -31,8 +31,8 @@ class Zone(Task):
         )
         self.add_output("workgraph.any", "_wait")
 
-    def to_dict(self, short: bool = False) -> Dict[str, Any]:
-        tdata = super().to_dict(short=short)
+    def to_dict(self, **kwargs) -> Dict[str, Any]:
+        tdata = super().to_dict(**kwargs)
         tdata["children"] = [task.name for task in self.children]
         return tdata
 

@@ -31,7 +31,7 @@ def test_to_dict():
         data["inputs"]["sockets"]["atoms"]["property"]["value"],
         orm.Data,
     )
-    data = wg.tasks.make_supercell_1.to_dict(serialize_for_db=True)
+    data = wg.tasks.make_supercell_1.to_dict(should_serialize=True)
     assert isinstance(
         data["inputs"]["sockets"]["atoms"]["property"]["value"],
         orm.Data,

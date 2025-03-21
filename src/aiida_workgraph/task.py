@@ -56,10 +56,12 @@ class Task(GraphNode):
         self.mapped_tasks = None
         self.execution_count = 0
 
-    def to_dict(self, short: bool = False) -> Dict[str, Any]:
+    def to_dict(
+        self, short: bool = False, should_serialize: bool = False
+    ) -> Dict[str, Any]:
         from aiida.orm.utils.serialize import serialize
 
-        tdata = super().to_dict(short=short)
+        tdata = super().to_dict(short=short, should_serialize=should_serialize)
         # clear unused keys
         for key in ["ctrl_inputs", "ctrl_outputs"]:
             tdata.pop(key, None)
