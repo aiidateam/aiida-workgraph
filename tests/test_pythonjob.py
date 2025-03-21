@@ -315,11 +315,13 @@ def test_exit_code(fixture_localhost, python_executable_path):
         """Handle the failure code 410 of the `add`.
         Simply make the inputs positive by taking the absolute value.
         """
-
+        # because the error_handler is ran by the engine
+        # all the inputs are serialized to AiiDA data
+        # therefore, we need use the `value` attribute to get the raw data
         task.set(
             {
-                "x": abs(task.inputs.x.value),
-                "y": abs(task.inputs["y"].value),
+                "x": abs(task.inputs.x.value.value),
+                "y": abs(task.inputs.y.value.value),
             }
         )
 
@@ -355,5 +357,5 @@ def test_exit_code(fixture_localhost, python_executable_path):
         == "Some elements are negative"
     )
     # the final task should have exit status 0
-    assert wg.tasks.add1.node.exit_status == 0
+    assert wg.tasks.add1.process.exit_status == 0
     assert (wg.tasks.add1.outputs.sum.value.value == np.array([2, 3])).all()

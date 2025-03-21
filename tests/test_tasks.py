@@ -18,7 +18,7 @@ def test_normal_task(decorated_add) -> None:
         decorated_add, name="add", x=task1.outputs.sum, y=task1.outputs["diff"]
     )
     wg.run()
-    print("node: ", task2.node.outputs.result)
+    print("node: ", task2.outputs.result)
     wg.update()
     assert task2.outputs.result.value == 4
 

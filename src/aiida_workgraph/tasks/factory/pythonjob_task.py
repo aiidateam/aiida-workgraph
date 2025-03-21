@@ -51,7 +51,7 @@ class PythonJobTask(Task):
 
     def update_from_dict(self, data: Dict[str, Any], **kwargs) -> "PythonJobTask":
         """Overwrite the update_from_dict method to handle the PythonJob data."""
-        self.deserialize_pythonjob_data(data["inputs"]["sockets"])
+        # self.deserialize_pythonjob_data(data["inputs"]["sockets"])
         super().update_from_dict(data)
 
     @classmethod
