@@ -8,6 +8,7 @@ from aiida.engine.runners import Runner
 from aiida_workgraph.config import task_types
 from aiida.engine import CalcJob, WorkChain
 from aiida_pythonjob import PythonJob
+from aiida_pythonjob.calculations.pyfunction import PyFunction
 from aiida_shell.calculations.shell import ShellJob
 import inspect
 
@@ -17,6 +18,8 @@ def inspect_aiida_component_type(executor: Callable) -> str:
     if isinstance(executor, type):
         if executor == PythonJob:
             task_type = "PYTHONJOB"
+        elif executor == PyFunction:
+            task_type = "PYFUNCTION"
         elif executor == ShellJob:
             task_type = "SHELLJOB"
         elif issubclass(executor, CalcJob):

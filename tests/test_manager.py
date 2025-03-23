@@ -33,7 +33,15 @@ def test_while_and_if(decorated_add):
 def test_map(decorated_add):
     """"""
 
-    @task()
+    @task(
+        outputs=[
+            {
+                "name": "result",
+                "identifier": "workgraph.namespace",
+                "metadata": {"dynamic": True},
+            }
+        ]
+    )
     def generate_list(N):
         return {"result": {f"item_{i}": i for i in range(1, N + 1)}}
 
