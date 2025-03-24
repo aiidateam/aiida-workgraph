@@ -203,7 +203,25 @@ class PyFunctionTask(BaseSerializablePythonTask):
 
         kwargs = kwargs or {}
         kwargs.setdefault("metadata", {})
+        # Build an explicit list of function outputs
+        function_outputs = []
+        for out_name in self.outputs._get_all_keys():
+            out_sock = self.outputs[out_name]
+            if not (
+                out_sock._metadata.get("is_pythonjob", False)
+                or out_sock._metadata.get("is_builtin", False)
+            ):
+                if out_sock._identifier.upper() == "WORKGRAPH.NAMESPACE":
+                    function_outputs.append(
+                        {"name": out_name, "identifier": "NAMESPACE"}
+                    )
+                else:
+                    function_outputs.append(
+                        {"name": out_name, "identifier": out_sock._identifier}
+                    )
+
         kwargs["metadata"].update({"call_link_label": self.name})
+        kwargs["function_outputs"] = function_outputs
 
         # If we have var_kwargs, pass them in
         if var_kwargs is None:
