@@ -229,6 +229,8 @@ class TaskManager:
     def execute_process_task(self, task, args=None, kwargs=None, var_kwargs=None):
         """Execute a CalcJob or WorkChain task."""
         try:
+            if task is None:
+                raise ValueError("Received a None task, cannot execute." "")
             process, state = task.execute(
                 engine_process=self.process,
                 args=args,
