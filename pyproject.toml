@@ -33,7 +33,7 @@ dependencies = [
     "aiida-core>=2.3",
     "cloudpickle",
     "aiida-shell~=0.8",
-    "aiida-pythonjob>=0.2.1",
+    "aiida-pythonjob>=0.2.2",
     "jsonschema",
 ]
 
