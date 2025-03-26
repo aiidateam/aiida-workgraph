@@ -10,7 +10,6 @@ from aiida_workgraph.tasks.factory import (
     AiiDAComponentTaskFactory,
     WorkGraphTaskFactory,
 )
-from node_graph.decorator import set_node_arguments
 
 
 def build_task(
@@ -69,32 +68,56 @@ def build_task_from_callable(
     raise ValueError(f"The executor {executor} is not supported.")
 
 
-def _make_wrapper(TaskCls, original_callable):
+def _make_wrapper(TaskCls, func):
     """
     Common wrapper that, when called, adds a node to the current graph
     and returns the outputs.
     """
 
-    @functools.wraps(original_callable)
+    @functools.wraps(func)
     def wrapper(*call_args, **call_kwargs):
         from aiida_workgraph.manager import get_current_graph
 
         graph = get_current_graph()
         if graph is None:
-            raise RuntimeError(
-                f"No active Graph available for {original_callable.__name__}."
-            )
+            raise RuntimeError(f"No active Graph available for {func.__name__}.")
         task = graph.add_task(TaskCls)
         active_zone = getattr(graph, "_active_zone", None)
         if active_zone:
             active_zone.children.add(task)
 
-        outputs = set_node_arguments(call_args, call_kwargs, task)
+        inputs = dict(call_kwargs or {})
+        arguments = list(call_args)
+        orginal_func = func._func if hasattr(func, "_func") else func
+
+        for name, parameter in inspect.signature(orginal_func).parameters.items():
+            if parameter.kind in [
+                parameter.POSITIONAL_ONLY,
+                parameter.POSITIONAL_OR_KEYWORD,
+            ]:
+                try:
+                    inputs[name] = arguments.pop(0)
+                except IndexError:
+                    pass
+            elif parameter.kind is parameter.VAR_POSITIONAL:
+                # not supported
+                raise ValueError("VAR_POSITIONAL is not supported.")
+
+        task.set(inputs)
+        outputs = [
+            output
+            for output in task.outputs
+            if output._name not in ["_wait", "_outputs", "exit_code"]
+        ]
+        if len(outputs) == 1:
+            return outputs[0]
+        else:
+            return task.outputs
         return outputs
 
     # Expose the TaskCls on the wrapper if you want
     wrapper._TaskCls = wrapper._NodeCls = TaskCls
-    wrapper._func = original_callable
+    wrapper._func = func
     return wrapper
 
 
@@ -143,6 +166,7 @@ class TaskDecoratorCollection:
         outputs: Optional[List[str | dict]] = None,
         error_handlers: Optional[List[Dict[str, Any]]] = None,
         catalog: str = "Others",
+        store_provenance: bool = True,
     ) -> Callable:
         """Generate a decorator that register a function as a task.
 
@@ -155,6 +179,11 @@ class TaskDecoratorCollection:
         """
 
         def decorator(callable):
+            from aiida_workgraph.tasks.factory import (
+                PyFunctionTaskFactory,
+            )
+            from aiida_pythonjob.decorator import pyfunction
+
             # function or builtin function
             if inspect.isfunction(callable) or callable.__module__ == "builtins":
                 # calcfunction and workfunction
@@ -163,16 +192,25 @@ class TaskDecoratorCollection:
                         callable, inputs=inputs, outputs=outputs
                     )
                 else:
-                    TaskCls = DecoratedFunctionTaskFactory.from_function(
-                        func=callable,
-                        identifier=identifier,
-                        task_type=task_type,
-                        properties=properties,
-                        inputs=inputs,
-                        outputs=outputs,
-                        error_handlers=error_handlers,
-                        catalog=catalog,
-                    )
+                    if store_provenance:
+                        callable = pyfunction(outputs=outputs)(callable)
+                        TaskCls = PyFunctionTaskFactory.from_function(
+                            callable,
+                            inputs=inputs,
+                            outputs=outputs,
+                            error_handlers=error_handlers,
+                        )
+                    else:
+                        TaskCls = DecoratedFunctionTaskFactory.from_function(
+                            func=callable,
+                            identifier=identifier,
+                            task_type=task_type,
+                            properties=properties,
+                            inputs=inputs,
+                            outputs=outputs,
+                            error_handlers=error_handlers,
+                            catalog=catalog,
+                        )
             else:
                 if issubclass(callable, CalcJob) or issubclass(callable, WorkChain):
                     TaskCls = AiiDAComponentTaskFactory.from_aiida_component(
@@ -274,7 +312,7 @@ class TaskDecoratorCollection:
         error_handlers: Optional[List[Dict[str, Any]]] = None,
     ) -> Callable:
         def decorator(func):
-            from aiida_workgraph.tasks.factory.pythonjob_task import (
+            from aiida_workgraph.tasks.factory import (
                 PythonJobTaskFactory,
             )
 

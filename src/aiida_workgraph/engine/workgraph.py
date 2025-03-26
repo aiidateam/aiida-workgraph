@@ -20,7 +20,7 @@ from aiida_workgraph.orm.workgraph import WorkGraphNode
 from aiida.engine.processes.exit_code import ExitCode
 from aiida.engine.processes.process import Process
 from aiida.engine.processes.workchains.workchain import Protect, WorkChainSpec
-from aiida_workgraph.utils import update_nested_dict
+from aiida_workgraph.utils import update_nested_dict, get_nested_dict
 from .context_manager import ContextManager
 from .awaitable_manager import AwaitableManager
 from .task_manager import TaskManager
@@ -358,11 +358,14 @@ class WorkGraphEngine(Process, metaclass=Protect):
             else:
                 # expose one output of the task
                 # note, the output may not exist
-                if names[1] in self.ctx._task_results[names[0]]:
+                result = get_nested_dict(
+                    self.ctx._task_results[names[0]], names[1], default=None
+                )
+                if result:
                     update_nested_dict(
                         group_outputs,
                         output["name"],
-                        self.ctx._task_results[names[0]][names[1]],
+                        result,
                     )
         self.out_many(group_outputs)
         # output the new data

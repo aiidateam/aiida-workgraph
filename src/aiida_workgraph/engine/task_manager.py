@@ -172,7 +172,7 @@ class TaskManager:
             # print("kwargs: ", inputs["kwargs"])
             self.ctx._task_results[task.name] = {}
             task_type = task.node_type.upper()
-            if task_type in ["CALCFUNCTION", "WORKFUNCTION"]:
+            if task_type in ["CALCFUNCTION", "PYFUNCTION", "WORKFUNCTION"]:
                 self.execute_function_task(task, continue_workgraph, **inputs)
             elif task_type in [
                 "CALCJOB",

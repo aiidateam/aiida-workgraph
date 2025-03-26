@@ -36,18 +36,16 @@ load_profile()
 # ===============
 # Suppose we want to calculate ```(x + y) * z ``` in two steps. First, add `x` and `y`, then multiply the result with `z`.
 #
-# In AiiDA, we can define two `calcfunction` to do the `add` and `mutiply`:
-#
 
 from aiida_workgraph import task
 
 
-@task.calcfunction()
+@task()
 def add(x, y):
     return x + y
 
 
-@task.calcfunction()
+@task()
 def multiply(x, y):
     return x * y
 
@@ -103,7 +101,7 @@ generate_node_graph(wg.pk)
 # %%
 # CalcJob and WorkChain
 # =======================
-# AiiDA uses `CalcJob` to run a calculation on a remote computer. AiiDA community also provides a lot of well-written `calcfunction` and `WorkChain`. One can use these AiiDA component direclty in the WorkGraph. The inputs and outputs of the task is automatically generated based on the input and output port of the AiiDA component.
+# One can use AiiDA components (``CalcJob`` and ``WorkChain``). The inputs and outputs of the task is automatically generated based on the input and output port of the AiiDA component.
 #
 # Here is an example of using the `ArithmeticAddCalculation` Calcjob inside the workgraph. Suppose we want to calculate ```(x + y) + z ``` in two steps.
 #
@@ -159,13 +157,10 @@ wg.tasks.add1.to_html()
 
 
 from aiida_workgraph import WorkGraph
-from aiida.engine import calcfunction
 from aiida_quantumespresso.calculations.pw import PwCalculation
 
-#
 
-
-@calcfunction
+@task()
 def atomization_energy(output_atom, output_mol):
     from aiida.orm import Float
 
@@ -390,7 +385,7 @@ print("\nResult of add2 is {} \n\n".format(wg.tasks.add2.outputs.result.value))
 # Second Real-world Workflow: Equation of state (EOS) WorkGraph
 # =============================================================
 #
-# First, create the calcfunction for the job.
+# First, create the task.
 #
 
 from aiida import orm
@@ -398,7 +393,7 @@ from aiida_workgraph import task
 
 #
 # explicitly define the output socket name to match the return value of the function
-@task.calcfunction(outputs=[{"name": "structures"}])
+@task(outputs=[{"name": "structures"}])
 def scale_structure(structure, scales):
     """Scale the structure by the given scales."""
     atoms = structure.get_ase()
@@ -431,8 +426,8 @@ def all_scf(structures, scf_inputs):
 #
 
 
-@task.calcfunction()
-# because this is a calcfunction, and the input datas are dynamic, we need use **datas.
+@task()
+# because the input datas are dynamic, we need use **datas.
 def eos(**datas):
     """Fit the EOS of the data."""
     from ase.eos import EquationOfState

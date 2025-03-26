@@ -169,13 +169,14 @@ class TaskStateManager:
 
     def task_update_ctx(self, name: str) -> None:
         """Export task results to the context based on context mapping."""
+        from aiida_workgraph.utils import update_nested_dict, get_nested_dict
 
         for link in self.process.wg.links:
             if link.from_node.name == name and link.to_node.name == "ctx":
-                key = link.to_socket._name
-                result_name = link.from_socket._name
-                result = self.ctx._task_results[name][result_name]
-                self.ctx._task_results["ctx"][key] = result
+                key = link.to_socket._scoped_name
+                result_key = link.from_socket._scoped_name
+                result = get_nested_dict(self.ctx._task_results[name], result_key)
+                update_nested_dict(self.ctx._task_results["ctx"], key, result)
 
     # --------------------------------------------------
     # Reset & removing from executed tasks

@@ -28,12 +28,12 @@ dependencies = [
     "numpy~=1.21",
     "scipy",
     "ase",
-    "node-graph==0.1.27",
+    "node-graph==0.1.28",
     "node-graph-widget>=0.0.4",
     "aiida-core>=2.3",
     "cloudpickle",
     "aiida-shell~=0.8",
-    "aiida-pythonjob>=0.1.8",
+    "aiida-pythonjob>=0.2.3",
     "jsonschema",
 ]
 
@@ -104,7 +104,8 @@ workgraph = "aiida_workgraph.cli.cmd_workgraph:workgraph"
 "workgraph.test_add" = "aiida_workgraph.tasks.test:TestAdd"
 "workgraph.test_sum_diff" = "aiida_workgraph.tasks.test:TestSumDiff"
 "workgraph.test_arithmetic_multiply_add" = "aiida_workgraph.tasks.test:TestArithmeticMultiplyAdd"
-"workgraph.pythonjob" = "aiida_workgraph.tasks.factory.pythonjob_task:PythonJobTaskFactory"
+"workgraph.pythonjob" = "aiida_workgraph.tasks.factory.pythonjob.factory:PythonJobTaskFactory"
+"workgraph.pyfunction" = "aiida_workgraph.tasks.factory.pythonjob.factory:PyFunctionTaskFactory"
 "workgraph.shelljob" = "aiida_workgraph.tasks.factory.shelljob_task:ShellJobTaskFactory"
 "workgraph.aiida_process" = "aiida_workgraph.tasks.aiida:AiiDAProcessTask"
 
