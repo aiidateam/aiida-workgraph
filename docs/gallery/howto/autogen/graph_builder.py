@@ -186,10 +186,12 @@ wg.submit(wait=True)
 
 
 # %%
-# Example for loop
+# Example loop
 # ^^^^^^^^^^^^^^^^
 # In this example we will create a dynamic number of tasks as specified in the
 # input of the WorkGraph.
+
+from aiida_workgraph.manager import active_while_zone
 
 
 @task.calcfunction()
@@ -198,30 +200,16 @@ def add_one(x):
 
 
 @task.graph_builder(outputs=[{"name": "result", "from": "ctx.task_out"}])
-def for_loop(nb_iterations: Int):
-    wg = WorkGraph()
-    results = []
-    for i in range(nb_iterations.value):
-        task = wg.add_task(add_one, x=i)
-        # Collect all results
-        results.append(task.outputs.result)
-
-    # We cannot refer to a specific task as output in the graph builder decorator
-    # as in the examples before since the name of the last task depends on the input.
-    # Remember that each task is always assigned unique name automatically.
-    # Therefore we use the context to not directly refer to the name but the last
-    # task object that was created. The context can then be referred in the outputs
-    # of the graph builder decorator.
-
-    # Put result of the task to the context under the name task_out
-    wg.update_ctx({"task_out": results})
-    # If want to know more about the usage of the context please refer to the
-    # context howto in the documentation
-    return wg
+def loop(nb_iterations: Int):
+    with WorkGraph() as wg:
+        wg.ctx.n = 0
+        with active_while_zone(wg.ctx.n < nb_iterations.value):
+            wg.ctx.n = add_one(x=wg.ctx.n)
+        wg.run()
 
 
 wg = WorkGraph("Nested workflow: For")
-loop_task = wg.add_task(for_loop, nb_iterations=Int(2))
+loop_task = wg.add_task(loop, nb_iterations=Int(2))
 wg.to_html()
 
 # %%
@@ -260,7 +248,7 @@ def if_then_else(i: Int):
     else:
         task = wg.add_task(modulo_two, x=i)
 
-    # same concept as before, please read the for loop example for explanation
+    # same concept as before, please read the loop example for explanation
     wg.update_ctx({"task_out": task.outputs.result})
     return wg
 
