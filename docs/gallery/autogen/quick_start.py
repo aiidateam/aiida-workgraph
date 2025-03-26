@@ -46,20 +46,19 @@ load_profile()
 # ~~~~~~~~~~~
 #
 # Task is the basic building block of the WorkGraph. A task has inputs,
-# outputs and an executor. The executor can be an AiiDA ``calcfunction``,
-# ``CalcJob``, ``WorkChain`` or any Python function.
+# outputs and an executor.
 #
 
 from aiida_workgraph import task
 
 # define add task
-@task.calcfunction()
+@task()
 def add(x, y):
     return x + y
 
 
 # define multiply task
-@task.calcfunction()
+@task()
 def multiply(x, y):
     return x * y
 
@@ -110,12 +109,10 @@ print("Result of multiply : {}".format(wg.tasks.multiply1.outputs.result.value))
 # CalcJob and WorkChain
 # ---------------------
 #
-# AiiDA also provide builtin ``CalcJob`` to run a calculation on a remote
-# computer. AiiDA community also provides a lot of well-written
-# ``calcfunction`` and ``WorkChain``. One can use these AiiDA component
+# One can use AiiDA components (``CalcJob`` and ``WorkChain``)
 # direclty in the WorkGraph. The inputs and outputs of the task is
 # automatically generated based on the input and output port of the AiiDA
-# component.
+# components.
 #
 # Here is an example of using the ``ArithmeticAddCalculation`` Calcjob
 # inside the workgraph.
@@ -188,13 +185,13 @@ add1 = wg.add_task(builder, name="add1")
 from aiida_workgraph import WorkGraph, task
 
 # define add task
-@task.calcfunction()
+@task()
 def add(x, y):
     return x + y
 
 
 # define multiply task
-@task.calcfunction()
+@task()
 def multiply(x, y):
     return x * y
 

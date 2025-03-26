@@ -82,6 +82,24 @@ class BaseSerializablePythonTask(Task):
         """
         raise NotImplementedError("Subclasses must implement `execute`.")
 
+    def build_function_ports(self, socket):
+        # Build an explicit list of function outputs
+        port = {"name": socket._name, "identifier": socket._identifier}
+        if hasattr(socket, "_sockets"):
+            port["ports"] = []
+            for name, sub_sock in socket._sockets.items():
+                if not (
+                    sub_sock._metadata.get("is_pythonjob", False)
+                    or sub_sock._metadata.get("is_builtin", False)
+                ):
+                    if sub_sock._identifier.upper() == "WORKGRAPH.NAMESPACE":
+                        port["ports"].append(self.build_function_ports(sub_sock))
+                    else:
+                        port["ports"].append(
+                            {"name": name, "identifier": sub_sock._identifier}
+                        )
+        return port
+
 
 class PythonJobTask(BaseSerializablePythonTask):
     """PythonJob Task."""
@@ -133,28 +151,16 @@ class PythonJobTask(BaseSerializablePythonTask):
 
         if hasattr(func, "is_process_function"):
             func = func.func
-        # Build an explicit list of function outputs
-        function_outputs = []
-        for out_name in self.outputs._get_all_keys():
-            out_sock = self.outputs[out_name]
-            if not (
-                out_sock._metadata.get("is_pythonjob", False)
-                or out_sock._metadata.get("is_builtin", False)
-            ):
-                if out_sock._identifier.upper() == "WORKGRAPH.NAMESPACE":
-                    function_outputs.append(
-                        {"name": out_name, "identifier": "NAMESPACE"}
-                    )
-                else:
-                    function_outputs.append(
-                        {"name": out_name, "identifier": out_sock._identifier}
-                    )
+
+        input_ports = self.build_function_ports(self.inputs)
+        output_ports = self.build_function_ports(self.outputs)
 
         # Prepare the final inputs for PythonJob
         inputs = prepare_pythonjob_inputs(
             function=func,
             function_inputs=function_inputs,
-            function_outputs=function_outputs,
+            input_ports=input_ports["ports"],
+            output_ports=output_ports["ports"],
             code=kwargs.pop("code", None),
             command_info=command_info,
             computer=computer,
@@ -203,25 +209,12 @@ class PyFunctionTask(BaseSerializablePythonTask):
 
         kwargs = kwargs or {}
         kwargs.setdefault("metadata", {})
-        # Build an explicit list of function outputs
-        function_outputs = []
-        for out_name in self.outputs._get_all_keys():
-            out_sock = self.outputs[out_name]
-            if not (
-                out_sock._metadata.get("is_pythonjob", False)
-                or out_sock._metadata.get("is_builtin", False)
-            ):
-                if out_sock._identifier.upper() == "WORKGRAPH.NAMESPACE":
-                    function_outputs.append(
-                        {"name": out_name, "identifier": "NAMESPACE"}
-                    )
-                else:
-                    function_outputs.append(
-                        {"name": out_name, "identifier": out_sock._identifier}
-                    )
+        input_ports = self.build_function_ports(self.inputs)
+        output_ports = self.build_function_ports(self.outputs)
 
         kwargs["metadata"].update({"call_link_label": self.name})
-        kwargs["function_outputs"] = function_outputs
+        kwargs["input_ports"] = input_ports["ports"]
+        kwargs["output_ports"] = output_ports["ports"]
 
         # If we have var_kwargs, pass them in
         if var_kwargs is None:
