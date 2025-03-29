@@ -17,7 +17,6 @@ from aiida_workgraph.utils.graph import (
 )
 from typing import Any, Dict, List, Optional, Union
 
-from node_graph_widget import NodeGraphWidget
 from node_graph.analysis import NodeGraphAnalysis
 
 
@@ -59,7 +58,6 @@ class WorkGraph(node_graph.NodeGraph):
         self.links.post_creation_hooks = [link_creation_hook]
         self.links.post_deletion_hooks = [link_deletion_hook]
         self._error_handlers = {}
-        self._widget = NodeGraphWidget(parent=self)
         self.analyzer = NodeGraphAnalysis(self)
 
     @property
@@ -151,9 +149,15 @@ class WorkGraph(node_graph.NodeGraph):
         from aiida.manage import manager
         from aiida.engine.utils import instantiate_process
         from aiida_workgraph.engine.workgraph import WorkGraphEngine
+        import time
 
+        tstart = time.time()
         self.check_before_run()
+        print(f"Check time: {time.time()-tstart}")
+        tstart = time.time()
         inputs = self.prepare_inputs(metadata)
+        print(f"Prepare inputs time: {time.time()-tstart}")
+        tstart = time.time()
         if self.process is None:
             runner = manager.get_manager().get_runner()
             # init a process node
@@ -165,7 +169,10 @@ class WorkGraph(node_graph.NodeGraph):
             print(f"WorkGraph process created, PK: {self.process.pk}")
         else:
             self.save_to_base(inputs["workgraph_data"])
+        print(f"Save time: {time.time()-tstart}")
+        tstart = time.time()
         self.update()
+        print(f"Update time: {time.time()-tstart}")
 
     def save_to_base(self, wgdata: Dict[str, Any]) -> None:
         """Save new wgdata to attribute.
@@ -307,9 +314,9 @@ class WorkGraph(node_graph.NodeGraph):
                 continue
             self.tasks[name].update_state(data)
 
-        if self._widget is not None:
+        if self.widget is not None:
             states = {name: data["state"] for name, data in processes_data.items()}
-            self._widget.states = states
+            self.widget.states = states
 
     @property
     def pk(self) -> Optional[int]:
@@ -623,16 +630,16 @@ class WorkGraph(node_graph.NodeGraph):
 
     def _repr_mimebundle_(self, *args, **kwargs):
         # if ipywdigets > 8.0.0, use _repr_mimebundle_ instead of _ipython_display_
-        self._widget.value = self.to_widget_value()
-        if hasattr(self._widget, "_repr_mimebundle_"):
-            return self._widget._repr_mimebundle_(*args, **kwargs)
+        self.widget.value = self.to_widget_value()
+        if hasattr(self.widget, "_repr_mimebundle_"):
+            return self.widget._repr_mimebundle_(*args, **kwargs)
         else:
-            return self._widget._ipython_display_(*args, **kwargs)
+            return self.widget._ipython_display_(*args, **kwargs)
 
     def to_html(self, output: str = None, **kwargs):
         """Write a standalone html file to visualize the workgraph."""
-        self._widget.value = self.to_widget_value()
-        return self._widget.to_html(output=output, **kwargs)
+        self.widget.value = self.to_widget_value()
+        return self.widget.to_html(output=output, **kwargs)
 
     def __repr__(self) -> str:
         return f'WorkGraph(name="{self.name}", uuid="{self.uuid}")'

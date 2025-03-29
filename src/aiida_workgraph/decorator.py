@@ -9,6 +9,7 @@ from aiida_workgraph.tasks.factory import (
     DecoratedFunctionTaskFactory,
     AiiDAComponentTaskFactory,
     WorkGraphTaskFactory,
+    PyFunctionTaskFactory,
 )
 
 
@@ -57,8 +58,10 @@ def build_task_from_callable(
                 executor, inputs=inputs, outputs=outputs
             )
         else:
-            return DecoratedFunctionTaskFactory.from_function(
-                executor, inputs=inputs, outputs=outputs
+            return PyFunctionTaskFactory.from_function(
+                executor,
+                inputs=inputs,
+                outputs=outputs,
             )
     else:
         if issubclass(executor, CalcJob) or issubclass(executor, WorkChain):
@@ -179,10 +182,6 @@ class TaskDecoratorCollection:
         """
 
         def decorator(callable):
-            from aiida_workgraph.tasks.factory import (
-                PyFunctionTaskFactory,
-            )
-            from aiida_pythonjob.decorator import pyfunction
 
             # function or builtin function
             if inspect.isfunction(callable) or callable.__module__ == "builtins":
@@ -193,7 +192,6 @@ class TaskDecoratorCollection:
                     )
                 else:
                     if store_provenance:
-                        callable = pyfunction(outputs=outputs)(callable)
                         TaskCls = PyFunctionTaskFactory.from_function(
                             callable,
                             inputs=inputs,
