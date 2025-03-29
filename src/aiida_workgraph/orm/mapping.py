@@ -2,7 +2,7 @@ from aiida import orm
 import importlib.metadata
 from typing import Any
 
-type_mapping = {
+builtins_type_mapping = {
     "default": "workgraph.any",
     "namespace": "workgraph.namespace",
     int: "workgraph.int",
@@ -23,6 +23,7 @@ type_mapping = {
 # Load additional mapping from entry points
 def load_custom_type_mapping():
     """Loads custom type mapping from plugins."""
+    type_mapping = {}
     for entry_point in importlib.metadata.entry_points().get(
         "workgraph.type_mapping", []
     ):
@@ -35,4 +36,4 @@ def load_custom_type_mapping():
             print(f"Failed to load type mapping from {entry_point.name}: {e}")
 
 
-load_custom_type_mapping()
+type_mapping = load_custom_type_mapping()
