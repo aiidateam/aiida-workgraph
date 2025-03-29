@@ -24,6 +24,9 @@ builtins_type_mapping = {
 def load_custom_type_mapping():
     """Loads custom type mapping from plugins."""
     type_mapping = {}
+
+    type_mapping.update(builtins_type_mapping)
+
     for entry_point in importlib.metadata.entry_points().get(
         "workgraph.type_mapping", []
     ):
@@ -34,6 +37,7 @@ def load_custom_type_mapping():
                 type_mapping.update(custom_mapping)
         except Exception as e:
             print(f"Failed to load type mapping from {entry_point.name}: {e}")
+    return type_mapping
 
 
 type_mapping = load_custom_type_mapping()
