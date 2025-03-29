@@ -24,6 +24,15 @@ from typing import Any
 def test_type_mapping(data_type, data, identifier) -> None:
     """Test the mapping of data types to socket types."""
 
+    # Ensure mapping are up-to-date
+    from aiida_workgraph.orm.mapping import load_custom_type_mapping, type_mapping
+
+    load_custom_type_mapping()
+
+    assert (
+        identifier in type_mapping.values()
+    ), f"Expected identifier {identifier} not found in type_mapping"
+
     @task()
     def add(x: data_type):
         pass
@@ -32,6 +41,10 @@ def test_type_mapping(data_type, data, identifier) -> None:
     assert add._TaskCls().inputs.x.property.identifier == identifier
     add_task = add._TaskCls()
     add_task.set({"x": data})
+
+    assert (
+        type_mapping.get(data_type, None) == identifier
+    ), f"Mismatch: Expected {identifier}, but got {type_mapping.get(data_type)}"
 
 
 def test_vector_socket() -> None:
