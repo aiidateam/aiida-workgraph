@@ -27,9 +27,14 @@ def load_custom_type_mapping():
 
     type_mapping.update(builtins_type_mapping)
 
-    for entry_point in importlib.metadata.entry_points().get(
-        "workgraph.type_mapping", []
-    ):
+    entry_points = importlib.metadata.entry_points()
+
+    if hasattr(entry_points, "select"):  # Python 3.10+
+        group_entries = entry_points.select(group="aiida_workgraph.type_mapping")
+    else:  # Python 3.9 and earlier
+        group_entries = entry_points.get("aiida_workgraph.type_mapping", [])
+
+    for entry_point in group_entries:
         try:
             # Load the function or dict and merge with default mapping
             custom_mapping = entry_point.load()
