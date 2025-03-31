@@ -134,6 +134,8 @@ workgraph = "aiida_workgraph.cli.cmd_workgraph:workgraph"
 "workgraph.aiida_float_vector" = "aiida_workgraph.sockets.builtins:SocketAiiDAFloatVector"
 "workgraph.aiida_structuredata" = "aiida_workgraph.sockets.builtins:SocketStructureData"
 
+[project.entry-points."aiida_workgraph.type_mapping"]
+"workgraph.builtins_mapping" = "aiida_workgraph.orm.mapping:builtins_type_mapping"
 
 
 [tool.flit.sdist]
