@@ -27,8 +27,6 @@ def load_custom_type_mapping():
     """Loads custom type mapping from plugins."""
     type_mapping = {}
 
-    type_mapping.update(builtins_type_mapping)
-
     entry_points = importlib.metadata.entry_points()
 
     if hasattr(entry_points, "select"):  # Python 3.10+
