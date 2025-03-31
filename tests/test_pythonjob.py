@@ -18,7 +18,6 @@ def test_to_dict():
         return atoms * (dim, dim, dim)
 
     atoms = bulk("Si")
-    structure = orm.StructureData(ase=atoms)
     wg = WorkGraph("test_PythonJob_retrieve_files")
     # atoms will be converted to AtomsData automatically
     wg.add_task(
@@ -27,23 +26,34 @@ def test_to_dict():
         dim=2,
         name="make_supercell_1",
     )
-    # structure will be converted to AtomsData automatically
+    data = wg.tasks.make_supercell_1.to_dict()
+    assert not isinstance(
+        data["inputs"]["sockets"]["atoms"]["property"]["value"],
+        orm.Data,
+    )
+    data = wg.tasks.make_supercell_1.to_dict(should_serialize=True)
+    assert isinstance(
+        data["inputs"]["sockets"]["atoms"]["property"]["value"],
+        orm.Data,
+    )
+
+
+def test_imported_pythonjob(fixture_localhost, python_executable_path):
+    from aiida_workgraph.executors.test import add_pythonjob
+    from aiida import orm
+
+    wg = WorkGraph("test_imported_pythonjob")
     wg.add_task(
-        make_supercell,
-        atoms=structure,
-        dim=2,
-        name="make_supercell_2",
+        add_pythonjob,
+        name="add1",
+        x=1,
+        y=2,
+        computer="localhost",
+        command_info={"label": python_executable_path},
     )
-    data = wg.tasks.make_supercell_1.to_dict()
-    assert isinstance(
-        data["inputs"]["sockets"]["atoms"]["property"]["value"],
-        orm.Data,
-    )
-    data = wg.tasks.make_supercell_1.to_dict()
-    assert isinstance(
-        data["inputs"]["sockets"]["atoms"]["property"]["value"],
-        orm.Data,
-    )
+    wg.run()
+    assert isinstance(wg.tasks.add1.outputs.result.value, orm.Data)
+    assert wg.tasks.add1.outputs.result.value == 3
 
 
 @pytest.mark.usefixtures("started_daemon_client")
@@ -305,11 +315,13 @@ def test_exit_code(fixture_localhost, python_executable_path):
         """Handle the failure code 410 of the `add`.
         Simply make the inputs positive by taking the absolute value.
         """
-
+        # because the error_handler is ran by the engine
+        # all the inputs are serialized to AiiDA data
+        # therefore, we need use the `value` attribute to get the raw data
         task.set(
             {
-                "x": abs(task.inputs.x.value),
-                "y": abs(task.inputs["y"].value),
+                "x": abs(task.inputs.x.value.value),
+                "y": abs(task.inputs.y.value.value),
             }
         )
 
@@ -345,5 +357,5 @@ def test_exit_code(fixture_localhost, python_executable_path):
         == "Some elements are negative"
     )
     # the final task should have exit status 0
-    assert wg.tasks.add1.node.exit_status == 0
+    assert wg.tasks.add1.process.exit_status == 0
     assert (wg.tasks.add1.outputs.sum.value.value == np.array([2, 3])).all()

@@ -24,14 +24,14 @@ load_profile()
 #
 # Create task
 # ------------
-# First, one should know that we can not launch a subprocess inside a `task` or a `calcfunction`. We need a create a `WorkGraph` to run tasksin parallel. And then treat this `WorkGraph` as a task.
+# We need a create a `WorkGraph` to run tasksin parallel. And then treat this `WorkGraph` as a task.
 #
 
 
 from aiida_workgraph import task, WorkGraph
 
 # define multiply task
-@task.calcfunction()
+@task()
 def multiply(x, y):
     return x * y
 
@@ -98,7 +98,7 @@ def multiply_parallel_gather(X, y):
     return wg
 
 
-@task.calcfunction()
+@task()
 # the input is dynamic, we must use a variable kewword argument. **datas
 def sum(**datas):
     from aiida.orm import Float

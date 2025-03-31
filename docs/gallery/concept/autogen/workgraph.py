@@ -20,8 +20,8 @@ wg = WorkGraph(name="my_first_workgraph")
 # Define and use tasks
 #
 
-# Define a task using a `calcfunction`:
-@task.calcfunction()
+# Define a task:
+@task()
 def add(x, y):
     return x + y
 

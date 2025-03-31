@@ -36,12 +36,12 @@ Suppose we want to calculate ```(x + y) * z ``` in two steps. First, add `x` and
 from aiida_workgraph import WorkGraph, task
 
 # define add task
-@task.calcfunction
+@task()
 def add(x, y):
     return x + y
 
 # define multiply task
-@task.calcfunction
+@task()
 def multiply(x, y):
     return x*y
 

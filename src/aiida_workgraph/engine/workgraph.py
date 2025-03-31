@@ -20,7 +20,7 @@ from aiida_workgraph.orm.workgraph import WorkGraphNode
 from aiida.engine.processes.exit_code import ExitCode
 from aiida.engine.processes.process import Process
 from aiida.engine.processes.workchains.workchain import Protect, WorkChainSpec
-from aiida_workgraph.utils import update_nested_dict
+from aiida_workgraph.utils import update_nested_dict, get_nested_dict
 from .context_manager import ContextManager
 from .awaitable_manager import AwaitableManager
 from .task_manager import TaskManager
@@ -91,13 +91,6 @@ class WorkGraphEngine(Process, metaclass=Protect):
         spec.exit_code(2, "ERROR_SUBPROCESS", message="A subprocess has failed.")
 
         spec.outputs.dynamic = True
-
-        spec.output(
-            "execution_count",
-            valid_type=orm.Int,
-            required=False,
-            help="The number of time the WorkGraph runs.",
-        )
         #
         spec.exit_code(
             201, "UNKNOWN_MESSAGE_TYPE", message="The message type is unknown."
@@ -295,8 +288,6 @@ class WorkGraphEngine(Process, metaclass=Protect):
         self.wg = WorkGraph.load(self.node)
         # create a builtin `_context` task with its results as the context variables
         self.ctx._task_results = {"ctx": self.wg.ctx._value}
-        #
-        self.ctx._execution_count = 1
         # init task results
         self.task_manager.set_task_results()
         # while workgraph
@@ -367,17 +358,19 @@ class WorkGraphEngine(Process, metaclass=Protect):
             else:
                 # expose one output of the task
                 # note, the output may not exist
-                if names[1] in self.ctx._task_results[names[0]]:
+                result = get_nested_dict(
+                    self.ctx._task_results[names[0]], names[1], default=None
+                )
+                if result:
                     update_nested_dict(
                         group_outputs,
                         output["name"],
-                        self.ctx._task_results[names[0]][names[1]],
+                        result,
                     )
         self.out_many(group_outputs)
         # output the new data
         if self.ctx._new_data:
             self.out("new_data", self.ctx._new_data)
-        self.out("execution_count", orm.Int(self.ctx._execution_count).store())
         self.report("Finalize workgraph.")
         for task in self.wg.tasks:
             if (

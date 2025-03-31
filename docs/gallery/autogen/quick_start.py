@@ -16,11 +16,11 @@ Quick Start
 #
 #    pip install aiida-workgraph
 #
-# Start (or restart) the AiiDA daemon if needed:
+# If you haven't configured an AiiDA profile, you can run the following
 #
 # .. code:: console
 #
-#    verdi daemon start
+#    verdi presto
 #
 # Load the AiiDA profile.
 #
@@ -46,48 +46,21 @@ load_profile()
 # ~~~~~~~~~~~
 #
 # Task is the basic building block of the WorkGraph. A task has inputs,
-# outputs and an executor. The executor can be a AiiDA ``calcfunction``,
-# ``CalcJob``, ``WorkChain`` or any Python function.
+# outputs and an executor.
 #
 
 from aiida_workgraph import task
 
 # define add task
-@task.calcfunction()
+@task()
 def add(x, y):
     return x + y
 
 
 # define multiply task
-@task.calcfunction()
+@task()
 def multiply(x, y):
     return x * y
-
-
-######################################################################
-# Visualize the task
-# ^^^^^^^^^^^^^^^^^^
-#
-# If you are running in a Jupiter notebook, you can visualize the task,
-# including its inputs and output sockets. You can also export the task to
-# html file so that it can be visualized in a browser.
-#
-
-
-# export the task to html file so that it can be visualized in a browser
-add._TaskCls().to_html()
-
-# comment out the following line to visualize the task in Jupyter Notebook
-# add._TaskCls()
-
-
-######################################################################
-# The input sockets are generated automatically based on the function
-# arguments. The default name of the output socket is ``result``. There
-# are also some built-in sockets, like ``_wait`` and ``_outputs``. In case
-# of ``calcfunction``, it also has several built-in sockets, such as
-# ``metadata``.
-#
 
 
 ######################################################################
@@ -116,15 +89,15 @@ wg.to_html()
 
 
 ######################################################################
-# Submit and view results
+# Run and view results
 # ~~~~~~~~~~~~~~~~~~~~~~~
 #
 
 from aiida.orm import Int
 
-# ------------------------- Submit the calculation -------------------
-wg.submit(
-    inputs={"add1": {"x": Int(2), "y": Int(3)}, "multiply1": {"y": Int(4)}}, wait=True
+# ------------------------- Run the calculation -------------------
+wg.run(
+    inputs={"add1": {"x": Int(2), "y": Int(3)}, "multiply1": {"y": Int(4)}},
 )
 
 print("State of WorkGraph:   {}".format(wg.state))
@@ -133,24 +106,13 @@ print("Result of multiply : {}".format(wg.tasks.multiply1.outputs.result.value))
 
 
 ######################################################################
-# One can also generate the node graph from the AiiDA process:
-#
-
-from aiida_workgraph.utils import generate_node_graph
-
-generate_node_graph(wg.pk)
-
-
-######################################################################
 # CalcJob and WorkChain
 # ---------------------
 #
-# AiiDA also provide builtin ``CalcJob`` to run a calculation on a remote
-# computer. AiiDA community also provides a lot of well-written
-# ``calcfunction`` and ``WorkChain``. One can use these AiiDA component
+# One can use AiiDA components (``CalcJob`` and ``WorkChain``)
 # direclty in the WorkGraph. The inputs and outputs of the task is
 # automatically generated based on the input and output port of the AiiDA
-# component.
+# components.
 #
 # Here is an example of using the ``ArithmeticAddCalculation`` Calcjob
 # inside the workgraph.
@@ -180,19 +142,15 @@ wg.to_html()
 
 
 ######################################################################
-# Submit the workgraph and wait for the result.
+# Run the workgraph and wait for the result.
 #
 
-wg.submit(wait=True)
-print("Result of task add1: {}".format(wg.tasks.add2.outputs.sum.value))
-
-from aiida_workgraph.utils import generate_node_graph
-
-generate_node_graph(wg.pk)
+wg.run()
+print("\nResult of task add1: {}".format(wg.tasks.add2.outputs.sum.value))
 
 
 ######################################################################
-# One can also set task inputs from an AiiDA process builder directly.
+# One can also create task from an AiiDA process builder directly.
 #
 
 from aiida.calculations.arithmetic.add import ArithmeticAddCalculation
@@ -203,8 +161,7 @@ builder.x = Int(2)
 builder.y = Int(3)
 
 wg = WorkGraph("test_set_inputs_from_builder")
-add1 = wg.add_task(ArithmeticAddCalculation, name="add1")
-add1.set_from_builder(builder)
+add1 = wg.add_task(builder, name="add1")
 
 
 ######################################################################
@@ -228,13 +185,13 @@ add1.set_from_builder(builder)
 from aiida_workgraph import WorkGraph, task
 
 # define add task
-@task.calcfunction()
+@task()
 def add(x, y):
     return x + y
 
 
 # define multiply task
-@task.calcfunction()
+@task()
 def multiply(x, y):
     return x * y
 
@@ -266,7 +223,7 @@ add_multiply1 = wg.add_task(add_multiply, x=Int(2), y=Int(3), z=Int(4))
 add_multiply2 = wg.add_task(add_multiply, x=Int(2), y=Int(3))
 # link the output of a task to the input of another task
 wg.add_link(add_multiply1.outputs.multiply, add_multiply2.inputs.z)
-wg.submit(wait=True)
+wg.run()
 print("WorkGraph state: ", wg.state)
 
 
@@ -275,8 +232,6 @@ print("WorkGraph state: ", wg.state)
 #
 
 print("Result of task add_multiply1: {}".format(add_multiply1.outputs.multiply.value))
-
-generate_node_graph(wg.pk)
 
 
 ######################################################################

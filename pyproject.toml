@@ -28,12 +28,12 @@ dependencies = [
     "numpy~=1.21",
     "scipy",
     "ase",
-    "node-graph==0.1.26",
+    "node-graph==0.1.29",
     "node-graph-widget>=0.0.4",
     "aiida-core>=2.3",
     "cloudpickle",
     "aiida-shell~=0.8",
-    "aiida-pythonjob>=0.1.8",
+    "aiida-pythonjob>=0.2.3",
     "jsonschema",
 ]
 
@@ -53,6 +53,7 @@ docs = [
     "sphinx-gallery",
     "myst-nb~=1.0.0",
     "nbsphinx",
+    "sphinx-autobuild",
 ]
 pre-commit = [
     "pre-commit~=2.2",
@@ -103,7 +104,8 @@ workgraph = "aiida_workgraph.cli.cmd_workgraph:workgraph"
 "workgraph.test_add" = "aiida_workgraph.tasks.test:TestAdd"
 "workgraph.test_sum_diff" = "aiida_workgraph.tasks.test:TestSumDiff"
 "workgraph.test_arithmetic_multiply_add" = "aiida_workgraph.tasks.test:TestArithmeticMultiplyAdd"
-"workgraph.pythonjob" = "aiida_workgraph.tasks.factory.pythonjob_task:PythonJobTaskFactory"
+"workgraph.pythonjob" = "aiida_workgraph.tasks.factory.pythonjob.factory:PythonJobTaskFactory"
+"workgraph.pyfunction" = "aiida_workgraph.tasks.factory.pythonjob.factory:PyFunctionTaskFactory"
 "workgraph.shelljob" = "aiida_workgraph.tasks.factory.shelljob_task:ShellJobTaskFactory"
 "workgraph.aiida_process" = "aiida_workgraph.tasks.aiida:AiiDAProcessTask"
 
@@ -113,14 +115,10 @@ workgraph = "aiida_workgraph.cli.cmd_workgraph:workgraph"
 "workgraph.float" = "aiida_workgraph.properties.builtins:PropertyFloat"
 "workgraph.string" = "aiida_workgraph.properties.builtins:PropertyString"
 "workgraph.bool" = "aiida_workgraph.properties.builtins:PropertyBool"
-"workgraph.aiida_int" = "aiida_workgraph.properties.builtins:PropertyAiiDAInt"
-"workgraph.aiida_float" = "aiida_workgraph.properties.builtins:PropertyAiiDAFloat"
-"workgraph.aiida_string" = "aiida_workgraph.properties.builtins:PropertyAiiDAString"
-"workgraph.aiida_bool" = "aiida_workgraph.properties.builtins:PropertyAiiDABool"
+"workgraph.list" = "aiida_workgraph.properties.builtins:PropertyList"
+"workgraph.dict" = "aiida_workgraph.properties.builtins:PropertyDict"
 "workgraph.aiida_int_vector" = "aiida_workgraph.properties.builtins:PropertyAiiDAIntVector"
 "workgraph.aiida_float_vector" = "aiida_workgraph.properties.builtins:PropertyAiiDAFloatVector"
-"workgraph.aiida_list" = "aiida_workgraph.properties.builtins:PropertyAiiDAList"
-"workgraph.aiida_dict" = "aiida_workgraph.properties.builtins:PropertyAiiDADict"
 "workgraph.aiida_structuredata" = "aiida_workgraph.properties.builtins:PropertyStructureData"
 
 [project.entry-points."aiida_workgraph.socket"]
@@ -130,15 +128,10 @@ workgraph = "aiida_workgraph.cli.cmd_workgraph:workgraph"
 "workgraph.float" = "aiida_workgraph.sockets.builtins:SocketFloat"
 "workgraph.string" = "aiida_workgraph.sockets.builtins:SocketString"
 "workgraph.bool" = "aiida_workgraph.sockets.builtins:SocketBool"
-"workgraph.aiida_int" = "aiida_workgraph.sockets.builtins:SocketAiiDAInt"
-"workgraph.aiida_float" = "aiida_workgraph.sockets.builtins:SocketAiiDAFloat"
-"workgraph.aiida_string" = "aiida_workgraph.sockets.builtins:SocketAiiDAString"
-"workgraph.aiida_structure" = "aiida_workgraph.sockets.builtins:SocketStructureData"
-"workgraph.aiida_bool" = "aiida_workgraph.sockets.builtins:SocketAiiDABool"
+"workgraph.list" = "aiida_workgraph.sockets.builtins:SocketList"
+"workgraph.dict" = "aiida_workgraph.sockets.builtins:SocketDict"
 "workgraph.aiida_int_vector" = "aiida_workgraph.sockets.builtins:SocketAiiDAIntVector"
 "workgraph.aiida_float_vector" = "aiida_workgraph.sockets.builtins:SocketAiiDAFloatVector"
-"workgraph.aiida_list" = "aiida_workgraph.sockets.builtins:SocketAiiDAList"
-"workgraph.aiida_dict" = "aiida_workgraph.sockets.builtins:SocketAiiDADict"
 "workgraph.aiida_structuredata" = "aiida_workgraph.sockets.builtins:SocketStructureData"
 
 [project.entry-points."aiida_workgraph.type_mapping"]

@@ -37,13 +37,13 @@ from aiida_workgraph import task, WorkGraph
 from aiida.orm import Int
 
 # define add task
-@task.calcfunction()
+@task()
 def add(x, y):
     return x + y
 
 
 # define multiply task
-@task.calcfunction()
+@task()
 def multiply(x, y):
     return x * y
 
@@ -192,7 +192,7 @@ wg.submit(wait=True)
 # input of the WorkGraph.
 
 
-@task.calcfunction()
+@task()
 def add_one(x):
     return x + 1
 
@@ -244,7 +244,7 @@ from aiida_workgraph import task, WorkGraph
 from aiida.orm import Int
 
 
-@task.calcfunction()
+@task()
 def modulo_two(x):
     return x % 2
 

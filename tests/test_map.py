@@ -1,7 +1,6 @@
 from aiida_workgraph import (
     WorkGraph,
     task,
-    active_graph,
     active_map_zone,
     active_if_zone,
 )
@@ -26,7 +25,7 @@ def test_map_instruction(add_code):
     x = 1
     y = 2
     n = 3
-    with active_graph(WorkGraph("add_graph")) as wg:
+    with WorkGraph("add_graph") as wg:
         wg.add_task(generate_data, name="generate_data", n=n)
         with active_map_zone(wg.tasks.generate_data.outputs.result) as map_zone:
             map_zone.add_task(
@@ -57,4 +56,4 @@ def test_map_instruction(add_code):
         wg.add_task(calc_sum, name="calc_sum1", kwargs=wg.ctx.sum)
         wg.tasks.calc_sum1.waiting_on.add([wg.tasks.add2, wg.tasks.add3])
         wg.run()
-        assert wg.tasks.calc_sum1.outputs.sum.value == 7
+        assert wg.tasks.calc_sum1.outputs.sum.value == 14

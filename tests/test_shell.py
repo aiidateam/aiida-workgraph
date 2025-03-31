@@ -29,7 +29,7 @@ def test_shell_command(fixture_localhost):
     # also check if we can set the computer explicitly
     job1.set({"metadata.computer": load_computer("localhost")})
     wg.run()
-    assert job1.node.outputs.stdout.get_content() == "string astring b"
+    assert job1.outputs.stdout.value.get_content() == "string astring b"
 
 
 def test_shell_code():
@@ -46,7 +46,7 @@ def test_shell_code():
         },
     )
     wg.run()
-    assert job1.node.outputs.stdout.get_content() == "string astring b"
+    assert job1.outputs.stdout.value.get_content() == "string astring b"
 
 
 def test_dynamic_port():

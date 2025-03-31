@@ -62,14 +62,14 @@ def eos(**datas):
 #
 #
 
-from aiida_workgraph import WorkGraph, active_map_zone, active_graph
+from aiida_workgraph import WorkGraph, active_map_zone
 from aiida_quantumespresso.calculations.pw import PwCalculation
 
 
 def eos_workgraph(
     structure: orm.StructureData = None, scales: list = None, scf_inputs: dict = None
 ):
-    with active_graph(WorkGraph("eos_tutorial")) as wg:
+    with WorkGraph("eos_tutorial") as wg:
         wg.add_task(scale_structure, name="scale", structure=structure, scales=scales)
         with active_map_zone(wg.tasks.scale.outputs.structures) as map_zone:
             scf_task = map_zone.add_task(
@@ -188,7 +188,7 @@ from aiida_workgraph import WorkGraph, task, active_map_zone, active_graph
 def eos_workgraph(
     structure: orm.StructureData = None, scales: list = None, scf_inputs: dict = None
 ):
-    with active_graph(WorkGraph("eos")) as wg:
+    with WorkGraph("eos") as wg:
         wg.add_task(scale_structure, name="scale", structure=structure, scales=scales)
         with active_map_zone(wg.tasks.scale.outputs.structures) as map_zone:
             scf_task = map_zone.add_task(

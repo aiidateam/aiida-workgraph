@@ -24,10 +24,23 @@ def test_decorators_args() -> None:
 
     n = test._TaskCls()
     assert n.args_data["args"] == []
-    assert set(n.args_data["kwargs"]) == set(["a", "b"])
+    assert set(n.args_data["kwargs"]) == set(
+        {
+            "metadata",
+            "function_data",
+            "deserializers",
+            "a",
+            "serializers",
+            "process_label",
+            "b",
+            "function_inputs",
+        }
+    )
     assert n.args_data["var_args"] is None
     assert n.args_data["var_kwargs"] == "c"
-    assert set(n.get_output_names()) == set(["result", "_outputs", "_wait"])
+    assert set(n.get_output_names()) == set(
+        ["result", "_outputs", "_wait", "exit_code"]
+    )
     assert isinstance(n.inputs.c, TaskSocketNamespace)
 
 
@@ -79,11 +92,20 @@ def test_decorators_task_args(task_function):
     n = task_function._TaskCls()
     tdata = n.to_dict()
     assert n.args_data["args"] == []
-    assert n.args_data["kwargs"] == ["a", "b"]
+    assert set(n.args_data["kwargs"]) == {
+        "metadata",
+        "function_data",
+        "deserializers",
+        "a",
+        "serializers",
+        "process_label",
+        "b",
+        "function_inputs",
+    }
     assert n.args_data["var_args"] is None
     assert n.args_data["var_kwargs"] == "c"
     assert set(tdata["outputs"]["sockets"].keys()) == set(
-        ["result", "_outputs", "_wait"]
+        ["result", "_outputs", "_wait", "exit_code"]
     )
 
 

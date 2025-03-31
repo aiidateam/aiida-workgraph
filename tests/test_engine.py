@@ -19,15 +19,17 @@ def test_run_order(decorated_add) -> None:
 @pytest.mark.skip(reason="The test is not stable.")
 def test_reset_node(wg_engine: WorkGraph) -> None:
     """Modify a node during the excution of a WorkGraph."""
+    from aiida import orm
+
     wg = wg_engine
     wg.name = "test_reset"
     wg.submit()
     time.sleep(15)
-    wg.tasks["add3"].set({"y": aiida.orm.Int(10).store()})
+    wg.tasks["add3"].set({"y": orm.Int(10).store()})
     wg.save()
     wg.wait()
     wg.update()
-    assert wg.tasks["add5"].node.outputs.sum == 21
+    assert wg.tasks.add5.outputs.sum == 21
     assert wg.process.base.extras.get("_workgraph_queue_index") == 1
     assert len(wg.process.base.extras.get("_workgraph_queue")) == 1
 

@@ -308,7 +308,7 @@ wg.add_link(paras_task.outputs[0], pw_relax1.inputs.base.pw.parameters)
 # wg.submit(wait=True, timeout=200)
 # print(
 #     "\nEnergy of a relaxed N2 molecule: {:0.3f}".format(
-#         pw_relax1.node.outputs.output_parameters.get_dict()["energy"]
+#         pw_relax1.outputs.output_parameters.get_dict()["energy"]
 #     )
 # )
 
