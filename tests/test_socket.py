@@ -25,15 +25,10 @@ def test_type_mapping(data_type, data, identifier) -> None:
     """Test the mapping of data types to socket types."""
 
     # Ensure mapping are up-to-date
-    from aiida_workgraph.orm.mapping import (
-        load_custom_type_mapping,
-        builtins_type_mapping,
-    )
-
-    load_custom_type_mapping()
+    from aiida_workgraph.orm.mapping import type_mapping
 
     assert (
-        identifier in builtins_type_mapping.values()
+        identifier in type_mapping.values()
     ), f"Expected identifier {identifier} not found in type_mapping"
 
     @task()
@@ -46,8 +41,8 @@ def test_type_mapping(data_type, data, identifier) -> None:
     add_task.set({"x": data})
 
     assert (
-        builtins_type_mapping.get(data_type, None) == identifier
-    ), f"Mismatch: Expected {identifier}, but got {builtins_type_mapping.get(data_type)}"
+        type_mapping.get(data_type, None) == identifier
+    ), f"Mismatch: Expected {identifier}, but got {type_mapping.get(data_type)}"
 
 
 def test_vector_socket() -> None:
