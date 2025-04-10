@@ -1,4 +1,4 @@
-from aiida.orm import Data
+from aiida.orm import Data, load_node, CalcJobNode
 from aiida.common.lang import classproperty
 from aiida.orm.fields import add_field
 from aiida.orm.utils.mixins import Sealable
@@ -10,8 +10,10 @@ class SchedulerNode(Sealable, Data):
 
     WAITING_PROCESS = "waiting_process"
     RUNNING_PROCESS = "running_process"
+    RUNNING_CALCJOB = "running_calcjob"
     FINISHED_PROCESS = "finished_process"
-    MAXIMUM_RUNNING_PROCESSES = "maximum_running_processes"
+    MAXIMUM_CALCJOB = "maximum_calcjob"
+    NEXT_PRIORITY = "next_priority"
 
     __qb_fields__ = [
         add_field(
@@ -30,14 +32,24 @@ class SchedulerNode(Sealable, Data):
             doc="List of running processes",
         ),
         add_field(
+            RUNNING_CALCJOB,
+            dtype=Optional[list],
+            doc="List of running calcjobs",
+        ),
+        add_field(
             FINISHED_PROCESS,
             dtype=Optional[list],
             doc="List of finished processes",
         ),
         add_field(
-            MAXIMUM_RUNNING_PROCESSES,
+            MAXIMUM_CALCJOB,
             dtype=Optional[int],
             doc="Maximum number of running processes",
+        ),
+        add_field(
+            NEXT_PRIORITY,
+            dtype=Optional[int],
+            doc="Next priority for the process",
         ),
     ]
 
@@ -46,8 +58,10 @@ class SchedulerNode(Sealable, Data):
         return super()._updatable_attributes + (
             cls.WAITING_PROCESS,
             cls.RUNNING_PROCESS,
+            cls.RUNNING_CALCJOB,
             cls.FINISHED_PROCESS,
-            cls.MAXIMUM_RUNNING_PROCESSES,
+            cls.MAXIMUM_CALCJOB,
+            cls.NEXT_PRIORITY,
         )
 
     @property
@@ -76,42 +90,74 @@ class SchedulerNode(Sealable, Data):
             waiting_process.append(pk)
             self.waiting_process = waiting_process
 
-    def pop_waiting_process(self) -> None:
+    def remove_waiting_process(self, pk) -> None:
         waiting_process = self.base.attributes.get(self.WAITING_PROCESS, [])
-        if waiting_process:
-            pk = waiting_process.pop(0)
+        if pk in waiting_process:
+            waiting_process.remove(pk)
             self.waiting_process = waiting_process
-            return pk
-        return None
 
     @property
-    def running_processes(self) -> list:
+    def running_process(self) -> list:
         """Return the list of running processes."""
         return self.base.attributes.get(self.RUNNING_PROCESS, [])
 
-    @running_processes.setter
-    def running_processes(self, value: list) -> None:
+    @running_process.setter
+    def running_process(self, value: list) -> None:
         """Set the list of running processes."""
         self.base.attributes.set(self.RUNNING_PROCESS, value)
+
+    @property
+    def running_calcjob(self) -> list:
+        """Return the list of running calcjobs."""
+        return self.base.attributes.get(self.RUNNING_CALCJOB, [])
+
+    @running_calcjob.setter
+    def running_calcjob(self, value: list) -> None:
+        """Set the list of running calcjobs."""
+        self.base.attributes.set(self.RUNNING_CALCJOB, value)
 
     def append_running_process(self, pk: int) -> None:
         running_process = self.base.attributes.get(self.RUNNING_PROCESS, [])
         if pk not in running_process:
             running_process.append(pk)
-            self.running_processes = running_process
+            self.running_process = running_process
+            # check if the process is a calcjob
+            node = load_node(pk)
+            if isinstance(node, CalcJobNode):
+                calcjob = self.running_calcjob
+                if pk not in calcjob:
+                    calcjob.append(pk)
+                    self.running_calcjob = calcjob
 
     def remove_running_process(self, pk: int) -> None:
         running_process = self.base.attributes.get(self.RUNNING_PROCESS, [])
         if pk in running_process:
             running_process.remove(pk)
-            self.running_processes = running_process
+            self.running_process = running_process
+            # check if the process is a calcjob
+            node = load_node(pk)
+            if isinstance(node, CalcJobNode):
+                calcjob = self.running_calcjob
+                if pk in calcjob:
+                    calcjob.remove(pk)
+                    self.running_calcjob = calcjob
 
     @property
-    def maxium_running_processes(self) -> int:
+    def maxium_calcjob(self) -> int:
         """Return the maximum number of running processes."""
-        return self.base.attributes.get(self.MAXIMUM_RUNNING_PROCESSES, 100000)
+        return self.base.attributes.get(self.MAXIMUM_CALCJOB, 100000)
 
-    @maxium_running_processes.setter
-    def maxium_running_processes(self, value: int) -> None:
+    @maxium_calcjob.setter
+    def maxium_calcjob(self, value: int) -> None:
         """Set the maximum number of running processes."""
-        self.base.attributes.set(self.MAXIMUM_RUNNING_PROCESSES, value)
+        self.base.attributes.set(self.MAXIMUM_CALCJOB, value)
+
+    @property
+    def next_priority(self) -> int:
+        """Return the next priority for the process."""
+        return self.base.attributes.get(self.NEXT_PRIORITY, 0)
+
+    @next_priority.setter
+    def next_priority(self, value: int) -> None:
+        """Set the next priority for the process."""
+        self.base.attributes.set(self.NEXT_PRIORITY, value)

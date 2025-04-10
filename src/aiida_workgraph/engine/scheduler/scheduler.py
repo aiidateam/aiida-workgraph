@@ -27,16 +27,22 @@ from aiida.brokers.rabbitmq.utils import (
 from aiida_workgraph.orm.scheduler import SchedulerNode
 
 logging.basicConfig(level=logging.INFO, format="[%(levelname)s] %(message)s")
+
 LOGGER = logging.getLogger(__name__)
 
 __all__ = ("Scheduler",)
 
+SCHEDULER_PRIORITY_KEY = "_scheduler_priority"
+
 
 class Scheduler:
     """
-    A Scheduler class that receives 'continue' tasks via RabbitMQ,
-    runs them up to a configured concurrency limit, and persists
-    its queue/active-state in a SchedulerNode in the AiiDA database.
+    A Scheduler class that:
+      - Receives 'continue' tasks via RabbitMQ,
+      - Runs them up to a configured concurrency limit,
+      - Persists its queue/active-state in a SchedulerNode,
+      - Assigns priorities to processes and always launches the
+        highest-priority (lowest integer) first.
     """
 
     _communicator: Optional[kiwipy.Communicator] = None
@@ -45,12 +51,13 @@ class Scheduler:
     def __init__(
         self,
         name: str,
-        maxium_running_processes: Optional[int] = None,
+        maxium_calcjob: Optional[int] = None,
         poll_interval: Union[int, float] = 0,
+        reset: bool = False,
     ):
         """
         :param name: A unique name for this scheduler.
-        :param maxium_running_processes: Maximum number of processes to run concurrently
+        :param maxium_calcjob: Maximum number of processes to run concurrently
         :param poll_interval: Interval in seconds for the fallback polling mechanism
                               (if an AiiDA broadcast is missed).
         """
@@ -64,24 +71,28 @@ class Scheduler:
         self._prefix = f"aiida-{self._profile.uuid}"
         set_event_loop_policy()
 
-        # We create our dedicated event loop and keep it in a private variable
+        # We create our dedicated event loop
         self._loop = asyncio.new_event_loop()
 
         # Set up the RabbitMQ communicator and attach the task receiver callback
         self.communicator.add_task_subscriber(self.task_receiver)
         self.process_controller = get_manager().get_process_controller()
 
-        # If the user provided a concurrency limit, update the node
-        if maxium_running_processes is not None:
-            self.node.maxium_running_processes = maxium_running_processes
+        if reset:
+            self.reset()
+
+        # If concurrency limit was provided, store it
+        if maxium_calcjob is not None:
+            self.node.maxium_calcjob = maxium_calcjob
 
     @property
     def node(self) -> SchedulerNode:
         """
-        Return the SchedulerNode that stores all persistent data for this scheduler:
-          - waiting_process (list of PKs waiting to run)
-          - running_processes (list of PKs currently running)
-          - maxium_running_processes (int concurrency limit)
+        Return (and lazily create) the SchedulerNode that stores all data for this scheduler:
+          - waiting_process: list of PKs waiting to run
+          - running_process: list of PKs currently running
+          - maxium_calcjob: concurrency limit
+          - next_priority: the integer to assign to the next new process (defaults to 0)
         """
         if self._node is None:
             from aiida.orm import QueryBuilder
@@ -89,24 +100,44 @@ class Scheduler:
             qb = QueryBuilder()
             qb.append(SchedulerNode, filters={"attributes.name": self.name})
             if qb.count() == 0:
-                # create new SchedulerNode
+                # Create a new SchedulerNode
                 self._node = SchedulerNode()
                 self._node.name = self.name
+                self._node.next_priority = 0
                 self._node.store()
                 LOGGER.info(
                     f"Created new SchedulerNode for {self.name}, pk={self._node.pk}"
                 )
             else:
-                # load existing SchedulerNode
+                # Load existing SchedulerNode
                 self._node = qb.first()[0]
                 LOGGER.info(
                     "Loaded existing SchedulerNode<%d> for '%s'",
                     self._node.pk,
                     self.name,
                 )
-                # Ensure any "running" processes are still actually running
+                # Check for any running processes that might have finished
                 self._check_for_finished_running()
+
         return self._node
+
+    def reset(self) -> None:
+        """
+        Reset the scheduler by clearing the waiting and running process lists.
+        """
+        self.node.waiting_process = []
+        self.node.running_process = []
+        self.node.next_priority = 0
+        LOGGER.info("Scheduler '%s' reset.", self.name)
+
+    def _get_next_priority(self) -> int:
+        """
+        Return and then increment the 'next_priority' counter
+        in the SchedulerNode’s extras or attributes.
+        """
+        current = self._node.next_priority
+        self._node.next_priority = current - 1
+        return current
 
     def get_url(self) -> str:
         """Return the RabbitMQ URL for this AiiDA profile."""
@@ -124,7 +155,7 @@ class Scheduler:
     def communicator(self) -> kiwipy.Communicator:
         """
         Access (and lazily create) a kiwipy Communicator connected to RabbitMQ.
-        We wrap it in `wrap_communicator` so it is driven by our internal event loop.
+        We wrap it in `wrap_communicator` so it is driven by our event loop.
         """
         from kiwipy.rmq import RmqThreadCommunicator
         from aiida.orm.utils import serialize
@@ -164,59 +195,112 @@ class Scheduler:
         task_type = task[TASK_KEY]
         if task_type == CONTINUE_TASK:
             pid = task.get(TASK_ARGS, {}).get("pid")
-            if pid is not None:
-                LOGGER.info("Received CONTINUE_TASK for pk=%d", pid)
-                self.node.append_waiting_process(pid)
-                # Trigger consumption (start more processes if possible)
-                self.consume_process_queue()
+            if pid is None:
+                return
+
+            LOGGER.info("Received CONTINUE_TASK for pk=%d", pid)
+            priority = self._compute_priority_for_new_process(pid)
+            child_node = load_node(pid)
+            child_node.base.extras.set(SCHEDULER_PRIORITY_KEY, priority)
+            self.node.append_waiting_process(pid)
+            # Trigger consumption (start more processes if possible)
+            self.consume_process_queue()
+
+    def _compute_priority_for_new_process(self, pid: int) -> int:
+        """"""
+        from aiida.common.links import LinkType
+
+        # find the parent process
+        node = load_node(pid)
+        links = node.base.links.get_incoming()
+        # find the parent node
+        parent_nodes = [
+            link.node
+            for link in links
+            if link.link_type in [LinkType.CALL_CALC, LinkType.CALL_WORK]
+        ]
+        if parent_nodes:
+            parent_node = parent_nodes[0]
+            return parent_node.base.extras.get(SCHEDULER_PRIORITY_KEY, 0)
+        return self._get_next_priority()
 
     def consume_process_queue(self) -> None:
         """
         Attempt to start processes from the waiting queue,
-        up to the concurrency limit in maxium_running_processes.
+        up to the concurrency limit. We pick the next process
+        with the *highest* priority.
         """
         waiting = len(self.node.waiting_process)
-        running = len(self.node.running_processes)
-        max_ = self.node.maxium_running_processes
+        running = len(self.node.running_calcjob)
+        max_ = self.node.maxium_calcjob
         LOGGER.info(
-            "consume_process_queue: waiting=%d, running=%d, max=%d",
+            "Summary: waiting_process=%d, running_calcjob=%d, max_calcjob=%d",
             waiting,
             running,
             max_,
         )
 
         # While we still have capacity, pop from waiting and continue
-        while len(self.node.running_processes) < self.node.maxium_running_processes:
-            if self.node.waiting_process:
-                pk = self.node.pop_waiting_process()
-                self.continue_process(pk)
-            else:
+        while len(self.node.running_calcjob) < self.node.maxium_calcjob:
+            # pick the next waiting PK with the highest priority
+            next_pk = self._pop_highest_priority_waiting_process()
+            if next_pk is None:
                 LOGGER.info("No more processes in waiting queue.")
                 return
+            self.continue_process(next_pk)
 
         LOGGER.info(
-            "Maximum concurrency (%d) reached, waiting for a process to finish...",
-            self.node.maxium_running_processes,
+            "Maximum concurrency (%d) reached, waiting for a calcjob to finish...",
+            self.node.maxium_calcjob,
         )
+
+    def _pop_highest_priority_waiting_process(self) -> Optional[int]:
+        """Return the waiting process PK with the largest 'priority' extras, or None if empty."""
+        waiting_list = self.node.waiting_process
+        if not waiting_list:
+            return None
+
+        # Sort waiting PKs by their priority
+        # The process with the largest integer is considered highest priority
+        priority_list = [self._get_priority_for_pid(pk) for pk in waiting_list]
+        # for i, pk in enumerate(waiting_list):
+        # LOGGER.info(f"Waiting process pk={pk} has priority {priority_list[i]}")
+        best_pk = waiting_list[priority_list.index(max(priority_list))]
+        LOGGER.info(f"Best waiting process pk={best_pk}")
+        self.node.remove_waiting_process(best_pk)
+        return best_pk
+
+    def _get_priority_for_pid(self, pk: int) -> int:
+        """Return the integer priority from the node extras, or a large default if missing."""
+        child_node = load_node(pk)
+        return child_node.base.extras.get(SCHEDULER_PRIORITY_KEY, 9999999)
 
     def _check_for_finished_running(self) -> None:
         """
         If the scheduler was stopped while processes were running,
-        some might have already finished by now. Let's check each quickly.
-        If it's finished, we remove it from 'running_processes'.
+        some might have already finished. We'll remove them from 'running'
+        if they're terminated. We also re-attach callbacks to any that are still running.
         """
         to_remove = []
-        for pk in list(self.node.running_processes):
-            node = load_node(pk)
-            if node.is_terminated:
-                LOGGER.info(
-                    "Found pk=%d in 'running' but it is actually terminated. Removing it.",
+        for pk in list(self.node.running_process):
+            try:
+                node = load_node(pk)
+                if node.is_terminated:
+                    LOGGER.info(
+                        "Found pk=%d in 'running' but it's already terminated. Removing it.",
+                        pk,
+                    )
+                    to_remove.append(pk)
+                else:
+                    # Re-attach callback in case we never did or the scheduler was restarted
+                    self.call_on_process_finish(pk)
+            except exceptions.NotExistent:
+                LOGGER.warning(
+                    "Found pk=%d in 'running' but it doesn't exist anymore. Removing it.",
                     pk,
                 )
                 to_remove.append(pk)
-            else:
-                # add the callback to the process
-                self.call_on_process_finish(pk)
+
         for pk in to_remove:
             self.node.remove_running_process(pk)
 
@@ -233,7 +317,7 @@ class Scheduler:
     def call_on_process_finish(self, pk: int) -> None:
         """
         Attach both a broadcast-based subscriber and a fallback polling
-        so that when the process <pk> terminates, we call `on_process_finished_callback`.
+        so that when process <pk> terminates, we call `on_process_finished_callback`.
         """
         node = load_node(pk=pk)
         subscriber_identifier = str(uuid.uuid4())
@@ -254,8 +338,7 @@ class Scheduler:
                 if self.communicator:
                     self.communicator.remove_broadcast_subscriber(subscriber_identifier)
 
-        # Subscribe to broadcast events from that PK,
-        # for any terminal state (FINISHED, KILLED, EXCEPTED)
+        # Subscribe to broadcast events from that PK
         broadcast_filter = kiwipy.BroadcastFilter(
             functools.partial(inline_callback, done_event), sender=pk
         )
@@ -282,7 +365,7 @@ class Scheduler:
         to consume another from the waiting queue.
         """
         LOGGER.info("[📢] Process pk=%d finished", pk)
-        if pk in self.node.running_processes:
+        if pk in self.node.running_process:
             self.node.remove_running_process(pk)
         # Attempt to start more processes if any remain
         self.consume_process_queue()
@@ -313,10 +396,7 @@ class Scheduler:
         LOGGER.info(
             "Starting Scheduler '%s' main loop. Press Ctrl+C to stop.", self.name
         )
-
-        # As soon as the loop starts, let's see if we have leftover waiting/running
-        # processes and try to continue them. We schedule this with call_soon
-        # so it runs right after the loop is in run_forever().
+        # Once loop starts, re-check leftover waiting/running
         self._loop.call_soon(self.consume_process_queue)
 
         try:
@@ -324,7 +404,6 @@ class Scheduler:
         except KeyboardInterrupt:
             LOGGER.info("Scheduler '%s' interrupted by user (Ctrl+C).", self.name)
         finally:
-            # Cleanup
             self._loop.run_until_complete(self._loop.shutdown_asyncgens())
             self._loop.close()
             LOGGER.info("Scheduler '%s' event loop closed.", self.name)
