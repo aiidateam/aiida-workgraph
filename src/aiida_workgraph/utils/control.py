@@ -37,16 +37,22 @@ def create_task_action(
 
 
 def continue_process_in_scheduler(
-    pk: int,
-    queue_name: str = "test_scheduler",
+    pk: int | orm.Node,
+    scheduler_name: str = "test_scheduler",
 ):
     """Send workgraph task to scheduler."""
 
     manager = get_manager()
     controller = ControllerWithQueueName(
-        queue_name=queue_name, communicator=manager.get_communicator()
+        queue_name=scheduler_name, communicator=manager.get_communicator()
     )
+    if isinstance(pk, orm.Node):
+        node = pk
+        pk = node.pk
+    else:
+        node = orm.load_node(pk)
     controller.continue_process(pk, nowait=False)
+    node.base.extras.set("scheduler", scheduler_name)
 
 
 def get_task_runtime_info(node, name: str, key: str) -> str:
