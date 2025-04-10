@@ -12,7 +12,7 @@ class SchedulerNode(Sealable, Data):
     RUNNING_PROCESS = "running_process"
     RUNNING_CALCJOB = "running_calcjob"
     FINISHED_PROCESS = "finished_process"
-    MAXIMUM_CALCJOB = "maximum_calcjob"
+    MAX_CALCJOB = "max_calcjob"
     NEXT_PRIORITY = "next_priority"
 
     __qb_fields__ = [
@@ -42,7 +42,7 @@ class SchedulerNode(Sealable, Data):
             doc="List of finished processes",
         ),
         add_field(
-            MAXIMUM_CALCJOB,
+            MAX_CALCJOB,
             dtype=Optional[int],
             doc="Maximum number of running processes",
         ),
@@ -60,7 +60,7 @@ class SchedulerNode(Sealable, Data):
             cls.RUNNING_PROCESS,
             cls.RUNNING_CALCJOB,
             cls.FINISHED_PROCESS,
-            cls.MAXIMUM_CALCJOB,
+            cls.MAX_CALCJOB,
             cls.NEXT_PRIORITY,
         )
 
@@ -143,14 +143,14 @@ class SchedulerNode(Sealable, Data):
                     self.running_calcjob = calcjob
 
     @property
-    def maxium_calcjob(self) -> int:
+    def max_calcjob(self) -> int:
         """Return the maximum number of running processes."""
-        return self.base.attributes.get(self.MAXIMUM_CALCJOB, 100000)
+        return self.base.attributes.get(self.MAX_CALCJOB, 100000)
 
-    @maxium_calcjob.setter
-    def maxium_calcjob(self, value: int) -> None:
+    @max_calcjob.setter
+    def max_calcjob(self, value: int) -> None:
         """Set the maximum number of running processes."""
-        self.base.attributes.set(self.MAXIMUM_CALCJOB, value)
+        self.base.attributes.set(self.MAX_CALCJOB, value)
 
     @property
     def next_priority(self) -> int:

@@ -17,7 +17,7 @@ from plumpy.process_comms import (
     CONTINUE_TASK,
 )
 from aiida.common import exceptions
-from aiida.orm import load_node
+from aiida.orm import load_node, QueryBuilder, ProcessNode
 from aiida.engine.processes import ProcessState
 from aiida.manage import get_manager
 from aiida.brokers.rabbitmq.utils import (
@@ -51,13 +51,13 @@ class Scheduler:
     def __init__(
         self,
         name: str,
-        maxium_calcjob: Optional[int] = None,
+        max_calcjob: Optional[int] = None,
         poll_interval: Union[int, float] = 0,
         reset: bool = False,
     ):
         """
         :param name: A unique name for this scheduler.
-        :param maxium_calcjob: Maximum number of processes to run concurrently
+        :param max_calcjob: Maximum number of processes to run concurrently
         :param poll_interval: Interval in seconds for the fallback polling mechanism
                               (if an AiiDA broadcast is missed).
         """
@@ -82,8 +82,8 @@ class Scheduler:
             self.reset()
 
         # If concurrency limit was provided, store it
-        if maxium_calcjob is not None:
-            self.node.maxium_calcjob = maxium_calcjob
+        if max_calcjob is not None:
+            self.node.max_calcjob = max_calcjob
 
     @property
     def node(self) -> SchedulerNode:
@@ -91,12 +91,10 @@ class Scheduler:
         Return (and lazily create) the SchedulerNode that stores all data for this scheduler:
           - waiting_process: list of PKs waiting to run
           - running_process: list of PKs currently running
-          - maxium_calcjob: concurrency limit
+          - max_calcjob: concurrency limit
           - next_priority: the integer to assign to the next new process (defaults to 0)
         """
         if self._node is None:
-            from aiida.orm import QueryBuilder
-
             qb = QueryBuilder()
             qb.append(SchedulerNode, filters={"attributes.name": self.name})
             if qb.count() == 0:
@@ -232,16 +230,15 @@ class Scheduler:
         """
         waiting = len(self.node.waiting_process)
         running = len(self.node.running_calcjob)
-        max_ = self.node.maxium_calcjob
+        max_ = self.node.max_calcjob
         LOGGER.info(
             "Summary: waiting_process=%d, running_calcjob=%d, max_calcjob=%d",
             waiting,
             running,
             max_,
         )
-
         # While we still have capacity, pop from waiting and continue
-        while len(self.node.running_calcjob) < self.node.maxium_calcjob:
+        while len(self.node.running_calcjob) < self.node.max_calcjob:
             # pick the next waiting PK with the highest priority
             next_pk = self._pop_highest_priority_waiting_process()
             if next_pk is None:
@@ -251,7 +248,7 @@ class Scheduler:
 
         LOGGER.info(
             "Maximum concurrency (%d) reached, waiting for a calcjob to finish...",
-            self.node.maxium_calcjob,
+            self.node.max_calcjob,
         )
 
     def _pop_highest_priority_waiting_process(self) -> Optional[int]:
@@ -262,18 +259,23 @@ class Scheduler:
 
         # Sort waiting PKs by their priority
         # The process with the largest integer is considered highest priority
-        priority_list = [self._get_priority_for_pid(pk) for pk in waiting_list]
-        # for i, pk in enumerate(waiting_list):
-        # LOGGER.info(f"Waiting process pk={pk} has priority {priority_list[i]}")
+        qb = QueryBuilder()
+        qb.append(
+            ProcessNode,
+            filters={"id": {"in": waiting_list}},
+            project=["extras._scheduler_priority"],
+        )
+        results = qb.all()
+        priority_list = [res[0] for res in results]
         best_pk = waiting_list[priority_list.index(max(priority_list))]
         LOGGER.info(f"Best waiting process pk={best_pk}")
         self.node.remove_waiting_process(best_pk)
         return best_pk
 
     def _get_priority_for_pid(self, pk: int) -> int:
-        """Return the integer priority from the node extras, or a large default if missing."""
+        """Return the integer priority from the node extras, or a negative number if not set."""
         child_node = load_node(pk)
-        return child_node.base.extras.get(SCHEDULER_PRIORITY_KEY, 9999999)
+        return child_node.base.extras.get(SCHEDULER_PRIORITY_KEY, -9999999)
 
     def _check_for_finished_running(self) -> None:
         """
