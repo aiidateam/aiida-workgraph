@@ -9,7 +9,7 @@ from typing import Any, Dict, Optional, Union
 
 import kiwipy
 from plumpy.communications import wrap_communicator
-from plumpy.events import set_event_loop_policy
+from plumpy.events import set_event_loop_policy, reset_event_loop_policy
 from plumpy.process_comms import (
     RemoteProcessThreadController,
     TASK_ARGS,
@@ -33,6 +33,16 @@ LOGGER = logging.getLogger(__name__)
 __all__ = ("Scheduler",)
 
 SCHEDULER_PRIORITY_KEY = "_scheduler_priority"
+INTENT_KEY = "intent"
+MESSAGE_TEXT_KEY = "message"
+
+
+class Intent:
+    """Intent constants for a process message"""
+
+    STOP: str = "stop"
+    PLAY: str = "play"
+    STATUS: str = "status"
 
 
 class Scheduler:
@@ -74,12 +84,23 @@ class Scheduler:
         # We create our dedicated event loop
         self._loop = asyncio.new_event_loop()
 
-        # Set up the RabbitMQ communicator and attach the task receiver callback
-        self.communicator.add_task_subscriber(self.task_receiver)
-        self.process_controller = get_manager().get_process_controller()
-
         if reset:
             self.reset()
+
+        # Set up the RabbitMQ communicator and attach the task receiver callback
+        self.communicator.add_task_subscriber(self.task_receiver)
+        try:
+            self.communicator.add_rpc_subscriber(
+                self.message_receive, identifier=str(self.node.pk)
+            )
+            # self.add_cleanup(functools.partial(self.communicator.remove_rpc_subscriber, identifier))
+        except kiwipy.TimeoutError:
+            raise exceptions.InternalError(
+                "Failed to add RPC subscriber to the communicator. "
+                "Is the RabbitMQ server running?"
+            )
+
+        self.process_controller = get_manager().get_process_controller()
 
         # If concurrency limit was provided, store it
         if max_calcjob is not None:
@@ -203,6 +224,38 @@ class Scheduler:
             self.node.append_waiting_process(pid)
             # Trigger consumption (start more processes if possible)
             self.consume_process_queue()
+
+    def message_receive(self, _comm: kiwipy.Communicator, msg: Dict[str, Any]) -> Any:
+        """
+        Coroutine called when the scheduler receives a message from the communicator
+
+        :param _comm: the communicator that sent the message
+        :param msg: the message
+        :return: the outcome of processing the message, the return value will be sent back as a response to the sender
+        """
+        LOGGER.info(
+            "Process<%s>: received RPC message with communicator '%s': %r",
+            self.node.pk,
+            msg,
+        )
+
+        intent = msg[INTENT_KEY]
+
+        if intent.lower() == Intent.STOP:
+            self._loop.call_soon(self.close)
+
+        if intent.lower() == Intent.PLAY:
+            pk = msg[MESSAGE_TEXT_KEY]
+            self._loop.call_soon(self.continue_process, pk)
+
+        if intent == Intent.STATUS:
+            status_info = {
+                "waiting": self.node.waiting_process,
+                "running": self.node.running_process,
+            }
+            return status_info
+
+        raise RuntimeError("Unknown intent")
 
     def _compute_priority_for_new_process(self, pid: int) -> int:
         """"""
@@ -409,3 +462,11 @@ class Scheduler:
             self._loop.run_until_complete(self._loop.shutdown_asyncgens())
             self._loop.close()
             LOGGER.info("Scheduler '%s' event loop closed.", self.name)
+
+    def close(self) -> None:
+        """Close the runner by stopping the loop."""
+        self._loop.stop()
+        if not self._loop.is_running():
+            self._loop.close()
+        reset_event_loop_policy()
+        LOGGER.info("Scheduler '%s' closed.", self.name)

@@ -57,6 +57,25 @@ def continue_process_in_scheduler(
     node.base.extras.set("scheduler", scheduler_name)
 
 
+def play_process_in_scheduler(scheduler: int, pk: int | orm.Node):
+    controller = get_manager().get_process_controller()
+    controller._communicator.rpc_send(scheduler, {"intent": "play", "message": pk})
+
+
+def stop_scheduler(scheduler: int):
+    """Stop scheduler."""
+    controller = get_manager().get_process_controller()
+    controller._communicator.rpc_send(scheduler, {"intent": "stop"})
+
+
+def get_scheduler_status(scheduler: int):
+    """Get scheduler status."""
+    controller = get_manager().get_process_controller()
+    status = controller._communicator.rpc_send(scheduler, {"intent": "status"})
+    result = status.result().result()
+    return result
+
+
 def get_task_runtime_info(node, name: str, key: str) -> str:
     """Get task state info from attributes."""
     from aiida_workgraph.orm.utils import deserialize_safe
