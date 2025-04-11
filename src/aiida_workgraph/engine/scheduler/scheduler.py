@@ -248,8 +248,9 @@ class Scheduler:
             self._loop.call_soon(self.consume_process_queue)
 
         if intent.lower() == Intent.PLAY:
-            pk = msg[MESSAGE_TEXT_KEY]
-            self._loop.call_soon(self.continue_process, pk)
+            pks = msg[MESSAGE_TEXT_KEY]
+            for pk in pks:
+                self._loop.call_soon(self.continue_process, pk)
 
         if intent.lower() == Intent.SET:
             data = msg[MESSAGE_TEXT_KEY]
@@ -544,5 +545,20 @@ class Scheduler:
             {
                 "intent": "set",
                 "message": {"identifier": "max_process", "value": max_process},
+            },
+        )
+
+    @classmethod
+    def play_processes(cls, name: str, pks: list, timeout: int = 5) -> None:
+        """
+        Play a process with the given pk.
+        """
+        scheduler = cls.get_scheduler(name)
+        controller = get_manager().get_process_controller()
+        controller._communicator.rpc_send(
+            scheduler.pk,
+            {
+                "intent": "play",
+                "message": pks,
             },
         )

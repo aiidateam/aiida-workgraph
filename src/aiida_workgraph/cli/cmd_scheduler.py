@@ -1,7 +1,7 @@
 from aiida_workgraph.cli.cmd_workgraph import workgraph
 import click
 from aiida.cmdline.utils import decorators, echo
-from aiida.cmdline.params import options
+from aiida.cmdline.params import arguments, options
 from aiida_workgraph.engine.scheduler.client import (
     get_scheduler_client,
     get_all_schedulers,
@@ -46,32 +46,54 @@ def scheduler_delete(name):
 
 
 @scheduler.command()
-@click.option("--foreground", is_flag=True, help="Run in foreground.")
 @click.argument("name", required=False, type=str)
+@click.option("--foreground", is_flag=True, help="Run in foreground.")
+@click.option(
+    "--max-calcjob", type=int, required=False, help="Maximum number of calcjobs."
+)
+@click.option(
+    "--max-process", type=int, required=False, help="Maximum number of processes."
+)
 @decorators.requires_broker
 @decorators.check_circus_zmq_version
-def start_scheduler(foreground, name):
+def start_scheduler(name, max_calcjob, max_process, foreground):
     """Start the scheduler application."""
     from aiida_workgraph.engine.scheduler.client import start_scheduler
 
     click.echo("Starting the scheduler process...")
 
-    start_scheduler(name=name, foreground=foreground)
+    start_scheduler(
+        name=name,
+        max_calcjob=max_calcjob,
+        max_process=max_process,
+        foreground=foreground,
+    )
 
 
 @scheduler.command()
-@click.option("--foreground", is_flag=True, help="Run in foreground.")
 @click.argument("name", required=False, type=str)
+@click.option("--foreground", is_flag=True, help="Run in foreground.")
+@click.option(
+    "--max-calcjob", type=int, required=False, help="Maximum number of calcjobs."
+)
+@click.option(
+    "--max-process", type=int, required=False, help="Maximum number of processes."
+)
 @options.TIMEOUT(default=None, required=False, type=int)
 @decorators.requires_broker
 @decorators.check_circus_zmq_version
-def start(foreground, name, timeout):
+def start(foreground, name, max_calcjob, max_process, timeout):
     """Start the scheduler application."""
     from aiida_workgraph.engine.scheduler.client import get_scheduler_client
 
     click.echo("Starting the scheduler ...")
     client = get_scheduler_client(scheduler_name=name)
-    client.start_daemon(foreground=foreground, timeout=timeout)
+    client.start_daemon(
+        max_calcjob=max_calcjob,
+        max_process=max_process,
+        foreground=foreground,
+        timeout=timeout,
+    )
 
 
 @scheduler.command()
@@ -106,16 +128,22 @@ def stop(ctx, name, no_wait, timeout):
 
 
 @scheduler.command(hidden=True)
-@click.option("--foreground", is_flag=True, help="Run in foreground.")
 @click.argument(
     "name",
     required=False,
     type=str,
 )
+@click.option(
+    "--max-calcjob", type=int, required=False, help="Maximum number of calcjobs."
+)
+@click.option(
+    "--max-process", type=int, required=False, help="Maximum number of processes."
+)
+@click.option("--foreground", is_flag=True, help="Run in foreground.")
 @decorators.with_dbenv()
 @decorators.requires_broker
 @decorators.check_circus_zmq_version
-def start_circus(foreground, name):
+def start_circus(name, max_calcjob, max_process, foreground):
     """This will actually launch the circus daemon, either daemonized in the background or in the foreground.
 
     If run in the foreground all logs are redirected to stdout.
@@ -123,7 +151,9 @@ def start_circus(foreground, name):
     .. note:: this should not be called directly from the commandline!
     """
 
-    get_scheduler_client(scheduler_name=name)._start_daemon(foreground=foreground)
+    get_scheduler_client(scheduler_name=name)._start_daemon(
+        max_calcjob=max_calcjob, max_process=max_process, foreground=foreground
+    )
 
 
 @scheduler.command()
@@ -149,12 +179,12 @@ def status(ctx, name, timeout):
         schedulers = get_all_schedulers()
 
     print(
-        "Name       status      pk   waiting  running   calcjob  max_calcjob max_process"
+        "Name                status      pk   waiting  running   calcjob  max_calcjob max_process"
     )
     # for scheduler in schedulers:
 
     for scheduler in schedulers:
-        echo.echo(f"{scheduler.name:<10}", bold=True, nl=False)
+        echo.echo(f"{scheduler.name:<20}", bold=True, nl=False)
 
         try:
             result = Scheduler.get_status(name=scheduler.name)
@@ -189,6 +219,9 @@ def scheduler_show(name, timeout):
 
     builder = CalculationQueryBuilder()
     scheduler = get_scheduler(name=name)
+    if not scheduler:
+        echo.echo_error(f"Scheduler `{name}` not found.")
+        return
     waiting_process = scheduler.waiting_process
     running_process = scheduler.running_process
     processes = waiting_process + running_process
@@ -262,6 +295,23 @@ def set_max_process(name, max_process, timeout):
     """Start the scheduler application."""
     try:
         Scheduler.set_max_process(name=name, max_process=max_process)
+    except kiwipy.exceptions.UnroutableError:
+        echo.echo_error(
+            f"Failed to set max_process for scheduler {name}. Is the scheduler running?"
+        )
+
+
+@scheduler.command()
+@click.argument("name", required=True, type=str)
+@arguments.PROCESSES()
+@options.TIMEOUT(default=None, required=False, type=int)
+@decorators.requires_broker
+@decorators.check_circus_zmq_version
+def play_processes(name, processes, timeout):
+    """Start the scheduler application."""
+    pks = [p.pk for p in processes]
+    try:
+        Scheduler.play_processes(name=name, pks=pks, timeout=timeout)
     except kiwipy.exceptions.UnroutableError:
         echo.echo_error(
             f"Failed to set max_process for scheduler {name}. Is the scheduler running?"

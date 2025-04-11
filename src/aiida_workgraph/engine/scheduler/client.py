@@ -118,7 +118,12 @@ class SchedulerClient(DaemonClient):
     def daemon_pid_file(self) -> str:
         return self.filepaths["daemon"]["pid"]
 
-    def cmd_start_daemon(self, foreground: bool = False) -> list[str]:
+    def cmd_start_daemon(
+        self,
+        max_calcjob: int | None = None,
+        max_process: int | None = None,
+        foreground: bool = False,
+    ) -> list[str]:
         """Return the command to start the daemon.
 
         :param foreground: Whether to launch the subprocess in the background or not.
@@ -132,15 +137,22 @@ class SchedulerClient(DaemonClient):
             self.scheduler_name,
         ]
 
+        if max_calcjob is not None:
+            command.append(f"--max-calcjob={max_calcjob}")
+        if max_process is not None:
+            command.append(f"--max-process={max_process}")
         if foreground:
             command.append("--foreground")
 
         return command
 
-    @property
-    def cmd_start_daemon_worker(self) -> list[str]:
+    def cmd_start_daemon_worker(
+        self,
+        max_calcjob: int | None = None,
+        max_process: int | None = None,
+    ) -> list[str]:
         """Return the command to start a daemon worker process."""
-        return [
+        command = [
             self._workgraph_bin,
             "-p",
             self.profile.name,
@@ -149,8 +161,20 @@ class SchedulerClient(DaemonClient):
             self.scheduler_name,
         ]
 
+        if max_calcjob is not None:
+            command.append(f"--max-calcjob={max_calcjob}")
+        if max_process is not None:
+            command.append(f"--max-process={max_process}")
+
+        return command
+
     def start_daemon(
-        self, foreground: bool = False, wait: bool = True, timeout: int | None = None
+        self,
+        max_calcjob: int | None = None,
+        max_process: int | None = None,
+        foreground: bool = False,
+        wait: bool = True,
+        timeout: int | None = None,
     ) -> None:
         """Start the daemon in a sub process running in the background.
 
@@ -165,7 +189,9 @@ class SchedulerClient(DaemonClient):
         self._clean_potentially_stale_pid_file()
 
         env = self.get_env()
-        command = self.cmd_start_daemon(foreground)
+        command = self.cmd_start_daemon(
+            max_calcjob=max_calcjob, max_process=max_process, foreground=foreground
+        )
         timeout = timeout or self._daemon_timeout
 
         try:
@@ -184,7 +210,12 @@ class SchedulerClient(DaemonClient):
             timeout=timeout,
         )
 
-    def _start_daemon(self, foreground: bool = False) -> None:
+    def _start_daemon(
+        self,
+        max_calcjob: int | None = None,
+        max_process: int | None = None,
+        foreground: bool = False,
+    ) -> None:
         """Start the daemon.
 
         .. warning:: This will daemonize the current process and put it in the background. It is most likely not what
@@ -217,7 +248,11 @@ class SchedulerClient(DaemonClient):
             "pidfile": self.circus_pid_file,
             "watchers": [
                 {
-                    "cmd": " ".join(self.cmd_start_daemon_worker),
+                    "cmd": " ".join(
+                        self.cmd_start_daemon_worker(
+                            max_calcjob=max_calcjob, max_process=max_process
+                        )
+                    ),
                     "name": self.scheduler_name,
                     "numprocesses": 1,
                     "virtualenv": self.virtualenv,
@@ -305,7 +340,12 @@ def get_scheduler(name: str) -> Optional["SchedulerNode"]:
     return qb.first()[0] if qb.count() else None
 
 
-def start_scheduler(name: str, foreground: bool = False) -> None:
+def start_scheduler(
+    name: str,
+    max_calcjob: int | None = None,
+    max_process: int | None = None,
+    foreground: bool = False,
+) -> None:
     """Start a scheduler worker for the currently configured profile.
 
     :param foreground: If true, the logging will be configured to write to stdout, otherwise it will be configured to
@@ -330,7 +370,9 @@ def start_scheduler(name: str, foreground: bool = False) -> None:
     LOGGER.debug(f"sys.path: {sys.path}")
 
     try:
-        scheduler = Scheduler(name=name)
+        scheduler = Scheduler(
+            name=name, max_calcjob=max_calcjob, max_process=max_process
+        )
     except Exception:
         LOGGER.exception("daemon worker failed to start")
         raise
