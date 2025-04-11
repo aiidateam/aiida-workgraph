@@ -57,7 +57,7 @@ def scheduler_delete(name):
 @decorators.requires_broker
 @decorators.check_circus_zmq_version
 def start_scheduler(name, max_calcjob, max_process, foreground):
-    """Start the scheduler application."""
+    """Start the scheduler application without circus."""
     from aiida_workgraph.engine.scheduler.client import start_scheduler
 
     click.echo("Starting the scheduler process...")
@@ -71,7 +71,7 @@ def start_scheduler(name, max_calcjob, max_process, foreground):
 
 
 @scheduler.command()
-@click.argument("name", required=False, type=str)
+@click.argument("name", required=True, type=str)
 @click.option("--foreground", is_flag=True, help="Run in foreground.")
 @click.option(
     "--max-calcjob", type=int, required=False, help="Maximum number of calcjobs."
@@ -83,7 +83,7 @@ def start_scheduler(name, max_calcjob, max_process, foreground):
 @decorators.requires_broker
 @decorators.check_circus_zmq_version
 def start(foreground, name, max_calcjob, max_process, timeout):
-    """Start the scheduler application."""
+    """Start the scheduler application with circus."""
     from aiida_workgraph.engine.scheduler.client import get_scheduler_client
 
     click.echo("Starting the scheduler ...")
@@ -275,7 +275,7 @@ def scheduler_show(name, timeout):
 @decorators.requires_broker
 @decorators.check_circus_zmq_version
 def set_max_calcjob(name, max_calcjob, timeout):
-    """Start the scheduler application."""
+    """Set the maximum number of running calcjobs."""
 
     try:
         Scheduler.set_max_calcjob(name=name, max_calcjob=max_calcjob)
@@ -292,7 +292,7 @@ def set_max_calcjob(name, max_calcjob, timeout):
 @decorators.requires_broker
 @decorators.check_circus_zmq_version
 def set_max_process(name, max_process, timeout):
-    """Start the scheduler application."""
+    """Set the maximum number of running processes."""
     try:
         Scheduler.set_max_process(name=name, max_process=max_process)
     except kiwipy.exceptions.UnroutableError:
@@ -308,10 +308,30 @@ def set_max_process(name, max_process, timeout):
 @decorators.requires_broker
 @decorators.check_circus_zmq_version
 def play_processes(name, processes, timeout):
-    """Start the scheduler application."""
+    """Ask the scheduler to play processes."""
     pks = [p.pk for p in processes]
     try:
         Scheduler.play_processes(name=name, pks=pks, timeout=timeout)
+    except kiwipy.exceptions.UnroutableError:
+        echo.echo_error(
+            f"Failed to set max_process for scheduler {name}. Is the scheduler running?"
+        )
+
+
+@scheduler.command()
+@click.argument("name", required=True, type=str)
+@arguments.PROCESSES()
+@click.argument("priority", required=True, type=int)
+@options.TIMEOUT(default=None, required=False, type=int)
+@decorators.requires_broker
+@decorators.check_circus_zmq_version
+def set_process_priority(name, processes, priority, timeout):
+    """Set the priority for some processes."""
+    pks = [p.pk for p in processes]
+    try:
+        Scheduler.set_process_priority(
+            name=name, pks=pks, priority=priority, timeout=timeout
+        )
     except kiwipy.exceptions.UnroutableError:
         echo.echo_error(
             f"Failed to set max_process for scheduler {name}. Is the scheduler running?"

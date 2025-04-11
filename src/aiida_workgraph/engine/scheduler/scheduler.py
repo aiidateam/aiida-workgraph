@@ -258,8 +258,17 @@ class Scheduler:
             value = data.get("value")
             if identifier.lower() == "max_calcjob":
                 self.node.max_calcjob = value
+                self.consume_process_queue()
             elif identifier.lower() == "max_process":
                 self.node.max_process = value
+                self.consume_process_queue()
+            elif identifier.lower() == "priority":
+                processes = data.get("processes")
+                for pk in processes:
+                    child_node = load_node(pk)
+                    child_node.base.extras.set(SCHEDULER_PRIORITY_KEY, value)
+            else:
+                raise RuntimeError(f"Unknown identifier: {identifier}")
 
         if intent == Intent.STATUS:
             status_info = {
@@ -560,5 +569,26 @@ class Scheduler:
             {
                 "intent": "play",
                 "message": pks,
+            },
+        )
+
+    @classmethod
+    def set_process_priority(
+        cls, name: str, pks: list, priority: int, timeout: int = 5
+    ) -> None:
+        """
+        Play a process with the given pk.
+        """
+        scheduler = cls.get_scheduler(name)
+        controller = get_manager().get_process_controller()
+        controller._communicator.rpc_send(
+            scheduler.pk,
+            {
+                "intent": "set",
+                "message": {
+                    "identifier": "priority",
+                    "value": priority,
+                    "processes": pks,
+                },
             },
         )
