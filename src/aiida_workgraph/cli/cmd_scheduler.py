@@ -7,7 +7,6 @@ from aiida_workgraph.engine.scheduler.client import (
     get_all_schedulers,
     get_scheduler,
 )
-from aiida import load_profile
 from aiida_workgraph.engine.scheduler.scheduler import Scheduler
 import kiwipy
 
@@ -18,9 +17,9 @@ def scheduler():
 
 
 @scheduler.command("list")
+@decorators.requires_loaded_profile()
 def scheduler_list():
     """Show a list of scheduler"""
-    load_profile()
     schedulers = get_all_schedulers()
     echo.echo_formatted_list(schedulers, ["name"])
 
@@ -49,14 +48,14 @@ def scheduler_delete(name):
 @click.argument("name", required=False, type=str)
 @click.option("--foreground", is_flag=True, help="Run in foreground.")
 @click.option(
-    "--max-calcjob", type=int, required=False, help="Maximum number of calcjobs."
+    "--max-calcjobs", type=int, required=False, help="Maximum number of calcjobs."
 )
 @click.option(
-    "--max-process", type=int, required=False, help="Maximum number of processes."
+    "--max-processes", type=int, required=False, help="Maximum number of processes."
 )
 @decorators.requires_broker
 @decorators.check_circus_zmq_version
-def start_scheduler(name, max_calcjob, max_process, foreground):
+def start_scheduler(name, max_calcjobs, max_processes, foreground):
     """Start the scheduler application without circus."""
     from aiida_workgraph.engine.scheduler.client import start_scheduler
 
@@ -64,8 +63,8 @@ def start_scheduler(name, max_calcjob, max_process, foreground):
 
     start_scheduler(
         name=name,
-        max_calcjob=max_calcjob,
-        max_process=max_process,
+        max_calcjobs=max_calcjobs,
+        max_processes=max_processes,
         foreground=foreground,
     )
 
@@ -74,23 +73,23 @@ def start_scheduler(name, max_calcjob, max_process, foreground):
 @click.argument("name", required=True, type=str)
 @click.option("--foreground", is_flag=True, help="Run in foreground.")
 @click.option(
-    "--max-calcjob", type=int, required=False, help="Maximum number of calcjobs."
+    "--max-calcjobs", type=int, required=False, help="Maximum number of calcjobs."
 )
 @click.option(
-    "--max-process", type=int, required=False, help="Maximum number of processes."
+    "--max-processes", type=int, required=False, help="Maximum number of processes."
 )
 @options.TIMEOUT(default=None, required=False, type=int)
 @decorators.requires_broker
 @decorators.check_circus_zmq_version
-def start(foreground, name, max_calcjob, max_process, timeout):
+def start(foreground, name, max_calcjobs, max_processes, timeout):
     """Start the scheduler application with circus."""
     from aiida_workgraph.engine.scheduler.client import get_scheduler_client
 
     click.echo("Starting the scheduler ...")
     client = get_scheduler_client(scheduler_name=name)
     client.start_daemon(
-        max_calcjob=max_calcjob,
-        max_process=max_process,
+        max_calcjobs=max_calcjobs,
+        max_processes=max_processes,
         foreground=foreground,
         timeout=timeout,
     )
@@ -134,16 +133,16 @@ def stop(ctx, name, no_wait, timeout):
     type=str,
 )
 @click.option(
-    "--max-calcjob", type=int, required=False, help="Maximum number of calcjobs."
+    "--max-calcjobs", type=int, required=False, help="Maximum number of calcjobs."
 )
 @click.option(
-    "--max-process", type=int, required=False, help="Maximum number of processes."
+    "--max-processes", type=int, required=False, help="Maximum number of processes."
 )
 @click.option("--foreground", is_flag=True, help="Run in foreground.")
 @decorators.with_dbenv()
 @decorators.requires_broker
 @decorators.check_circus_zmq_version
-def start_circus(name, max_calcjob, max_process, foreground):
+def start_circus(name, max_calcjobs, max_processes, foreground):
     """This will actually launch the circus daemon, either daemonized in the background or in the foreground.
 
     If run in the foreground all logs are redirected to stdout.
@@ -152,7 +151,7 @@ def start_circus(name, max_calcjob, max_process, foreground):
     """
 
     get_scheduler_client(scheduler_name=name)._start_daemon(
-        max_calcjob=max_calcjob, max_process=max_process, foreground=foreground
+        max_calcjobs=max_calcjobs, max_processes=max_processes, foreground=foreground
     )
 
 
@@ -174,12 +173,13 @@ def status(ctx, name, timeout):
     from aiida.engine.daemon.client import DaemonException
 
     if name:
-        schedulers = [get_scheduler(name=name)]
+        scheduler = get_scheduler(name=name)
+        schedulers = [scheduler] if scheduler else []
     else:
         schedulers = get_all_schedulers()
 
     print(
-        "Name                status      pk   waiting  running   calcjob  max_calcjob max_process"
+        "Name                status      pk   waiting  running   calcjob  max_calcjobs max_processes"
     )
     # for scheduler in schedulers:
 
@@ -196,8 +196,8 @@ def status(ctx, name, timeout):
             echo.echo(f"  {len(scheduler.waiting_process):<8}", nl=False)
             echo.echo(f"  {len(scheduler.running_process):<8}", nl=False)
             echo.echo(f"  {len(scheduler.running_calcjob):<8}", nl=False)
-            echo.echo(f"  {scheduler.max_calcjob:<8}", nl=False)
-            echo.echo(f"  {scheduler.max_process:<8}")
+            echo.echo(f"  {scheduler.max_calcjobs:<8}", nl=False)
+            echo.echo(f"  {scheduler.max_processes:<8}")
         except DaemonException as exception:
             echo.echo_error(str(exception))
             continue
@@ -264,40 +264,40 @@ def scheduler_show(name, timeout):
     echo.echo(f"running_process: {len(running_process)}")
     echo.echo(f"waiting_process: {len(waiting_process)}")
     echo.echo(f"running_calcjob: {len(scheduler.running_calcjob)}")
-    echo.echo(f"max_calcjob: {scheduler.max_calcjob}")
-    echo.echo(f"max_process: {scheduler.max_process}")
+    echo.echo(f"max_calcjobs: {scheduler.max_calcjobs}")
+    echo.echo(f"max_processes: {scheduler.max_processes}")
 
 
 @scheduler.command()
 @click.argument("name", required=True, type=str)
-@click.argument("max_calcjob", required=True, type=int)
+@click.argument("max_calcjobs", required=True, type=int)
 @options.TIMEOUT(default=None, required=False, type=int)
 @decorators.requires_broker
 @decorators.check_circus_zmq_version
-def set_max_calcjob(name, max_calcjob, timeout):
+def set_max_calcjobs(name, max_calcjobs, timeout):
     """Set the maximum number of running calcjobs."""
 
     try:
-        Scheduler.set_max_calcjob(name=name, max_calcjob=max_calcjob)
+        Scheduler.set_max_calcjobs(name=name, max_calcjobs=max_calcjobs)
     except kiwipy.exceptions.UnroutableError:
         echo.echo_error(
-            f"Failed to set max_process for scheduler {name}. Is the scheduler running?"
+            f"Failed to set max_processes for scheduler {name}. Is the scheduler running?"
         )
 
 
 @scheduler.command()
 @click.argument("name", required=True, type=str)
-@click.argument("max_process", required=True, type=int)
+@click.argument("max_processes", required=True, type=int)
 @options.TIMEOUT(default=None, required=False, type=int)
 @decorators.requires_broker
 @decorators.check_circus_zmq_version
-def set_max_process(name, max_process, timeout):
+def set_max_processes(name, max_processes, timeout):
     """Set the maximum number of running processes."""
     try:
-        Scheduler.set_max_process(name=name, max_process=max_process)
+        Scheduler.set_max_processes(name=name, max_processes=max_processes)
     except kiwipy.exceptions.UnroutableError:
         echo.echo_error(
-            f"Failed to set max_process for scheduler {name}. Is the scheduler running?"
+            f"Failed to set max_processes for scheduler {name}. Is the scheduler running?"
         )
 
 
@@ -314,7 +314,7 @@ def play_processes(name, processes, timeout):
         Scheduler.play_processes(name=name, pks=pks, timeout=timeout)
     except kiwipy.exceptions.UnroutableError:
         echo.echo_error(
-            f"Failed to set max_process for scheduler {name}. Is the scheduler running?"
+            f"Failed to set max_processes for scheduler {name}. Is the scheduler running?"
         )
 
 
@@ -334,5 +334,5 @@ def set_process_priority(name, processes, priority, timeout):
         )
     except kiwipy.exceptions.UnroutableError:
         echo.echo_error(
-            f"Failed to set max_process for scheduler {name}. Is the scheduler running?"
+            f"Failed to set max_processes for scheduler {name}. Is the scheduler running?"
         )

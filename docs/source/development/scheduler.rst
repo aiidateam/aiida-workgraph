@@ -45,7 +45,7 @@ Dynamic Control
 
 - The scheduler exposes **RPC methods** to:
 
-  - Update runtime settings (e.g., ``max_calcjob``, ``max_process``).
+  - Update runtime settings (e.g., ``max_calcjobs``, ``max_processes``).
   - Manipulate processes (e.g., ``play``, ``set_priority``).
 
 Scheduler Management
@@ -56,7 +56,7 @@ Scheduler Management
 
   .. code-block:: bash
 
-     workgraph scheduler start <name> [--max-calcjob N] [--max-process M]
+     workgraph scheduler start <name> [--max-calcjobs N] [--max-processes M]
      workgraph scheduler status <name>
      workgraph scheduler show <name>
      workgraph scheduler stop <name>
@@ -72,7 +72,7 @@ Start a ``workgraph`` scheduler with limits on the number of concurrently runnin
 
 .. code-block:: bash
 
-   workgraph scheduler start test-scheduler --max-calcjob 2 --max-process 10
+   workgraph scheduler start test-scheduler --max-calcjobs 2 --max-processes 10
 
 2. Verify Scheduler Status
 --------------------------
@@ -87,7 +87,7 @@ Sample output:
 
 .. code-block:: text
 
-   Name            status    pk     waiting  running  calcjob  max_calcjob  max_process
+   Name            status    pk     waiting  running  calcjob  max_calcjobs  max_processes
    test-scheduler  Running   72507       0        0        0            2           10
 
 3. Submit WorkGraphs with ArithmeticAddCalculation
@@ -147,7 +147,7 @@ Sample output:
    running_process: 4
    waiting_process: 10
    running_calcjob: 2
-   max_calcjob: 2
-   max_process: 10
+   max_calcjobs: 2
+   max_processes: 10
 
-You can see that only 2 ``CalcJobs`` are running at a time (as per ``max_calcjob=2``), and no more than 10 processes are handled concurrently.
+You can see that only 2 ``CalcJobs`` are running at a time (as per ``max_calcjobs=2``), and no more than 10 processes are handled concurrently.

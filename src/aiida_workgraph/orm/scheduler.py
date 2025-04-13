@@ -12,8 +12,8 @@ class SchedulerNode(Sealable, Data):
     RUNNING_PROCESS = "running_process"
     RUNNING_CALCJOB = "running_calcjob"
     FINISHED_PROCESS = "finished_process"
-    MAX_CALCJOB = "max_calcjob"
-    MAX_PROCESS = "max_process"
+    MAX_CALCJOBS = "max_calcjobs"
+    MAX_PROCESSES = "max_processes"
     NEXT_PRIORITY = "next_priority"
 
     __qb_fields__ = [
@@ -43,12 +43,12 @@ class SchedulerNode(Sealable, Data):
             doc="List of finished processes",
         ),
         add_field(
-            MAX_CALCJOB,
+            MAX_CALCJOBS,
             dtype=Optional[int],
             doc="Maximum number of running processes",
         ),
         add_field(
-            MAX_PROCESS,
+            MAX_PROCESSES,
             dtype=Optional[int],
             doc="Maximum number of processes",
         ),
@@ -66,8 +66,8 @@ class SchedulerNode(Sealable, Data):
             cls.RUNNING_PROCESS,
             cls.RUNNING_CALCJOB,
             cls.FINISHED_PROCESS,
-            cls.MAX_CALCJOB,
-            cls.MAX_PROCESS,
+            cls.MAX_CALCJOBS,
+            cls.MAX_PROCESSES,
             cls.NEXT_PRIORITY,
         )
 
@@ -156,24 +156,24 @@ class SchedulerNode(Sealable, Data):
                 self.remove_running_calcjob(pk)
 
     @property
-    def max_calcjob(self) -> int:
+    def max_calcjobs(self) -> int:
         """Return the maximum number of running processes."""
-        return self.base.attributes.get(self.MAX_CALCJOB, 100)
+        return self.base.attributes.get(self.MAX_CALCJOBS, 100)
 
-    @max_calcjob.setter
-    def max_calcjob(self, value: int) -> None:
+    @max_calcjobs.setter
+    def max_calcjobs(self, value: int) -> None:
         """Set the maximum number of running processes."""
-        self.base.attributes.set(self.MAX_CALCJOB, value)
+        self.base.attributes.set(self.MAX_CALCJOBS, value)
 
     @property
-    def max_process(self) -> int:
+    def max_processes(self) -> int:
         """Return the maximum number of processes."""
-        return self.base.attributes.get(self.MAX_PROCESS, 2000)
+        return self.base.attributes.get(self.MAX_PROCESSES, 2000)
 
-    @max_process.setter
-    def max_process(self, value: int) -> None:
+    @max_processes.setter
+    def max_processes(self, value: int) -> None:
         """Set the maximum number of processes."""
-        self.base.attributes.set(self.MAX_PROCESS, value)
+        self.base.attributes.set(self.MAX_PROCESSES, value)
 
     @property
     def next_priority(self) -> int:

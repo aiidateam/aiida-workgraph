@@ -7,7 +7,10 @@ from aiida.orm import WorkflowNode
 import time
 import os
 
-pytest_plugins = "aiida.tools.pytest_fixtures"
+pytest_plugins = [
+    "aiida.tools.pytest_fixtures",
+    "aiida_workgraph.tools.pytest_fixtures.scheduler",
+]
 
 
 @pytest.fixture(scope="session", autouse=True)

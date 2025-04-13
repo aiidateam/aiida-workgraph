@@ -63,15 +63,15 @@ class Scheduler:
     def __init__(
         self,
         name: str,
-        max_calcjob: Optional[int] = None,
-        max_process: Optional[int] = None,
+        max_calcjobs: Optional[int] = None,
+        max_processes: Optional[int] = None,
         poll_interval: Union[int, float] = 0,
         reset: bool = False,
     ):
         """
         :param name: A unique name for this scheduler.
-        :param max_calcjob: Maximum number of processes to run concurrently
-        :param max_process: Maximum number of processes to run concurrently
+        :param max_calcjobs: Maximum number of processes to run concurrently
+        :param max_processes: Maximum number of processes to run concurrently
         :param poll_interval: Interval in seconds for the fallback polling mechanism
                               (if an AiiDA broadcast is missed).
         """
@@ -106,10 +106,10 @@ class Scheduler:
 
         self.process_controller = get_manager().get_process_controller()
 
-        if max_calcjob is not None:
-            self.node.max_calcjob = max_calcjob
-        if max_process is not None:
-            self.node.max_process = max_process
+        if max_calcjobs is not None:
+            self.node.max_calcjobs = max_calcjobs
+        if max_processes is not None:
+            self.node.max_processes = max_processes
 
     @property
     def node(self) -> SchedulerNode:
@@ -186,8 +186,11 @@ class Scheduler:
                 encoder=functools.partial(serialize.serialize, encoding="utf-8"),
                 decoder=serialize.deserialize_unsafe,
                 task_exchange=get_task_exchange_name(self._prefix),
-                task_queue=self.name,
+                task_queue=f"{self._prefix}-{self.name}",
                 task_prefetch_count=10000,
+                # This is needed because the verdi commands will call this function and when called in unit tests the
+                # testing_mode cannot be set.
+                testing_mode=self._profile.is_test_profile,
             )
             self._communicator = wrap_communicator(communicator, self._loop)
             self._controller = RemoteProcessThreadController(communicator)
@@ -256,11 +259,11 @@ class Scheduler:
             data = msg[MESSAGE_TEXT_KEY]
             identifier = data.get("identifier")
             value = data.get("value")
-            if identifier.lower() == "max_calcjob":
-                self.node.max_calcjob = value
+            if identifier.lower() == "max_calcjobs":
+                self.node.max_calcjobs = value
                 self.consume_process_queue()
-            elif identifier.lower() == "max_process":
-                self.node.max_process = value
+            elif identifier.lower() == "max_processes":
+                self.node.max_processes = value
                 self.consume_process_queue()
             elif identifier.lower() == "priority":
                 processes = data.get("processes")
@@ -303,8 +306,8 @@ class Scheduler:
         Check if we can run another process. This is true if the number of
         running processes is less than the maximum.
         """
-        cond1 = len(self.node.running_calcjob) < self.node.max_calcjob
-        cond2 = len(self.node.running_process) < self.node.max_process
+        cond1 = len(self.node.running_calcjob) < self.node.max_calcjobs
+        cond2 = len(self.node.running_process) < self.node.max_processes
         return cond1 and cond2
 
     def consume_process_queue(self) -> None:
@@ -315,8 +318,8 @@ class Scheduler:
         """
         LOGGER.info(
             f"Summary: waiting= {len(self.node.waiting_process)}, "
-            f"process: {len(self.node.running_process)}/{self.node.max_process}, "
-            f"calcjob: {len(self.node.running_calcjob)}/{self.node.max_calcjob}"
+            f"process: {len(self.node.running_process)}/{self.node.max_processes}, "
+            f"calcjob: {len(self.node.running_calcjob)}/{self.node.max_calcjobs}"
         )
         # While we still have capacity, pop from waiting and continue
         while self.should_run_next_process():
@@ -329,7 +332,7 @@ class Scheduler:
 
         LOGGER.info(
             "Maximum concurrency (%d) reached, waiting for a calcjob to finish...",
-            self.node.max_calcjob,
+            self.node.max_calcjobs,
         )
 
     def _pop_highest_priority_waiting_process(self) -> Optional[int]:
@@ -528,7 +531,7 @@ class Scheduler:
         controller._communicator.rpc_send(scheduler.pk, {"intent": "stop"})
 
     @classmethod
-    def set_max_calcjob(cls, name: str, max_calcjob: int) -> None:
+    def set_max_calcjobs(cls, name: str, max_calcjobs: int) -> None:
         """
         Set the maximum number of calcjobs for the scheduler with the given name.
         """
@@ -538,12 +541,12 @@ class Scheduler:
             scheduler.pk,
             {
                 "intent": "set",
-                "message": {"identifier": "max_calcjob", "value": max_calcjob},
+                "message": {"identifier": "max_calcjobs", "value": max_calcjobs},
             },
         )
 
     @classmethod
-    def set_max_process(cls, name: str, max_process: int) -> None:
+    def set_max_processes(cls, name: str, max_processes: int) -> None:
         """
         Set the maximum number of processes for the scheduler with the given name.
         """
@@ -553,7 +556,7 @@ class Scheduler:
             scheduler.pk,
             {
                 "intent": "set",
-                "message": {"identifier": "max_process", "value": max_process},
+                "message": {"identifier": "max_processes", "value": max_processes},
             },
         )
 

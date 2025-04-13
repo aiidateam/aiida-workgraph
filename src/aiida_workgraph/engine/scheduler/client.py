@@ -1,3 +1,4 @@
+from __future__ import annotations
 from aiida.engine.daemon.client import (
     DaemonClient,
     DaemonException,
@@ -50,27 +51,31 @@ class SchedulerClient(DaemonClient):
 
         :return: a dictionary of filepaths
         """
-        from aiida.manage.configuration.settings import AiiDAConfigPathResolver
+        from aiida.manage.configuration.settings import DAEMON_DIR, DAEMON_LOG_DIR
 
-        config = AiiDAConfigPathResolver()
+        # for aiida-core >= 2.7
+        # from aiida.manage.configuration.settings import AiiDAConfigPathResolver
+        # config = AiiDAConfigPathResolver()
+        # DAEMON_LOG_DIR = config.daemon_log_dir
+        # DAEMON_DIR = config.daemon_dir
 
         return {
             "circus": {
                 "log": str(
-                    config.daemon_log_dir
+                    DAEMON_LOG_DIR
                     / f"circus-scheduler-{self.profile.name}-{self.scheduler_name}.log"
                 ),
                 "pid": str(
-                    config.daemon_dir
+                    DAEMON_DIR
                     / f"circus-scheduler-{self.profile.name}-{self.scheduler_name}.pid"
                 ),
                 "port": str(
-                    config.daemon_dir
+                    DAEMON_DIR
                     / f"circus-scheduler-{self.profile.name}-{self.scheduler_name}.port"
                 ),
                 "socket": {
                     "file": str(
-                        config.daemon_dir
+                        DAEMON_DIR
                         / f"circus-scheduler-{self.profile.name}-{self.scheduler_name}.sockets"
                     ),
                     "controller": "circus.c.sock",
@@ -80,11 +85,11 @@ class SchedulerClient(DaemonClient):
             },
             "daemon": {
                 "log": str(
-                    config.daemon_log_dir
+                    DAEMON_LOG_DIR
                     / f"aiida-scheduler-{self.profile.name}-{self.scheduler_name}.log"
                 ),
                 "pid": str(
-                    config.daemon_dir
+                    DAEMON_DIR
                     / f"aiida-scheduler-{self.profile.name}-{self.scheduler_name}.pid"
                 ),
             },
@@ -120,8 +125,8 @@ class SchedulerClient(DaemonClient):
 
     def cmd_start_daemon(
         self,
-        max_calcjob: int | None = None,
-        max_process: int | None = None,
+        max_calcjobs: int | None = None,
+        max_processes: int | None = None,
         foreground: bool = False,
     ) -> list[str]:
         """Return the command to start the daemon.
@@ -137,10 +142,10 @@ class SchedulerClient(DaemonClient):
             self.scheduler_name,
         ]
 
-        if max_calcjob is not None:
-            command.append(f"--max-calcjob={max_calcjob}")
-        if max_process is not None:
-            command.append(f"--max-process={max_process}")
+        if max_calcjobs is not None:
+            command.append(f"--max-calcjob={max_calcjobs}")
+        if max_processes is not None:
+            command.append(f"--max-processes={max_processes}")
         if foreground:
             command.append("--foreground")
 
@@ -148,8 +153,8 @@ class SchedulerClient(DaemonClient):
 
     def cmd_start_daemon_worker(
         self,
-        max_calcjob: int | None = None,
-        max_process: int | None = None,
+        max_calcjobs: int | None = None,
+        max_processes: int | None = None,
     ) -> list[str]:
         """Return the command to start a daemon worker process."""
         command = [
@@ -161,17 +166,29 @@ class SchedulerClient(DaemonClient):
             self.scheduler_name,
         ]
 
-        if max_calcjob is not None:
-            command.append(f"--max-calcjob={max_calcjob}")
-        if max_process is not None:
-            command.append(f"--max-process={max_process}")
+        if max_calcjobs is not None:
+            command.append(f"--max-calcjob={max_calcjobs}")
+        if max_processes is not None:
+            command.append(f"--max-processes={max_processes}")
 
         return command
 
+    def get_scheduler(self) -> Optional["SchedulerNode"]:
+        """Return the scheduler node with the given name.
+
+        :return: The scheduler node or None if not found.
+        """
+        from aiida import orm
+        from aiida_workgraph.orm.scheduler import SchedulerNode
+
+        qb = orm.QueryBuilder()
+        qb.append(SchedulerNode, filters={"attributes.name": self.scheduler_name})
+        return qb.first()[0] if qb.count() else None
+
     def start_daemon(
         self,
-        max_calcjob: int | None = None,
-        max_process: int | None = None,
+        max_calcjobs: int | None = None,
+        max_processes: int | None = None,
         foreground: bool = False,
         wait: bool = True,
         timeout: int | None = None,
@@ -190,7 +207,9 @@ class SchedulerClient(DaemonClient):
 
         env = self.get_env()
         command = self.cmd_start_daemon(
-            max_calcjob=max_calcjob, max_process=max_process, foreground=foreground
+            max_calcjobs=max_calcjobs,
+            max_processes=max_processes,
+            foreground=foreground,
         )
         timeout = timeout or self._daemon_timeout
 
@@ -212,8 +231,8 @@ class SchedulerClient(DaemonClient):
 
     def _start_daemon(
         self,
-        max_calcjob: int | None = None,
-        max_process: int | None = None,
+        max_calcjobs: int | None = None,
+        max_processes: int | None = None,
         foreground: bool = False,
     ) -> None:
         """Start the daemon.
@@ -250,7 +269,7 @@ class SchedulerClient(DaemonClient):
                 {
                     "cmd": " ".join(
                         self.cmd_start_daemon_worker(
-                            max_calcjob=max_calcjob, max_process=max_process
+                            max_calcjobs=max_calcjobs, max_processes=max_processes
                         )
                     ),
                     "name": self.scheduler_name,
@@ -342,8 +361,8 @@ def get_scheduler(name: str) -> Optional["SchedulerNode"]:
 
 def start_scheduler(
     name: str,
-    max_calcjob: int | None = None,
-    max_process: int | None = None,
+    max_calcjobs: int | None = None,
+    max_processes: int | None = None,
     foreground: bool = False,
 ) -> None:
     """Start a scheduler worker for the currently configured profile.
@@ -371,7 +390,7 @@ def start_scheduler(
 
     try:
         scheduler = Scheduler(
-            name=name, max_calcjob=max_calcjob, max_process=max_process
+            name=name, max_calcjobs=max_calcjobs, max_processes=max_processes
         )
     except Exception:
         LOGGER.exception("daemon worker failed to start")

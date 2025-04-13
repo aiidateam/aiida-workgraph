@@ -45,8 +45,10 @@ def continue_process_in_scheduler(
     """Send workgraph task to scheduler."""
 
     manager = get_manager()
+    profile = manager.get_profile()
+    queue_name = f"aiida-{profile.uuid}-{scheduler_name}"
     controller = ControllerWithQueueName(
-        queue_name=scheduler_name, communicator=manager.get_communicator()
+        queue_name=queue_name, communicator=manager.get_communicator()
     )
     if isinstance(pk, orm.Node):
         node = pk
