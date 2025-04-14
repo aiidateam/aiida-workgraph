@@ -4,7 +4,7 @@ from aiida.manage import get_manager
 from aiida import orm
 from aiida.engine.processes import control
 from plumpy.process_comms import RemoteProcessThreadController
-from typing import Any, Optional
+from typing import Any, Optional, Type
 
 
 class ControllerWithQueueName(RemoteProcessThreadController):
@@ -212,3 +212,49 @@ def reset_tasks(pk: int, tasks: list) -> None:
             create_task_action(pk, tasks, action="reset")
 
     return True, ""
+
+
+def submit(process_class, inputs: dict, scheduler: str | None = None) -> orm.Node:
+    """Submit a process to the scheduler."""
+    from aiida.manage import manager
+    from aiida.engine.utils import instantiate_process
+    from aiida.engine import submit
+    from aiida_workgraph.utils.control import continue_process_in_scheduler
+
+    if scheduler is not None:
+        runner = manager.get_manager().get_runner()
+        process_inited = instantiate_process(runner, process_class, **inputs)
+        process_inited.close()
+        process_inited.runner.persister.save_checkpoint(process_inited)
+        node = process_inited.node
+        continue_process_in_scheduler(node.pk, scheduler_name=scheduler)
+    else:
+        node = submit(process_class, **inputs)
+
+    return node
+
+
+def inside_workchain_submit(
+    self,
+    process: Type["Process"],
+    inputs: dict[str, Any] | None = None,
+    **kwargs,
+) -> orm.ProcessNode:
+    """Submit a process inside the workchain to the scheduler.
+    :param process: The process class.
+    :param inputs: The dictionary of process inputs.
+    :return: The process node.
+    """
+    from aiida.engine import utils
+    from aiida_workgraph.utils.control import continue_process_in_scheduler
+
+    scheduler = self.node.base.extras.get("scheduler", None)
+    if scheduler:
+        inputs = utils.prepare_inputs(inputs, **kwargs)
+        process_inited = self.runner.instantiate_process(process, **inputs)
+        self.runner.persister.save_checkpoint(process_inited)
+        process_inited.close()
+        continue_process_in_scheduler(process_inited.node, scheduler)
+        return process_inited.node
+    else:
+        return self.runner.submit(process, inputs, **kwargs)
