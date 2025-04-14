@@ -143,7 +143,7 @@ class SchedulerClient(DaemonClient):
         ]
 
         if max_calcjobs is not None:
-            command.append(f"--max-calcjob={max_calcjobs}")
+            command.append(f"--max-calcjobs={max_calcjobs}")
         if max_processes is not None:
             command.append(f"--max-processes={max_processes}")
         if foreground:
@@ -167,7 +167,7 @@ class SchedulerClient(DaemonClient):
         ]
 
         if max_calcjobs is not None:
-            command.append(f"--max-calcjob={max_calcjobs}")
+            command.append(f"--max-calcjobs={max_calcjobs}")
         if max_processes is not None:
             command.append(f"--max-processes={max_processes}")
 
