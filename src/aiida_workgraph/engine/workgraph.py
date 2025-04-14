@@ -343,6 +343,32 @@ class WorkGraphEngine(Process, metaclass=Protect):
         # Didn't match any known intents
         raise RuntimeError("Unknown intent")
 
+    def submit(
+        self,
+        process: t.Type["Process"],
+        inputs: dict[str, t.Any] | None = None,
+        **kwargs,
+    ) -> orm.ProcessNode:
+        """Submit process for execution.
+
+        :param process: The process class.
+        :param inputs: The dictionary of process inputs.
+        :return: The process node.
+        """
+        from aiida.engine import utils
+        from aiida_workgraph.utils.control import continue_process_in_scheduler
+
+        scheduler = self.node.base.extras.get("scheduler", None)
+        if scheduler:
+            inputs = utils.prepare_inputs(inputs, **kwargs)
+            process_inited = self.runner.instantiate_process(process, **inputs)
+            self.runner.persister.save_checkpoint(process_inited)
+            process_inited.close()
+            continue_process_in_scheduler(process_inited.node, scheduler)
+            return process_inited.node
+        else:
+            return self.runner.submit(process, inputs, **kwargs)
+
     def finalize(self) -> t.Optional[ExitCode]:
         """"""
         # expose outputs of the workgraph

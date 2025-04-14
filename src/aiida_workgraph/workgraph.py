@@ -115,6 +115,7 @@ class WorkGraph(node_graph.NodeGraph):
         timeout: int = 600,
         interval: int = 5,
         metadata: Optional[Dict[str, Any]] = None,
+        scheduler: str | None = None,
     ) -> aiida.orm.ProcessNode:
         """Submit the AiiDA workgraph process and optionally wait for it to finish.
         Args:
@@ -123,6 +124,8 @@ class WorkGraph(node_graph.NodeGraph):
             restart (bool): Restart the process, and reset the modified tasks, then only re-run the modified tasks.
             new (bool): Submit a new process.
         """
+        from aiida_workgraph.utils.control import continue_process_in_scheduler
+
         # set task inputs
         if inputs is not None:
             for name, input in inputs.items():
@@ -134,7 +137,10 @@ class WorkGraph(node_graph.NodeGraph):
         self.save(metadata=metadata)
         if self.process.process_state.value.upper() not in ["CREATED"]:
             raise ValueError(f"Process {self.process.pk} has already been submitted.")
-        self.continue_process()
+        if scheduler:
+            continue_process_in_scheduler(self.pk, scheduler)
+        else:
+            self.continue_process()
         # as long as we submit the process, it is a new submission, we should set restart_process to None
         self.restart_process = None
         if wait:
@@ -149,15 +155,9 @@ class WorkGraph(node_graph.NodeGraph):
         from aiida.manage import manager
         from aiida.engine.utils import instantiate_process
         from aiida_workgraph.engine.workgraph import WorkGraphEngine
-        import time
 
-        tstart = time.time()
         self.check_before_run()
-        print(f"Check time: {time.time()-tstart}")
-        tstart = time.time()
         inputs = self.prepare_inputs(metadata)
-        print(f"Prepare inputs time: {time.time()-tstart}")
-        tstart = time.time()
         if self.process is None:
             runner = manager.get_manager().get_runner()
             # init a process node
@@ -169,10 +169,7 @@ class WorkGraph(node_graph.NodeGraph):
             print(f"WorkGraph process created, PK: {self.process.pk}")
         else:
             self.save_to_base(inputs["workgraph_data"])
-        print(f"Save time: {time.time()-tstart}")
-        tstart = time.time()
         self.update()
-        print(f"Update time: {time.time()-tstart}")
 
     def save_to_base(self, wgdata: Dict[str, Any]) -> None:
         """Save new wgdata to attribute.

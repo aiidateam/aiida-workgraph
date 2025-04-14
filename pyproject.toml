@@ -78,6 +78,7 @@ workgraph = "aiida_workgraph.cli.cmd_workgraph:workgraph"
 
 [project.entry-points."aiida.data"]
 "workgraph.pickled_data" = "aiida_workgraph.orm.pickled_data:PickledData"
+"workgraph.scheduler" = "aiida_workgraph.orm.scheduler:SchedulerNode"
 
 [project.entry-points."aiida.node"]
 "process.workflow.workgraph" = "aiida_workgraph.orm.workgraph:WorkGraphNode"

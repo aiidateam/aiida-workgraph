@@ -1,6 +1,27 @@
+from __future__ import annotations
+
 from aiida.manage import get_manager
 from aiida import orm
 from aiida.engine.processes import control
+from plumpy.process_comms import RemoteProcessThreadController
+from typing import Any, Optional
+
+
+class ControllerWithQueueName(RemoteProcessThreadController):
+    def __init__(self, queue_name: str, **kwargs):
+        super().__init__(**kwargs)
+        self.queue_name = queue_name
+
+    def task_send(self, message: Any, no_reply: bool = False) -> Optional[Any]:
+        """
+        Send a task to be performed using the communicator
+
+        :param message: the task message
+        :param no_reply: if True, this call will be fire-and-forget, i.e. no return value
+        :return: the response from the remote side (if no_reply=False)
+        """
+        queue = self._communicator.task_queue(self.queue_name)
+        return queue.task_send(message, no_reply=no_reply)
 
 
 def create_task_action(
@@ -15,6 +36,46 @@ def create_task_action(
     controller = get_manager().get_process_controller()
     message = {"intent": "custom", "catalog": "task", "action": action, "tasks": tasks}
     controller._communicator.rpc_send(pk, message)
+
+
+def continue_process_in_scheduler(
+    pk: int | orm.Node,
+    scheduler_name: str = "test_scheduler",
+):
+    """Send workgraph task to scheduler."""
+
+    manager = get_manager()
+    profile = manager.get_profile()
+    queue_name = f"aiida-{profile.uuid}-{scheduler_name}"
+    controller = ControllerWithQueueName(
+        queue_name=queue_name, communicator=manager.get_communicator()
+    )
+    if isinstance(pk, orm.Node):
+        node = pk
+        pk = node.pk
+    else:
+        node = orm.load_node(pk)
+    controller.continue_process(pk, nowait=False)
+    node.base.extras.set("scheduler", scheduler_name)
+
+
+def play_process_in_scheduler(scheduler: int, pk: int | orm.Node):
+    controller = get_manager().get_process_controller()
+    controller._communicator.rpc_send(scheduler, {"intent": "play", "message": pk})
+
+
+def stop_scheduler(scheduler: int):
+    """Stop scheduler."""
+    controller = get_manager().get_process_controller()
+    controller._communicator.rpc_send(scheduler, {"intent": "stop"})
+
+
+def get_scheduler_status(scheduler: int):
+    """Get scheduler status."""
+    controller = get_manager().get_process_controller()
+    status = controller._communicator.rpc_send(scheduler, {"intent": "status"})
+    result = status.result().result()
+    return result
 
 
 def get_task_runtime_info(node, name: str, key: str) -> str:
