@@ -11,6 +11,20 @@ class ControllerWithQueueName(RemoteProcessThreadController):
     def __init__(self, queue_name: str, **kwargs):
         super().__init__(**kwargs)
         self.queue_name = queue_name
+        # This is a workaround to patch the communicator to preserve the queue to avoid
+        # opening many channels.
+        # A better solution is implement it in the manager, so that
+        # we can also close the channel when loading another profile.
+        if not hasattr(self._communicator, "scheduler_queues"):
+            self._communicator.scheduler_queues = {}
+        if self.queue_name not in self._communicator.scheduler_queues:
+            queue = self._communicator.task_queue(self.queue_name)
+            self._communicator.scheduler_queues[self.queue_name] = queue
+
+    @property
+    def scheduler_queue(self):
+        """Return the scheduler queue."""
+        return self._communicator.scheduler_queues[self.queue_name]
 
     def task_send(self, message: Any, no_reply: bool = False) -> Optional[Any]:
         """
@@ -20,8 +34,8 @@ class ControllerWithQueueName(RemoteProcessThreadController):
         :param no_reply: if True, this call will be fire-and-forget, i.e. no return value
         :return: the response from the remote side (if no_reply=False)
         """
-        queue = self._communicator.task_queue(self.queue_name)
-        return queue.task_send(message, no_reply=no_reply)
+        result = self.scheduler_queue.task_send(message, no_reply=no_reply)
+        return result
 
 
 def create_task_action(
