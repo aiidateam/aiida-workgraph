@@ -386,6 +386,8 @@ class GraphBuilderTask(Task):
             wg = executor(*args, **kwargs)
         else:
             wg = executor(*args, **kwargs, **var_kwargs)
+        if wg is None:
+            raise ValueError("Error: No workgraph was returned from the graph builder.")
         wg.name = self.name
 
         wg.group_outputs = self.metadata["group_outputs"]
