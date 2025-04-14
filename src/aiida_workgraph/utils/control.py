@@ -214,7 +214,9 @@ def reset_tasks(pk: int, tasks: list) -> None:
     return True, ""
 
 
-def submit(process_class, inputs: dict, scheduler: str | None = None) -> orm.Node:
+def submit_to_scheduler(
+    process_class, inputs: dict, scheduler: str | None = None
+) -> orm.Node:
     """Submit a process to the scheduler."""
     from aiida.manage import manager
     from aiida.engine.utils import instantiate_process
@@ -234,7 +236,7 @@ def submit(process_class, inputs: dict, scheduler: str | None = None) -> orm.Nod
     return node
 
 
-def inside_workchain_submit(
+def submit_to_scheduler_inside_workchain(
     self,
     process: Type["Process"],
     inputs: dict[str, Any] | None = None,
