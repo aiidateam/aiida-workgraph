@@ -92,13 +92,13 @@ class SchedulerNode(Sealable, Data):
         self.base.attributes.set(self.WAITING_PROCESS, value)
 
     def append_waiting_process(self, pk: int) -> None:
-        waiting_process = self.base.attributes.get(self.WAITING_PROCESS, [])
+        waiting_process = self.waiting_process
         if pk not in waiting_process:
             waiting_process.append(pk)
             self.waiting_process = waiting_process
 
     def remove_waiting_process(self, pk) -> None:
-        waiting_process = self.base.attributes.get(self.WAITING_PROCESS, [])
+        waiting_process = self.waiting_process
         if pk in waiting_process:
             waiting_process.remove(pk)
             self.waiting_process = waiting_process
@@ -150,10 +150,7 @@ class SchedulerNode(Sealable, Data):
         if pk in running_process:
             running_process.remove(pk)
             self.running_process = running_process
-            # check if the process is a calcjob
-            node = load_node(pk)
-            if isinstance(node, CalcJobNode):
-                self.remove_running_calcjob(pk)
+            self.remove_running_calcjob(pk)
 
     @property
     def max_calcjobs(self) -> int:

@@ -134,8 +134,8 @@ class Scheduler:
                     self._node.pk,
                     self.name,
                 )
-                # Check for any running processes that might have finished
-                self._check_for_finished_running()
+                # Check for any stale processes
+                self._cleanup_stale_processes()
 
         return self._node
 
@@ -352,11 +352,15 @@ class Scheduler:
         child_node = load_node(pk)
         return child_node.base.extras.get(SCHEDULER_PRIORITY_KEY, -9999999)
 
-    def _check_for_finished_running(self) -> None:
+    def _cleanup_stale_processes(self) -> None:
         """
-        If the scheduler was stopped while processes were running,
-        some might have already finished. We'll remove them from 'running'
-        if they're terminated. We also re-attach callbacks to any that are still running.
+        Clean up processes that are incorrectly listed as running or waiting.
+
+        This function scans the 'running_process' and 'waiting_process' lists for process nodes that are
+        no longer active (i.e., terminated or deleted). Terminated processes are removed from the list,
+        and callbacks are reattached to still-active running processes to ensure they are monitored properly.
+
+        This is especially useful after scheduler restarts or interruptions where the state might be outdated.
         """
         to_remove = []
         for pk in list(self.node.running_process):
@@ -377,9 +381,27 @@ class Scheduler:
                     pk,
                 )
                 to_remove.append(pk)
-
         for pk in to_remove:
             self.node.remove_running_process(pk)
+
+        for pk in list(self.node.waiting_process):
+            try:
+                node = load_node(pk)
+                # This should not happen, but just in case
+                if node.is_terminated:
+                    LOGGER.info(
+                        "Found pk=%d in 'waiting' but it's already terminated. Removing it.",
+                        pk,
+                    )
+                    to_remove.append(pk)
+            except exceptions.NotExistent:
+                LOGGER.warning(
+                    "Found pk=%d in 'waiting' but it doesn't exist anymore. Removing it.",
+                    pk,
+                )
+                to_remove.append(pk)
+        for pk in to_remove:
+            self.node.remove_waiting_process(pk)
 
     def continue_process(self, pk: int) -> None:
         """
