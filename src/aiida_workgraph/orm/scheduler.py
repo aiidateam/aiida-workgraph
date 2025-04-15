@@ -215,8 +215,16 @@ class SchedulerNode(Sealable, Data):
         qb.append(
             ProcessNode,
             filters={"id": {"in": waiting_list}},
-            project=["extras._scheduler_priority"],
+            project=["id", "extras._scheduler_priority"],
         )
         results = qb.all()
-        priorites = {waiting_list[i]: results[i][0] for i in range(len(waiting_list))}
+        priorites = {result[0]: result[1] for result in results}
+        # For a unknown reason, the query returns None for some of the nodes
+        # find None values, and replace with 0
+        for pk, priority in priorites.items():
+            if priority is None:
+                priorites[pk] = 0
+                node = load_node(pk)
+                node.base.extras.set("_scheduler_priority", 0)
+                self.logger.report(f"Process {pk} has no priority, setting to 0")
         return priorites

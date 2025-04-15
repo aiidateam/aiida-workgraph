@@ -25,6 +25,10 @@ from aiida.brokers.rabbitmq.utils import (
     get_task_exchange_name,
 )
 from aiida_workgraph.orm.scheduler import SchedulerNode
+from aiida_workgraph.utils import (
+    query_terminated_processes,
+    query_existing_processes,
+)
 
 logging.basicConfig(level=logging.INFO, format="[%(levelname)s] %(message)s")
 
@@ -65,7 +69,7 @@ class Scheduler:
         name: str,
         max_calcjobs: Optional[int] = None,
         max_processes: Optional[int] = None,
-        poll_interval: Union[int, float] = 0,
+        poll_interval: Union[int, float] = 60,
         reset: bool = False,
     ):
         """
@@ -220,7 +224,7 @@ class Scheduler:
             if pid is None:
                 return
 
-            LOGGER.info("Received CONTINUE_TASK for pk=%d", pid)
+            LOGGER.debug("Received CONTINUE_TASK for pk=%d", pid)
             try:
                 child_node = load_node(pid)
                 priority = self._compute_priority_for_new_process(pid)
@@ -325,7 +329,7 @@ class Scheduler:
         up to the concurrency limit. We pick the next process
         with the *highest* priority.
         """
-        LOGGER.info(
+        LOGGER.debug(
             f"Summary: waiting= {len(self.node.waiting_process)}, "
             f"process: {len(self.node.running_process)}/{self.node.max_processes}, "
             f"calcjob: {len(self.node.running_calcjob)}/{self.node.max_calcjobs}"
@@ -335,11 +339,11 @@ class Scheduler:
             # pick the next waiting PK with the highest priority
             next_pk = self._pop_highest_priority_waiting_process()
             if next_pk is None:
-                LOGGER.info("No more processes in waiting queue.")
+                LOGGER.debug("No more processes in waiting queue.")
                 return
             self.continue_process(next_pk)
 
-        LOGGER.info(
+        LOGGER.debug(
             "Maximum concurrency (%d) reached, waiting for a calcjob to finish...",
             self.node.max_calcjobs,
         )
@@ -350,7 +354,7 @@ class Scheduler:
         # find the process with the highest priority
         if priorites:
             best_pk = max(priorites, key=priorites.get)
-            LOGGER.info(f"Best waiting process pk={best_pk}")
+            LOGGER.debug(f"Best waiting process pk={best_pk}")
             self.node.remove_waiting_process(best_pk)
             return best_pk
         else:
@@ -371,46 +375,51 @@ class Scheduler:
 
         This is especially useful after scheduler restarts or interruptions where the state might be outdated.
         """
-        to_remove = []
-        for pk in list(self.node.running_process):
-            try:
-                node = load_node(pk)
-                if node.is_terminated:
-                    LOGGER.info(
-                        "Found pk=%d in 'running' but it's already terminated. Removing it.",
-                        pk,
-                    )
-                    to_remove.append(pk)
-                else:
-                    # Re-attach callback in case we never did or the scheduler was restarted
-                    self.call_on_process_finish(pk)
-            except exceptions.NotExistent:
-                LOGGER.warning(
-                    "Found pk=%d in 'running' but it doesn't exist anymore. Removing it.",
-                    pk,
-                )
-                to_remove.append(pk)
-        for pk in to_remove:
-            self.node.remove_running_process(pk)
 
-        for pk in list(self.node.waiting_process):
-            try:
-                node = load_node(pk)
-                # This should not happen, but just in case
-                if node.is_terminated:
-                    LOGGER.info(
-                        "Found pk=%d in 'waiting' but it's already terminated. Removing it.",
-                        pk,
-                    )
-                    to_remove.append(pk)
-            except exceptions.NotExistent:
-                LOGGER.warning(
-                    "Found pk=%d in 'waiting' but it doesn't exist anymore. Removing it.",
-                    pk,
+        running_process = self.node.running_process
+        if running_process:
+            existing_processes = query_existing_processes(running_process)
+            non_existing_processes = set(running_process) - set(existing_processes)
+            terminated_pks = query_terminated_processes(running_process)
+            if terminated_pks:
+                LOGGER.info(
+                    f"Found {len(terminated_pks)} processes in 'running' "
+                    "but it's already terminated. Removing it.",
                 )
-                to_remove.append(pk)
-        for pk in to_remove:
-            self.node.remove_waiting_process(pk)
+            if non_existing_processes:
+                LOGGER.warning(
+                    f"Found {len(non_existing_processes)} processes in 'running' "
+                    "but it doesn't exist anymore. Removing it.",
+                )
+            self.node.remove_running_process(
+                list(non_existing_processes) + list(terminated_pks)
+            )
+            # Re-attach callback in case we never did or the scheduler was restarted
+            LOGGER.info(
+                f"Found {len(running_process)} processes in 'running' "
+                "but not terminated. Re-attaching callback.",
+            )
+            for pk in running_process:
+                self.call_on_process_finish(pk)
+        # -----------------------------------------------------------
+        waiting_process = self.node.waiting_process
+        if waiting_process:
+            existing_processes = query_existing_processes(waiting_process)
+            non_existing_processes = set(waiting_process) - set(existing_processes)
+            terminated_pks = query_terminated_processes(waiting_process)
+            if terminated_pks:
+                LOGGER.info(
+                    f"Found {len(terminated_pks)} processes in 'waiting' "
+                    "but it's already terminated. Removing it.",
+                )
+            if non_existing_processes:
+                LOGGER.warning(
+                    f"Found {len(non_existing_processes)} processes in 'waiting' "
+                    "but it doesn't exist anymore. Removing it.",
+                )
+            self.node.remove_waiting_process(
+                list(non_existing_processes) + list(terminated_pks)
+            )
 
     def continue_process(self, pk: int) -> None:
         """
@@ -427,7 +436,6 @@ class Scheduler:
         Attach both a broadcast-based subscriber and a fallback polling
         so that when process <pk> terminates, we call `on_process_finished_callback`.
         """
-        node = load_node(pk=pk)
         subscriber_identifier = str(uuid.uuid4())
         done_event = threading.Event()
 
@@ -464,9 +472,6 @@ class Scheduler:
                 broadcast_filter, subscriber_identifier
             )
 
-        # Start polling in parallel, as a fallback
-        self._poll_process(node, functools.partial(inline_callback, done_event))
-
     def on_process_finished_callback(self, pk: int) -> None:
         """
         When a process finishes, remove it from the running list, and try
@@ -477,22 +482,19 @@ class Scheduler:
         # Attempt to start more processes if any remain
         self.consume_process_queue()
 
-    def _poll_process(self, node, callback):
+    def _poll_process(self):
+        """Fallback on polling to check if processes are still running.
+        This is useful if the RabbitMQ broadcast was missed or not received.
         """
-        Fallback: check if the process is terminated; if so call `callback`,
-        otherwise schedule another check in `self._poll_interval` seconds.
-        """
-        if node.is_terminated:
-            LOGGER.debug(
-                "%s<%d> is already terminated (confirmed by polling).",
-                node.__class__.__name__,
-                node.pk,
-            )
-            self._loop.call_soon(callback)
-        else:
-            self._loop.call_later(
-                self._poll_interval, self._poll_process, node, callback
-            )
+        running_process = self.node.running_process
+        if running_process:
+            terminated_pks = query_terminated_processes(running_process)
+            for pk in terminated_pks:
+                LOGGER.info(
+                    f"pool_process: {pk} is already terminated (confirmed by polling).",
+                )
+                self._loop.call_soon(self.on_process_finished_callback, pk)
+        self._loop.call_later(self._poll_interval, self._poll_process)
 
     def start(self) -> None:
         """
@@ -505,6 +507,8 @@ class Scheduler:
         )
         # Once loop starts, re-check leftover waiting/running
         self._loop.call_soon(self.consume_process_queue)
+        # Schedule the first poll
+        self._loop.call_later(self._poll_interval, self._poll_process)
 
         try:
             self.node.is_running = True

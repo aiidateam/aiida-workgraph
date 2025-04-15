@@ -355,19 +355,9 @@ class WorkGraphEngine(Process, metaclass=Protect):
         :param inputs: The dictionary of process inputs.
         :return: The process node.
         """
-        from aiida.engine import utils
-        from aiida_workgraph.utils.control import continue_process_in_scheduler
+        from aiida_workgraph.utils.control import submit_to_scheduler_inside_workchain
 
-        scheduler = self.node.base.extras.get("scheduler", None)
-        if scheduler:
-            inputs = utils.prepare_inputs(inputs, **kwargs)
-            process_inited = self.runner.instantiate_process(process, **inputs)
-            self.runner.persister.save_checkpoint(process_inited)
-            process_inited.close()
-            continue_process_in_scheduler(process_inited.node, scheduler)
-            return process_inited.node
-        else:
-            return self.runner.submit(process, inputs, **kwargs)
+        return submit_to_scheduler_inside_workchain(self, process, inputs, **kwargs)
 
     def finalize(self) -> t.Optional[ExitCode]:
         """"""
