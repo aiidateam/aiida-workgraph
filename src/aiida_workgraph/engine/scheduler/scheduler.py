@@ -507,6 +507,7 @@ class Scheduler:
         self._loop.call_soon(self.consume_process_queue)
 
         try:
+            self.node.is_running = True
             self._loop.run_forever()
         except KeyboardInterrupt:
             LOGGER.info("Scheduler '%s' interrupted by user (Ctrl+C).", self.name)
@@ -521,6 +522,7 @@ class Scheduler:
         if not self._loop.is_running():
             self._loop.close()
         reset_event_loop_policy()
+        self.node.is_running = False
         LOGGER.info("Scheduler '%s' closed.", self.name)
 
     @classmethod

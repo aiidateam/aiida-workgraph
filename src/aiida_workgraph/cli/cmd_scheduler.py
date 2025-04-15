@@ -59,6 +59,9 @@ def scheduler_delete(name):
     from aiida.tools import delete_nodes
 
     scheduler = get_scheduler(name=name)
+    if not scheduler:
+        echo.echo_error(f"Scheduler `{name}` not found.")
+        return
     status = Scheduler.get_status(name=scheduler.name)
     if status:
         echo.echo_error(
