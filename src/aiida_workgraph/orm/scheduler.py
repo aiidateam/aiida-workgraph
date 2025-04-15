@@ -2,7 +2,7 @@ from aiida.orm import Data, load_node, CalcJobNode, QueryBuilder, ProcessNode
 from aiida.common.lang import classproperty
 from aiida.orm.fields import add_field
 from aiida.orm.utils.mixins import Sealable
-from typing import Optional, Tuple
+from typing import Optional, Tuple, Union
 
 
 class SchedulerNode(Sealable, Data):
@@ -92,16 +92,18 @@ class SchedulerNode(Sealable, Data):
         self.base.attributes.set(self.WAITING_PROCESS, value)
 
     def append_waiting_process(self, pk: int) -> None:
-        waiting_process = self.base.attributes.get(self.WAITING_PROCESS, [])
+        waiting_process = self.waiting_process
         if pk not in waiting_process:
             waiting_process.append(pk)
             self.waiting_process = waiting_process
 
-    def remove_waiting_process(self, pk) -> None:
-        waiting_process = self.base.attributes.get(self.WAITING_PROCESS, [])
-        if pk in waiting_process:
-            waiting_process.remove(pk)
-            self.waiting_process = waiting_process
+    def remove_waiting_process(self, pks: Union[int, list]) -> None:
+        if isinstance(pks, int):
+            pks = [pks]
+
+        waiting_process = set(self.waiting_process)
+        waiting_process.difference_update(pks)
+        self.waiting_process = list(waiting_process)
 
     @property
     def running_process(self) -> list:
@@ -129,11 +131,13 @@ class SchedulerNode(Sealable, Data):
             running_calcjob.append(pk)
             self.running_calcjob = running_calcjob
 
-    def remove_running_calcjob(self, pk: int) -> None:
-        running_calcjob = self.running_calcjob
-        if pk in running_calcjob:
-            running_calcjob.remove(pk)
-            self.running_calcjob = running_calcjob
+    def remove_running_calcjob(self, pks: Union[int, list]) -> None:
+        if isinstance(pks, int):
+            pks = [pks]
+
+        running_calcjob = set(self.running_calcjob)
+        running_calcjob.difference_update(pks)
+        self.running_calcjob = list(running_calcjob)
 
     def append_running_process(self, pk: int) -> None:
         running_process = self.running_process
@@ -145,15 +149,15 @@ class SchedulerNode(Sealable, Data):
             if isinstance(node, CalcJobNode):
                 self.append_running_calcjob(pk)
 
-    def remove_running_process(self, pk: int) -> None:
-        running_process = self.running_process
-        if pk in running_process:
-            running_process.remove(pk)
-            self.running_process = running_process
-            # check if the process is a calcjob
-            node = load_node(pk)
-            if isinstance(node, CalcJobNode):
-                self.remove_running_calcjob(pk)
+    def remove_running_process(self, pks: Union[int, list]) -> None:
+        if isinstance(pks, int):
+            pks = [pks]
+
+        running_process = set(self.running_process)
+        running_process.difference_update(pks)
+        self.running_process = list(running_process)
+        # Also remove from running_calcjob
+        self.remove_running_calcjob(pks)
 
     @property
     def max_calcjobs(self) -> int:
