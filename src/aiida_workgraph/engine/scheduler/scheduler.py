@@ -25,6 +25,10 @@ from aiida.brokers.rabbitmq.utils import (
     get_task_exchange_name,
 )
 from aiida_workgraph.orm.scheduler import SchedulerNode
+from aiida_workgraph.utils import (
+    query_terminated_processes,
+    query_existing_processes,
+)
 
 logging.basicConfig(level=logging.INFO, format="[%(levelname)s] %(message)s")
 
@@ -65,7 +69,7 @@ class Scheduler:
         name: str,
         max_calcjobs: Optional[int] = None,
         max_processes: Optional[int] = None,
-        poll_interval: Union[int, float] = 120,
+        poll_interval: Union[int, float] = 60,
         reset: bool = False,
     ):
         """
@@ -371,10 +375,6 @@ class Scheduler:
 
         This is especially useful after scheduler restarts or interruptions where the state might be outdated.
         """
-        from aiida_workgraph.utils import (
-            query_terminated_processes,
-            query_existing_processes,
-        )
 
         running_process = self.node.running_process
         if running_process:
@@ -436,7 +436,6 @@ class Scheduler:
         Attach both a broadcast-based subscriber and a fallback polling
         so that when process <pk> terminates, we call `on_process_finished_callback`.
         """
-        node = load_node(pk=pk)
         subscriber_identifier = str(uuid.uuid4())
         done_event = threading.Event()
 
@@ -473,9 +472,6 @@ class Scheduler:
                 broadcast_filter, subscriber_identifier
             )
 
-        # Start polling in parallel, as a fallback
-        self._poll_process(node, functools.partial(inline_callback, done_event))
-
     def on_process_finished_callback(self, pk: int) -> None:
         """
         When a process finishes, remove it from the running list, and try
@@ -486,22 +482,19 @@ class Scheduler:
         # Attempt to start more processes if any remain
         self.consume_process_queue()
 
-    def _poll_process(self, node, callback):
+    def _poll_process(self):
+        """Fallback on polling to check if processes are still running.
+        This is useful if the RabbitMQ broadcast was missed or not received.
         """
-        Fallback: check if the process is terminated; if so call `callback`,
-        otherwise schedule another check in `self._poll_interval` seconds.
-        """
-        if node.is_terminated:
-            LOGGER.debug(
-                "%s<%d> is already terminated (confirmed by polling).",
-                node.__class__.__name__,
-                node.pk,
-            )
-            self._loop.call_soon(callback)
-        else:
-            self._loop.call_later(
-                self._poll_interval, self._poll_process, node, callback
-            )
+        running_process = self.node.running_process
+        if running_process:
+            terminated_pks = query_terminated_processes(running_process)
+            for pk in terminated_pks:
+                LOGGER.info(
+                    f"pool_process: {pk} is already terminated (confirmed by polling).",
+                )
+                self._loop.call_soon(self.on_process_finished_callback, pk)
+        self._loop.call_later(self._poll_interval, self._poll_process)
 
     def start(self) -> None:
         """
@@ -514,6 +507,8 @@ class Scheduler:
         )
         # Once loop starts, re-check leftover waiting/running
         self._loop.call_soon(self.consume_process_queue)
+        # Schedule the first poll
+        self._loop.call_later(self._poll_interval, self._poll_process)
 
         try:
             self.node.is_running = True
