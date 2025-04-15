@@ -70,7 +70,7 @@ def continue_process_in_scheduler(
     else:
         node = orm.load_node(pk)
     controller.continue_process(pk, nowait=False)
-    node.base.extras.set("scheduler", scheduler_name)
+    node.base.extras.set("_scheduler", scheduler_name)
 
 
 def play_process_in_scheduler(scheduler: int, pk: int | orm.Node):
@@ -264,7 +264,7 @@ def submit_to_scheduler_inside_workchain(
     from aiida.engine import utils
     from aiida_workgraph.utils.control import continue_process_in_scheduler
 
-    scheduler = self.node.base.extras.get("scheduler", None)
+    scheduler = self.node.base.extras.get("_scheduler", None)
     if scheduler:
         inputs = utils.prepare_inputs(inputs, **kwargs)
         process_inited = self.runner.instantiate_process(process, **inputs)

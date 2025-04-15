@@ -224,7 +224,7 @@ class Scheduler:
             if pid is None:
                 return
 
-            LOGGER.info("Received CONTINUE_TASK for pk=%d", pid)
+            LOGGER.debug("Received CONTINUE_TASK for pk=%d", pid)
             try:
                 child_node = load_node(pid)
                 priority = self._compute_priority_for_new_process(pid)
@@ -329,7 +329,7 @@ class Scheduler:
         up to the concurrency limit. We pick the next process
         with the *highest* priority.
         """
-        LOGGER.info(
+        LOGGER.debug(
             f"Summary: waiting= {len(self.node.waiting_process)}, "
             f"process: {len(self.node.running_process)}/{self.node.max_processes}, "
             f"calcjob: {len(self.node.running_calcjob)}/{self.node.max_calcjobs}"
@@ -339,11 +339,11 @@ class Scheduler:
             # pick the next waiting PK with the highest priority
             next_pk = self._pop_highest_priority_waiting_process()
             if next_pk is None:
-                LOGGER.info("No more processes in waiting queue.")
+                LOGGER.debug("No more processes in waiting queue.")
                 return
             self.continue_process(next_pk)
 
-        LOGGER.info(
+        LOGGER.debug(
             "Maximum concurrency (%d) reached, waiting for a calcjob to finish...",
             self.node.max_calcjobs,
         )
@@ -354,7 +354,7 @@ class Scheduler:
         # find the process with the highest priority
         if priorites:
             best_pk = max(priorites, key=priorites.get)
-            LOGGER.info(f"Best waiting process pk={best_pk}")
+            LOGGER.debug(f"Best waiting process pk={best_pk}")
             self.node.remove_waiting_process(best_pk)
             return best_pk
         else:
