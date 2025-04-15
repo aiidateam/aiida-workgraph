@@ -65,7 +65,7 @@ class Scheduler:
         name: str,
         max_calcjobs: Optional[int] = None,
         max_processes: Optional[int] = None,
-        poll_interval: Union[int, float] = 0,
+        poll_interval: Union[int, float] = 120,
         reset: bool = False,
     ):
         """
@@ -371,46 +371,55 @@ class Scheduler:
 
         This is especially useful after scheduler restarts or interruptions where the state might be outdated.
         """
-        to_remove = []
-        for pk in list(self.node.running_process):
-            try:
-                node = load_node(pk)
-                if node.is_terminated:
-                    LOGGER.info(
-                        "Found pk=%d in 'running' but it's already terminated. Removing it.",
-                        pk,
-                    )
-                    to_remove.append(pk)
-                else:
-                    # Re-attach callback in case we never did or the scheduler was restarted
-                    self.call_on_process_finish(pk)
-            except exceptions.NotExistent:
-                LOGGER.warning(
-                    "Found pk=%d in 'running' but it doesn't exist anymore. Removing it.",
-                    pk,
-                )
-                to_remove.append(pk)
-        for pk in to_remove:
-            self.node.remove_running_process(pk)
+        from aiida_workgraph.utils import (
+            query_terminated_processes,
+            query_existing_processes,
+        )
 
-        for pk in list(self.node.waiting_process):
-            try:
-                node = load_node(pk)
-                # This should not happen, but just in case
-                if node.is_terminated:
-                    LOGGER.info(
-                        "Found pk=%d in 'waiting' but it's already terminated. Removing it.",
-                        pk,
-                    )
-                    to_remove.append(pk)
-            except exceptions.NotExistent:
-                LOGGER.warning(
-                    "Found pk=%d in 'waiting' but it doesn't exist anymore. Removing it.",
-                    pk,
+        running_process = self.node.running_process
+        if running_process:
+            existing_processes = query_existing_processes(running_process)
+            non_existing_processes = set(running_process) - set(existing_processes)
+            terminated_pks = query_terminated_processes(running_process)
+            if terminated_pks:
+                LOGGER.info(
+                    f"Found {len(terminated_pks)} processes in 'running' "
+                    "but it's already terminated. Removing it.",
                 )
-                to_remove.append(pk)
-        for pk in to_remove:
-            self.node.remove_waiting_process(pk)
+            if non_existing_processes:
+                LOGGER.warning(
+                    f"Found {len(non_existing_processes)} processes in 'running' "
+                    "but it doesn't exist anymore. Removing it.",
+                )
+            self.node.remove_running_process(
+                list(non_existing_processes) + list(terminated_pks)
+            )
+            # Re-attach callback in case we never did or the scheduler was restarted
+            LOGGER.info(
+                f"Found {len(running_process)} processes in 'running' "
+                "but not terminated. Re-attaching callback.",
+            )
+            for pk in running_process:
+                self.call_on_process_finish(pk)
+        # -----------------------------------------------------------
+        waiting_process = self.node.waiting_process
+        if waiting_process:
+            existing_processes = query_existing_processes(waiting_process)
+            non_existing_processes = set(waiting_process) - set(existing_processes)
+            terminated_pks = query_terminated_processes(waiting_process)
+            if terminated_pks:
+                LOGGER.info(
+                    f"Found {len(terminated_pks)} processes in 'waiting' "
+                    "but it's already terminated. Removing it.",
+                )
+            if non_existing_processes:
+                LOGGER.warning(
+                    f"Found {len(non_existing_processes)} processes in 'waiting' "
+                    "but it doesn't exist anymore. Removing it.",
+                )
+            self.node.remove_waiting_process(
+                list(non_existing_processes) + list(terminated_pks)
+            )
 
     def continue_process(self, pk: int) -> None:
         """
