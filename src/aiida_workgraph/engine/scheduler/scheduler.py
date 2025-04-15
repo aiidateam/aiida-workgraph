@@ -17,7 +17,7 @@ from plumpy.process_comms import (
     CONTINUE_TASK,
 )
 from aiida.common import exceptions
-from aiida.orm import load_node, QueryBuilder
+from aiida.orm import load_node, QueryBuilder, Node
 from aiida.engine.processes import ProcessState
 from aiida.manage import get_manager
 from aiida.brokers.rabbitmq.utils import (
@@ -221,12 +221,18 @@ class Scheduler:
                 return
 
             LOGGER.info("Received CONTINUE_TASK for pk=%d", pid)
-            priority = self._compute_priority_for_new_process(pid)
-            child_node = load_node(pid)
-            child_node.base.extras.set(SCHEDULER_PRIORITY_KEY, priority)
-            self.node.append_waiting_process(pid)
-            # Trigger consumption (start more processes if possible)
-            self.consume_process_queue()
+            try:
+                child_node = load_node(pid)
+                priority = self._compute_priority_for_new_process(pid)
+                child_node.base.extras.set(SCHEDULER_PRIORITY_KEY, priority)
+                self.node.append_waiting_process(pid)
+                # Trigger consumption (start more processes if possible)
+                self.consume_process_queue()
+            except exceptions.NotExistent:
+                LOGGER.warning(
+                    "Received CONTINUE_TASK for pk=%d, but it doesn't exist anymore.",
+                    pid,
+                )
 
     def message_receive(self, _comm: kiwipy.Communicator, msg: Dict[str, Any]) -> Any:
         """
@@ -283,12 +289,15 @@ class Scheduler:
 
         raise RuntimeError("Unknown intent")
 
-    def _compute_priority_for_new_process(self, pid: int) -> int:
+    def _compute_priority_for_new_process(self, pid: int | Node) -> int:
         """"""
         from aiida.common.links import LinkType
 
         # find the parent process
-        node = load_node(pid)
+        if isinstance(pid, int):
+            node = load_node(pid)
+        else:
+            node = pid
         links = node.base.links.get_incoming()
         # find the parent node
         parent_nodes = [
@@ -498,6 +507,7 @@ class Scheduler:
         self._loop.call_soon(self.consume_process_queue)
 
         try:
+            self.node.is_running = True
             self._loop.run_forever()
         except KeyboardInterrupt:
             LOGGER.info("Scheduler '%s' interrupted by user (Ctrl+C).", self.name)
@@ -512,6 +522,7 @@ class Scheduler:
         if not self._loop.is_running():
             self._loop.close()
         reset_event_loop_policy()
+        self.node.is_running = False
         LOGGER.info("Scheduler '%s' closed.", self.name)
 
     @classmethod

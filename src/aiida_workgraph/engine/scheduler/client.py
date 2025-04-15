@@ -20,6 +20,8 @@ LOGGER = AIIDA_LOGGER.getChild("engine.launch")
 class SchedulerClient(DaemonClient):
     """Client for interacting with the scheduler daemon."""
 
+    _DAEMON_NAME = "aiida-{profile_name}-{scheduler_name}"
+
     def __init__(self, scheduler_name, *args, **kwargs):
         self.scheduler_name = scheduler_name
         super().__init__(*args, **kwargs)
@@ -272,7 +274,7 @@ class SchedulerClient(DaemonClient):
                             max_calcjobs=max_calcjobs, max_processes=max_processes
                         )
                     ),
-                    "name": self.scheduler_name,
+                    "name": self.daemon_name,
                     "numprocesses": 1,
                     "virtualenv": self.virtualenv,
                     "copy_env": True,

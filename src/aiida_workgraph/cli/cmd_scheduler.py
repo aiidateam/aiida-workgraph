@@ -8,6 +8,8 @@ from aiida_workgraph.engine.scheduler.client import (
     get_scheduler,
 )
 from aiida_workgraph.engine.scheduler.scheduler import Scheduler
+from aiida_workgraph.orm.scheduler import SchedulerNode
+
 import kiwipy
 
 
@@ -24,6 +26,31 @@ def scheduler_list():
     echo.echo_formatted_list(schedulers, ["name"])
 
 
+@scheduler.command("add")
+@click.argument("name", required=True, type=str)
+@click.option(
+    "--max-calcjobs", type=int, required=False, help="Maximum number of calcjobs."
+)
+@click.option(
+    "--max-processes", type=int, required=False, help="Maximum number of processes."
+)
+def scheduler_add(name, max_calcjobs, max_processes):
+    """Add a scheduler."""
+
+    click.echo("Adding the scheduler ...")
+    scheduler = get_scheduler(name=name)
+    if scheduler:
+        echo.echo_error(f"Scheduler `{name}` already exists.")
+        return
+    node = SchedulerNode()
+    node.name = name
+    if max_calcjobs:
+        node.max_calcjobs = max_calcjobs
+    if max_processes:
+        node.max_processes = max_processes
+    node.store()
+
+
 @scheduler.command("delete")
 @click.argument("name", required=False, type=str)
 @decorators.requires_loaded_profile()
@@ -32,6 +59,9 @@ def scheduler_delete(name):
     from aiida.tools import delete_nodes
 
     scheduler = get_scheduler(name=name)
+    if not scheduler:
+        echo.echo_error(f"Scheduler `{name}` not found.")
+        return
     status = Scheduler.get_status(name=scheduler.name)
     if status:
         echo.echo_error(

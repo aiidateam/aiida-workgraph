@@ -8,6 +8,7 @@ from typing import Optional, Tuple, Union
 class SchedulerNode(Sealable, Data):
     """"""
 
+    IS_RUNNING = "is_running"
     WAITING_PROCESS = "waiting_process"
     RUNNING_PROCESS = "running_process"
     RUNNING_CALCJOB = "running_calcjob"
@@ -21,6 +22,11 @@ class SchedulerNode(Sealable, Data):
             "name",
             dtype=Optional[str],
             doc="Name of the scheduler node",
+        ),
+        add_field(
+            "is_running",
+            dtype=Optional[bool],
+            doc="Is the scheduler running",
         ),
         add_field(
             WAITING_PROCESS,
@@ -62,6 +68,7 @@ class SchedulerNode(Sealable, Data):
     @classproperty
     def _updatable_attributes(cls) -> Tuple[str, ...]:  # noqa: N805
         return super()._updatable_attributes + (
+            cls.IS_RUNNING,
             cls.WAITING_PROCESS,
             cls.RUNNING_PROCESS,
             cls.RUNNING_CALCJOB,
@@ -80,6 +87,16 @@ class SchedulerNode(Sealable, Data):
     def name(self, value: str) -> None:
         """Set the name of the scheduler node."""
         self.base.attributes.set("name", value)
+
+    @property
+    def is_running(self) -> bool:
+        """Return if the scheduler is running."""
+        return self.base.attributes.get("is_running", False)
+
+    @is_running.setter
+    def is_running(self, value: bool) -> None:
+        """Set if the scheduler is running."""
+        self.base.attributes.set("is_running", value)
 
     @property
     def waiting_process(self) -> list:
