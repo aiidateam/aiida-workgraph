@@ -224,7 +224,7 @@ class Scheduler:
             if pid is None:
                 return
 
-            LOGGER.debug("Received CONTINUE_TASK for pk=%d", pid)
+            LOGGER.info("Received CONTINUE_TASK for pk=%d", pid)
             try:
                 child_node = load_node(pid)
                 priority = self._compute_priority_for_new_process(pid)
@@ -329,7 +329,7 @@ class Scheduler:
         up to the concurrency limit. We pick the next process
         with the *highest* priority.
         """
-        LOGGER.debug(
+        LOGGER.info(
             f"Summary: waiting= {len(self.node.waiting_process)}, "
             f"process: {len(self.node.running_process)}/{self.node.max_processes}, "
             f"calcjob: {len(self.node.running_calcjob)}/{self.node.max_calcjobs}"
@@ -339,11 +339,11 @@ class Scheduler:
             # pick the next waiting PK with the highest priority
             next_pk = self._pop_highest_priority_waiting_process()
             if next_pk is None:
-                LOGGER.debug("No more processes in waiting queue.")
+                LOGGER.info("No more processes in waiting queue.")
                 return
             self.continue_process(next_pk)
 
-        LOGGER.debug(
+        LOGGER.info(
             "Maximum concurrency (%d) reached, waiting for a calcjob to finish...",
             self.node.max_calcjobs,
         )
@@ -394,13 +394,17 @@ class Scheduler:
             self.node.remove_running_process(
                 list(non_existing_processes) + list(terminated_pks)
             )
-            # Re-attach callback in case we never did or the scheduler was restarted
-            LOGGER.info(
-                f"Found {len(running_process)} processes in 'running' "
-                "but not terminated. Re-attaching callback.",
+            running_process = (
+                set(running_process) - set(terminated_pks) - set(non_existing_processes)
             )
-            for pk in running_process:
-                self.call_on_process_finish(pk)
+            # If we have any processes that are still running, re-attach the callback
+            if running_process:
+                LOGGER.info(
+                    f"Found {len(running_process)} processes in 'running' "
+                    "but not terminated. Re-attaching callback.",
+                )
+                for pk in running_process:
+                    self.call_on_process_finish(pk)
         # -----------------------------------------------------------
         waiting_process = self.node.waiting_process
         if waiting_process:
