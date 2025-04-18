@@ -344,7 +344,24 @@ def play_processes(name, processes, timeout):
         Scheduler.play_processes(name=name, pks=pks, timeout=timeout)
     except kiwipy.exceptions.UnroutableError:
         echo.echo_error(
-            f"Failed to set max_processes for scheduler {name}. Is the scheduler running?"
+            f"Failed to play processes for scheduler {name}. Is the scheduler running?"
+        )
+
+
+@scheduler.command()
+@click.argument("name", required=True, type=str)
+@arguments.PROCESSES()
+@options.TIMEOUT(default=None, required=False, type=int)
+@decorators.requires_broker
+@decorators.check_circus_zmq_version
+def repair_processes(name, processes, timeout):
+    """Repair processes in the scheduler."""
+    pks = [p.pk for p in processes]
+    try:
+        Scheduler.repair_processes(name=name, pks=pks, timeout=timeout)
+    except kiwipy.exceptions.UnroutableError:
+        echo.echo_error(
+            f"Failed to play processes for scheduler {name}. Is the scheduler running?"
         )
 
 
