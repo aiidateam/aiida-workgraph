@@ -175,6 +175,10 @@ class Scheduler:
         return get_rmq_url(**kwargs, **additional_kwargs)
 
     @property
+    def queue_name(self):
+        return f"{self._prefix}-{self.name}"
+
+    @property
     def communicator(self) -> kiwipy.Communicator:
         """
         Access (and lazily create) a kiwipy Communicator connected to RabbitMQ.
@@ -227,6 +231,13 @@ class Scheduler:
             LOGGER.info("Received CONTINUE_TASK for pk=%d", pid)
             try:
                 child_node = load_node(pid)
+                # Check if the process is already terminated
+                if child_node.is_terminated:
+                    LOGGER.warning(
+                        "Received CONTINUE_TASK for pk=%d, but it is already terminated.",
+                        pid,
+                    )
+                    return
                 priority = self._compute_priority_for_new_process(pid)
                 child_node.base.extras.set(SCHEDULER_PRIORITY_KEY, priority)
                 self.node.append_waiting_process(pid)
@@ -355,7 +366,6 @@ class Scheduler:
         if priorites:
             best_pk = max(priorites, key=priorites.get)
             LOGGER.debug(f"Best waiting process pk={best_pk}")
-            self.node.remove_waiting_process(best_pk)
             return best_pk
         else:
             return None
@@ -391,12 +401,9 @@ class Scheduler:
                     f"Found {len(non_existing_processes)} processes in 'running' "
                     "but it doesn't exist anymore. Removing it.",
                 )
-            self.node.remove_running_process(
-                list(non_existing_processes) + list(terminated_pks)
-            )
-            running_process = (
-                set(running_process) - set(terminated_pks) - set(non_existing_processes)
-            )
+            processes_to_remove = list(non_existing_processes) + list(terminated_pks)
+            self.node.remove_running_process(processes_to_remove)
+            running_process = set(running_process) - set(processes_to_remove)
             # If we have any processes that are still running, re-attach the callback
             if running_process:
                 LOGGER.info(
@@ -432,8 +439,10 @@ class Scheduler:
         """
         LOGGER.info("Continuing process pk=%d...", pk)
         self.call_on_process_finish(pk)
+        # Do not wait for the future's result to avoid blocking
+        self.process_controller.continue_process(pk, nowait=False, no_reply=True)
         self.node.append_running_process(pk)
-        self.process_controller.continue_process(pk)
+        self.node.remove_waiting_process(pk)
 
     def call_on_process_finish(self, pk: int) -> None:
         """
@@ -636,3 +645,22 @@ class Scheduler:
                 },
             },
         )
+
+    def iterate_tasks(self):
+        """Return an iterator over the tasks in the launch queue.
+        Note: this will not delete the tasks from the queue, because
+        we don't acknowledge them.
+        """
+        for task in self.communicator._communicator.task_queue(self.queue_name):
+            yield task
+
+    def get_process_tasks(self):
+        pks = []
+
+        for task in self.iterate_tasks():
+            try:
+                pks.append(task.body.get("args", {})["pid"])
+            except KeyError:
+                pass
+
+        return pks
