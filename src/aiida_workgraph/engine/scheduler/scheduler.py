@@ -37,6 +37,7 @@ LOGGER = logging.getLogger(__name__)
 __all__ = ("Scheduler",)
 
 SCHEDULER_PRIORITY_KEY = "_scheduler_priority"
+SCHEDULER_KEY = "_scheduler"
 INTENT_KEY = "intent"
 MESSAGE_TEXT_KEY = "message"
 
@@ -47,6 +48,7 @@ class Intent:
     STOP: str = "stop"
     CONTINUE: str = "continue"
     PLAY: str = "play"
+    REPAIR: str = "repair"
     STATUS: str = "status"
     SET: str = "set"
 
@@ -175,6 +177,10 @@ class Scheduler:
         return get_rmq_url(**kwargs, **additional_kwargs)
 
     @property
+    def queue_name(self):
+        return f"{self._prefix}-{self.name}"
+
+    @property
     def communicator(self) -> kiwipy.Communicator:
         """
         Access (and lazily create) a kiwipy Communicator connected to RabbitMQ.
@@ -224,19 +230,40 @@ class Scheduler:
             if pid is None:
                 return
 
-            LOGGER.debug("Received CONTINUE_TASK for pk=%d", pid)
-            try:
-                child_node = load_node(pid)
-                priority = self._compute_priority_for_new_process(pid)
-                child_node.base.extras.set(SCHEDULER_PRIORITY_KEY, priority)
-                self.node.append_waiting_process(pid)
-                # Trigger consumption (start more processes if possible)
-                self.consume_process_queue()
-            except exceptions.NotExistent:
+            LOGGER.info("Received CONTINUE_TASK for pk=%d", pid)
+            self._add_process(pid)
+
+    def _add_process(self, pk: int | Node) -> None:
+        """Add a process to the scheduler."""
+        try:
+            node = load_node(pk) if not isinstance(pk, Node) else pk
+            pk = node.pk
+            # Check if the process is already terminated
+            if node.is_terminated:
                 LOGGER.warning(
-                    "Received CONTINUE_TASK for pk=%d, but it doesn't exist anymore.",
-                    pid,
+                    "Try to add process pk=%d, but it is already terminated.",
+                    pk,
                 )
+                return
+            elif node.process_state == ProcessState.CREATED:
+                # If the process is in CREATED state, we can continue it
+                self.node.append_waiting_process(pk)
+            elif node.process_state in [ProcessState.RUNNING, ProcessState.WAITING]:
+                # If the process is in RUNNING or WAITING state, we can continue it
+                self.node.append_running_process(pk)
+                self.call_on_process_finish(pk)
+            # The process may already has SCHEDULER_KEY and priority set
+            # but we set it again to be sure
+            node.base.extras.set(SCHEDULER_KEY, self.name)
+            priority = self._compute_priority_for_new_process(pk)
+            node.base.extras.set(SCHEDULER_PRIORITY_KEY, priority)
+            # Trigger consumption (start more processes if possible)
+            self.consume_process_queue()
+        except exceptions.NotExistent:
+            LOGGER.warning(
+                "Received CONTINUE_TASK for pk=%d, but it doesn't exist anymore.",
+                pk,
+            )
 
     def message_receive(self, _comm: kiwipy.Communicator, msg: Dict[str, Any]) -> Any:
         """
@@ -264,6 +291,10 @@ class Scheduler:
             pks = msg[MESSAGE_TEXT_KEY]
             for pk in pks:
                 self._loop.call_soon(self.continue_process, pk)
+
+        if intent.lower() == Intent.REPAIR:
+            pks = msg[MESSAGE_TEXT_KEY]
+            self._loop.call_soon(self._repair_processes, pks)
 
         if intent.lower() == Intent.SET:
             data = msg[MESSAGE_TEXT_KEY]
@@ -329,7 +360,7 @@ class Scheduler:
         up to the concurrency limit. We pick the next process
         with the *highest* priority.
         """
-        LOGGER.debug(
+        LOGGER.info(
             f"Summary: waiting= {len(self.node.waiting_process)}, "
             f"process: {len(self.node.running_process)}/{self.node.max_processes}, "
             f"calcjob: {len(self.node.running_calcjob)}/{self.node.max_calcjobs}"
@@ -339,11 +370,11 @@ class Scheduler:
             # pick the next waiting PK with the highest priority
             next_pk = self._pop_highest_priority_waiting_process()
             if next_pk is None:
-                LOGGER.debug("No more processes in waiting queue.")
+                LOGGER.info("No more processes in waiting queue.")
                 return
             self.continue_process(next_pk)
 
-        LOGGER.debug(
+        LOGGER.info(
             "Maximum concurrency (%d) reached, waiting for a calcjob to finish...",
             self.node.max_calcjobs,
         )
@@ -355,7 +386,6 @@ class Scheduler:
         if priorites:
             best_pk = max(priorites, key=priorites.get)
             LOGGER.debug(f"Best waiting process pk={best_pk}")
-            self.node.remove_waiting_process(best_pk)
             return best_pk
         else:
             return None
@@ -391,16 +421,17 @@ class Scheduler:
                     f"Found {len(non_existing_processes)} processes in 'running' "
                     "but it doesn't exist anymore. Removing it.",
                 )
-            self.node.remove_running_process(
-                list(non_existing_processes) + list(terminated_pks)
-            )
-            # Re-attach callback in case we never did or the scheduler was restarted
-            LOGGER.info(
-                f"Found {len(running_process)} processes in 'running' "
-                "but not terminated. Re-attaching callback.",
-            )
-            for pk in running_process:
-                self.call_on_process_finish(pk)
+            processes_to_remove = list(non_existing_processes) + list(terminated_pks)
+            self.node.remove_running_process(processes_to_remove)
+            running_process = set(running_process) - set(processes_to_remove)
+            # If we have any processes that are still running, re-attach the callback
+            if running_process:
+                LOGGER.info(
+                    f"Found {len(running_process)} processes in 'running' "
+                    "but not terminated. Re-attaching callback.",
+                )
+                for pk in running_process:
+                    self.call_on_process_finish(pk)
         # -----------------------------------------------------------
         waiting_process = self.node.waiting_process
         if waiting_process:
@@ -428,8 +459,10 @@ class Scheduler:
         """
         LOGGER.info("Continuing process pk=%d...", pk)
         self.call_on_process_finish(pk)
+        # Do not wait for the future's result to avoid blocking
+        self.process_controller.continue_process(pk, nowait=False, no_reply=True)
         self.node.append_running_process(pk)
-        self.process_controller.continue_process(pk)
+        self.node.remove_waiting_process(pk)
 
     def call_on_process_finish(self, pk: int) -> None:
         """
@@ -600,7 +633,7 @@ class Scheduler:
     @classmethod
     def play_processes(cls, name: str, pks: list, timeout: int = 5) -> None:
         """
-        Play a process with the given pk.
+        Play processes with the given pks.
         """
         scheduler = cls.get_scheduler(name)
         controller = get_manager().get_process_controller()
@@ -608,6 +641,37 @@ class Scheduler:
             scheduler.pk,
             {
                 "intent": "play",
+                "message": pks,
+            },
+        )
+
+    def _repair_processes(self, pks: list) -> None:
+        """
+        Repair processes with the given pks by continuing them in the scheduler.
+        """
+        for pk in pks:
+            try:
+                node = load_node(pk)
+                self._add_process(node)
+            except exceptions.NotExistent:
+                self.node.remove_running_process(pk)
+                self.node.remove_waiting_process(pk)
+                LOGGER.warning(
+                    "Process pk=%d does not exist. Removing it from the scheduler.",
+                    pk,
+                )
+
+    @classmethod
+    def repair_processes(cls, name: str, pks: list, timeout: int = 5) -> None:
+        """
+        Repair processes with the given pks by continuing them in the scheduler.
+        """
+        scheduler = cls.get_scheduler(name)
+        controller = get_manager().get_process_controller()
+        controller._communicator.rpc_send(
+            scheduler.pk,
+            {
+                "intent": "repair",
                 "message": pks,
             },
         )
@@ -632,3 +696,22 @@ class Scheduler:
                 },
             },
         )
+
+    def iterate_tasks(self):
+        """Return an iterator over the tasks in the launch queue.
+        Note: this will not delete the tasks from the queue, because
+        we don't acknowledge them.
+        """
+        for task in self.communicator._communicator.task_queue(self.queue_name):
+            yield task
+
+    def get_process_tasks(self):
+        pks = []
+
+        for task in self.iterate_tasks():
+            try:
+                pks.append(task.body.get("args", {})["pid"])
+            except KeyError:
+                pass
+
+        return pks
