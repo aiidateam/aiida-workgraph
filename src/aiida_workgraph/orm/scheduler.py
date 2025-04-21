@@ -1,4 +1,4 @@
-from aiida.orm import Data, load_node, CalcJobNode, QueryBuilder, ProcessNode
+from aiida.orm import Data, load_node, Node, CalcJobNode, QueryBuilder, ProcessNode
 from aiida.common.lang import classproperty
 from aiida.orm.fields import add_field
 from aiida.orm.utils.mixins import Sealable
@@ -12,9 +12,11 @@ class SchedulerNode(Sealable, Data):
     WAITING_PROCESS = "waiting_process"
     RUNNING_PROCESS = "running_process"
     RUNNING_CALCJOB = "running_calcjob"
+    RUNNING_WORKFLOW = "running_workflow"
     FINISHED_PROCESS = "finished_process"
-    MAX_CALCJOBS = "max_calcjobs"
     MAX_PROCESSES = "max_processes"
+    MAX_CALCJOBS = "max_calcjobs"
+    MAX_WORKFLOWS = "max_workflows"
     NEXT_PRIORITY = "next_priority"
 
     __qb_fields__ = [
@@ -39,6 +41,11 @@ class SchedulerNode(Sealable, Data):
             doc="List of running processes",
         ),
         add_field(
+            RUNNING_WORKFLOW,
+            dtype=Optional[list],
+            doc="List of running workflows",
+        ),
+        add_field(
             RUNNING_CALCJOB,
             dtype=Optional[list],
             doc="List of running calcjobs",
@@ -49,14 +56,19 @@ class SchedulerNode(Sealable, Data):
             doc="List of finished processes",
         ),
         add_field(
-            MAX_CALCJOBS,
-            dtype=Optional[int],
-            doc="Maximum number of running processes",
-        ),
-        add_field(
             MAX_PROCESSES,
             dtype=Optional[int],
             doc="Maximum number of processes",
+        ),
+        add_field(
+            MAX_CALCJOBS,
+            dtype=Optional[int],
+            doc="Maximum number of running calcjobs",
+        ),
+        add_field(
+            MAX_WORKFLOWS,
+            dtype=Optional[int],
+            doc="Maximum number of workflows",
         ),
         add_field(
             NEXT_PRIORITY,
@@ -65,16 +77,33 @@ class SchedulerNode(Sealable, Data):
         ),
     ]
 
+    def __init__(
+        self,
+        name: str = "scheduler",
+        max_calcjobs: Optional[int] = None,
+        max_workflows: Optional[int] = None,
+        max_processes: Optional[int] = None,
+        **kwargs,
+    ):
+        """Initialise a ``SchedulerNode`` instance."""
+        super().__init__(**kwargs)
+        self.name = name
+        self.max_calcjobs = 100 if max_calcjobs is None else max_calcjobs
+        self.max_workflows = 100 if max_workflows is None else max_workflows
+        self.max_processes = 10000 if max_processes is None else max_processes
+
     @classproperty
     def _updatable_attributes(cls) -> Tuple[str, ...]:  # noqa: N805
         return super()._updatable_attributes + (
             cls.IS_RUNNING,
             cls.WAITING_PROCESS,
             cls.RUNNING_PROCESS,
+            cls.RUNNING_WORKFLOW,
             cls.RUNNING_CALCJOB,
             cls.FINISHED_PROCESS,
-            cls.MAX_CALCJOBS,
             cls.MAX_PROCESSES,
+            cls.MAX_CALCJOBS,
+            cls.MAX_WORKFLOWS,
             cls.NEXT_PRIORITY,
         )
 
@@ -133,6 +162,30 @@ class SchedulerNode(Sealable, Data):
         self.base.attributes.set(self.RUNNING_PROCESS, value)
 
     @property
+    def running_workflow(self) -> list:
+        """Return the list of running workflows."""
+        return self.base.attributes.get(self.RUNNING_WORKFLOW, [])
+
+    @running_workflow.setter
+    def running_workflow(self, value: list) -> None:
+        """Set the list of running workflows."""
+        self.base.attributes.set(self.RUNNING_WORKFLOW, value)
+
+    def append_running_workflow(self, pk: int) -> None:
+        running_workflow = self.running_workflow
+        if pk not in running_workflow:
+            running_workflow.append(pk)
+            self.running_workflow = running_workflow
+
+    def remove_running_workflow(self, pks: Union[int, list]) -> None:
+        if isinstance(pks, int):
+            pks = [pks]
+
+        running_workflow = set(self.running_workflow)
+        running_workflow.difference_update(pks)
+        self.running_workflow = list(running_workflow)
+
+    @property
     def running_calcjob(self) -> list:
         """Return the list of running calcjobs."""
         return self.base.attributes.get(self.RUNNING_CALCJOB, [])
@@ -156,7 +209,22 @@ class SchedulerNode(Sealable, Data):
         running_calcjob.difference_update(pks)
         self.running_calcjob = list(running_calcjob)
 
+    @classmethod
+    def is_top_level_workflow(cls, node: Node) -> bool:
+        """Check if the process is a top level workflow."""
+        from aiida.common.links import LinkType
+
+        links = node.base.links.get_incoming()
+        # find the parent node
+        parent_nodes = [
+            link.node
+            for link in links
+            if link.link_type in [LinkType.CALL_CALC, LinkType.CALL_WORK]
+        ]
+        return len(parent_nodes) == 0
+
     def append_running_process(self, pk: int) -> None:
+
         running_process = self.running_process
         if pk not in running_process:
             running_process.append(pk)
@@ -165,6 +233,9 @@ class SchedulerNode(Sealable, Data):
             node = load_node(pk)
             if isinstance(node, CalcJobNode):
                 self.append_running_calcjob(pk)
+            else:
+                if self.is_top_level_workflow(node):
+                    self.append_running_workflow(pk)
 
     def remove_running_process(self, pks: Union[int, list]) -> None:
         if isinstance(pks, int):
@@ -175,6 +246,18 @@ class SchedulerNode(Sealable, Data):
         self.running_process = list(running_process)
         # Also remove from running_calcjob
         self.remove_running_calcjob(pks)
+        # Also remove from running_workflow
+        self.remove_running_workflow(pks)
+
+    @property
+    def max_workflows(self) -> int:
+        """Return the maximum number of workflows."""
+        return self.base.attributes.get(self.MAX_WORKFLOWS, 100)
+
+    @max_workflows.setter
+    def max_workflows(self, value: int) -> None:
+        """Set the maximum number of workflows."""
+        self.base.attributes.set(self.MAX_WORKFLOWS, value)
 
     @property
     def max_calcjobs(self) -> int:
@@ -189,7 +272,7 @@ class SchedulerNode(Sealable, Data):
     @property
     def max_processes(self) -> int:
         """Return the maximum number of processes."""
-        return self.base.attributes.get(self.MAX_PROCESSES, 2000)
+        return self.base.attributes.get(self.MAX_PROCESSES, 10000)
 
     @max_processes.setter
     def max_processes(self, value: int) -> None:
@@ -206,7 +289,7 @@ class SchedulerNode(Sealable, Data):
         """Set the next priority for the process."""
         self.base.attributes.set(self.NEXT_PRIORITY, value)
 
-    def get_process_priority(self) -> int:
+    def get_process_priority(self) -> dict:
         waiting_list = self.waiting_process
         if not waiting_list:
             return {}
@@ -228,3 +311,16 @@ class SchedulerNode(Sealable, Data):
                 node.base.extras.set("_scheduler_priority", 0)
                 self.logger.report(f"Process {pk} has no priority, setting to 0")
         return priorites
+
+    def reset(self) -> None:
+        """Reset the scheduler node."""
+        self.is_running = False
+        self.waiting_process = []
+        self.running_process = []
+        self.running_workflow = []
+        self.running_calcjob = []
+        self.finished_process = []
+        self.max_processes = 10000
+        self.max_calcjobs = 100
+        self.max_workflows = 100
+        self.next_priority = 0

@@ -4,8 +4,8 @@ from aiida.cmdline.utils import decorators, echo
 from aiida.cmdline.params import arguments, options
 from aiida_workgraph.engine.scheduler.client import (
     get_scheduler_client,
-    get_all_schedulers,
-    get_scheduler,
+    get_all_scheduler_nodes,
+    get_scheduler_node,
 )
 from aiida_workgraph.engine.scheduler.scheduler import Scheduler
 from aiida_workgraph.orm.scheduler import SchedulerNode
@@ -22,23 +22,35 @@ def scheduler():
 @decorators.requires_loaded_profile()
 def scheduler_list():
     """Show a list of scheduler"""
-    schedulers = get_all_schedulers()
+    schedulers = get_all_scheduler_nodes()
     echo.echo_formatted_list(schedulers, ["name"])
 
 
 @scheduler.command("add")
 @click.argument("name", required=True, type=str)
 @click.option(
-    "--max-calcjobs", type=int, required=False, help="Maximum number of calcjobs."
+    "--max-calcjobs",
+    type=int,
+    required=False,
+    help="Maximum number of calcjobs to run concurrently.",
 )
 @click.option(
-    "--max-processes", type=int, required=False, help="Maximum number of processes."
+    "--max-workflows",
+    type=int,
+    required=False,
+    help="Maximum number of top-level workflows to run concurrently.",
 )
-def scheduler_add(name, max_calcjobs, max_processes):
+@click.option(
+    "--max-processes",
+    type=int,
+    required=False,
+    help="Maximum number of processes to run concurrently.",
+)
+def scheduler_add(name, max_calcjobs, max_workflows, max_processes):
     """Add a scheduler."""
 
     click.echo("Adding the scheduler ...")
-    scheduler = get_scheduler(name=name)
+    scheduler = get_scheduler_node(name=name)
     if scheduler:
         echo.echo_error(f"Scheduler `{name}` already exists.")
         return
@@ -46,6 +58,8 @@ def scheduler_add(name, max_calcjobs, max_processes):
     node.name = name
     if max_calcjobs:
         node.max_calcjobs = max_calcjobs
+    if max_workflows:
+        node.max_workflows = max_workflows
     if max_processes:
         node.max_processes = max_processes
     node.store()
@@ -58,7 +72,7 @@ def scheduler_delete(name):
     """Delete a scheduler."""
     from aiida.tools import delete_nodes
 
-    scheduler = get_scheduler(name=name)
+    scheduler = get_scheduler_node(name=name)
     if not scheduler:
         echo.echo_error(f"Scheduler `{name}` not found.")
         return
@@ -78,14 +92,26 @@ def scheduler_delete(name):
 @click.argument("name", required=False, type=str)
 @click.option("--foreground", is_flag=True, help="Run in foreground.")
 @click.option(
-    "--max-calcjobs", type=int, required=False, help="Maximum number of calcjobs."
+    "--max-calcjobs",
+    type=int,
+    required=False,
+    help="Maximum number of calcjobs to run concurrently.",
 )
 @click.option(
-    "--max-processes", type=int, required=False, help="Maximum number of processes."
+    "--max-workflows",
+    type=int,
+    required=False,
+    help="Maximum number of top-level workflows to run concurrently.",
+)
+@click.option(
+    "--max-processes",
+    type=int,
+    required=False,
+    help="Maximum number of processes to run concurrently.",
 )
 @decorators.requires_broker
 @decorators.check_circus_zmq_version
-def start_scheduler(name, max_calcjobs, max_processes, foreground):
+def start_scheduler(name, max_calcjobs, max_workflows, max_processes, foreground):
     """Start the scheduler application without circus."""
     from aiida_workgraph.engine.scheduler.client import start_scheduler
 
@@ -94,6 +120,7 @@ def start_scheduler(name, max_calcjobs, max_processes, foreground):
     start_scheduler(
         name=name,
         max_calcjobs=max_calcjobs,
+        max_workflows=max_workflows,
         max_processes=max_processes,
         foreground=foreground,
     )
@@ -103,15 +130,27 @@ def start_scheduler(name, max_calcjobs, max_processes, foreground):
 @click.argument("name", required=True, type=str)
 @click.option("--foreground", is_flag=True, help="Run in foreground.")
 @click.option(
-    "--max-calcjobs", type=int, required=False, help="Maximum number of calcjobs."
+    "--max-calcjobs",
+    type=int,
+    required=False,
+    help="Maximum number of calcjobs to run concurrently.",
 )
 @click.option(
-    "--max-processes", type=int, required=False, help="Maximum number of processes."
+    "--max-workflows",
+    type=int,
+    required=False,
+    help="Maximum number of top-level workflows to run concurrently.",
+)
+@click.option(
+    "--max-processes",
+    type=int,
+    required=False,
+    help="Maximum number of processes to run concurrently.",
 )
 @options.TIMEOUT(default=None, required=False, type=int)
 @decorators.requires_broker
 @decorators.check_circus_zmq_version
-def start(foreground, name, max_calcjobs, max_processes, timeout):
+def start(foreground, name, max_calcjobs, max_workflows, max_processes, timeout):
     """Start the scheduler application with circus."""
     from aiida_workgraph.engine.scheduler.client import get_scheduler_client
 
@@ -119,6 +158,7 @@ def start(foreground, name, max_calcjobs, max_processes, timeout):
     client = get_scheduler_client(scheduler_name=name)
     client.start_daemon(
         max_calcjobs=max_calcjobs,
+        max_workflows=max_workflows,
         max_processes=max_processes,
         foreground=foreground,
         timeout=timeout,
@@ -137,13 +177,13 @@ def stop(ctx, name, no_wait, timeout):
     Returns exit code 0 if the daemon was shut down successfully (or was not running), non-zero if there was an error.
     """
     if name:
-        scheduler = get_scheduler(name=name)
+        scheduler = get_scheduler_node(name=name)
         if not scheduler:
             echo.echo_error(f"Scheduler `{name}` not found.")
             ctx.exit(1)
         schedulers = [scheduler]
     else:
-        schedulers = get_all_schedulers()
+        schedulers = get_all_scheduler_nodes()
 
     for scheduler in schedulers:
         echo.echo("Scheduler: ", fg=echo.COLORS["report"], bold=True, nl=False)
@@ -163,16 +203,28 @@ def stop(ctx, name, no_wait, timeout):
     type=str,
 )
 @click.option(
-    "--max-calcjobs", type=int, required=False, help="Maximum number of calcjobs."
+    "--max-calcjobs",
+    type=int,
+    required=False,
+    help="Maximum number of calcjobs to run concurrently.",
 )
 @click.option(
-    "--max-processes", type=int, required=False, help="Maximum number of processes."
+    "--max-workflows",
+    type=int,
+    required=False,
+    help="Maximum number of top-level workflows to run concurrently.",
+)
+@click.option(
+    "--max-processes",
+    type=int,
+    required=False,
+    help="Maximum number of processes to run concurrently.",
 )
 @click.option("--foreground", is_flag=True, help="Run in foreground.")
 @decorators.with_dbenv()
 @decorators.requires_broker
 @decorators.check_circus_zmq_version
-def start_circus(name, max_calcjobs, max_processes, foreground):
+def start_circus(name, max_calcjobs, max_workflows, max_processes, foreground):
     """This will actually launch the circus daemon, either daemonized in the background or in the foreground.
 
     If run in the foreground all logs are redirected to stdout.
@@ -181,7 +233,10 @@ def start_circus(name, max_calcjobs, max_processes, foreground):
     """
 
     get_scheduler_client(scheduler_name=name)._start_daemon(
-        max_calcjobs=max_calcjobs, max_processes=max_processes, foreground=foreground
+        max_calcjobs=max_calcjobs,
+        max_workflows=max_workflows,
+        max_processes=max_processes,
+        foreground=foreground,
     )
 
 
@@ -201,36 +256,37 @@ def status(ctx, name, timeout):
     Returns exit code 0 if all requested daemons are running, else exit code 3.
     """
     from aiida.engine.daemon.client import DaemonException
+    from tabulate import tabulate
 
     if name:
-        scheduler = get_scheduler(name=name)
+        scheduler = get_scheduler_node(name=name)
         schedulers = [scheduler] if scheduler else []
     else:
-        schedulers = get_all_schedulers()
+        schedulers = get_all_scheduler_nodes()
 
-    print(
-        "Name                status      pk   waiting  running   calcjob  max_calcjobs max_processes"
-    )
-    # for scheduler in schedulers:
+    HEADERS = ["Name", "status", "pk", "waiting", "process", "calcjob", "workflow"]
 
-    for scheduler in schedulers:
-        echo.echo(f"{scheduler.name:<20}", bold=True, nl=False)
-
+    table = []
+    for s in schedulers:
         try:
-            result = Scheduler.get_status(name=scheduler.name)
-            if result:
-                echo.echo("Running", fg=echo.COLORS["success"], nl=False)
-            else:
-                echo.echo("Stopped", fg=echo.COLORS["error"], nl=False)
-            echo.echo(f"  {scheduler.pk:<10}", nl=False)
-            echo.echo(f"  {len(scheduler.waiting_process):<8}", nl=False)
-            echo.echo(f"  {len(scheduler.running_process):<8}", nl=False)
-            echo.echo(f"  {len(scheduler.running_calcjob):<8}", nl=False)
-            echo.echo(f"  {scheduler.max_calcjobs:<8}", nl=False)
-            echo.echo(f"  {scheduler.max_processes:<8}")
-        except DaemonException as exception:
-            echo.echo_error(str(exception))
-            continue
+            running = Scheduler.get_status(name=s.name)
+            status = "Running" if running else "Stopped"
+            status_colored = click.style(status, fg="green" if running else "red")
+
+            row = [
+                s.name,
+                status_colored,
+                s.pk,
+                len(s.waiting_process),
+                f"{len(s.running_process)}/{s.max_processes}",
+                f"{len(s.running_calcjob)}/{s.max_calcjobs}",
+                f"{len(s.running_workflow)}/{s.max_workflows}",
+            ]
+            table.append(row)
+        except DaemonException as exc:
+            echo.echo_error(str(exc))
+
+    echo.echo(tabulate(table, headers=HEADERS, tablefmt="plain", stralign="left"))
 
 
 @scheduler.command("show")
@@ -248,7 +304,7 @@ def scheduler_show(name, timeout):
     from tabulate import tabulate
 
     builder = CalculationQueryBuilder()
-    scheduler = get_scheduler(name=name)
+    scheduler = get_scheduler_node(name=name)
     if not scheduler:
         echo.echo_error(f"Scheduler `{name}` not found.")
         return
@@ -288,13 +344,15 @@ def scheduler_show(name, timeout):
     echo.echo(tabulated)
     echo.echo(f"\nTotal results: {len(projected)}\n")
 
-    scheduler = get_scheduler(name=name)
+    scheduler = get_scheduler_node(name=name)
     echo.echo(f"name: {scheduler.name}")
     echo.echo(f"pk: {scheduler.pk}")
     echo.echo(f"running_process: {len(running_process)}")
     echo.echo(f"waiting_process: {len(waiting_process)}")
+    echo.echo(f"running_workflow: {len(scheduler.running_workflow)}")
     echo.echo(f"running_calcjob: {len(scheduler.running_calcjob)}")
     echo.echo(f"max_calcjobs: {scheduler.max_calcjobs}")
+    echo.echo(f"max_workflows: {scheduler.max_workflows}")
     echo.echo(f"max_processes: {scheduler.max_processes}")
 
 
@@ -344,7 +402,24 @@ def play_processes(name, processes, timeout):
         Scheduler.play_processes(name=name, pks=pks, timeout=timeout)
     except kiwipy.exceptions.UnroutableError:
         echo.echo_error(
-            f"Failed to set max_processes for scheduler {name}. Is the scheduler running?"
+            f"Failed to play processes for scheduler {name}. Is the scheduler running?"
+        )
+
+
+@scheduler.command()
+@click.argument("name", required=True, type=str)
+@arguments.PROCESSES()
+@options.TIMEOUT(default=None, required=False, type=int)
+@decorators.requires_broker
+@decorators.check_circus_zmq_version
+def repair_processes(name, processes, timeout):
+    """Repair processes in the scheduler."""
+    pks = [p.pk for p in processes]
+    try:
+        Scheduler.repair_processes(name=name, pks=pks, timeout=timeout)
+    except kiwipy.exceptions.UnroutableError:
+        echo.echo_error(
+            f"Failed to play processes for scheduler {name}. Is the scheduler running?"
         )
 
 
