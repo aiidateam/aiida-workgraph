@@ -289,7 +289,7 @@ class SchedulerNode(Sealable, Data):
         """Set the next priority for the process."""
         self.base.attributes.set(self.NEXT_PRIORITY, value)
 
-    def get_process_priority(self) -> int:
+    def get_process_priority(self) -> dict:
         waiting_list = self.waiting_process
         if not waiting_list:
             return {}

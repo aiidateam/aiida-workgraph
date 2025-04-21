@@ -66,8 +66,47 @@ def test_scheduler_set_limit() -> None:
 
 
 def test_scheduler_consume_process() -> None:
+    # set max_calcjobs and max_workflows to 0 so that not process wiil be consumed
+    s = Scheduler(name="test", max_calcjobs=0, max_workflows=0, max_processes=5)
+    # Running process should be added to the running list
+    wf_node = WorkflowNode().store()
+    wf_node.set_process_state("running")
+    s._add_process(wf_node)
+    # Created process should be added to the waiting list
+    calc_node = CalcJobNode().store()
+    calc_node.set_process_state("created")
+    s._add_process(calc_node)
+    wf_node = WorkflowNode().store()
+    wf_node.set_process_state("created")
+    s._add_process(wf_node)
+    assert len(s.node.waiting_process) == 2
+    assert len(s.node.running_process) == 1
+    assert len(s.node.running_workflow) == 1
+    assert s.node.get_process_priority() == {calc_node.pk: -1, wf_node.pk: -2}
+    # A finished process should not be added to the waiting list
+    calc_node = CalcJobNode().store()
+    calc_node.set_process_state("finished")
+    s._add_process(calc_node)
+    assert len(s.node.waiting_process) == 2
+    # set the max_calcjobs to 1
+    s.node.max_calcjobs = 1
+    s.consume_process_queue()
+    assert len(s.node.waiting_process) == 1
+    assert len(s.node.running_process) == 2
+    assert len(s.node.running_calcjob) == 1
+    # no process will be consumed because the max_workflows is 0
+    s.consume_process_queue()
+    assert len(s.node.waiting_process) == 1
+    s.node.max_workflows = 2
+    s.consume_process_queue()
+    assert len(s.node.waiting_process) == 0
+    assert len(s.node.running_process) == 3
+    assert len(s.node.running_workflow) == 2
+
+
+def test_scheduler_capacity() -> None:
     """Test Scheduler consume process."""
-    s = Scheduler(name="test2", max_calcjobs=1, max_workflows=1, max_processes=5)
+    s = Scheduler(name="test", max_calcjobs=1, max_workflows=1, max_processes=5)
     assert s.node.max_calcjobs == 1
     assert s.node.max_workflows == 1
     assert s.node.max_processes == 5
@@ -82,6 +121,7 @@ def test_scheduler_consume_process() -> None:
     assert SchedulerNode.is_top_level_workflow(wf_node) is True
     assert s._has_capacity(calc_node) is False
     assert s._has_capacity(wf_node) is False
+    s.reset()
 
 
 @pytest.mark.usefixtures("started_daemon_client")

@@ -398,6 +398,14 @@ class Scheduler:
                 break
 
             node = self._validate_before_continue(pk)
+            if node is False:
+                # process is already terminated or doesn't exist anymore
+                self.node.remove_waiting_process(pk)
+                LOGGER.warning(
+                    "Try to launch process pk=%d, but it is already terminated or doesn't exist anymore.",
+                    pk,
+                )
+                continue
 
             if not self._has_capacity(node):
                 # queue is full – but there *is* work waiting
