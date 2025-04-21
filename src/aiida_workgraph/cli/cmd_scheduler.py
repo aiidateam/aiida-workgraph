@@ -256,6 +256,7 @@ def status(ctx, name, timeout):
     Returns exit code 0 if all requested daemons are running, else exit code 3.
     """
     from aiida.engine.daemon.client import DaemonException
+    from tabulate import tabulate
 
     if name:
         scheduler = get_scheduler_node(name=name)
@@ -263,29 +264,29 @@ def status(ctx, name, timeout):
     else:
         schedulers = get_all_scheduler_nodes()
 
-    print(
-        "Name                status      pk   waiting  running   calcjob  max_calcjobs max_workflows"
-    )
-    # for scheduler in schedulers:
+    HEADERS = ["Name", "status", "pk", "waiting", "process", "calcjob", "workflow"]
 
-    for scheduler in schedulers:
-        echo.echo(f"{scheduler.name:<20}", bold=True, nl=False)
-
+    table = []
+    for s in schedulers:
         try:
-            result = Scheduler.get_status(name=scheduler.name)
-            if result:
-                echo.echo("Running", fg=echo.COLORS["success"], nl=False)
-            else:
-                echo.echo("Stopped", fg=echo.COLORS["error"], nl=False)
-            echo.echo(f"  {scheduler.pk:<10}", nl=False)
-            echo.echo(f"  {len(scheduler.waiting_process):<8}", nl=False)
-            echo.echo(f"  {len(scheduler.running_workflow):<8}", nl=False)
-            echo.echo(f"  {len(scheduler.running_calcjob):<8}", nl=False)
-            echo.echo(f"  {scheduler.max_calcjobs:<8}", nl=False)
-            echo.echo(f"  {scheduler.max_workflows:<8}")
-        except DaemonException as exception:
-            echo.echo_error(str(exception))
-            continue
+            running = Scheduler.get_status(name=s.name)
+            status = "Running" if running else "Stopped"
+            status_colored = click.style(status, fg="green" if running else "red")
+
+            row = [
+                s.name,
+                status_colored,
+                s.pk,
+                len(s.waiting_process),
+                f"{len(s.running_process)}/{s.max_processes}",
+                f"{len(s.running_calcjob)}/{s.max_calcjobs}",
+                f"{len(s.running_workflow)}/{s.max_workflows}",
+            ]
+            table.append(row)
+        except DaemonException as exc:
+            echo.echo_error(str(exc))
+
+    echo.echo(tabulate(table, headers=HEADERS, tablefmt="plain", stralign="left"))
 
 
 @scheduler.command("show")

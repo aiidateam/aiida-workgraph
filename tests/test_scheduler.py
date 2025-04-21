@@ -12,16 +12,22 @@ import datetime
 
 def test_scheduler_node_init() -> None:
     """Test Scheduler node."""
-    s = SchedulerNode(name="test", max_calcjobs=1, max_workflows=2, max_processes=3)
-    assert s.name == "test"
+    s = SchedulerNode(
+        name="test_scheduler_node_init",
+        max_calcjobs=1,
+        max_workflows=2,
+        max_processes=3,
+    )
+    assert s.name == "test_scheduler_node_init"
     assert s.max_calcjobs == 1
     assert s.max_workflows == 2
     assert s.max_processes == 3
+    s.reset()
 
 
 def test_scheduler_node_append_process() -> None:
     """Test Scheduler node."""
-    s = SchedulerNode(name="test")
+    s = SchedulerNode(name="test_scheduler_node_append_process")
     calc_node = CalcJobNode().store()
     wf_node = WorkflowNode().store()
     s.append_running_process(calc_node.pk)
@@ -37,15 +43,19 @@ def test_scheduler_node_append_process() -> None:
     s.remove_running_process(wf_node.pk)
     assert s.running_process == []
     assert s.running_workflow == []
+    s.reset()
 
 
 def test_scheduler_init() -> None:
     """Test Scheduler."""
-    s = Scheduler(name="test", max_calcjobs=1, max_workflows=2, max_processes=3)
-    assert s.name == "test"
+    s = Scheduler(
+        name="test_scheduler_init", max_calcjobs=1, max_workflows=2, max_processes=3
+    )
+    assert s.name == "test_scheduler_init"
     assert s.node.max_calcjobs == 1
     assert s.node.max_workflows == 2
     assert s.node.max_processes == 3
+    s.reset()
 
 
 @pytest.mark.usefixtures("started_scheduler_client")
@@ -67,7 +77,12 @@ def test_scheduler_set_limit() -> None:
 
 def test_scheduler_consume_process() -> None:
     # set max_calcjobs and max_workflows to 0 so that not process wiil be consumed
-    s = Scheduler(name="test", max_calcjobs=0, max_workflows=0, max_processes=5)
+    s = Scheduler(
+        name="test_scheduler_consume_process",
+        max_calcjobs=0,
+        max_workflows=0,
+        max_processes=5,
+    )
     # Running process should be added to the running list
     wf_node = WorkflowNode().store()
     wf_node.set_process_state("running")
@@ -106,7 +121,9 @@ def test_scheduler_consume_process() -> None:
 
 def test_scheduler_capacity() -> None:
     """Test Scheduler consume process."""
-    s = Scheduler(name="test", max_calcjobs=1, max_workflows=1, max_processes=5)
+    s = Scheduler(
+        name="test_scheduler_capacity", max_calcjobs=1, max_workflows=1, max_processes=5
+    )
     assert s.node.max_calcjobs == 1
     assert s.node.max_workflows == 1
     assert s.node.max_processes == 5
@@ -121,7 +138,6 @@ def test_scheduler_capacity() -> None:
     assert SchedulerNode.is_top_level_workflow(wf_node) is True
     assert s._has_capacity(calc_node) is False
     assert s._has_capacity(wf_node) is False
-    s.reset()
 
 
 @pytest.mark.usefixtures("started_daemon_client")
