@@ -29,13 +29,13 @@ def scheduler_client(
 
     """
     from aiida_workgraph.engine.scheduler import get_scheduler_client
-    from aiida_workgraph.engine.scheduler.client import get_scheduler
+    from aiida_workgraph.engine.scheduler.client import get_scheduler_node
     from aiida.engine.daemon.client import (
         DaemonNotRunningException,
         DaemonTimeoutException,
     )
 
-    scheduler = get_scheduler(name=scheduler_name)
+    scheduler = get_scheduler_node(name=scheduler_name)
 
     if scheduler:
         raise ValueError(
@@ -73,12 +73,26 @@ def started_scheduler_client(scheduler_client: "SchedulerClient"):
             assert started_scheduler_client.is_daemon_running
 
     """
+    from aiida_workgraph.engine.scheduler.client import (
+        get_scheduler_node,
+    )
+    import time
+
     if not scheduler_client.is_daemon_running:
         scheduler_client.start_daemon()
         assert scheduler_client.is_daemon_running
 
     logger = logging.getLogger("tests.scheduler:started_scheduler_client")
     logger.debug(f"Daemon log file is located at: {scheduler_client.daemon_log_file}")
+    # wait for scheduler to be started
+    scheduler = get_scheduler_node(name=DEFAULT_TEST_SCHEDULER_NAME)
+    timeout = 10
+    tstart = time.time()
+    while not scheduler:
+        scheduler = get_scheduler_node(name=DEFAULT_TEST_SCHEDULER_NAME)
+        time.sleep(0.5)
+        if time.time() - tstart > timeout:
+            raise TimeoutError(f"Scheduler failed to start after {timeout} seconds.")
 
     yield scheduler_client
 

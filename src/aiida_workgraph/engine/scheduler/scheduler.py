@@ -17,7 +17,7 @@ from plumpy.process_comms import (
     CONTINUE_TASK,
 )
 from aiida.common import exceptions
-from aiida.orm import load_node, QueryBuilder, Node
+from aiida.orm import load_node, QueryBuilder, Node, CalcJobNode
 from aiida.engine.processes import ProcessState
 from aiida.manage import get_manager
 from aiida.brokers.rabbitmq.utils import (
@@ -70,18 +70,24 @@ class Scheduler:
         self,
         name: str,
         max_calcjobs: Optional[int] = None,
+        max_workflows: Optional[int] = None,
         max_processes: Optional[int] = None,
         poll_interval: Union[int, float] = 60,
         reset: bool = False,
     ):
         """
         :param name: A unique name for this scheduler.
-        :param max_calcjobs: Maximum number of processes to run concurrently
+        :param max_calcjobs: Maximum number of calcjobs to run concurrently
+        :param max_workflows: Maximum number of top-level workflows to run concurrently
         :param max_processes: Maximum number of processes to run concurrently
         :param poll_interval: Interval in seconds for the fallback polling mechanism
                               (if an AiiDA broadcast is missed).
         """
         self.name = name
+        self._max_calcjobs = max_calcjobs
+        self._max_workflows = max_workflows
+        self._max_processes = max_processes
+
         self._node: SchedulerNode = None
         self._poll_interval = poll_interval
 
@@ -112,11 +118,6 @@ class Scheduler:
 
         self.process_controller = get_manager().get_process_controller()
 
-        if max_calcjobs is not None:
-            self.node.max_calcjobs = max_calcjobs
-        if max_processes is not None:
-            self.node.max_processes = max_processes
-
     @property
     def node(self) -> SchedulerNode:
         """Return (and lazily create) the SchedulerNode that stores all data for this scheduler."""
@@ -125,9 +126,12 @@ class Scheduler:
             qb.append(SchedulerNode, filters={"attributes.name": self.name})
             if qb.count() == 0:
                 # Create a new SchedulerNode
-                self._node = SchedulerNode()
-                self._node.name = self.name
-                self._node.next_priority = 0
+                self._node = SchedulerNode(
+                    name=self.name,
+                    max_calcjobs=self._max_calcjobs,
+                    max_workflows=self._max_workflows,
+                    max_processes=self._max_processes,
+                )
                 self._node.store()
                 LOGGER.info(
                     f"Created new SchedulerNode for {self.name}, pk={self._node.pk}"
@@ -149,10 +153,7 @@ class Scheduler:
         """
         Reset the scheduler by clearing the waiting and running process lists.
         """
-        self.node.waiting_process = []
-        self.node.running_process = []
-        self.node.running_calcjob = []
-        self.node.next_priority = 0
+        self.node.reset()
         LOGGER.info("Scheduler '%s' reset.", self.name)
 
     def _get_next_priority(self) -> int:
@@ -290,7 +291,9 @@ class Scheduler:
         if intent.lower() == Intent.PLAY:
             pks = msg[MESSAGE_TEXT_KEY]
             for pk in pks:
-                self._loop.call_soon(self.continue_process, pk)
+                node = self._validate_before_continue(pk)
+                if node is not False:
+                    self._loop.call_soon(self.continue_process, pk)
 
         if intent.lower() == Intent.REPAIR:
             pks = msg[MESSAGE_TEXT_KEY]
@@ -303,9 +306,15 @@ class Scheduler:
             if identifier.lower() == "max_calcjobs":
                 self.node.max_calcjobs = value
                 self.consume_process_queue()
+                return self.node.max_calcjobs
+            elif identifier.lower() == "max_workflows":
+                self.node.max_workflows = value
+                self.consume_process_queue()
+                return self.node.max_workflows
             elif identifier.lower() == "max_processes":
                 self.node.max_processes = value
                 self.consume_process_queue()
+                return self.node.max_processes
             elif identifier.lower() == "priority":
                 processes = data.get("processes")
                 for pk in processes:
@@ -318,6 +327,7 @@ class Scheduler:
             status_info = {
                 "priority": self.node.get_process_priority(),
                 "running_process": self.node.running_process,
+                "running_workflow": self.node.running_workflow,
                 "running_calcjob": self.node.running_calcjob,
             }
             return status_info
@@ -345,39 +355,62 @@ class Scheduler:
             return parent_node.base.extras.get(SCHEDULER_PRIORITY_KEY, 0)
         return self._get_next_priority()
 
-    def should_run_next_process(self) -> bool:
+    def _has_capacity(self, node: Node) -> bool:
+        """Return True if we have a free slot to run *node* (CalcJob or WorkChain)."""
+        if isinstance(node, CalcJobNode):
+            return len(self.node.running_calcjob) < self.node.max_calcjobs
+        if SchedulerNode.is_top_level_workflow(node):
+            return len(self.node.running_workflow) < self.node.max_workflows
+        return len(self.node.running_process) < self.node.max_processes
+
+    def _next_waiting_pk(self) -> Optional[int]:
         """
-        Check if we can run another process. This is true if the number of
-        running processes is less than the maximum.
+        Return the PK of the waiting process with the **highest** priority
+        (largest integer). None if the waiting list is empty.
         """
-        cond1 = len(self.node.running_calcjob) < self.node.max_calcjobs
-        cond2 = len(self.node.running_process) < self.node.max_processes
-        return cond1 and cond2
+        priorities = self.node.get_process_priority()
+        return max(priorities, key=priorities.get) if priorities else None
+
+    def _log_summary(self):
+        LOGGER.info(
+            "waiting=%d  process=%d/%d  calcjob=%d/%d, workflow=%d/%d",
+            len(self.node.waiting_process),
+            len(self.node.running_process),
+            self.node.max_processes,
+            len(self.node.running_calcjob),
+            self.node.max_calcjobs,
+            len(self.node.running_workflow),
+            self.node.max_workflows,
+        )
 
     def consume_process_queue(self) -> None:
         """
-        Attempt to start processes from the waiting queue,
-        up to the concurrency limit. We pick the next process
-        with the *highest* priority.
+        Try to start as many queued processes as the capacity limits allow.
+        Never raises – all errors are logged and the loop continues.
         """
-        LOGGER.info(
-            f"Summary: waiting= {len(self.node.waiting_process)}, "
-            f"process: {len(self.node.running_process)}/{self.node.max_processes}, "
-            f"calcjob: {len(self.node.running_calcjob)}/{self.node.max_calcjobs}"
-        )
-        # While we still have capacity, pop from waiting and continue
-        while self.should_run_next_process():
-            # pick the next waiting PK with the highest priority
-            next_pk = self._pop_highest_priority_waiting_process()
-            if next_pk is None:
-                LOGGER.info("No more processes in waiting queue.")
-                return
-            self.continue_process(next_pk)
 
-        LOGGER.info(
-            "Maximum concurrency (%d) reached, waiting for a calcjob to finish...",
-            self.node.max_calcjobs,
-        )
+        self._log_summary()
+
+        while True:
+            pk = self._next_waiting_pk()
+            if pk is None:
+                LOGGER.debug("No processes waiting; scheduler idle.")
+                break
+
+            node = self._validate_before_continue(pk)
+
+            if not self._has_capacity(node):
+                # queue is full – but there *is* work waiting
+                LOGGER.debug("Capacity full; will continue when a slot frees up.")
+                break
+
+            try:
+                self.continue_process(node)
+                self._log_summary()  # live feedback after each launch
+            except Exception:  # noqa: BLE001 – keep scheduler alive
+                LOGGER.exception("Failed launching pk=%d – skipped.", pk)
+                # failed launches are *not* removed from waiting so the user can retry
+                break
 
     def _pop_highest_priority_waiting_process(self) -> Optional[int]:
         """Return the waiting process PK with the largest 'priority' extras, or None if empty."""
@@ -452,17 +485,48 @@ class Scheduler:
                 list(non_existing_processes) + list(terminated_pks)
             )
 
-    def continue_process(self, pk: int) -> None:
+    def _validate_before_continue(self, pk: int) -> bool | Node:
+        """
+        Validate if the process can be continued.
+        This is a placeholder for any validation logic that might be needed.
+        """
+        # Check if the process is already terminated
+        try:
+            node = load_node(pk)
+            if node.is_terminated:
+                LOGGER.warning(
+                    "Try to continue process pk=%d, but it is already terminated.",
+                    pk,
+                )
+                return False
+            return node
+        except exceptions.NotExistent:
+            LOGGER.warning(
+                "Received CONTINUE_TASK for pk=%d, but it doesn't exist anymore.",
+                pk,
+            )
+            return False
+
+    def continue_process(self, node: Node) -> None:
         """
         Actually continue an AiiDA process in the daemon. Attach a callback
         so that when it finishes, we free up a slot and can launch a new one.
         """
-        LOGGER.info("Continuing process pk=%d...", pk)
-        self.call_on_process_finish(pk)
-        # Do not wait for the future's result to avoid blocking
-        self.process_controller.continue_process(pk, nowait=False, no_reply=True)
-        self.node.append_running_process(pk)
-        self.node.remove_waiting_process(pk)
+        try:
+            pk = node.pk
+            LOGGER.info("Continuing process pk=%d...", pk)
+            self.call_on_process_finish(pk)
+            # Do not wait for the future's result to avoid blocking
+            self.process_controller.continue_process(pk, nowait=False, no_reply=True)
+            self.node.append_running_process(pk)
+            self.node.remove_waiting_process(pk)
+        except Exception:
+            LOGGER.exception(
+                "Failed to continue process pk=%d. It will be removed from the scheduler.",
+                pk,
+            )
+            self.node.remove_waiting_process(pk)
+            self.node.remove_running_process(pk)
 
     def call_on_process_finish(self, pk: int) -> None:
         """
@@ -563,7 +627,7 @@ class Scheduler:
         LOGGER.info("Scheduler '%s' closed.", self.name)
 
     @classmethod
-    def get_scheduler(cls, name: str) -> SchedulerNode:
+    def get_scheduler_node(cls, name: str) -> SchedulerNode:
         """
         Return the scheduler node associated with the given name.
         """
@@ -580,7 +644,7 @@ class Scheduler:
         """
         controller = get_manager().get_process_controller()
 
-        scheduler = cls.get_scheduler(name)
+        scheduler = cls.get_scheduler_node(name)
 
         try:
             status = controller._communicator.rpc_send(
@@ -596,7 +660,7 @@ class Scheduler:
         """
         Stop the scheduler with the given name.
         """
-        scheduler = cls.get_scheduler(name)
+        scheduler = cls.get_scheduler_node(name)
         controller = get_manager().get_process_controller()
         controller._communicator.rpc_send(scheduler.pk, {"intent": "stop"})
 
@@ -605,37 +669,55 @@ class Scheduler:
         """
         Set the maximum number of calcjobs for the scheduler with the given name.
         """
-        scheduler = cls.get_scheduler(name)
+        scheduler = cls.get_scheduler_node(name)
         controller = get_manager().get_process_controller()
-        controller._communicator.rpc_send(
+        result = controller._communicator.rpc_send(
             scheduler.pk,
             {
                 "intent": "set",
                 "message": {"identifier": "max_calcjobs", "value": max_calcjobs},
             },
         )
+        return result
+
+    @classmethod
+    def set_max_workflows(cls, name: str, max_workflows: int) -> None:
+        """
+        Set the maximum number of workflows for the scheduler with the given name.
+        """
+        scheduler = cls.get_scheduler_node(name)
+        controller = get_manager().get_process_controller()
+        result = controller._communicator.rpc_send(
+            scheduler.pk,
+            {
+                "intent": "set",
+                "message": {"identifier": "max_workflows", "value": max_workflows},
+            },
+        )
+        return result
 
     @classmethod
     def set_max_processes(cls, name: str, max_processes: int) -> None:
         """
         Set the maximum number of processes for the scheduler with the given name.
         """
-        scheduler = cls.get_scheduler(name)
+        scheduler = cls.get_scheduler_node(name)
         controller = get_manager().get_process_controller()
-        controller._communicator.rpc_send(
+        result = controller._communicator.rpc_send(
             scheduler.pk,
             {
                 "intent": "set",
                 "message": {"identifier": "max_processes", "value": max_processes},
             },
         )
+        return result
 
     @classmethod
     def play_processes(cls, name: str, pks: list, timeout: int = 5) -> None:
         """
         Play processes with the given pks.
         """
-        scheduler = cls.get_scheduler(name)
+        scheduler = cls.get_scheduler_node(name)
         controller = get_manager().get_process_controller()
         controller._communicator.rpc_send(
             scheduler.pk,
@@ -666,7 +748,7 @@ class Scheduler:
         """
         Repair processes with the given pks by continuing them in the scheduler.
         """
-        scheduler = cls.get_scheduler(name)
+        scheduler = cls.get_scheduler_node(name)
         controller = get_manager().get_process_controller()
         controller._communicator.rpc_send(
             scheduler.pk,
@@ -683,7 +765,7 @@ class Scheduler:
         """
         Play a process with the given pk.
         """
-        scheduler = cls.get_scheduler(name)
+        scheduler = cls.get_scheduler_node(name)
         controller = get_manager().get_process_controller()
         controller._communicator.rpc_send(
             scheduler.pk,

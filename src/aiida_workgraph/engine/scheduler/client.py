@@ -12,6 +12,7 @@ from typing import Optional
 from aiida.common.log import AIIDA_LOGGER
 from typing import List
 import subprocess
+from aiida_workgraph.orm.scheduler import SchedulerNode
 
 WORKGRAPH_BIN = shutil.which("workgraph")
 LOGGER = AIIDA_LOGGER.getChild("engine.launch")
@@ -128,6 +129,7 @@ class SchedulerClient(DaemonClient):
     def cmd_start_daemon(
         self,
         max_calcjobs: int | None = None,
+        max_workflows: int | None = None,
         max_processes: int | None = None,
         foreground: bool = False,
     ) -> list[str]:
@@ -146,6 +148,8 @@ class SchedulerClient(DaemonClient):
 
         if max_calcjobs is not None:
             command.append(f"--max-calcjobs={max_calcjobs}")
+        if max_workflows is not None:
+            command.append(f"--max-workflows={max_workflows}")
         if max_processes is not None:
             command.append(f"--max-processes={max_processes}")
         if foreground:
@@ -156,6 +160,7 @@ class SchedulerClient(DaemonClient):
     def cmd_start_daemon_worker(
         self,
         max_calcjobs: int | None = None,
+        max_workflows: int | None = None,
         max_processes: int | None = None,
     ) -> list[str]:
         """Return the command to start a daemon worker process."""
@@ -170,18 +175,19 @@ class SchedulerClient(DaemonClient):
 
         if max_calcjobs is not None:
             command.append(f"--max-calcjobs={max_calcjobs}")
+        if max_workflows is not None:
+            command.append(f"--max-workflows={max_workflows}")
         if max_processes is not None:
             command.append(f"--max-processes={max_processes}")
 
         return command
 
-    def get_scheduler(self) -> Optional["SchedulerNode"]:
+    def get_scheduler_node(self) -> Optional[SchedulerNode]:
         """Return the scheduler node with the given name.
 
         :return: The scheduler node or None if not found.
         """
         from aiida import orm
-        from aiida_workgraph.orm.scheduler import SchedulerNode
 
         qb = orm.QueryBuilder()
         qb.append(SchedulerNode, filters={"attributes.name": self.scheduler_name})
@@ -190,6 +196,7 @@ class SchedulerClient(DaemonClient):
     def start_daemon(
         self,
         max_calcjobs: int | None = None,
+        max_workflows: int | None = None,
         max_processes: int | None = None,
         foreground: bool = False,
         wait: bool = True,
@@ -210,6 +217,7 @@ class SchedulerClient(DaemonClient):
         env = self.get_env()
         command = self.cmd_start_daemon(
             max_calcjobs=max_calcjobs,
+            max_workflows=max_workflows,
             max_processes=max_processes,
             foreground=foreground,
         )
@@ -234,6 +242,7 @@ class SchedulerClient(DaemonClient):
     def _start_daemon(
         self,
         max_calcjobs: int | None = None,
+        max_workflows: int | None = None,
         max_processes: int | None = None,
         foreground: bool = False,
     ) -> None:
@@ -271,7 +280,9 @@ class SchedulerClient(DaemonClient):
                 {
                     "cmd": " ".join(
                         self.cmd_start_daemon_worker(
-                            max_calcjobs=max_calcjobs, max_processes=max_processes
+                            max_calcjobs=max_calcjobs,
+                            max_workflows=max_workflows,
+                            max_processes=max_processes,
                         )
                     ),
                     "name": self.daemon_name,
@@ -338,23 +349,21 @@ def get_scheduler_client(
     return SchedulerClient(scheduler_name=scheduler_name, profile=profile)
 
 
-def get_all_schedulers() -> List[str]:
+def get_all_scheduler_nodes() -> List[str]:
     from aiida import orm
-    from aiida_workgraph.orm.scheduler import SchedulerNode
 
     qb = orm.QueryBuilder()
     qb.append(SchedulerNode)
     return [scheduler[0] for scheduler in qb.all()]
 
 
-def get_scheduler(name: str) -> Optional["SchedulerNode"]:
+def get_scheduler_node(name: str) -> Optional[SchedulerNode]:
     """Return the scheduler node with the given name.
 
     :param name: The name of the scheduler.
     :return: The scheduler node or None if not found.
     """
     from aiida import orm
-    from aiida_workgraph.orm.scheduler import SchedulerNode
 
     qb = orm.QueryBuilder()
     qb.append(SchedulerNode, filters={"attributes.name": name})
@@ -364,6 +373,7 @@ def get_scheduler(name: str) -> Optional["SchedulerNode"]:
 def start_scheduler(
     name: str,
     max_calcjobs: int | None = None,
+    max_workflows: int | None = None,
     max_processes: int | None = None,
     foreground: bool = False,
 ) -> None:
@@ -392,7 +402,10 @@ def start_scheduler(
 
     try:
         scheduler = Scheduler(
-            name=name, max_calcjobs=max_calcjobs, max_processes=max_processes
+            name=name,
+            max_calcjobs=max_calcjobs,
+            max_workflows=max_workflows,
+            max_processes=max_processes,
         )
     except Exception:
         LOGGER.exception("daemon worker failed to start")
