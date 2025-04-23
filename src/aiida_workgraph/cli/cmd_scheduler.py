@@ -369,7 +369,24 @@ def set_max_calcjobs(name, max_calcjobs, timeout):
         Scheduler.set_max_calcjobs(name=name, max_calcjobs=max_calcjobs)
     except kiwipy.exceptions.UnroutableError:
         echo.echo_error(
-            f"Failed to set max_processes for scheduler {name}. Is the scheduler running?"
+            f"Failed to set max_calcjobs for scheduler {name}. Is the scheduler running?"
+        )
+
+
+@scheduler.command()
+@click.argument("name", required=True, type=str)
+@click.argument("max_workflows", required=True, type=int)
+@options.TIMEOUT(default=None, required=False, type=int)
+@decorators.requires_broker
+@decorators.check_circus_zmq_version
+def set_max_workflows(name, max_workflows, timeout):
+    """Set the maximum number of running workflows."""
+
+    try:
+        Scheduler.set_max_workflows(name=name, max_workflows=max_workflows)
+    except kiwipy.exceptions.UnroutableError:
+        echo.echo_error(
+            f"Failed to set max_workflows for scheduler {name}. Is the scheduler running?"
         )
 
 
