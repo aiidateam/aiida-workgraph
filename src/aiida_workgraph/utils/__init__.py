@@ -228,6 +228,7 @@ def get_processes_latest(
     """Get the latest info of all tasks from the process."""
     import aiida
     from aiida_workgraph.orm.utils import deserialize_safe
+    from aiida_workgraph.orm.workgraph import WorkGraphNode
 
     tasks = {}
     if pk is None:
@@ -237,7 +238,7 @@ def get_processes_latest(
         # fetch the process that called by the workgraph
         for link in node.base.links.get_outgoing().all():
             if isinstance(link.node, aiida.orm.ProcessNode):
-                tasks[f"{link.node.process_label}_{link.node.pk}"] = {
+                tasks[f"{link.link_label}-{link.node.pk}"] = {
                     "pk": link.node.pk,
                     "process_type": link.node.process_type,
                     "state": link.node.process_state.value,
@@ -245,6 +246,8 @@ def get_processes_latest(
                     "mtime": link.node.mtime,
                 }
     elif item_type == "task":
+        if not isinstance(node, WorkGraphNode):
+            return tasks
         task_states = node.task_states
         task_processes = node.task_processes
         task_names = [task_name] if task_name else task_states.keys()
