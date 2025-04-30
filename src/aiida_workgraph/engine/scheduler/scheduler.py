@@ -515,13 +515,13 @@ class Scheduler:
             )
             return False
 
-    def continue_process(self, node: Node) -> None:
+    def continue_process(self, pk: int | Node) -> None:
         """
         Actually continue an AiiDA process in the daemon. Attach a callback
         so that when it finishes, we free up a slot and can launch a new one.
         """
+        pk = pk.pk if isinstance(pk, Node) else pk
         try:
-            pk = node.pk
             LOGGER.info("Continuing process pk=%d...", pk)
             self.call_on_process_finish(pk)
             # Do not wait for the future's result to avoid blocking
@@ -530,8 +530,7 @@ class Scheduler:
             self.node.remove_waiting_process(pk)
         except Exception:
             LOGGER.exception(
-                "Failed to continue process pk=%d. It will be removed from the scheduler.",
-                pk,
+                f"Failed to continue process {pk}. It will be removed from the scheduler.",
             )
             self.node.remove_waiting_process(pk)
             self.node.remove_running_process(pk)
