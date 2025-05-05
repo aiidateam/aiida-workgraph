@@ -20,7 +20,6 @@ from aiida_workgraph.orm.workgraph import WorkGraphNode
 from aiida.engine.processes.exit_code import ExitCode
 from aiida.engine.processes.process import Process
 from aiida.engine.processes.workchains.workchain import Protect, WorkChainSpec
-from aiida_workgraph.utils import update_nested_dict, get_nested_dict
 from .context_manager import ContextManager
 from .awaitable_manager import AwaitableManager
 from .task_manager import TaskManager
@@ -287,7 +286,11 @@ class WorkGraphEngine(Process, metaclass=Protect):
         # read the latest workgraph data
         self.wg = WorkGraph.load(self.node)
         # create a builtin `_context` task with its results as the context variables
-        self.ctx._task_results = {"ctx": self.wg.ctx._value}
+        self.ctx._task_results = {
+            "ctx": self.wg.ctx._value,
+            "group_inputs": self.wg.group_inputs._value,
+            "group_outputs": self.wg.group_outputs._value,
+        }
         # init task results
         self.task_manager.set_task_results()
         # while workgraph
@@ -360,30 +363,11 @@ class WorkGraphEngine(Process, metaclass=Protect):
         return submit_to_scheduler_inside_workchain(self, process, inputs, **kwargs)
 
     def finalize(self) -> t.Optional[ExitCode]:
-        """"""
+        """Finalize the workgraph.
+        Output the results of the workgraph and the new data.
+        """
         # expose outputs of the workgraph
-        group_outputs = {}
-        for output in self.wg.group_outputs:
-            names = output["from"].split(".", 1)
-            if len(names) == 1:
-                update_nested_dict(
-                    group_outputs,
-                    output["name"],
-                    self.ctx._task_results[names[0]],
-                )
-            else:
-                # expose one output of the task
-                # note, the output may not exist
-                result = get_nested_dict(
-                    self.ctx._task_results[names[0]], names[1], default=None
-                )
-                if result:
-                    update_nested_dict(
-                        group_outputs,
-                        output["name"],
-                        result,
-                    )
-        self.out_many(group_outputs)
+        self.out_many(self.ctx._task_results["group_outputs"])
         # output the new data
         if self.ctx._new_data:
             self.out("new_data", self.ctx._new_data)

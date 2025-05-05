@@ -98,7 +98,7 @@ class TaskStateManager:
                         self.ctx._task_results[name] = node.outputs
                         # self.ctx._new_data[name] = self.ctx._task_results[name]
                     self.set_task_runtime_info(task.name, "state", "FINISHED")
-                    self.task_update_ctx(name)
+                    self.update_meta_tasks(name)
                     self.process.report(
                         f"Task: {name}, type: {task.node_type}, finished."
                     )
@@ -115,7 +115,7 @@ class TaskStateManager:
                 ][0]
                 self.ctx._task_results[name] = {output_name: node}
                 self.set_task_runtime_info(task.name, "state", "FINISHED")
-                self.task_update_ctx(name)
+                self.update_meta_tasks(name)
                 self.process.report(f"Task: {name} finished.")
         else:
             self.on_task_failed(name)
@@ -160,23 +160,28 @@ class TaskStateManager:
                         self.set_task_runtime_info(task.name, "process", results)
                 elif len(output_names) > 1:
                     self.process.exit_codes.OUTPUS_NOT_MATCH_RESULTS
-            self.task_update_ctx(name)
+            self.update_meta_tasks(name)
             self.set_task_runtime_info(name, "state", "FINISHED")
             self.process.report(f"Task: {name} finished.")
         else:
             self.on_task_failed(name)
         self.update_parent_task_state(name)
 
-    def task_update_ctx(self, name: str) -> None:
+    def update_meta_tasks(self, name: str) -> None:
         """Export task results to the context based on context mapping."""
         from aiida_workgraph.utils import update_nested_dict, get_nested_dict
 
         for link in self.process.wg.links:
-            if link.from_node.name == name and link.to_node.name == "ctx":
+            if link.from_node.name == name and link.to_node.name in [
+                "ctx",
+                "group_outputs",
+            ]:
                 key = link.to_socket._scoped_name
                 result_key = link.from_socket._scoped_name
                 result = get_nested_dict(self.ctx._task_results[name], result_key)
-                update_nested_dict(self.ctx._task_results["ctx"], key, result)
+                update_nested_dict(
+                    self.ctx._task_results[link.to_node.name], key, result
+                )
 
     # --------------------------------------------------
     # Reset & removing from executed tasks
@@ -332,7 +337,7 @@ class TaskStateManager:
                         ][output._name]
             self.ctx._task_results[name] = results
             self.set_task_runtime_info(name, "state", "FINISHED")
-            self.task_update_ctx(name)
+            self.update_meta_tasks(name)
             self.process.report(f"Task: {name} finished.")
             self.update_parent_task_state(name)
 

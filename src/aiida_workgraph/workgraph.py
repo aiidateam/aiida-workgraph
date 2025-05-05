@@ -18,6 +18,7 @@ from aiida_workgraph.utils.graph import (
 from typing import Any, Dict, List, Optional, Union
 
 from node_graph.analysis import NodeGraphAnalysis
+from aiida_workgraph.sockets import SocketPool
 
 
 class WorkGraph(node_graph.NodeGraph):
@@ -47,7 +48,8 @@ class WorkGraph(node_graph.NodeGraph):
         """
         super().__init__(name, **kwargs)
         self._ctx = None
-        self.conditions = []
+        self._group_inputs = None
+        self._group_outputs = None
         self.process = None
         self.restart_process = None
         self.max_number_jobs = 1000000
@@ -64,6 +66,15 @@ class WorkGraph(node_graph.NodeGraph):
     def tasks(self) -> TaskCollection:
         """Add alias to `nodes` for WorkGraph"""
         return self.nodes
+
+    @property
+    def meta_tasks(self) -> dict:
+        """Meta tasks are the context and group inputs/outputs"""
+        return {
+            "ctx": self.ctx,
+            "group_inputs": self.group_inputs,
+            "group_outputs": self.group_outputs,
+        }
 
     def prepare_inputs(
         self, metadata: Optional[Dict[str, Any]] = None
@@ -199,12 +210,17 @@ class WorkGraph(node_graph.NodeGraph):
     def to_dict(self, should_serialize: bool = False) -> Dict[str, Any]:
         """Convert the workgraph to a dictionary."""
         wgdata = super().to_dict(should_serialize=should_serialize)
-        wgdata["context"] = self.ctx._value
+        wgdata["meta_tasks"] = {
+            key: task._value for key, task in self.meta_tasks.items()
+        }
         # separate the links connected to the context from the main links
-        wgdata["ctx_links"] = []
+        wgdata["meta_links"] = []
         for link in wgdata["links"][:]:
-            if link["from_node"] == "ctx" or link["to_node"] == "ctx":
-                wgdata["ctx_links"].append(link)
+            if (
+                link["from_node"] in self.meta_tasks
+                or link["to_node"] in self.meta_tasks
+            ):
+                wgdata["meta_links"].append(link)
                 wgdata["links"].remove(link)
         wgdata.update(
             {
@@ -212,7 +228,6 @@ class WorkGraph(node_graph.NodeGraph):
                 if self.restart_process
                 else None,
                 "max_iteration": self.max_iteration,
-                "conditions": self.conditions,
                 "max_number_jobs": self.max_number_jobs,
             }
         )
@@ -321,7 +336,6 @@ class WorkGraph(node_graph.NodeGraph):
 
     @property
     def ctx(self) -> ContextSocketNamespace:
-        from aiida_workgraph.sockets import SocketPool
 
         if self._ctx is None:
             self._ctx = ContextSocketNamespace(
@@ -337,6 +351,38 @@ class WorkGraph(node_graph.NodeGraph):
     def update_ctx(self, value: Dict[str, Any]) -> None:
         self.ctx._set_socket_value(value, link_limit=100000)
 
+    @property
+    def group_inputs(self) -> ContextSocketNamespace:
+        if self._group_inputs is None:
+            self._group_inputs = ContextSocketNamespace(
+                name="group_inputs",
+                pool=SocketPool,
+                graph=self,
+                metadata={"dynamic": True},
+            )
+        return self._group_inputs
+
+    @group_inputs.setter
+    def group_inputs(self, value: Dict[str, Any]) -> None:
+        self.group_inputs._clear()
+        self.group_inputs._set_socket_value(value, link_limit=100000)
+
+    @property
+    def group_outputs(self) -> ContextSocketNamespace:
+        if self._group_outputs is None:
+            self._group_outputs = ContextSocketNamespace(
+                name="group_outputs",
+                pool=SocketPool,
+                graph=self,
+                metadata={"dynamic": True},
+            )
+        return self._group_outputs
+
+    @group_outputs.setter
+    def group_outputs(self, value: Dict[str, Any]) -> None:
+        self.group_outputs._clear()
+        self.group_outputs._set_socket_value(value, link_limit=100000)
+
     @classmethod
     def from_dict(cls, wgdata: Dict[str, Any]) -> "WorkGraph":
         from aiida_workgraph.tasks.factory.base import BaseTaskFactory
@@ -346,7 +392,6 @@ class WorkGraph(node_graph.NodeGraph):
         wg = super().from_dict(wgdata, class_factory=BaseTaskFactory)
         for key in [
             "max_iteration",
-            "conditions",
             "max_number_jobs",
             "connectivity",
         ]:
@@ -354,27 +399,35 @@ class WorkGraph(node_graph.NodeGraph):
                 setattr(wg, key, wgdata[key])
         if "error_handlers" in wgdata:
             wg._error_handlers = wgdata["error_handlers"]
-        wg.ctx = wgdata.get("context", {})
+        meta_tasks = wgdata.pop("meta_tasks", {})
+        wg.ctx = meta_tasks.get("context", {})
+        wg.group_inputs = meta_tasks.get("group_inputs", {})
+        wg.group_outputs = meta_tasks.get("group_outputs", {})
         # for zone tasks, add their children
         for task in wg.tasks:
             if hasattr(task, "children"):
                 task.children.add(wgdata["nodes"][task.name].get("children", []))
         # add links to the context
-        for link in wgdata.get("ctx_links", []):
-            if link["from_node"] == "ctx":
-                if link["from_socket"] not in wg.ctx:
-                    wg.update_ctx({link["from_socket"]: None})
+        for link in wgdata.get("meta_links", []):
+            if link["from_node"] in wg.meta_tasks:
+                meta_task = wg.meta_tasks[link["from_node"]]
+                if link["from_socket"] not in meta_task:
+                    meta_task._set_socket_value(
+                        {link["from_socket"]: None}, link_limit=100000
+                    )
                 wg.add_link(
-                    wg.ctx[link["from_socket"]],
+                    meta_task[link["from_socket"]],
                     wg.tasks[link["to_node"]].inputs[link["to_socket"]],
                 )
-            elif link["to_node"] == "ctx":
-                wg.update_ctx(
+            elif link["to_node"] in wg.meta_tasks:
+                meta_task = wg.meta_tasks[link["to_node"]]
+                meta_task._set_socket_value(
                     {
                         link["to_socket"]: wg.tasks[link["from_node"]].outputs[
                             link["from_socket"]
                         ]
-                    }
+                    },
+                    link_limit=100000,
                 )
 
         return wg
@@ -544,7 +597,6 @@ class WorkGraph(node_graph.NodeGraph):
         self.process = None
         for task in self.tasks:
             task.reset()
-        self.conditions = []
         self.ctx = {}
         self.state = "PLANNED"
 
@@ -556,7 +608,6 @@ class WorkGraph(node_graph.NodeGraph):
             task.name = prefix + task.name
             task.graph = self
             self.tasks._append(task)
-        # self.conditions.extend(wg.conditions)
         self.update_ctx(wg.ctx._value)
         # links
         for link in wg.links:

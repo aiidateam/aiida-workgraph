@@ -62,13 +62,13 @@ class ContextSocketNamespace(TaskSocketNamespace):
 
     _identifier = "workgraph.context_namespace"
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, name, *args, **kwargs):
         from aiida_workgraph.task import Task
 
-        super().__init__(*args, **kwargs)
+        super().__init__(name, *args, **kwargs)
         # Add a temporary node, but not in the WorkGraph
         # we should disable users adding task with name `_context`
-        self._node = Task(name="ctx", graph=self._graph)
+        self._node = Task(name=name, graph=self._graph)
 
     def __setattr__(self, name: str, value: Any) -> None:
         """
