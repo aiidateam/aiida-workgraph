@@ -13,6 +13,9 @@ Create and launch workgraph
 #
 
 from aiida_workgraph import WorkGraph, task
+from aiida import load_profile
+
+load_profile()
 
 wg = WorkGraph(name="my_first_workgraph")
 
@@ -78,8 +81,8 @@ wg.add_task(add, "add1", x=wg.group_inputs.x, y=3)
 wg.add_task(add, "add2", x=wg.group_inputs.x, y=wg.tasks.add1.outputs.result)
 
 # Define group-level outputs to expose selected task results
-wg.group_outputs.sum1 = wg.tasks.add1.result
-wg.group_outputs.sum2 = wg.tasks.add2.result
+wg.group_outputs.sum1 = wg.tasks.add1.outputs.result
+wg.group_outputs.sum2 = wg.tasks.add2.outputs.result
 
 # Run the workgraph
 wg.submit(wait=True)
