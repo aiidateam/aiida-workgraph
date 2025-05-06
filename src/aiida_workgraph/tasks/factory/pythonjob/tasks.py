@@ -44,7 +44,7 @@ class BaseSerializablePythonTask(Task):
         values to AiiDA Data nodes, if needed.
         """
         for sock in input_sockets.values():
-            if not sock["metadata"].get("is_pythonjob", False):
+            if not sock["metadata"].get("extras", {}).get("is_pythonjob", False):
                 if sock["identifier"] == "workgraph.namespace":
                     cls._serialize_python_data(sock["sockets"])
                 elif sock.get("property", {}).get("value") is not None:
@@ -57,7 +57,7 @@ class BaseSerializablePythonTask(Task):
         back into raw Python objects, if needed.
         """
         for sock in input_sockets.values():
-            if not sock["metadata"].get("is_pythonjob", False):
+            if not sock["metadata"].get("extras", {}).get("is_pythonjob", False):
                 if sock["identifier"] == "workgraph.namespace":
                     cls._deserialize_python_data(sock["sockets"])
                 else:
@@ -89,8 +89,8 @@ class BaseSerializablePythonTask(Task):
             port["ports"] = []
             for name, sub_sock in socket._sockets.items():
                 if not (
-                    sub_sock._metadata.get("is_pythonjob", False)
-                    or sub_sock._metadata.get("is_builtin", False)
+                    sub_sock._metadata.extras.get("is_pythonjob", False)
+                    or sub_sock._metadata.builtin_socket
                 ):
                     if sub_sock._identifier.upper() == "WORKGRAPH.NAMESPACE":
                         port["ports"].append(self.build_function_ports(sub_sock))
@@ -117,8 +117,8 @@ class PythonJobTask(BaseSerializablePythonTask):
         function_inputs = kwargs.pop("function_inputs", {}) or {}
         for socket_in in self.inputs:
             if not (
-                socket_in._metadata.get("is_pythonjob", False)
-                or socket_in._metadata.get("is_builtin", False)
+                socket_in._metadata.extras.get("is_pythonjob", False)
+                or socket_in._metadata.builtin_socket
             ):
                 if socket_in._name not in function_inputs:
                     function_inputs[socket_in._name] = kwargs.pop(socket_in._name, None)

@@ -39,23 +39,13 @@ class WorkGraphTask(Task):
 
     def prepare_for_workgraph_task(self, kwargs: dict) -> tuple:
         """Prepare the inputs for WorkGraph task"""
-
-        wgdata = self.get_executor()["graph_data"]
-        wgdata["name"] = self.name
-        wgdata["metadata"]["group_outputs"] = self.metadata["group_outputs"]
-        # update the workgraph data by kwargs
-        for task_name, data in kwargs.items():
-            # because kwargs is updated using update_nested_dict_with_special_keys
-            # which means the data is grouped by the task name
-            for socket_name, value in data.items():
-                input = wgdata["tasks"][task_name]["inputs"]["sockets"][socket_name]
-                if input["identifier"] == "workgraph.namespace":
-                    input["value"] = value
-                else:
-                    input["property"]["value"] = value
+        # update the workgraph inputs by the kwargs
+        for socket, data in kwargs.items():
+            input = self.workgraph.group_inputs[socket]
+            input._set_socket_value(data)
         # merge the properties
         metadata = {"call_link_label": self.name}
-        inputs = {"workgraph_data": wgdata, "metadata": metadata}
+        inputs = self.workgraph.prepare_inputs(metadata=metadata)
         return inputs
 
     def execute(self, engine_process, args=None, kwargs=None, var_kwargs=None):

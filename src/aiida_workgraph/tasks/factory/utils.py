@@ -26,7 +26,7 @@ def generate_tdata(
     )
     for input in task_inputs:
         input.setdefault("metadata", {})
-        input["metadata"]["is_function_input"] = True
+        input["metadata"]["function_socket"] = True
     task_outputs = outputs
     # add built-in sockets
     for output in builtin_outputs:
