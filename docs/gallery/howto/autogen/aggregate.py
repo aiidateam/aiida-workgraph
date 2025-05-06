@@ -199,13 +199,14 @@ def aggregate(**collected_values):  # We use a keyword argument to obtain a dict
 # For this use case it is more convenient to use the graph_builder as we can
 # expose the context under a more convenient name.
 @task.graph_builder(
-    outputs=[{"name": "result", "from": "ctx.generated"}]
+    outputs=[{"name": "result"}]
 )  # this port is created by `update_ctx`
 def generator_loop(nb_iterations: int):
     wg = WorkGraph()
     for i in range(nb_iterations):  # this can be chosen as wanted
         generator_task = wg.add_task(generator, name=f"generator{i}", seed=i)
         wg.update_ctx({f"generated.seed{i}": generator_task.outputs.result})
+    wg.group_outputs.result = wg.ctx.generated
     return wg
 
 

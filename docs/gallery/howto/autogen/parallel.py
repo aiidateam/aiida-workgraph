@@ -87,7 +87,7 @@ generate_node_graph(wg.pk)
 #
 
 
-@task.graph_builder(outputs=[{"name": "result", "from": "ctx.mul"}])
+@task.graph_builder(outputs=[{"name": "result"}])
 def multiply_parallel_gather(X, y):
     wg = WorkGraph()
     for key, value in X.items():
@@ -95,6 +95,7 @@ def multiply_parallel_gather(X, y):
         # add result of multiply1 to `self.context.mul`
         # self.context.mul is a dict {"a": value1, "b": value2, "c": value3}
         wg.update_ctx({f"mul.{key}": multiply1.outputs.result})
+        wg.group_outputs.result = wg.ctx.mul
     return wg
 
 

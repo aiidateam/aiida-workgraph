@@ -208,13 +208,14 @@ def decorated_add_multiply(decorated_add, decorated_multiply) -> Callable:
 def decorated_add_multiply_group(decorated_add, decorated_multiply) -> Callable:
     """Generate a decorated node for test."""
 
-    @task.graph_builder(outputs=[{"name": "result", "from": "multiply1.result"}])
+    @task.graph_builder(outputs=[{"name": "result"}])
     def add_multiply_group(x, y, z):
         wg = WorkGraph("add_multiply_group")
         add1 = wg.add_task(decorated_add, name="add1", x=x, y=y)
         multiply = wg.add_task(decorated_multiply, name="multiply1", x=z)
         # link the output of a task to the input of another task
         wg.add_link(add1.outputs[0], multiply.inputs["y"])
+        wg.group_outputs.result = multiply.outputs.result
         return wg
 
     return add_multiply_group

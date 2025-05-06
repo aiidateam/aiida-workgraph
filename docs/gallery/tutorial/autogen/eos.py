@@ -184,7 +184,7 @@ print("B: {B}\nv0: {v0}\ne0: {e0}\nv0: {v0}".format(**data))
 from aiida_workgraph import WorkGraph, task, active_map_zone, active_graph
 
 
-@task.graph_builder(outputs=[{"name": "result", "from": "eos.result"}])
+@task.graph_builder(outputs=[{"name": "result"}])
 def eos_workgraph(
     structure: orm.StructureData = None, scales: list = None, scf_inputs: dict = None
 ):
@@ -196,6 +196,7 @@ def eos_workgraph(
             )
             scf_task.set(scf_inputs)
         wg.add_task(eos, name="eos", datas=scf_task.outputs.output_parameters)
+        wg.group_outputs.result = wg.tasks.eos.outputs.result
         return wg
 
 

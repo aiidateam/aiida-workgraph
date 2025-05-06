@@ -111,25 +111,26 @@ generate_node_graph(wg.pk)
 # We add `task.graph_builder` decorator to a function to define a graph builder
 # function. The function constructs a WorkGraph based on the inputs, and returns
 # it at the end.
-# We can expose the outputs of the tasks as the outputs of the WorkGraph:
+# We can expose the outputs of the WorkGraph as the outputs of the task.
 #
 # .. code-block:: python
 #
-#     @task.graph_builder(outputs = [{"name": "multiply", "from": "multiply.result"}])
+#     @task.graph_builder(outputs = [{"name": "multiply"}])
 #
-# This will expose the `result` output of the `multiply` task as the `multiply` output of the WorkGraph.
+# This will expose the `result` output of the workgraph as the `multiply` output of the task.
 #
 
 
 # We use task.graph_builder decorator and expose the output of the "multiply"
 # task as the output of the graph builder function.
-@task.graph_builder(outputs=[{"name": "multiply", "from": "multiply.result"}])
+@task.graph_builder(outputs=[{"name": "multiply"}])
 def add_multiply(x, y, z):
     # Create a WorkGraph
     wg = WorkGraph()
     wg.add_task(add, name="add", x=x, y=y)
     wg.add_task(multiply, name="multiply", x=z)
     wg.add_link(wg.tasks.add.outputs[0], wg.tasks.multiply.inputs.y)
+    wg.group_outputs.multiply = wg.tasks.multiply.outputs.result
     # Don't forget to return the `wg`
     return wg
 
@@ -197,7 +198,7 @@ def add_one(x):
     return x + 1
 
 
-@task.graph_builder(outputs=[{"name": "result", "from": "ctx.task_out"}])
+@task.graph_builder(outputs=[{"name": "result"}])
 def for_loop(nb_iterations: Int):
     wg = WorkGraph()
     for i in range(nb_iterations.value):
@@ -212,6 +213,7 @@ def for_loop(nb_iterations: Int):
 
     # Put result of the task to the context under the name task_out
     wg.update_ctx({"task_out": task.outputs.result})
+    wg.group_outputs.result = wg.ctx.task_out
     # If want to know more about the usage of the context please refer to the
     # context howto in the documentation
     return wg
@@ -249,7 +251,7 @@ def modulo_two(x):
     return x % 2
 
 
-@task.graph_builder(outputs=[{"name": "result", "from": "ctx.task_out"}])
+@task.graph_builder(outputs=[{"name": "result"}])
 def if_then_else(i: Int):
     wg = WorkGraph()
     if i.value < 2:
@@ -259,6 +261,7 @@ def if_then_else(i: Int):
 
     # same concept as before, please read the for loop example for explanation
     wg.update_ctx({"task_out": task.outputs.result})
+    wg.group_outputs.result = wg.ctx.task_out
     return wg
 
 

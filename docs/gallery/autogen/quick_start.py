@@ -198,13 +198,14 @@ def multiply(x, y):
 
 # use task.graph_builder decorator, expose the "result" output of "multiply" task
 # as the "multiply" output of the `WorkGraph`.
-@task.graph_builder(outputs=[{"name": "multiply", "from": "multiply.result"}])
+@task.graph_builder(outputs=[{"name": "multiply"}])
 def add_multiply(x, y, z):
     # Create a WorkGraph
     wg = WorkGraph()
     wg.add_task(add, name="add", x=x, y=y)
     wg.add_task(multiply, name="multiply", x=z)
     wg.add_link(wg.tasks.add.outputs.result, wg.tasks.multiply.inputs.y)
+    wg.group_outputs.multiply = wg.tasks.multiply.outputs.result
     # don't forget to return the `wg`
     return wg
 
