@@ -388,7 +388,12 @@ class GraphBuilderTask(Task):
             wg = executor(*args, **kwargs, **var_kwargs)
         wg.name = self.name
 
-        wg.group_outputs = self.metadata["group_outputs"]
+        for group_output in self.metadata["group_outputs"]:
+            task_name, socket_name = group_output["from"].split(".", 1)
+            wg.group_outputs._set_socket_value(
+                {group_output["name"]: wg.tasks[task_name].outputs[socket_name]},
+                link_limit=100000,
+            )
         wg.parent_uuid = engine_process.node.uuid
         inputs = wg.prepare_inputs(metadata={"call_link_label": self.name})
         if self.action == "PAUSE":

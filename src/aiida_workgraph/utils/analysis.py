@@ -27,7 +27,7 @@ class WorkGraphSaver:
         wgdata.setdefault("tasks", {})
         wgdata.setdefault("links", [])
         wgdata.setdefault("error_handlers", {})
-        wgdata.setdefault("meta_tasks", {})
+        wgdata.setdefault("meta_sockets", {})
         self.wgdata = wgdata
         self.name = wgdata["name"]
         self.clean_hanging_links()
@@ -212,4 +212,4 @@ class WorkGraphSaver:
             self.task_error_handlers[name] = task.pop("error_handlers", {})
             self.wgdata["tasks"][name] = serialize(task)
         self.workgraph_error_handlers = self.wgdata.pop("error_handlers")
-        self.wgdata["meta_tasks"] = serialize(self.wgdata["meta_tasks"])
+        self.wgdata["meta_sockets"] = serialize(self.wgdata["meta_sockets"])

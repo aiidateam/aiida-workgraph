@@ -367,6 +367,7 @@ class WorkGraphEngine(Process, metaclass=Protect):
         Output the results of the workgraph and the new data.
         """
         # expose outputs of the workgraph
+        self.task_manager.state_manager.update_meta_tasks("ctx")
         self.out_many(self.ctx._task_results["group_outputs"])
         # output the new data
         if self.ctx._new_data:

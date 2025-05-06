@@ -1,10 +1,26 @@
 from aiida_workgraph import WorkGraph
 from typing import Callable
+from aiida import orm
 
 
 def test_inputs_outptus(wg_calcfunction: WorkGraph) -> None:
     """Test the inputs and outputs of the WorkGraph."""
     wg = WorkGraph(name="test_inputs_outptus")
+    wg_calcfunction.group_inputs = {"x": 1, "y": 2}
+    wg_calcfunction.group_outputs.diff = wg_calcfunction.tasks.sumdiff1.outputs.diff
+    wg_calcfunction.group_outputs.sum = wg_calcfunction.tasks.sumdiff2.outputs.sum
+    task1 = wg.add_task(wg_calcfunction, name="add1")
+    assert len(task1.inputs) == 3
+    assert len(task1.outputs) == 4
+    assert "x" in task1.inputs
+    assert "y" in task1.inputs
+    assert "sum" in task1.outputs
+
+
+def test_inputs_outptus_auto_generate(wg_calcfunction: WorkGraph) -> None:
+    """Test the inputs and outputs of the WorkGraph."""
+    wg = WorkGraph(name="test_inputs_outptus")
+    # this will generate the group inputs and outputs automatically
     task1 = wg.add_task(wg_calcfunction, name="add1")
     ninput = 0
     for sub_task in wg_calcfunction.tasks:
@@ -23,15 +39,17 @@ def test_build_task_from_workgraph(decorated_add: Callable) -> None:
     # create a sub workgraph
     from aiida_workgraph.collection import TaskCollection
 
+    x = orm.Int(1).store()
+
     sub_wg = WorkGraph("build_task_from_workgraph")
-    sub_wg.add_task(decorated_add, name="add1", x=1, y=3)
+    sub_wg.add_task(decorated_add, name="add1", x=x, y=3)
     sub_wg.add_task(decorated_add, name="add2", x=2, y=sub_wg.tasks.add1.outputs.result)
     #
     wg = WorkGraph("build_task_from_workgraph")
     add1_task = wg.add_task(decorated_add, name="add1", x=1, y=3)
     wg_task = wg.add_task(sub_wg, name="sub_wg")
     # the default value of the namespace is None
-    assert wg_task.inputs["add1"]._value == {}
+    assert wg_task.inputs["add1"]._value == {"x": x, "y": 3}
     assert hasattr(wg.tasks.sub_wg, "workgraph")
     assert hasattr(wg.tasks.sub_wg, "links")
     assert hasattr(wg.tasks.sub_wg, "tasks")

@@ -25,6 +25,7 @@ class Task(GraphNode):
     OutputCollectionClass = TaskSocketNamespace
     PropertyCollectionClass = WorkGraphPropertyCollection
 
+    identifier: str = "workgraph.task"
     is_aiida_component = False
     _error_handlers = None
 

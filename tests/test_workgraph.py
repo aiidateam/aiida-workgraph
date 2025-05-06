@@ -178,10 +178,7 @@ def test_extend_workgraph(decorated_add_multiply_group):
 def test_workgraph_group_outputs(decorated_add):
     wg = WorkGraph("test_workgraph_group_outputs")
     wg.add_task(decorated_add, "add1", x=2, y=3)
-    wg.group_outputs = [
-        {"name": "sum", "from": "add1.result"},
-        # {"name": "add1", "from": "add1"},
-    ]
+    wg.group_outputs.sum = wg.tasks.add1.outputs.result
     wg.run()
     assert wg.process.outputs.sum.value == 5
     # assert wg.process.outputs.add1.result.value == 5

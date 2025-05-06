@@ -91,35 +91,20 @@ class WorkGraphTaskFactory(BaseTaskFactory):
         workgraph: "WorkGraph",
     ):
         tdata = {"metadata": {"node_type": "workgraph"}}
-        inputs = {"name": "inputs", "identifier": "workgraph.namespace", "sockets": {}}
         outputs = {
             "name": "outputs",
             "identifier": "workgraph.namespace",
             "sockets": {},
         }
-        group_outputs = []
         # add all the inputs/outputs from the tasks in the workgraph
         # builtin_input_names = [input["name"] for input in builtin_inputs]
-        builtin_output_names = [output["name"] for output in builtin_outputs]
-
-        for task in workgraph.tasks:
-            # inputs
-            data = task.inputs._to_dict()
-            data["name"] = task.name
-            inputs["sockets"][task.name] = data
-            # outputs
-            data = task.outputs._to_dict()
-            data["name"] = task.name
-            outputs["sockets"][task.name] = data
-            for socket in task.outputs:
-                if socket._name in builtin_output_names:
-                    continue
-                group_outputs.append(
-                    {
-                        "name": f"{task.name}.{socket._name}",
-                        "from": f"{task.name}.{socket._name}",
-                    }
-                )
+        # generate group inputs/outputs if not exist
+        if len(workgraph.group_inputs) == 0:
+            workgraph.generate_group_inputs()
+        if len(workgraph.group_outputs) == 0:
+            workgraph.generate_group_outputs()
+        inputs = workgraph.group_inputs._to_dict()
+        outputs = workgraph.group_outputs._to_dict()
         # add built-in sockets
         for input in builtin_inputs:
             inputs["sockets"][input["name"]] = input.copy()
@@ -135,7 +120,6 @@ class WorkGraphTaskFactory(BaseTaskFactory):
             "callable_name": "WorkGraphEngine",
             "graph_data": graph_data,
         }
-        tdata["metadata"]["group_outputs"] = group_outputs
         tdata["metadata"]["node_class"] = WorkGraphTask
         tdata["executor"] = executor
 

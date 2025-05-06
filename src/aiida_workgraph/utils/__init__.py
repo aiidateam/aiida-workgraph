@@ -202,7 +202,7 @@ def get_workgraph_data(process: Union[int, orm.Node]) -> Optional[Dict[str, Any]
         wgdata["tasks"][name] = deserialize_safe(task)
         wgdata["tasks"][name]["executor"] = task_executors.get(name)
     wgdata["error_handlers"] = process.workgraph_error_handlers
-    wgdata["meta_tasks"] = deserialize_safe(wgdata["meta_tasks"])
+    wgdata["meta_sockets"] = deserialize_safe(wgdata["meta_sockets"])
     return wgdata
 
 
