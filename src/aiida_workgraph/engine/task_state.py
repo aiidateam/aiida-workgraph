@@ -271,7 +271,11 @@ class TaskStateManager:
         self.set_tasks_state(
             self.process.wg.connectivity["child_node"][name], "SKIPPED"
         )
-        self.process.report(f"Task, {name}, type: {task_type}, failed.")
+        msg = f"Task, {name}, type: {task_type}, failed."
+        process = self.get_task_runtime_info(name, "process")
+        if isinstance(process, ProcessNode):
+            msg += f" Error message: {process.exit_message}"
+        self.process.report(msg)
         self.process.error_handler_manager.run_error_handlers(name)
 
     def update_parent_task_state(self, name: str) -> None:

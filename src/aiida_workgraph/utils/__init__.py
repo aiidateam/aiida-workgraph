@@ -367,12 +367,14 @@ def workgraph_to_short_json(
     wgdata: Dict[str, Union[str, List, Dict]]
 ) -> Dict[str, Union[str, Dict]]:
     """Export a workgraph to a rete js editor data."""
+    from copy import deepcopy
+
     wgdata_short = {
         "name": wgdata["name"],
         "uuid": wgdata.get("uuid", ""),
         "state": wgdata.get("state", ""),
         "nodes": {},
-        "links": wgdata.get("links", []),
+        "links": deepcopy(wgdata.get("links", []) + wgdata.get("meta_links", [])),
     }
     #
     for name, task in wgdata["tasks"].items():
@@ -395,8 +397,25 @@ def workgraph_to_short_json(
             "position": task["position"],
             "children": task["children"],
         }
+    for name, socket in wgdata["meta_sockets"].items():
+        inputs = []
+        for input in socket["sockets"].values():
+            metadata = input.get("metadata", {}) or {}
+            if metadata.get("required", False):
+                inputs.append(
+                    {"name": input["name"], "identifier": input["identifier"]}
+                )
+        wgdata_short["nodes"][name] = {
+            "label": name,
+            "node_type": name,
+            "inputs": inputs,
+            "properties": {},
+            "outputs": [],
+            "position": [0, 0],
+            "children": [],
+        }
     # Add links to nodes
-    for link in wgdata["links"]:
+    for link in wgdata_short["links"]:
         wgdata_short["nodes"][link["to_node"]]["inputs"].append(
             {
                 "name": link["to_socket"],
@@ -407,6 +426,49 @@ def workgraph_to_short_json(
                 "name": link["from_socket"],
             }
         )
+    # hide meta nodes if there is no link to them
+    for name, socket in wgdata["meta_sockets"].items():
+        node = wgdata_short["nodes"][name]
+        if len(node["inputs"]) == 0 and len(node["outputs"]) == 0:
+            del wgdata_short["nodes"][name]
+    # split ctx node into two nodes, one with only inputs and one with only outputs
+    ctx_node = wgdata_short["nodes"].get("ctx")
+    if ctx_node:
+        ctx_inputs = []
+        ctx_outputs = []
+        for input in ctx_node["inputs"]:
+            if input.get("identifier") == "_wait":
+                continue
+            ctx_inputs.append(input)
+        for output in ctx_node["outputs"]:
+            if output.get("identifier") == "_wait":
+                continue
+            ctx_outputs.append(output)
+        wgdata_short["nodes"]["ctx_inputs"] = {
+            "label": "ctx_inputs",
+            "node_type": "ctx",
+            "inputs": ctx_inputs,
+            "properties": {},
+            "outputs": [],
+            "position": [0, 0],
+            "children": [],
+        }
+        wgdata_short["nodes"]["ctx_outputs"] = {
+            "label": "ctx_outputs",
+            "node_type": "ctx",
+            "inputs": [],
+            "properties": {},
+            "outputs": ctx_outputs,
+            "position": [0, 0],
+            "children": [],
+        }
+        del wgdata_short["nodes"]["ctx"]
+        # update the links
+        for link in wgdata_short["links"]:
+            if link["from_node"] == "ctx":
+                link["from_node"] = "ctx_inputs"
+            if link["to_node"] == "ctx":
+                link["to_node"] = "ctx_outputs"
     return wgdata_short
 
 
