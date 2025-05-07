@@ -557,7 +557,7 @@ class WorkGraph(node_graph.NodeGraph):
         from aiida.engine import ProcessBuilder
         from aiida_workgraph.utils import get_dict_from_builder
 
-        if name in ["_ctx", "_inputs", "_outputs"]:
+        if name in ["graph_ctx", "graph_inputs", "graph_inputs"]:
             raise ValueError(f"Task name {name} can not be used, it is reserved.")
 
         if isinstance(identifier, WorkGraph):

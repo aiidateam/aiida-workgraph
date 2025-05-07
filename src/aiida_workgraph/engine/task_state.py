@@ -173,8 +173,8 @@ class TaskStateManager:
 
         for link in self.process.wg.links:
             if link.from_node.name == name and link.to_node.name in [
-                "_ctx",
-                "_outputs",
+                "graph_ctx",
+                "graph_outputs",
             ]:
                 key = link.to_socket._scoped_name
                 result_key = link.from_socket._scoped_name
