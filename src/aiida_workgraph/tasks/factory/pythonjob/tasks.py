@@ -43,12 +43,12 @@ class BaseSerializablePythonTask(Task):
         Recursively walk over the sockets and convert raw Python
         values to AiiDA Data nodes, if needed.
         """
-        for sock in input_sockets.values():
-            if not sock["metadata"].get("is_pythonjob", False):
-                if sock["identifier"] == "workgraph.namespace":
-                    cls._serialize_python_data(sock["sockets"])
-                elif sock.get("property", {}).get("value") is not None:
-                    cls._serialize_socket_data(sock)
+        for socket in input_sockets.values():
+            if not socket["metadata"].get("extras", {}).get("is_pythonjob", False):
+                if socket["identifier"] == "workgraph.namespace":
+                    cls._serialize_python_data(socket["sockets"])
+                elif socket.get("property", {}).get("value") is not None:
+                    cls._serialize_socket_data(socket)
 
     @classmethod
     def _deserialize_python_data(cls, input_sockets: Dict[str, Any]) -> None:
@@ -56,25 +56,25 @@ class BaseSerializablePythonTask(Task):
         Recursively walk over the sockets and convert AiiDA Data nodes
         back into raw Python objects, if needed.
         """
-        for sock in input_sockets.values():
-            if not sock["metadata"].get("is_pythonjob", False):
-                if sock["identifier"] == "workgraph.namespace":
-                    cls._deserialize_python_data(sock["sockets"])
+        for socket in input_sockets.values():
+            if not socket["metadata"].get("extras", {}).get("is_pythonjob", False):
+                if socket["identifier"] == "workgraph.namespace":
+                    cls._deserialize_python_data(socket["sockets"])
                 else:
-                    cls._deserialize_socket_data(sock)
+                    cls._deserialize_socket_data(socket)
 
     @classmethod
-    def _serialize_socket_data(cls, sock: Dict[str, Any]) -> Any:
-        value = sock.get("property", {}).get("value")
+    def _serialize_socket_data(cls, socket: Dict[str, Any]) -> Any:
+        value = socket.get("property", {}).get("value")
         if value is None or isinstance(value, orm.Data):
             return  # Already stored or is None
-        sock["property"]["value"] = general_serializer(value)
+        socket["property"]["value"] = general_serializer(value)
 
     @classmethod
-    def _deserialize_socket_data(cls, sock: Dict[str, Any]) -> Any:
-        value = sock.get("property", {}).get("value")
+    def _deserialize_socket_data(cls, socket: Dict[str, Any]) -> Any:
+        value = socket.get("property", {}).get("value")
         if isinstance(value, orm.Data):
-            sock["property"]["value"] = deserialize_to_raw_python_data(value)
+            socket["property"]["value"] = deserialize_to_raw_python_data(value)
 
     def execute(self, *args, **kwargs):
         """
@@ -87,16 +87,16 @@ class BaseSerializablePythonTask(Task):
         port = {"name": socket._name, "identifier": socket._identifier}
         if hasattr(socket, "_sockets"):
             port["ports"] = []
-            for name, sub_sock in socket._sockets.items():
+            for name, sub_socket in socket._sockets.items():
                 if not (
-                    sub_sock._metadata.get("is_pythonjob", False)
-                    or sub_sock._metadata.get("is_builtin", False)
+                    sub_socket._metadata.extras.get("is_pythonjob", False)
+                    or sub_socket._metadata.builtin_socket
                 ):
-                    if sub_sock._identifier.upper() == "WORKGRAPH.NAMESPACE":
-                        port["ports"].append(self.build_function_ports(sub_sock))
+                    if sub_socket._identifier.upper() == "WORKGRAPH.NAMESPACE":
+                        port["ports"].append(self.build_function_ports(sub_socket))
                     else:
                         port["ports"].append(
-                            {"name": name, "identifier": sub_sock._identifier}
+                            {"name": name, "identifier": sub_socket._identifier}
                         )
         return port
 
@@ -117,8 +117,8 @@ class PythonJobTask(BaseSerializablePythonTask):
         function_inputs = kwargs.pop("function_inputs", {}) or {}
         for socket_in in self.inputs:
             if not (
-                socket_in._metadata.get("is_pythonjob", False)
-                or socket_in._metadata.get("is_builtin", False)
+                socket_in._metadata.extras.get("is_pythonjob", False)
+                or socket_in._metadata.builtin_socket
             ):
                 if socket_in._name not in function_inputs:
                     function_inputs[socket_in._name] = kwargs.pop(socket_in._name, None)

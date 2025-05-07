@@ -131,8 +131,8 @@ class ShellJobTaskFactory(BaseTaskFactory):
                 tdata["outputs"]["sockets"][output["name"]] = output.copy()
         #
         tdata["identifier"] = "ShellJob"
-        for input in additional_inputs:
-            tdata["inputs"]["sockets"][input["name"]] = input.copy()
+        for input_data in additional_inputs:
+            tdata["inputs"]["sockets"][input_data["name"]] = input_data.copy()
         tdata["metadata"]["node_type"] = "SHELLJOB"
         tdata["metadata"]["node_class"] = ShellJobTask
 
