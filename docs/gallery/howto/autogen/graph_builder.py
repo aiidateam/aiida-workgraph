@@ -117,7 +117,7 @@ generate_node_graph(wg.pk)
 #
 #     @task.graph_builder(outputs = [{"name": "multiply"}])
 #
-# This will expose the `result` output of the workgraph as the `multiply` output of the task.
+# This will expose the `multiply` output of the workgraph as the `multiply` output of the task.
 #
 
 
@@ -130,7 +130,7 @@ def add_multiply(x, y, z):
     wg.add_task(add, name="add", x=x, y=y)
     wg.add_task(multiply, name="multiply", x=z)
     wg.add_link(wg.tasks.add.outputs[0], wg.tasks.multiply.inputs.y)
-    wg.group_outputs.multiply = wg.tasks.multiply.outputs.result
+    wg.outputs.multiply = wg.tasks.multiply.outputs.result
     # Don't forget to return the `wg`
     return wg
 
@@ -213,7 +213,7 @@ def for_loop(nb_iterations: Int):
 
     # Put result of the task to the context under the name task_out
     wg.update_ctx({"task_out": task.outputs.result})
-    wg.group_outputs.result = wg.ctx.task_out
+    wg.outputs.result = wg.ctx.task_out
     # If want to know more about the usage of the context please refer to the
     # context howto in the documentation
     return wg
@@ -261,7 +261,7 @@ def if_then_else(i: Int):
 
     # same concept as before, please read the for loop example for explanation
     wg.update_ctx({"task_out": task.outputs.result})
-    wg.group_outputs.result = wg.ctx.task_out
+    wg.outputs.result = wg.ctx.task_out
     return wg
 
 

@@ -95,7 +95,7 @@ def multiply_parallel_gather(X, y):
         # add result of multiply1 to `self.context.mul`
         # self.context.mul is a dict {"a": value1, "b": value2, "c": value3}
         wg.update_ctx({f"mul.{key}": multiply1.outputs.result})
-        wg.group_outputs.result = wg.ctx.mul
+        wg.outputs.result = wg.ctx.mul
     return wg
 
 

@@ -58,13 +58,13 @@ class BasePythonTaskFactory(BaseTaskFactory):
         tdata = TaskCls0._ndata
         # merge the inputs and outputs from the process_class task to the function task
         # skip the already existed inputs and outputs
-        for input in cls.additional_inputs:
-            tdata["inputs"]["sockets"][input["name"]] = input.copy()
-        for input in TaskCls._ndata["inputs"]["sockets"].values():
-            if input["name"] not in tdata["inputs"]["sockets"]:
-                input["metadata"].setdefault("extras", {})
-                input["metadata"]["extras"]["is_pythonjob"] = True
-                tdata["inputs"]["sockets"][input["name"]] = input
+        for input_data in cls.additional_inputs:
+            tdata["inputs"]["sockets"][input_data["name"]] = input_data.copy()
+        for input_data in TaskCls._ndata["inputs"]["sockets"].values():
+            if input_data["name"] not in tdata["inputs"]["sockets"]:
+                input_data["metadata"].setdefault("extras", {})
+                input_data["metadata"]["extras"]["is_pythonjob"] = True
+                tdata["inputs"]["sockets"][input_data["name"]] = input_data
         for output in TaskCls._ndata["outputs"]["sockets"].values():
             if output["name"] not in tdata["outputs"]["sockets"]:
                 output["metadata"].setdefault("extras", {})

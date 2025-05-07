@@ -56,8 +56,8 @@ class DecoratedFunctionTaskFactory(BaseTaskFactory):
             out.setdefault("metadata", {})
             out["metadata"]["function_socket"] = True
         # add built-in sockets
-        for input in builtin_inputs:
-            task_inputs["sockets"][input["name"]] = input.copy()
+        for input_data in builtin_inputs:
+            task_inputs["sockets"][input_data["name"]] = input_data.copy()
         for output in builtin_outputs:
             task_outputs["sockets"][output["name"]] = output.copy()
 

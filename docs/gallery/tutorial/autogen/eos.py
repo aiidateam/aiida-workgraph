@@ -196,7 +196,7 @@ def eos_workgraph(
             )
             scf_task.set(scf_inputs)
         wg.add_task(eos, name="eos", datas=scf_task.outputs.output_parameters)
-        wg.group_outputs.result = wg.tasks.eos.outputs.result
+        wg.outputs.result = wg.tasks.eos.outputs.result
         return wg
 
 

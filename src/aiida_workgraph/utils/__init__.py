@@ -432,7 +432,7 @@ def workgraph_to_short_json(
         if len(node["inputs"]) == 0 and len(node["outputs"]) == 0:
             del wgdata_short["nodes"][name]
     # split ctx node into two nodes, one with only inputs and one with only outputs
-    ctx_node = wgdata_short["nodes"].get("ctx")
+    ctx_node = wgdata_short["nodes"].get("_ctx")
     if ctx_node:
         ctx_inputs = []
         ctx_outputs = []
@@ -444,30 +444,30 @@ def workgraph_to_short_json(
             if output.get("identifier") == "_wait":
                 continue
             ctx_outputs.append(output)
-        wgdata_short["nodes"]["ctx_inputs"] = {
-            "label": "ctx_inputs",
-            "node_type": "ctx",
+        wgdata_short["nodes"]["_ctx_inputs"] = {
+            "label": "_ctx_inputs",
+            "node_type": "_ctx",
             "inputs": ctx_inputs,
             "properties": {},
             "outputs": [],
             "position": [0, 0],
             "children": [],
         }
-        wgdata_short["nodes"]["ctx_outputs"] = {
-            "label": "ctx_outputs",
-            "node_type": "ctx",
+        wgdata_short["nodes"]["_ctx_outputs"] = {
+            "label": "_ctx_outputs",
+            "node_type": "_ctx",
             "inputs": [],
             "properties": {},
             "outputs": ctx_outputs,
             "position": [0, 0],
             "children": [],
         }
-        del wgdata_short["nodes"]["ctx"]
+        del wgdata_short["nodes"]["_ctx"]
         # update the links
         for link in wgdata_short["links"]:
-            if link["from_node"] == "ctx":
+            if link["from_node"] == "_ctx":
                 link["from_node"] = "ctx_inputs"
-            if link["to_node"] == "ctx":
+            if link["to_node"] == "_ctx":
                 link["to_node"] = "ctx_outputs"
     return wgdata_short
 

@@ -205,7 +205,7 @@ def add_multiply(x, y, z):
     wg.add_task(add, name="add", x=x, y=y)
     wg.add_task(multiply, name="multiply", x=z)
     wg.add_link(wg.tasks.add.outputs.result, wg.tasks.multiply.inputs.y)
-    wg.group_outputs.multiply = wg.tasks.multiply.outputs.result
+    wg.outputs.multiply = wg.tasks.multiply.outputs.result
     # don't forget to return the `wg`
     return wg
 

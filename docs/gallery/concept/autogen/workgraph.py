@@ -71,24 +71,24 @@ wg_loaded = WorkGraph.load(wg.pk)
 # - Present only the necessary inputs to users, simplify the external interface of a complex workflow.
 # - Collect and optionally rename outputs from individual tasks as grouped outputs.
 
-wg = WorkGraph("test_workgraph_group_outputs")
+wg = WorkGraph("test_workgraph_outputs")
 
 # Define group-level input
-wg.group_inputs.x = 2
+wg.inputs.x = 2
 
 # Add tasks using the group-level input
-wg.add_task(add, "add1", x=wg.group_inputs.x, y=3)
-wg.add_task(add, "add2", x=wg.group_inputs.x, y=wg.tasks.add1.outputs.result)
+wg.add_task(add, "add1", x=wg.inputs.x, y=3)
+wg.add_task(add, "add2", x=wg.inputs.x, y=wg.tasks.add1.outputs.result)
 
 # Define group-level outputs to expose selected task results
-wg.group_outputs.sum1 = wg.tasks.add1.outputs.result
-wg.group_outputs.sum2 = wg.tasks.add2.outputs.result
+wg.outputs.sum1 = wg.tasks.add1.outputs.result
+wg.outputs.sum2 = wg.tasks.add2.outputs.result
 
 # Run the workgraph
 wg.submit(wait=True)
 
 # Verify the final output
-assert wg.group_outputs.sum2.value == 2 + (2 + 3)
+assert wg.outputs.sum2.value == 2 + (2 + 3)
 
 # %%
 # List of all Methods

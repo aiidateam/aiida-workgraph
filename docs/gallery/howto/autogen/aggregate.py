@@ -206,7 +206,7 @@ def generator_loop(nb_iterations: int):
     for i in range(nb_iterations):  # this can be chosen as wanted
         generator_task = wg.add_task(generator, name=f"generator{i}", seed=i)
         wg.update_ctx({f"generated.seed{i}": generator_task.outputs.result})
-    wg.group_outputs.result = wg.ctx.generated
+    wg.outputs.result = wg.ctx.generated
     return wg
 
 

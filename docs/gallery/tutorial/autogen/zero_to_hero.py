@@ -348,7 +348,7 @@ def add_multiply_if_generator(x, y):
         multiply1 = wg.add_task(multiply, name="multiply1", x=x, y=y)
         # export the result of multiply1 to the context
         wg.update_ctx({"result": multiply1.outputs.result})
-    wg.group_outputs.result = wg.ctx.result
+    wg.outputs.result = wg.ctx.result
     return wg
 
 
@@ -368,13 +368,13 @@ wg.to_html()
 # Submit the WorkGraph
 
 
-wg.run(
+wg.submit(
     inputs={
         "add1": {"x": 1, "y": 2},
         "add_multiply_if1": {"y": 2},
         "add2": {"y": 2},
     },
-    # wait=True,
+    wait=True,
 )
 # ------------------------- Print the output -------------------------
 print("result: ", wg.tasks.add2.outputs.result.value)
@@ -422,7 +422,7 @@ def all_scf(structures, scf_inputs):
         pw1.set(scf_inputs)
         # save the output parameters to the context
         wg.update_ctx({f"result.{key}": pw1.outputs.output_parameters})
-    wg.group_outputs.result = wg.ctx.result
+    wg.outputs.result = wg.ctx.result
     return wg
 
 
@@ -487,7 +487,7 @@ def eos_workgraph(structure=None, scales=None, scf_inputs=None):
     eos1 = wg.add_task(eos, name="eos1")
     wg.add_link(scale_structure1.outputs.structures, all_scf1.inputs.structures)
     wg.add_link(all_scf1.outputs.result, eos1.inputs.datas)
-    wg.group_outputs.result = wg.ctx.eos1.result
+    wg.outputs.result = wg.ctx.eos1.result
     return wg
 
 

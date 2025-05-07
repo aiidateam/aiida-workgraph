@@ -215,10 +215,42 @@ def decorated_add_multiply_group(decorated_add, decorated_multiply) -> Callable:
         multiply = wg.add_task(decorated_multiply, name="multiply1", x=z)
         # link the output of a task to the input of another task
         wg.add_link(add1.outputs[0], multiply.inputs["y"])
-        wg.group_outputs.result = multiply.outputs.result
+        wg.outputs.result = multiply.outputs.result
         return wg
 
     return add_multiply_group
+
+
+@pytest.fixture
+def decorated_namespace_sum_diff() -> Callable:
+    """Generate a decorated node for test."""
+
+    @task(
+        inputs=[
+            {"name": "nested", "identifier": "namespace"},
+            {"name": "nested.x"},
+            {"name": "nested.y"},
+        ],
+        outputs=[
+            "sum",
+            "diff",
+            {"name": "nested", "identifier": "namespace"},
+            {"name": "nested.sum"},
+            {"name": "nested.diff"},
+        ],
+    )
+    def sum_diff(x, y, nested):
+        """Add two numbers and return the result."""
+        return {
+            "sum": x + y,
+            "diff": x - y,
+            "nested": {
+                "diff": nested["x"] - nested["y"],
+                "sum": nested["x"] + nested["y"],
+            },
+        }
+
+    return sum_diff
 
 
 @pytest.fixture

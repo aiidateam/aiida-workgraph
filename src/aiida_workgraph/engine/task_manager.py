@@ -318,7 +318,7 @@ class TaskManager:
                 key = f"map_zone_{name}_item_{prefix}"
                 # add a new item to the wg.ctx, as well as the results of the ctx node
                 self.process.wg.update_ctx({key: value})
-                self.ctx._task_results["ctx"][key] = value
+                self.ctx._task_results["_ctx"][key] = value
                 new_tasks, new_links = self.generate_mapped_tasks(task, prefix=prefix)
             map_info["children"] = list(new_tasks.keys())
             map_info["links"] = new_links
@@ -579,7 +579,8 @@ class TaskManager:
             if link.from_node.name in new_tasks:
                 from_node = new_tasks[link.from_node.name]
                 from_socket = from_node.outputs[link.from_socket._scoped_name]
-            elif link.from_node.name == "ctx" and link.from_socket._name == share_key:
+            # TODO: check if this is necessary, should we also consider "_inputs" and "_outputs"?
+            elif link.from_node.name == "_ctx" and link.from_socket._name == share_key:
                 from_socket = self.process.wg.ctx[item_key]
             else:
                 from_socket = link.from_socket

@@ -6,9 +6,9 @@ from aiida import orm
 def test_inputs_outptus(wg_calcfunction: WorkGraph) -> None:
     """Test the inputs and outputs of the WorkGraph."""
     wg = WorkGraph(name="test_inputs_outptus")
-    wg_calcfunction.group_inputs = {"x": 1, "y": 2}
-    wg_calcfunction.group_outputs.diff = wg_calcfunction.tasks.sumdiff1.outputs.diff
-    wg_calcfunction.group_outputs.sum = wg_calcfunction.tasks.sumdiff2.outputs.sum
+    wg_calcfunction.inputs = {"x": 1, "y": 2}
+    wg_calcfunction.outputs.diff = wg_calcfunction.tasks.sumdiff1.outputs.diff
+    wg_calcfunction.outputs.sum = wg_calcfunction.tasks.sumdiff2.outputs.sum
     task1 = wg.add_task(wg_calcfunction, name="add1")
     assert len(task1.inputs) == 3
     assert len(task1.outputs) == 4

@@ -314,7 +314,7 @@ class WorkGraph(node_graph.NodeGraph):
 
         if self.process.is_finished_ok:
             # update the output sockets
-            for socket in self.group_outputs:
+            for socket in self.outputs:
                 if socket._identifier == "workgraph.namespace":
                     socket._value = get_nested_dict(
                         self.process.outputs, socket._name, default=None
@@ -557,8 +557,8 @@ class WorkGraph(node_graph.NodeGraph):
         from aiida.engine import ProcessBuilder
         from aiida_workgraph.utils import get_dict_from_builder
 
-        if name == "ctx":
-            raise ValueError("Task name can not be 'ctx', it is reserved.")
+        if name in ["_ctx", "_inputs", "_outputs"]:
+            raise ValueError(f"Task name {name} can not be used, it is reserved.")
 
         if isinstance(identifier, WorkGraph):
             identifier = WorkGraphTaskFactory.create_task(identifier)

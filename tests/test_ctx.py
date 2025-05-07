@@ -65,9 +65,9 @@ def test_task_update_nested_ctx():
     wg = WorkGraph()
     wg.add_task(add, name="add", x=1, y=2)
     wg.update_ctx({"data.sum": wg.tasks.add.outputs.results.sum})
-    wg.group_outputs.sum = wg.ctx.data.sum
-    wg.group_outputs.add = {}
-    wg.group_outputs.add.sum = wg.ctx.data.sum
+    wg.outputs.sum = wg.ctx.data.sum
+    wg.outputs.add = {}
+    wg.outputs.add.sum = wg.ctx.data.sum
     wg.run()
     assert wg.process.outputs.sum.value == 3
     assert wg.process.outputs.add.sum.value == 3

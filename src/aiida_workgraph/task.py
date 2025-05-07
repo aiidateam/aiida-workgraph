@@ -237,8 +237,8 @@ class Task(GraphNode):
         for key in ("properties", "executor", "node_class", "process"):
             tdata.pop(key, None)
 
-        for input in tdata["inputs"]["sockets"].values():
-            input.pop("property", None)
+        for input_data in tdata["inputs"]["sockets"].values():
+            input_data.pop("property", None)
 
         tdata["label"] = tdata["identifier"]
 

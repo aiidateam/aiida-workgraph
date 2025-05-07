@@ -287,9 +287,9 @@ class WorkGraphEngine(Process, metaclass=Protect):
         self.wg = WorkGraph.load(self.node)
         # create a builtin `_context` task with its results as the context variables
         self.ctx._task_results = {
-            "ctx": self.wg.ctx._value,
-            "group_inputs": self.wg.group_inputs._value,
-            "group_outputs": self.wg.group_outputs._value,
+            "_ctx": self.wg.ctx._value,
+            "_inputs": self.wg.inputs._value,
+            "_outputs": self.wg.outputs._value,
         }
         # init task results
         self.task_manager.set_task_results()
@@ -367,8 +367,8 @@ class WorkGraphEngine(Process, metaclass=Protect):
         Output the results of the workgraph and the new data.
         """
         # expose outputs of the workgraph
-        self.task_manager.state_manager.update_meta_tasks("ctx")
-        self.out_many(self.ctx._task_results["group_outputs"])
+        self.task_manager.state_manager.update_meta_tasks("_ctx")
+        self.out_many(self.ctx._task_results["_outputs"])
         # output the new data
         if self.ctx._new_data:
             self.out("new_data", self.ctx._new_data)

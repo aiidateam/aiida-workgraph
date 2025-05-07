@@ -40,9 +40,9 @@ class WorkGraphTask(Task):
     def prepare_for_workgraph_task(self, kwargs: dict) -> tuple:
         """Prepare the inputs for WorkGraph task"""
         # update the workgraph inputs by the kwargs
-        for socket, data in kwargs.items():
-            input = self.workgraph.group_inputs[socket]
-            input._set_socket_value(data)
+        for name, data in kwargs.items():
+            input_socket = self.workgraph.inputs[name]
+            input_socket._set_socket_value(data)
         # merge the properties
         metadata = {"call_link_label": self.name}
         inputs = self.workgraph.prepare_inputs(metadata=metadata)
@@ -89,15 +89,15 @@ class WorkGraphTaskFactory(BaseTaskFactory):
         # add all the inputs/outputs from the tasks in the workgraph
         # builtin_input_names = [input["name"] for input in builtin_inputs]
         # generate group inputs/outputs if not exist
-        if len(workgraph.group_inputs) == 0:
-            workgraph.generate_group_inputs()
-        if len(workgraph.group_outputs) == 0:
-            workgraph.generate_group_outputs()
-        inputs = workgraph.group_inputs._to_dict()
-        outputs = workgraph.group_outputs._to_dict()
+        if len(workgraph.inputs) == 0:
+            workgraph.generate_inputs()
+        if len(workgraph.outputs) == 0:
+            workgraph.generate_outputs()
+        inputs = workgraph.inputs._to_dict()
+        outputs = workgraph.outputs._to_dict()
         # add built-in sockets
-        for input in builtin_inputs:
-            inputs["sockets"][input["name"]] = input.copy()
+        for input_data in builtin_inputs:
+            inputs["sockets"][input_data["name"]] = input_data.copy()
         for output in builtin_outputs:
             outputs["sockets"][output["name"]] = output.copy()
         tdata["inputs"] = inputs

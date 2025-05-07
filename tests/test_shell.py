@@ -116,7 +116,7 @@ def test_shell_graph_builder():
                 {"identifier": "workgraph.any", "name": "result"}
             ],  # add a "result" output socket from the parser
         )
-        wg.group_outputs.result = wg.tasks.job2.outputs.result
+        wg.outputs.result = wg.tasks.job2.outputs.result
         return wg
 
     wg = WorkGraph(name="test_shell_graph_builder")
