@@ -200,12 +200,21 @@ def test_inputs_outputs(decorated_namespace_sum_diff):
 
     wg = WorkGraph(name="test_inputs_outputs")
     wg.inputs = {"x": 1, "nested.x": 2}
+    # same as
+    # wg.add_input("workgraph.any", "x")
+    # wg.add_input("workgraph.namespace", "nested")
+    # wg.add_input("workgraph.any", "nested.x")
+    # wg.inputs.x = 1
+    # wg.inputs.nested.x = 2
     wg.add_task(decorated_namespace_sum_diff, name="sum_diff1", x=wg.inputs.x, y=3)
     wg.tasks.sum_diff1.inputs.nested.x = wg.inputs.nested.x
     wg.tasks.sum_diff1.inputs.nested.y = 3
     wg.outputs.sum = wg.tasks.sum_diff1.outputs.sum
     wg.outputs.nested = {}
     wg.outputs.nested.sum = wg.tasks.sum_diff1.outputs.nested.sum
+    # same as
+    # wg.add_output("workgraph.namespace", "nested")
+    # wg.add_output("workgraph.any", "nested.sum")
     wg.run()
     assert wg.outputs.sum.value == 4
     assert wg.outputs.nested.sum.value == 5
