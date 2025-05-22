@@ -14,8 +14,6 @@ def generate_tdata(
     properties: List[Tuple[str, str]],
     catalog: str,
     task_type: str,
-    group_inputs: List[Tuple[str, str]] = None,
-    group_outputs: List[Tuple[str, str]] = None,
     additional_data: Optional[Dict[str, Any]] = None,
 ) -> Dict[str, Any]:
     """Generate task data for creating a task."""
@@ -24,15 +22,15 @@ def generate_tdata(
     task_inputs = generate_input_sockets(
         func, inputs, properties, type_mapping=type_mapping
     )
-    for input in task_inputs:
-        input.setdefault("metadata", {})
-        input["metadata"]["is_function_input"] = True
+    for input_data in task_inputs:
+        input_data.setdefault("metadata", {})
+        input_data["metadata"]["function_socket"] = True
     task_outputs = outputs
     # add built-in sockets
     for output in builtin_outputs:
         task_outputs.append(output.copy())
-    for input in builtin_inputs:
-        task_inputs.append(input.copy())
+    for input_data in builtin_inputs:
+        task_inputs.append(input_data.copy())
     tdata = {
         "identifier": identifier,
         "metadata": {
@@ -42,8 +40,6 @@ def generate_tdata(
                 "module_path": "aiida_workgraph.task",
                 "callable_name": "Task",
             },
-            "group_inputs": group_inputs or [],
-            "group_outputs": group_outputs or [],
         },
         "properties": properties,
         "inputs": task_inputs,

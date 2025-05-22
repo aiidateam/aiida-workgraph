@@ -172,8 +172,8 @@ def get_task_data_from_aiida_component(
     # add built-in sockets
     for output in builtin_outputs:
         outputs.append(output.copy())
-    for input in builtin_inputs:
-        inputs.append(input.copy())
+    for input_data in builtin_inputs:
+        inputs.append(input_data.copy())
     final_inputs = {
         "name": "inputs",
         "identifier": "workgraph.namespace",

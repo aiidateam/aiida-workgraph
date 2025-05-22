@@ -37,18 +37,6 @@
               "graph_type": {
                   "type": "string",
                   "description": "Type of this graph, e.g. NORMAL"
-              },
-              "group_properties": {
-                  "type": "array",
-                  "items": { "type": "string" }
-              },
-              "group_inputs": {
-                  "type": "array",
-                  "items": { "type": "string" }
-              },
-              "group_outputs": {
-                  "type": "array",
-                  "items": { "type": "string" }
               }
           },
           "required": []
