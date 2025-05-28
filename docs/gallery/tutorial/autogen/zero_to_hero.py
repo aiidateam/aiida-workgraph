@@ -337,7 +337,7 @@ generate_node_graph(wg.pk)
 from aiida_workgraph import task
 
 #
-@task.graph_builder(outputs=[{"name": "result", "from": "ctx.result"}])
+@task.graph_builder(outputs=[{"name": "result"}])
 def add_multiply_if_generator(x, y):
     wg = WorkGraph()
     if x.value > 0:
@@ -348,6 +348,7 @@ def add_multiply_if_generator(x, y):
         multiply1 = wg.add_task(multiply, name="multiply1", x=x, y=y)
         # export the result of multiply1 to the context
         wg.update_ctx({"result": multiply1.outputs.result})
+    wg.outputs.result = wg.ctx.result
     return wg
 
 
@@ -376,6 +377,7 @@ wg.submit(
     wait=True,
 )
 # ------------------------- Print the output -------------------------
+print("result: ", wg.tasks.add2.outputs.result.value)
 assert wg.tasks.add2.outputs.result.value == 7
 print("\nResult of add2 is {} \n\n".format(wg.tasks.add2.outputs.result.value))
 #
@@ -408,7 +410,7 @@ def scale_structure(structure, scales):
 
 #
 # Output result from context to the output socket
-@task.graph_builder(outputs=[{"name": "result", "from": "ctx.result"}])
+@task.graph_builder(outputs=[{"name": "result"}])
 def all_scf(structures, scf_inputs):
     """Run the scf calculation for each structure."""
     from aiida_workgraph import WorkGraph
@@ -420,6 +422,7 @@ def all_scf(structures, scf_inputs):
         pw1.set(scf_inputs)
         # save the output parameters to the context
         wg.update_ctx({f"result.{key}": pw1.outputs.output_parameters})
+    wg.outputs.result = wg.ctx.result
     return wg
 
 
@@ -474,7 +477,7 @@ from aiida_workgraph import WorkGraph, task
 from aiida_quantumespresso.calculations.pw import PwCalculation
 
 #
-@task.graph_builder(outputs=[{"name": "result", "from": "eos1.result"}])
+@task.graph_builder(outputs=[{"name": "result"}])
 def eos_workgraph(structure=None, scales=None, scf_inputs=None):
     wg = WorkGraph("eos")
     scale_structure1 = wg.add_task(
@@ -484,6 +487,7 @@ def eos_workgraph(structure=None, scales=None, scf_inputs=None):
     eos1 = wg.add_task(eos, name="eos1")
     wg.add_link(scale_structure1.outputs.structures, all_scf1.inputs.structures)
     wg.add_link(all_scf1.outputs.result, eos1.inputs.datas)
+    wg.outputs.result = wg.ctx.eos1.result
     return wg
 
 

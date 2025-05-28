@@ -25,6 +25,7 @@ class Task(GraphNode):
     OutputCollectionClass = TaskSocketNamespace
     PropertyCollectionClass = WorkGraphPropertyCollection
 
+    identifier: str = "workgraph.task"
     is_aiida_component = False
     _error_handlers = None
 
@@ -236,8 +237,8 @@ class Task(GraphNode):
         for key in ("properties", "executor", "node_class", "process"):
             tdata.pop(key, None)
 
-        for input in tdata["inputs"]["sockets"].values():
-            input.pop("property", None)
+        for input_data in tdata["inputs"]["sockets"].values():
+            input_data.pop("property", None)
 
         tdata["label"] = tdata["identifier"]
 

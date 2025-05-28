@@ -58,15 +58,17 @@ class BasePythonTaskFactory(BaseTaskFactory):
         tdata = TaskCls0._ndata
         # merge the inputs and outputs from the process_class task to the function task
         # skip the already existed inputs and outputs
-        for input in cls.additional_inputs:
-            tdata["inputs"]["sockets"][input["name"]] = input.copy()
-        for input in TaskCls._ndata["inputs"]["sockets"].values():
-            if input["name"] not in tdata["inputs"]["sockets"]:
-                input["metadata"]["is_pythonjob"] = True
-                tdata["inputs"]["sockets"][input["name"]] = input
+        for input_data in cls.additional_inputs:
+            tdata["inputs"]["sockets"][input_data["name"]] = input_data.copy()
+        for input_data in TaskCls._ndata["inputs"]["sockets"].values():
+            if input_data["name"] not in tdata["inputs"]["sockets"]:
+                input_data["metadata"].setdefault("extras", {})
+                input_data["metadata"]["extras"]["is_pythonjob"] = True
+                tdata["inputs"]["sockets"][input_data["name"]] = input_data
         for output in TaskCls._ndata["outputs"]["sockets"].values():
             if output["name"] not in tdata["outputs"]["sockets"]:
-                output["metadata"]["is_pythonjob"] = True
+                output["metadata"].setdefault("extras", {})
+                output["metadata"]["extras"]["is_pythonjob"] = True
                 tdata["outputs"]["sockets"][output["name"]] = output
         for output in cls.additional_outputs:
             tdata["outputs"]["sockets"][output["name"]] = output.copy()
@@ -95,24 +97,24 @@ class PythonJobTaskFactory(BasePythonTaskFactory):
         {
             "identifier": "workgraph.string",
             "name": "computer",
-            "metadata": {"is_pythonjob": True},
+            "metadata": {"extras": {"is_pythonjob": True}},
         },
         {
             "identifier": "workgraph.any",
             "name": "command_info",
-            "metadata": {"is_pythonjob": True},
+            "metadata": {"extras": {"is_pythonjob": True}},
         },
         {
             "identifier": "workgraph.any",
             "name": "register_pickle_by_value",
-            "metadata": {"is_pythonjob": True},
+            "metadata": {"extras": {"is_pythonjob": True}},
         },
     ]
     additional_outputs = [
         {
             "identifier": "workgraph.any",
             "name": "exit_code",
-            "metadata": {"is_pythonjob": True},
+            "metadata": {"extras": {"is_pythonjob": True}},
         }
     ]
 

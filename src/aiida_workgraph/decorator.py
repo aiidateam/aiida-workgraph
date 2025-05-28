@@ -252,8 +252,6 @@ class TaskDecoratorCollection:
                 inputs=inputs,
                 outputs=task_outputs,
                 catalog=catalog,
-                group_inputs=inputs,
-                group_outputs=outputs,
                 node_class=GraphBuilderTask,
             )
 

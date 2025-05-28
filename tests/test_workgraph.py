@@ -175,13 +175,10 @@ def test_extend_workgraph(decorated_add_multiply_group):
     assert wg.tasks.group_multiply1.outputs.result == 45
 
 
-def test_workgraph_group_outputs(decorated_add):
-    wg = WorkGraph("test_workgraph_group_outputs")
+def test_workgraph_outputs(decorated_add):
+    wg = WorkGraph("test_workgraph_outputs")
     wg.add_task(decorated_add, "add1", x=2, y=3)
-    wg.group_outputs = [
-        {"name": "sum", "from": "add1.result"},
-        # {"name": "add1", "from": "add1"},
-    ]
+    wg.outputs.sum = wg.tasks.add1.outputs.result
     wg.run()
     assert wg.process.outputs.sum.value == 5
     # assert wg.process.outputs.add1.result.value == 5
@@ -196,3 +193,28 @@ def test_wait_timeout(create_workgraph_process_node):
         match="Timeout reached after 1 seconds while waiting for the WorkGraph:",
     ):
         wg.wait(timeout=1, interval=1)
+
+
+def test_inputs_outputs(decorated_namespace_sum_diff):
+    """Test the group inputs and outputs of the WorkGraph."""
+
+    wg = WorkGraph(name="test_inputs_outputs")
+    wg.inputs = {"x": 1, "nested.x": 2}
+    # same as
+    # wg.add_input("workgraph.any", "x")
+    # wg.add_input("workgraph.namespace", "nested")
+    # wg.add_input("workgraph.any", "nested.x")
+    # wg.inputs.x = 1
+    # wg.inputs.nested.x = 2
+    wg.add_task(decorated_namespace_sum_diff, name="sum_diff1", x=wg.inputs.x, y=3)
+    wg.tasks.sum_diff1.inputs.nested.x = wg.inputs.nested.x
+    wg.tasks.sum_diff1.inputs.nested.y = 3
+    wg.outputs.sum = wg.tasks.sum_diff1.outputs.sum
+    wg.outputs.nested = {}
+    wg.outputs.nested.sum = wg.tasks.sum_diff1.outputs.nested.sum
+    # same as
+    # wg.add_output("workgraph.namespace", "nested")
+    # wg.add_output("workgraph.any", "nested.sum")
+    wg.run()
+    assert wg.outputs.sum.value == 4
+    assert wg.outputs.nested.sum.value == 5

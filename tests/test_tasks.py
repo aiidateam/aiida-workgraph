@@ -277,7 +277,7 @@ def test_task_from_builder_multiply_add(add_code, decorated_add) -> None:
 
     assert len(wg.tasks) == 2
     assert len(wg.links) == 1
-    assert wg.links_to_dict() == [
+    assert wg.links_to_dict()[0] == [
         {
             "from_node": multiply_add_task_name,
             "from_socket": "result",
