@@ -8,7 +8,7 @@ build:
   jobs:
     post_create_environment:
       - python -m pip install --no-cache-dir .[docs]
-      - python -m pip install --exists-action=w --no-cache-dir -r docs/requirements.txt
+      - pip list
       - rabbitmq-server -detached
       - sleep 10
       - rabbitmq-diagnostics status
