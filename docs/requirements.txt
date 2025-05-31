@@ -1,4 +1,4 @@
-sphinx_rtd_theme==1.2.2
+sphinx_rtd_theme>=3.0.0
 sphinx-gallery
 nbsphinx==0.9.2
 ipython
