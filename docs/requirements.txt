@@ -7,5 +7,3 @@ node-graph
 anywidget
 furo
 matplotlib # for sphinx-gallery
-aiida-quantumespresso
-aiida-pseudo
