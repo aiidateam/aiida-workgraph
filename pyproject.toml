@@ -43,7 +43,7 @@ Source = "https://github.com/aiidateam/aiida-workgraph"
 
 [project.optional-dependencies]
 docs = [
-    "sphinx_rtd_theme",
+    "sphinx_rtd_theme>=3.0",
     "sphinx~=7.2",
     "sphinx-copybutton~=0.5.0",
     "sphinx-design~=0.5.0",
@@ -53,7 +53,13 @@ docs = [
     "sphinx-gallery",
     "myst-nb~=1.0.0",
     "nbsphinx",
+    "furo",
+    "aiida-core~=2.6.3",
+    "aiida-quantumespresso",
+    "aiida-pseudo",
+    "anywidget",
     "sphinx-autobuild",
+    "click~=8.1.0",
 ]
 pre-commit = [
     "pre-commit~=2.2",
