@@ -5,7 +5,7 @@ from .tasks import TaskPool
 from .utils.flow_control import if_, while_, map_
 from .manager import active_graph, active_if_zone, active_map_zone, active_while_zone
 
-__version__ = "0.5.2"
+__version__ = "0.5.2post0"
 
 __all__ = [
     "WorkGraph",
