@@ -3,5 +3,6 @@ channels:
   - conda-forge
   - defaults
 dependencies:
+  - graphviz
   - aiida-core.services
   - qe
