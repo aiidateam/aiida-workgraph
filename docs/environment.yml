@@ -3,6 +3,5 @@ channels:
   - conda-forge
   - defaults
 dependencies:
-  - aiida-core~=2.7.0rc1
   - aiida-core.services
   - qe
