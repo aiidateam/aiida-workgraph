@@ -195,7 +195,10 @@ class WorkGraphSaver:
         - task_actions
 
         """
-        from aiida_workgraph.utils import workgraph_to_short_json
+        from aiida_workgraph.utils import (
+            workgraph_to_short_json,
+            serialize_input_values_recursively,
+        )
 
         self.task_states = {}
         self.task_processes = {}
@@ -210,6 +213,6 @@ class WorkGraphSaver:
             self.task_actions[name] = task["action"]
             self.task_executors[name] = task.pop("executor", None)
             self.task_error_handlers[name] = task.pop("error_handlers", {})
-            self.wgdata["tasks"][name] = serialize(task)
+            serialize_input_values_recursively(task["inputs"])
         self.workgraph_error_handlers = self.wgdata.pop("error_handlers")
         self.wgdata["meta_sockets"] = serialize(self.wgdata["meta_sockets"])

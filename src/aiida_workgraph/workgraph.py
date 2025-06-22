@@ -73,8 +73,11 @@ class WorkGraph(node_graph.NodeGraph):
     def prepare_inputs(
         self, metadata: Optional[Dict[str, Any]] = None
     ) -> Dict[str, Any]:
+        from aiida_workgraph.utils import remove_output_values
 
         wgdata = self.to_dict(should_serialize=True)
+        for task in wgdata["tasks"].values():
+            remove_output_values(task["outputs"])
         metadata = metadata or {}
         inputs = {"workgraph_data": wgdata, "metadata": metadata}
         return inputs
@@ -109,6 +112,7 @@ class WorkGraph(node_graph.NodeGraph):
             return
         self.check_before_run()
         inputs = self.prepare_inputs(metadata=metadata)
+        print("inputs:", inputs)
         _, node = aiida.engine.run_get_node(WorkGraphEngine, inputs=inputs)
         self.process = node
         self.update()
@@ -385,7 +389,9 @@ class WorkGraph(node_graph.NodeGraph):
         return nt
 
     @classmethod
-    def load(cls, pk: int | aiida.orm.ProcessNode) -> Optional["WorkGraph"]:
+    def load(
+        cls, pk: int | aiida.orm.ProcessNode, safe_load: bool = True
+    ) -> Optional["WorkGraph"]:
         """
         Load WorkGraph from the process node with the given primary key.
 
@@ -405,7 +411,7 @@ class WorkGraph(node_graph.NodeGraph):
             )
         if not isinstance(process, WorkGraphNode):
             raise ValueError(f"Process {pk} is not a WorkGraph")
-        wgdata = get_workgraph_data(process)
+        wgdata = get_workgraph_data(process, safe_load=safe_load)
         wg = cls.from_dict(wgdata)
         wg.process = process
         wg.update()
