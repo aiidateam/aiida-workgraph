@@ -112,7 +112,6 @@ class WorkGraph(node_graph.NodeGraph):
             return
         self.check_before_run()
         inputs = self.prepare_inputs(metadata=metadata)
-        print("inputs:", inputs)
         _, node = aiida.engine.run_get_node(WorkGraphEngine, inputs=inputs)
         self.process = node
         self.update()
