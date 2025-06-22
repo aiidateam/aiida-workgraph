@@ -284,7 +284,7 @@ class WorkGraphEngine(Process, metaclass=Protect):
         self.ctx._new_data = {}
         self.ctx._executed_tasks = []
         # read the latest workgraph data
-        self.wg = WorkGraph.load(self.node)
+        self.wg = WorkGraph.load(self.node, safe_load=False)
         # create a builtin `_context` task with its results as the context variables
         self.ctx._task_results = {
             "graph_ctx": self.wg.ctx._value,

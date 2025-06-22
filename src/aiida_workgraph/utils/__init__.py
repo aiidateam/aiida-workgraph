@@ -187,10 +187,18 @@ def get_dict_from_builder(builder: Any) -> Dict:
         return builder
 
 
-def get_workgraph_data(process: Union[int, orm.Node]) -> Optional[Dict[str, Any]]:
+def get_workgraph_data(
+    process: Union[int, orm.Node], safe_load: bool = True
+) -> Optional[Dict[str, Any]]:
     """Get the workgraph data from the process node."""
     from aiida_workgraph.orm.utils import deserialize_safe
+    from aiida.orm.utils.serialize import deserialize_unsafe
     from aiida.orm import load_node
+
+    if safe_load:
+        deserializer = deserialize_safe
+    else:
+        deserializer = deserialize_unsafe
 
     if isinstance(process, int):
         process = load_node(process)
@@ -199,10 +207,10 @@ def get_workgraph_data(process: Union[int, orm.Node]) -> Optional[Dict[str, Any]
     if wgdata is None:
         return
     for name, task in wgdata["tasks"].items():
-        wgdata["tasks"][name] = deserialize_safe(task)
+        wgdata["tasks"][name] = deserializer(task)
         wgdata["tasks"][name]["executor"] = task_executors.get(name)
     wgdata["error_handlers"] = process.workgraph_error_handlers
-    wgdata["meta_sockets"] = deserialize_safe(wgdata["meta_sockets"])
+    wgdata["meta_sockets"] = deserializer(wgdata["meta_sockets"])
     return wgdata
 
 

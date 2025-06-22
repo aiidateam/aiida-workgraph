@@ -385,7 +385,9 @@ class WorkGraph(node_graph.NodeGraph):
         return nt
 
     @classmethod
-    def load(cls, pk: int | aiida.orm.ProcessNode) -> Optional["WorkGraph"]:
+    def load(
+        cls, pk: int | aiida.orm.ProcessNode, safe_load: bool = True
+    ) -> Optional["WorkGraph"]:
         """
         Load WorkGraph from the process node with the given primary key.
 
@@ -405,7 +407,7 @@ class WorkGraph(node_graph.NodeGraph):
             )
         if not isinstance(process, WorkGraphNode):
             raise ValueError(f"Process {pk} is not a WorkGraph")
-        wgdata = get_workgraph_data(process)
+        wgdata = get_workgraph_data(process, safe_load=safe_load)
         wg = cls.from_dict(wgdata)
         wg.process = process
         wg.update()
