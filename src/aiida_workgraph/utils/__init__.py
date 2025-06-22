@@ -11,6 +11,7 @@ from aiida_pythonjob import PythonJob
 from aiida_pythonjob.calculations.pyfunction import PyFunction
 from aiida_shell.calculations.shell import ShellJob
 import inspect
+from yaml.constructor import ConstructorError
 
 
 def inspect_aiida_component_type(executor: Callable) -> str:
@@ -190,7 +191,9 @@ def get_dict_from_builder(builder: Any) -> Dict:
 def get_workgraph_data(
     process: Union[int, orm.Node], safe_load: bool = True
 ) -> Optional[Dict[str, Any]]:
-    """Get the workgraph data from the process node."""
+    """
+    Get the workgraph data from the given process node.
+    """
     from aiida_workgraph.orm.utils import deserialize_safe
     from aiida.orm.utils.serialize import deserialize_unsafe
     from aiida.orm import load_node
@@ -204,11 +207,9 @@ def get_workgraph_data(
         process = load_node(process)
     wgdata = process.workgraph_data
     task_executors = process.task_executors
-    if wgdata is None:
-        return
     for name, task in wgdata["tasks"].items():
-        wgdata["tasks"][name] = deserializer(task)
-        wgdata["tasks"][name]["executor"] = task_executors.get(name)
+        deserialize_input_values_recursively(task["inputs"], deserializer)
+        task["executor"] = task_executors.get(name)
     wgdata["error_handlers"] = process.workgraph_error_handlers
     wgdata["meta_sockets"] = deserializer(wgdata["meta_sockets"])
     return wgdata
@@ -478,6 +479,61 @@ def workgraph_to_short_json(
             if link["to_node"] == "graph_ctx":
                 link["to_node"] = "ctx_outputs"
     return wgdata_short
+
+
+def serialize_input_values_recursively(
+    inputs: Dict[str, Any], serializer: callable = None
+) -> None:
+    """
+    Serialize input values to a format suitable for storage or transmission.
+
+    This function converts all input values to their raw representations, ensuring
+    that complex objects are converted to simple types (e.g., strings, integers).
+
+    :param inputs: A dictionary of inputs to be serialized.
+    :return: A dictionary with serialized input values.
+    """
+    if serializer is None:
+        from aiida.orm.utils.serialize import serialize
+
+        serializer = serialize
+    if "property" in inputs:
+        inputs["property"]["value"] = serializer(inputs["property"]["value"])
+    if "sockets" in inputs:
+        for socket in inputs["sockets"].values():
+            serialize_input_values_recursively(socket)
+
+
+def deserialize_input_values_recursively(
+    inputs: Dict[str, Any], deserializer: callable = None
+) -> None:
+    """
+    Deserialize input values from a format suitable for storage or transmission.
+
+    This function converts all input values back to their original representations,
+    ensuring that complex objects are restored from their serialized forms.
+
+    :param inputs: A dictionary of inputs to be deserialized.
+    :return: A dictionary with deserialized input values.
+    """
+    if deserializer is None:
+        from aiida_workgraph.orm.utils import deserialize_safe
+
+        deserializer = deserialize_safe
+
+    if "property" in inputs:
+        try:
+            inputs["property"]["value"] = deserializer(inputs["property"]["value"])
+        except ConstructorError:
+            name = inputs["name"]
+            print(
+                f"Info: could not deserialize input '{name}'. The raw input value is left in place."
+                "The workgraph is still loaded and you can inspect tasks, inputs and outputs. "
+                "If you trust the data, reload with safe_load=False."
+            )
+    if "sockets" in inputs:
+        for socket in inputs["sockets"].values():
+            deserialize_input_values_recursively(socket, deserializer)
 
 
 def validate_task_inout(inout_list: list[str | dict], list_type: str) -> list[dict]:
