@@ -481,6 +481,23 @@ def workgraph_to_short_json(
     return wgdata_short
 
 
+def remove_output_values(outputs: Dict[str, Any]) -> None:
+    """
+    Remove output values from the outputs dictionary.
+
+    This function iterates through the outputs and removes the 'value' key from each output.
+    It is useful for cleaning up outputs before serialization or storage.
+
+    :param outputs: A dictionary of outputs to be cleaned.
+    :return: None
+    """
+    if "property" in outputs:
+        outputs["property"].pop("value", None)
+    if "sockets" in outputs:
+        for socket in outputs["sockets"].values():
+            remove_output_values(socket)
+
+
 def serialize_input_values_recursively(
     inputs: Dict[str, Any], serializer: callable = None
 ) -> None:
