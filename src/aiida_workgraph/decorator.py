@@ -86,12 +86,11 @@ def _make_wrapper(TaskCls, func):
             WorkGraphImperativeEngine,
         )
 
+        is_imperative = False
         if is_process_scoped():
             process = Process.current()
             if isinstance(process, WorkGraphImperativeEngine):
                 is_imperative = True
-            else:
-                is_imperative = False
         if is_imperative:
             process = Process.current()
             graph = process.wg

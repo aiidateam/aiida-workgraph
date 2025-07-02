@@ -52,7 +52,8 @@ class TaskStateManager:
             self.process.node.set_task_process(name, serialized)
         elif key == "state":
             self.process.node.set_task_state(name, value)
-            self.process.wg.tasks[name].state = value
+            if name in self.process.wg.tasks:
+                self.process.wg.tasks[name].state = value
         elif key == "action":
             self.process.node.set_task_action(name, value)
         elif key == "execution_count":
