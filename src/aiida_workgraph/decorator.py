@@ -80,19 +80,32 @@ def _make_wrapper(TaskCls, func):
     @functools.wraps(func)
     def wrapper(*call_args, **call_kwargs):
         from aiida_workgraph.manager import get_current_graph
+        from aiida.engine.utils import is_process_scoped
+        from aiida.engine import Process
+        from aiida_workgraph.engine.imperative.imperative import (
+            WorkGraphImperativeEngine,
+        )
 
-        graph = get_current_graph()
-        if graph is None:
-            raise RuntimeError(f"No active Graph available for {func.__name__}.")
+        if is_process_scoped():
+            process = Process.current()
+            if isinstance(process, WorkGraphImperativeEngine):
+                is_imperative = True
+            else:
+                is_imperative = False
+        if is_imperative:
+            process = Process.current()
+            graph = process.wg
+        else:
+            graph = get_current_graph()
+            if graph is None:
+                raise RuntimeError(f"No active Graph available for {func.__name__}.")
         task = graph.add_task(TaskCls)
         active_zone = getattr(graph, "_active_zone", None)
         if active_zone:
             active_zone.children.add(task)
-
         inputs = dict(call_kwargs or {})
         arguments = list(call_args)
         orginal_func = func._func if hasattr(func, "_func") else func
-
         for name, parameter in inspect.signature(orginal_func).parameters.items():
             if parameter.kind in [
                 parameter.POSITIONAL_ONLY,
@@ -105,13 +118,26 @@ def _make_wrapper(TaskCls, func):
             elif parameter.kind is parameter.VAR_POSITIONAL:
                 # not supported
                 raise ValueError("VAR_POSITIONAL is not supported.")
-
         task.set(inputs)
         outputs = [
             output
             for output in task.outputs
             if output._name not in ["_wait", "_outputs", "exit_code"]
         ]
+        if is_imperative:
+            from aiida_workgraph.utils.analysis import WorkGraphSaver
+
+            workgraph_data = process.wg.prepare_inputs()["workgraph_data"]
+            saver = WorkGraphSaver(
+                process.node,
+                workgraph_data,
+                restart_process=process._raw_inputs["workgraph_data"].get(
+                    "restart_process", None
+                ),
+            )
+            graph.connectivity = graph.build_connectivity()
+            saver.save(update_state=False)
+            process._do_step()
         if len(outputs) == 1:
             return outputs[0]
         else:
