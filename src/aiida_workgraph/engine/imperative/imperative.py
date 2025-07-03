@@ -98,7 +98,9 @@ class WorkGraphImperativeEngine(WorkGraphEngine):
         self.task_manager.state_manager.update_meta_tasks("graph_ctx")
         self.wg.update()
         graph_results = {}
-        for name, socket in self.ctx._task_results.get("_flow", {}).items():
+        # print("graph results:", self.ctx._task_results.get("_flow", {}))
+        for name, data in self.ctx._task_results.get("_flow", {}).items():
+            socket = self.wg.tasks[data["task_name"]].outputs[data["socket_name"]]
             graph_results[name] = (
                 socket._value
                 if isinstance(socket, TaskSocketNamespace)
@@ -123,7 +125,7 @@ class WorkGraphImperativeEngine(WorkGraphEngine):
 
 
 async def wait_for(
-    socket: TaskSocket, interval: float = 2.0, timeout: float = 30.0
+    socket: TaskSocket, interval: float = 5.0, timeout: float = 604800.0
 ) -> None:
     """
     Wait for the socket's node to reach a terminal state, with a timeout.
@@ -140,6 +142,6 @@ async def wait_for(
         if time.monotonic() - start_time > timeout:
             print("Timeout reached while waiting for node state.")
             return
-        print("node state:", socket._node.state)
+        print(f"Task {socket._node.name} state:", socket._node.state)
         await asyncio.sleep(interval)
     socket._node.graph.update()
