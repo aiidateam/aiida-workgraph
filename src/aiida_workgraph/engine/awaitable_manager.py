@@ -106,6 +106,21 @@ class AwaitableManager:
             else:
                 assert f"invalid awaitable target '{awaitable.target}'"
 
+    def clean_socket_results(self, results) -> None:
+        """Clean the socket results of the awaitables.
+
+        TODO: this is hardcoded for TaskSocket, we should make it more generic
+        """
+        from aiida_workgraph.socket import TaskSocket, TaskSocketNamespace
+
+        if isinstance(results, dict):
+            for key, result in results.items():
+                results[key] = self.clean_socket_results(result)
+        elif isinstance(results, (TaskSocket, TaskSocketNamespace)):
+            # if the result is a TaskSocket, we need to clean it
+            return {"socket_name": results._name, "task_name": results._node.name}
+        return results
+
     def on_awaitable_finished(self, awaitable: Awaitable) -> None:
         """Callback function, for when an awaitable process instance is completed.
 
@@ -157,6 +172,7 @@ class AwaitableManager:
                     self.process.report(f"Task: {awaitable.key} cancelled.")
                 else:
                     results = awaitable.result()
+                    results = self.clean_socket_results(results)
                     self.process.task_manager.state_manager.update_normal_task_state(
                         awaitable.key, results
                     )

@@ -201,7 +201,6 @@ class WorkGraph(node_graph.NodeGraph):
     def build_connectivity(self) -> None:
         """Analyze the connectivity of workgraph and save it into dict."""
         connectivity = self.analyzer.build_connectivity()
-        connectivity["zone"] = {}
         return connectivity
 
     def to_dict(self, should_serialize: bool = False) -> Dict[str, Any]:
