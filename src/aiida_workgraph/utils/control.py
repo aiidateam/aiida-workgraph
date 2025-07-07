@@ -3,39 +3,6 @@ from __future__ import annotations
 from aiida.manage import get_manager
 from aiida import orm
 from aiida.engine.processes import control
-from plumpy.process_comms import RemoteProcessThreadController
-from typing import Any, Optional, Type
-
-
-class ControllerWithQueueName(RemoteProcessThreadController):
-    def __init__(self, queue_name: str, **kwargs):
-        super().__init__(**kwargs)
-        self.queue_name = queue_name
-        # This is a workaround to patch the communicator to preserve the queue to avoid
-        # opening many channels.
-        # A better solution is implement it in the manager, so that
-        # we can also close the channel when loading another profile.
-        if not hasattr(self._communicator, "scheduler_queues"):
-            self._communicator.scheduler_queues = {}
-        if self.queue_name not in self._communicator.scheduler_queues:
-            queue = self._communicator.task_queue(self.queue_name)
-            self._communicator.scheduler_queues[self.queue_name] = queue
-
-    @property
-    def scheduler_queue(self):
-        """Return the scheduler queue."""
-        return self._communicator.scheduler_queues[self.queue_name]
-
-    def task_send(self, message: Any, no_reply: bool = False) -> Optional[Any]:
-        """
-        Send a task to be performed using the communicator
-
-        :param message: the task message
-        :param no_reply: if True, this call will be fire-and-forget, i.e. no return value
-        :return: the response from the remote side (if no_reply=False)
-        """
-        result = self.scheduler_queue.task_send(message, no_reply=no_reply)
-        return result
 
 
 def create_task_action(
@@ -50,46 +17,6 @@ def create_task_action(
     controller = get_manager().get_process_controller()
     message = {"intent": "custom", "catalog": "task", "action": action, "tasks": tasks}
     controller._communicator.rpc_send(pk, message)
-
-
-def continue_process_in_scheduler(
-    pk: int | orm.Node,
-    scheduler_name: str = "test_scheduler",
-):
-    """Send workgraph task to scheduler."""
-
-    manager = get_manager()
-    profile = manager.get_profile()
-    queue_name = f"aiida-{profile.uuid}-{scheduler_name}"
-    controller = ControllerWithQueueName(
-        queue_name=queue_name, communicator=manager.get_communicator()
-    )
-    if isinstance(pk, orm.Node):
-        node = pk
-        pk = node.pk
-    else:
-        node = orm.load_node(pk)
-    controller.continue_process(pk, nowait=False)
-    node.base.extras.set("_scheduler", scheduler_name)
-
-
-def play_process_in_scheduler(scheduler: int, pk: int | orm.Node):
-    controller = get_manager().get_process_controller()
-    controller._communicator.rpc_send(scheduler, {"intent": "play", "message": pk})
-
-
-def stop_scheduler(scheduler: int):
-    """Stop scheduler."""
-    controller = get_manager().get_process_controller()
-    controller._communicator.rpc_send(scheduler, {"intent": "stop"})
-
-
-def get_scheduler_status(scheduler: int):
-    """Get scheduler status."""
-    controller = get_manager().get_process_controller()
-    status = controller._communicator.rpc_send(scheduler, {"intent": "status"})
-    result = status.result().result()
-    return result
 
 
 def get_task_runtime_info(node, name: str, key: str) -> str:
@@ -226,51 +153,3 @@ def reset_tasks(pk: int, tasks: list) -> None:
             create_task_action(pk, tasks, action="reset")
 
     return True, ""
-
-
-def submit_to_scheduler(
-    process_class, inputs: dict, scheduler: str | None = None
-) -> orm.Node:
-    """Submit a process to the scheduler."""
-    from aiida.manage import manager
-    from aiida.engine.utils import instantiate_process
-    from aiida.engine import submit
-    from aiida_workgraph.utils.control import continue_process_in_scheduler
-
-    if scheduler is not None:
-        runner = manager.get_manager().get_runner()
-        process_inited = instantiate_process(runner, process_class, **inputs)
-        process_inited.close()
-        process_inited.runner.persister.save_checkpoint(process_inited)
-        node = process_inited.node
-        continue_process_in_scheduler(node.pk, scheduler_name=scheduler)
-    else:
-        node = submit(process_class, **inputs)
-
-    return node
-
-
-def submit_to_scheduler_inside_workchain(
-    self,
-    process: Type["Process"],
-    inputs: dict[str, Any] | None = None,
-    **kwargs,
-) -> orm.ProcessNode:
-    """Submit a process inside the workchain to the scheduler.
-    :param process: The process class.
-    :param inputs: The dictionary of process inputs.
-    :return: The process node.
-    """
-    from aiida.engine import utils
-    from aiida_workgraph.utils.control import continue_process_in_scheduler
-
-    scheduler = self.node.base.extras.get("_scheduler", None)
-    if scheduler:
-        inputs = utils.prepare_inputs(inputs, **kwargs)
-        process_inited = self.runner.instantiate_process(process, **inputs)
-        self.runner.persister.save_checkpoint(process_inited)
-        process_inited.close()
-        continue_process_in_scheduler(process_inited.node, scheduler)
-        return process_inited.node
-    else:
-        return self.runner.submit(process, inputs, **kwargs)
