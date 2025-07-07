@@ -358,7 +358,7 @@ class WorkGraphEngine(Process, metaclass=Protect):
         :param inputs: The dictionary of process inputs.
         :return: The process node.
         """
-        from aiida_workgraph.utils.control import submit_to_scheduler_inside_workchain
+        from aiida_scheduler.control import submit_to_scheduler_inside_workchain
 
         return submit_to_scheduler_inside_workchain(self, process, inputs, **kwargs)
 
