@@ -92,7 +92,7 @@ assert add_multiply2.outputs.multiply.result.value == 100
 
 from aiida_workgraph.utils import generate_node_graph
 
-# NOTE: Show only part of provenance graph? Like this is too big?
+# PRCOMMENT: Show only part of provenance graph? Like this is too big?
 
 generate_node_graph(wg.pk)
 
