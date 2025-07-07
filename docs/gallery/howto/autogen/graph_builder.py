@@ -8,8 +8,8 @@ Graph Builder for nested and dynamic workflows
 # Introduction
 # ============
 # In this example we learn how to create nested workflows by creating a task
-# out of a WorkGraph. Further, we will learn how to do the same with the Graph
-# Builder, a decorator that allows us to move the creation of the WorkGraph to
+# out of a WorkGraph. Further, we will learn how to do the same with the `Graph
+# Builder`, a decorator that allows us to move the creation of the WorkGraph to
 # runtime, so we can create dynamic workflows that change depending on the inputs.
 # This is of particular interest for integrating for-loops and if-then-else
 # logic into your workflow.
@@ -23,7 +23,7 @@ load_profile()
 # Nested workflows with WorkGraph
 # ===============================
 # We will discuss how to use WorkGraph's
-# nested workflows. Suppose we want to reuse the WorkGraph computing `(x+y)*z`
+# nested workflows. Suppose we want to reuse a WorkGraph that computes `(x+y)*z`
 # to perform the operation
 #
 # .. code-block:: Python
@@ -67,9 +67,8 @@ wg.add_link(add_multiply1.outputs.multiply.result, add_multiply2.inputs.multiply
 wg.to_html()
 
 # %%
-# The created WorkGraphTask behaves similarly as a normal WorkGraph would (and indeed actually has the associated
-# `WorkGraph` attached as an attribute).That means we can access elements of the sub-WorkGraph, for instance, its tasks,
-# inputs, etc., via:
+# The automatically created ``WorkGraphTask`` behaves similarly as a normal WorkGraph would (and indeed actually has the associated
+# ``WorkGraph`` attached as an attribute). That means we can access elements of the sub-WorkGraph, for instance, its tasks, inputs, etc., via:
 
 print(wg.tasks.add_multiply1.tasks)
 print(wg.tasks.add_multiply1.tasks.add.inputs.x)
@@ -100,13 +99,17 @@ generate_node_graph(wg.pk)
 # Graph builder
 # =============
 # A much more powerful tool to create nested WorkGraphs is the Graph Builder.
-# It is a decorator that we can add to a function that returns a WorkGraph
-# similar as `add_multiply` to have more control what we want to expose to the
-# user and to create dynamic workflows.
+# It is a decorator that we can add to a function that returns a WorkGraph.
+# The main advantages of using the Graph Builder are as follows:
+# * **Clean interfaces** - Expose only necessary inputs/outputs while hiding internal complexity
+# * **Dynamic workflows** - Create different task structures based on input values at runtime
+# * **Control flow** - Use Python `if`, `for`, `while` statements directly in workflows
+# * **Reusable components** - Use Graph Builders as modular tasks in larger workflows
+# * **Runtime flexibility** - Workflow structure adapts to actual data rather than being fixed at design time
 
 
 # %%
-# Expose outputs
+# Exposing outputs
 # --------------
 # We add `task.graph_builder` decorator to a function to define a graph builder
 # function. The function constructs a WorkGraph based on the inputs, and returns
