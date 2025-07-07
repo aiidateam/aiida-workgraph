@@ -80,7 +80,7 @@ print(wg.tasks.add_multiply1.outputs)
 
 
 # %%
-# Finally, we run the workgraph
+# Finally, we run the WorkGraph
 
 wg.submit(wait=True)
 # (2+3)*4 = 20
@@ -92,6 +92,8 @@ assert add_multiply2.outputs.multiply.result.value == 100
 
 from aiida_workgraph.utils import generate_node_graph
 
+# NOTE: Show only part of provenance graph? Like this is too big?
+
 generate_node_graph(wg.pk)
 
 
@@ -100,13 +102,14 @@ generate_node_graph(wg.pk)
 # =============
 # A much more powerful tool to create nested WorkGraphs is the Graph Builder.
 # It is a decorator that we can add to a function that returns a WorkGraph.
-# The main advantages of using the Graph Builder are as follows:
+# The main advantages of using the Graph Builder are the following:
 # * **Clean interfaces** - Expose only necessary inputs/outputs while hiding internal complexity
-# * **Dynamic workflows** - Create different task structures based on input values at runtime
 # * **Control flow** - Use Python `if`, `for`, `while` statements directly in workflows
 # * **Reusable components** - Use Graph Builders as modular tasks in larger workflows
+# * **Dynamic workflows** - Create different task structures based on input values at runtime
 # * **Runtime flexibility** - Workflow structure adapts to actual data rather than being fixed at design time
 
+# Let's have a look at these points individually!
 
 # %%
 # Exposing outputs
@@ -120,7 +123,7 @@ generate_node_graph(wg.pk)
 #
 #     @task.graph_builder(outputs = [{"name": "multiply"}])
 #
-# This will expose the `multiply` output of the workgraph as the `multiply` output of the task.
+# This will expose the `multiply` output of the WorkGraph as the `multiply` output of the task.
 #
 
 
@@ -158,17 +161,17 @@ wg.to_html()
 
 
 # %%
-# Generate node graph from the AiiDA process,and we can see that the `multiply` task was executed.
+# When we generate node graph from the AiiDA process, we can see that the `multiply` task was executed.
 
 generate_node_graph(wg.pk)
 
 # %%
-# Looking at the process list we can also that multiple WorkGraphs have been submitted.
+# Looking at the process list we can also see that multiple WorkGraphs have been submitted.
 # Please run this now in the terminal:
 #
 # .. code-block:: bash
 #
-#     verdi process list -a
+#     verdi process list -ap 1
 
 
 # %%
@@ -205,20 +208,8 @@ def add_one(x):
 def for_loop(nb_iterations: Int):
     wg = WorkGraph()
     for i in range(nb_iterations.value):
-        task = wg.add_task(add_one, x=i)
+        _ = wg.add_task(add_one, x=i)  # No `Int` needed?
 
-    # We cannot refer to a specific task as output in the graph builder decorator
-    # as in the examples before since the name of the last task depends on the input.
-    # Remember that each task is always assigned unique name automatically.
-    # Therefore we use the context to not directly refer to the name but the last
-    # task object that was created. The context can then be referred in the outputs
-    # of the graph builder decorator.
-
-    # Put result of the task to the context under the name task_out
-    wg.update_ctx({"task_out": task.outputs.result})
-    wg.outputs.result = wg.ctx.task_out
-    # If want to know more about the usage of the context please refer to the
-    # context howto in the documentation
     return wg
 
 
@@ -258,13 +249,11 @@ def modulo_two(x):
 def if_then_else(i: Int):
     wg = WorkGraph()
     if i.value < 2:
-        task = wg.add_task(add_one, x=i)
+        _ = wg.add_task(add_one, x=i)
     else:
-        task = wg.add_task(modulo_two, x=i)
+        _ = wg.add_task(modulo_two, x=i)
 
     # same concept as before, please read the for loop example for explanation
-    wg.update_ctx({"task_out": task.outputs.result})
-    wg.outputs.result = wg.ctx.task_out
     return wg
 
 
