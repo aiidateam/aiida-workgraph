@@ -11,14 +11,14 @@ Flow control: Using ``if`` conditions
 # This tutorial provides a step-by-step guide on how to implement conditional logic in WorkGraph using three different
 # methods:
 #
-# 1. **If**
+# 1. **If context manager**
 # 2. **graph_builder Decorator**
 # 3. **Programmatic approach using the If Task**
 #
 # For simple cases, we recommend option 1), the ``If`` context manager approach, while option 2), using the Graph
 # Builder provides additional advantages, such as dynamic runtime dependence (see :doc:`graph_builder`).
 # Finally, option 3) is the most complex approach that requires the largest amount of code, however, it allows to
-# programmatically construct the ``if`` condition, thus offering the biggest flexibility.
+# programmatically construct the ``if`` condition and offers the biggest flexibility.
 #
 
 # %%
@@ -83,7 +83,7 @@ with WorkGraph("if_context") as wg:
         wg.ctx.result = add(x=result, y=2)
     with If(result >= 0):
         wg.ctx.result = multiply(x=result, y=2)
-    #---------------------------------------------------------------------
+    # -----------------------------------------
     result = add(x=wg.ctx.result, y=1)
 
 # We export the workgraph to an html file so that it can be visualized in a browser
@@ -124,14 +124,13 @@ generate_node_graph(wg.pk)
 # The ``graph_builder`` decorator is used for creating a dynamic ``WorkGraph`` during runtime based on input values (see `this
 # section <https://aiida-workgraph.readthedocs.io/en/latest/howto/autogen/graph_builder.html>`_).
 #
-# This method differs significantly from the ``If``:
+# This method differs significantly from the ``If`` context manager:
 #
 # - **Visibility**: In the GUI, only the ``graph_builder`` task is visible before execution, while for the ``If``,
 #   both branches were shown
 # - **Dynamic Generation**: Upon running, it generates the WorkGraph dynamically, allowing for complex conditional logic and flow adjustments based on runtime data.
 
-# Create a WorkGraph which is dynamically generated based on the input
-# then we output the result from the context
+# Create a WorkGraph which is dynamically generated based on the input then we output the result from the context
 @task.graph_builder(outputs = [{"name": "result", "from": "ctx.data"}])
 def add_multiply_if(x, y):
     wg = WorkGraph()
