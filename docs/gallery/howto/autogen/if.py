@@ -13,12 +13,14 @@ Flow control: Using ``if`` conditions
 #
 # 1. **If**
 # 2. **graph_builder Decorator**
+# 3. **Programmatic approach**
 
 # %%
-# Using the ``If``
-# ============================
+# Using the ``If`` context manager
+# ================================
 #
-# WorkGraph provides the ``If`` context manager that allows you to define conditional logic in your workflow. The ``If`` block encapsulates all its child tasks, which are executed based on the defined conditions.
+# WorkGraph provides the ``If`` context manager that allows you to define conditional logic in your workflow. The ``If``
+# block encapsulates all its child tasks, which are executed based on the defined conditions.
 
 # %%
 # Example
@@ -65,6 +67,7 @@ def multiply(x, y):
 # AiiDA WorkGraph.
 # Using a context manager for the ``If`` also requires the ``WorkGraph`` itself being constructed as a context
 # manager:
+# PRCOMMENT: Maybe explain better here why also context manager for the WorkGraph
 
 from aiida_workgraph import WorkGraph, If
 
@@ -77,10 +80,10 @@ with WorkGraph("if_task") as wg:
     #---------------------------------------------------------------------
     result = add(x=wg.ctx.result, y=1)
 
-# export the workgraph to html file so that it can be visualized in a browser
+# We export the workgraph to an html file so that it can be visualized in a browser
 wg.to_html()
 
-# comment out the following line to visualize the workgraph in jupyter-notebook
+# Comment out the following line to visualize the workgraph in jupyter-notebook
 # wg
 
 # %%
@@ -101,8 +104,8 @@ print(f'Result:             {result.value}')
 
 # %%
 # Finally, after the WG has finished, we generate the node (provenance) graph from the AiiDA process, where we can see
-# that the result of the ``op_lt`` (larger than) comparison is ``False``, while for the ``og_ge`` (greater or equal) comparison
-# it is ``True``, meaning that the branch with the intermediate multiplication was executed.
+# that the result of the ``op_lt`` (larger than) comparison is ``False``, while for the ``og_ge`` (greater or equal)
+# comparison it is ``True``, meaning that the branch with the intermediate multiplication was executed.
 
 from aiida_workgraph.utils import generate_node_graph
 generate_node_graph(wg.pk)
