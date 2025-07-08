@@ -85,6 +85,7 @@ def _make_wrapper(TaskCls, func):
         if graph is None:
             raise RuntimeError(f"No active Graph available for {func.__name__}.")
         task = graph.add_task(TaskCls)
+        # PRCOMMENT: Not sure if this now still works, as this uses `_active_zone`
         active_zone = getattr(graph, "_active_zone", None)
         if active_zone:
             active_zone.children.add(task)
