@@ -639,3 +639,19 @@ def query_terminated_processes(pks: list[int]) -> list[int]:
     results = qb.all()
     terminated_pks = [res[0] for res in results]
     return terminated_pks
+
+
+def serialize_socket_data(input_socket: Dict[str, Any]) -> None:
+    """Recursively walk over the sockets and convert raw Python
+    values to AiiDA Data nodes, if needed.
+    """
+    from aiida_pythonjob.data.serializer import general_serializer
+
+    if input_socket["identifier"] == "workgraph.namespace":
+        for socket in input_socket["sockets"].values():
+            serialize_socket_data(socket)
+    else:
+        value = input_socket.get("property", {}).get("value")
+        if value is None or isinstance(value, orm.Data):
+            return
+        input_socket["property"]["value"] = general_serializer(value)
