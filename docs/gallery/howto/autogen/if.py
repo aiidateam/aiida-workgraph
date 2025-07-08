@@ -8,12 +8,18 @@ Flow control: Using ``if`` conditions
 # Introduction
 # ============
 #
-# This tutorial provides a step-by-step guide on how to implement conditional logic in WorkGraph using two distinct
+# This tutorial provides a step-by-step guide on how to implement conditional logic in WorkGraph using three different
 # methods:
 #
 # 1. **If**
 # 2. **graph_builder Decorator**
-# 3. **Programmatic approach**
+# 3. **Programmatic approach using the If Task**
+#
+# For simple cases, we recommend option 1), the ``If`` context manager approach, while option 2), using the Graph
+# Builder provides additional advantages, such as dynamic runtime dependence (see :doc:`graph_builder`).
+# Finally, option 3) is the most complex approach that requires the largest amount of code, however, it allows to
+# programmatically construct the ``if`` condition, thus offering the biggest flexibility.
+#
 
 # %%
 # Using the ``If`` context manager
@@ -71,7 +77,7 @@ def multiply(x, y):
 
 from aiida_workgraph import WorkGraph, If
 
-with WorkGraph("if_task") as wg:
+with WorkGraph("if_context") as wg:
     result = add(x=1, y=1)
     with If(result < 0):
         wg.ctx.result = add(x=result, y=2)
@@ -150,9 +156,11 @@ wg = WorkGraph("if_graph_builer")
 add1 = wg.add_task(add, name="add1", x=1, y=1)
 add_multiply_if1 = wg.add_task(add_multiply_if, name="add_multiply_if1", x=add1.outputs.result, y=2)
 add1 = wg.add_task(add, name="add2", x=add_multiply_if1.outputs.result, y=1)
-# export the workgraph to html file so that it can be visualized in a browser
+
+# We export the workgraph to an html file so that it can be visualized in a browser
 wg.to_html()
-# comment out the following line to visualize the workgraph in jupyter-notebook
+
+# Comment out the following line to visualize the workgraph in jupyter-notebook
 # wg
 
 # %%
@@ -164,8 +172,8 @@ wg.to_html()
 # ===========================================
 
 wg.run()
-print("State of WorkGraph         : {}".format(wg.state))
-print('Result                     : {}'.format(wg.tasks.add2.outputs.result.value))
+print(f"State of WorkGraph: {wg.state}")
+print(f'Result            : {wg.tasks.add2.outputs.result.value}')
 
 # %%
 # Generate node graph from the AiiDA process,and we can see that the ``multiply`` task is executed.
@@ -177,7 +185,7 @@ generate_node_graph(wg.pk)
 # If Task
 # =======
 #
-# Internally, the ``if_`` instruction is implemented using the ``If`` ``Task`` from the WorkGraph library.
+# Internally, the ``If`` instruction is implemented using the ``If`` ``Task`` from the WorkGraph library.
 # In the WorkGraph user interface, the ``If`` ``Task`` is visually represented as an "If Zone".
 # This zone encapsulates all its child tasks, which are executed based on the defined conditions.
 #
@@ -221,8 +229,10 @@ from aiida_workgraph import WorkGraph
 
 with WorkGraph("if_task") as wg:
     condition = add(x=1, y=1)
+
     if_true_zone = wg.add_task("workgraph.if_zone", name="if_true", conditions=condition)
     add2 = if_true_zone.add_task(add, name="add2", x=condition, y=2)
+
     if_false_zone = wg.add_task("workgraph.if_zone", name="if_false", conditions=condition, invert_condition=True)
     multiply1 = if_false_zone.add_task(multiply, name="multiply1", x=condition, y=2)
     # ---------------------------------------------------------------------
@@ -234,9 +244,11 @@ with WorkGraph("if_task") as wg:
         condition=condition,
     )
     add3 = wg.add_task(add, name="add3", x=select1.outputs["result"], y=1)
-# export the workgraph to html file so that it can be visualized in a browser
+
+# We export the workgraph to an html file so that it can be visualized in a browser
 wg.to_html()
-# comment out the following line to visualize the workgraph in jupyter-notebook
+
+# Comment out the following line to visualize the workgraph in jupyter-notebook
 # wg
 
 # %%
