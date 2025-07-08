@@ -132,7 +132,7 @@ class WorkGraph(node_graph.NodeGraph):
             restart (bool): Restart the process, and reset the modified tasks, then only re-run the modified tasks.
             new (bool): Submit a new process.
         """
-        from aiida_workgraph.utils.control import continue_process_in_scheduler
+        from aiida_scheduler.control import continue_process_in_scheduler
 
         # set task inputs
         if inputs is not None:

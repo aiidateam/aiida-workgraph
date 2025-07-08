@@ -25,7 +25,6 @@ This section contains a collection of HowTos for various topics.
    zone
    monitor
    protocol
-   scheduler
    cli
    control
    transfer_workchain
