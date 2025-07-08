@@ -143,9 +143,7 @@ def While(condition_socket: TaskSocket, max_iterations: int = 10000):
 
 
 @contextmanager
-def Map(
-    source_socket: TaskSocket, placeholder: str = DEFAULT_MAP_PLACEHOLDER
-):
+def Map(source_socket: TaskSocket, placeholder: str = DEFAULT_MAP_PLACEHOLDER):
     """
     Context manager to create a "map zone" in the current graph.
 
