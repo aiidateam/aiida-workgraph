@@ -34,21 +34,24 @@ Flow control: Using ``if`` conditions
 #
 # Suppose you have the following Python workflow:
 
+
 def add(x, y):
     return x + y
 
+
 def multiply(x, y):
-    return x*y
+    return x * y
+
 
 # step 1
-result = add(1, 1)                    # First addition
+result = add(1, 1)  # First addition
 # step 2
 if result < 0:
-    result = add(result, 2)           # Conditionally execute addition
+    result = add(result, 2)  # Conditionally execute addition
 else:
-    result = multiply(result, 2)      # Or multiplication
+    result = multiply(result, 2)  # Or multiplication
 # step 3
-result = add(result, 1)               # Last addition
+result = add(result, 1)  # Last addition
 
 print("Result is", result)
 
@@ -58,14 +61,15 @@ print("Result is", result)
 
 from aiida_workgraph import task
 
+
 @task.calcfunction
 def add(x, y):
     return x + y
 
+
 @task.calcfunction
 def multiply(x, y):
-    return x*y
-
+    return x * y
 
 
 # %%
@@ -106,7 +110,7 @@ load_profile()
 
 wg.run()
 print(f"State of WorkGraph: {wg.state}")
-print(f'Result:             {result.value}')
+print(f"Result:             {result.value}")
 
 # %%
 # Finally, after the WG has finished, we generate the node (provenance) graph from the AiiDA process, where we can see
@@ -114,6 +118,7 @@ print(f'Result:             {result.value}')
 # comparison it is ``True``, meaning that the branch with the intermediate multiplication was executed.
 
 from aiida_workgraph.utils import generate_node_graph
+
 generate_node_graph(wg.pk)
 
 
@@ -131,7 +136,7 @@ generate_node_graph(wg.pk)
 # - **Dynamic Generation**: Upon running, it generates the WorkGraph dynamically, allowing for complex conditional logic and flow adjustments based on runtime data.
 
 # Create a WorkGraph which is dynamically generated based on the input then we output the result from the context
-@task.graph_builder(outputs = [{"name": "result", "from": "ctx.data"}])
+@task.graph_builder(outputs=[{"name": "result", "from": "ctx.data"}])
 def add_multiply_if(x, y):
     wg = WorkGraph()
     if x.value > 0:
@@ -153,7 +158,9 @@ from aiida_workgraph import WorkGraph
 
 wg = WorkGraph("if_graph_builer")
 add1 = wg.add_task(add, name="add1", x=1, y=1)
-add_multiply_if1 = wg.add_task(add_multiply_if, name="add_multiply_if1", x=add1.outputs.result, y=2)
+add_multiply_if1 = wg.add_task(
+    add_multiply_if, name="add_multiply_if1", x=add1.outputs.result, y=2
+)
 add1 = wg.add_task(add, name="add2", x=add_multiply_if1.outputs.result, y=1)
 
 # We export the workgraph to an html file so that it can be visualized in a browser
@@ -172,12 +179,13 @@ wg.to_html()
 
 wg.run()
 print(f"State of WorkGraph: {wg.state}")
-print(f'Result            : {wg.tasks.add2.outputs.result.value}')
+print(f"Result            : {wg.tasks.add2.outputs.result.value}")
 
 # %%
 # Generate node graph from the AiiDA process,and we can see that the ``multiply`` task is executed.
 
 from aiida_workgraph.utils import generate_node_graph
+
 generate_node_graph(wg.pk)
 
 # %%
@@ -229,10 +237,17 @@ from aiida_workgraph import WorkGraph
 with WorkGraph("if_task") as wg:
     condition = add(x=1, y=1)
 
-    if_true_zone = wg.add_task("workgraph.if_zone", name="if_true", conditions=condition)
+    if_true_zone = wg.add_task(
+        "workgraph.if_zone", name="if_true", conditions=condition
+    )
     add2 = if_true_zone.add_task(add, name="add2", x=condition, y=2)
 
-    if_false_zone = wg.add_task("workgraph.if_zone", name="if_false", conditions=condition, invert_condition=True)
+    if_false_zone = wg.add_task(
+        "workgraph.if_zone",
+        name="if_false",
+        conditions=condition,
+        invert_condition=True,
+    )
     multiply1 = if_false_zone.add_task(multiply, name="multiply1", x=condition, y=2)
     # ---------------------------------------------------------------------
     select1 = wg.add_task(
