@@ -31,8 +31,8 @@ class Zone(Task):
         )
         self.add_output("workgraph.any", "_wait")
 
-    def to_dict(self, short: bool = False) -> Dict[str, Any]:
-        tdata = super().to_dict(short=short)
+    def to_dict(self, **kwargs) -> Dict[str, Any]:
+        tdata = super().to_dict(**kwargs)
         tdata["children"] = [task.name for task in self.children]
         return tdata
 
@@ -171,7 +171,7 @@ class AiiDAInt(Task):
         self.add_input(
             "workgraph.any", "_wait", link_limit=100000, metadata={"arg_type": "none"}
         )
-        self.add_output("workgraph.aiida_int", "result")
+        self.add_output("workgraph.int", "result")
         self.add_output("workgraph.any", "_wait")
 
     def get_executor(self):
@@ -195,7 +195,7 @@ class AiiDAFloat(Task):
         self.add_input(
             "workgraph.any", "_wait", link_limit=100000, metadata={"arg_type": "none"}
         )
-        self.add_output("workgraph.aiida_float", "result")
+        self.add_output("workgraph.float", "result")
         self.add_output("workgraph.any", "_wait")
 
     def get_executor(self):
@@ -219,7 +219,7 @@ class AiiDAString(Task):
         self.add_input(
             "workgraph.any", "_wait", link_limit=100000, metadata={"arg_type": "none"}
         )
-        self.add_output("workgraph.aiida_string", "result")
+        self.add_output("workgraph.string", "result")
         self.add_output("workgraph.any", "_wait")
 
     def get_executor(self):
@@ -243,7 +243,7 @@ class AiiDAList(Task):
         self.add_input(
             "workgraph.any", "_wait", link_limit=100000, metadata={"arg_type": "none"}
         )
-        self.add_output("workgraph.aiida_list", "result")
+        self.add_output("workgraph.list", "result")
         self.add_output("workgraph.any", "_wait")
 
     def get_executor(self):
@@ -267,7 +267,7 @@ class AiiDADict(Task):
         self.add_input(
             "workgraph.any", "_wait", link_limit=100000, metadata={"arg_type": "none"}
         )
-        self.add_output("workgraph.aiida_dict", "result")
+        self.add_output("workgraph.dict", "result")
         self.add_output("workgraph.any", "_wait")
 
     def get_executor(self):
@@ -395,7 +395,6 @@ class GraphBuilderTask(Task):
             )
         wg.name = self.name
 
-        wg.group_outputs = self.metadata["group_outputs"]
         wg.parent_uuid = engine_process.node.uuid
         inputs = wg.prepare_inputs(metadata={"call_link_label": self.name})
         if self.action == "PAUSE":

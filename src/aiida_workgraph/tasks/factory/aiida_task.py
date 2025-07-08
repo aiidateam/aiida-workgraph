@@ -42,11 +42,16 @@ def add_input_recursive(
         # TODO the default value is {} could cause problem, because the address of the dict is the same,
         # so if you change the value of one port, the value of all the ports of other tasks will be changed
         # consider to use None as default value
+        if port.dynamic:
+            link_limit = 1e6
+        else:
+            link_limit = 1
         if port_name not in input_names:
             inputs.append(
                 {
                     "identifier": "workgraph.namespace",
                     "name": port_name,
+                    "link_limit": link_limit,
                     "metadata": {
                         "arg_type": "kwargs",
                         "required": required,
@@ -157,7 +162,7 @@ def get_task_data_from_aiida_component(
 
     tdata["identifier"] = tdata.pop("identifier", callable.__name__)
     tdata["executor"] = NodeExecutor.from_callable(callable).to_dict()
-    if task_type.upper() in ["CALCFUNCTION", "WORKFUNCTION"]:
+    if task_type.upper() in ["CALCFUNCTION", "AUTO_CALCFUNCTION", "WORKFUNCTION"]:
         outputs = (
             [{"identifier": "workgraph.any", "name": "result"}]
             if not outputs
@@ -167,8 +172,8 @@ def get_task_data_from_aiida_component(
     # add built-in sockets
     for output in builtin_outputs:
         outputs.append(output.copy())
-    for input in builtin_inputs:
-        inputs.append(input.copy())
+    for input_data in builtin_inputs:
+        inputs.append(input_data.copy())
     final_inputs = {
         "name": "inputs",
         "identifier": "workgraph.namespace",

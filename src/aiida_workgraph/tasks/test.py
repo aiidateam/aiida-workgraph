@@ -9,19 +9,19 @@ class TestAdd(CalcFunctionTask):
     catalog = "Test"
 
     def create_properties(self) -> None:
-        self.add_property("workgraph.aiida_float", "t", default=1.0)
+        self.add_property("workgraph.float", "t", default=1.0)
 
     def create_sockets(self) -> None:
         self.inputs._clear()
         self.outputs._clear()
-        inp = self.add_input("workgraph.aiida_float", "x")
-        inp.add_property("workgraph.aiida_float", "x", default=0.0)
-        inp = self.add_input("workgraph.aiida_float", "y")
-        inp.add_property("workgraph.aiida_float", "y", default=0.0)
+        inp = self.add_input("workgraph.float", "x")
+        inp.add_property("workgraph.float", "x", default=0.0)
+        inp = self.add_input("workgraph.float", "y")
+        inp.add_property("workgraph.float", "y", default=0.0)
         self.add_input(
             "workgraph.any", "_wait", metadata={"arg_type": "none"}, link_limit=100000
         )
-        self.add_output("workgraph.aiida_float", "sum")
+        self.add_output("workgraph.float", "sum")
         self.add_output("workgraph.any", "_wait")
         self.add_output("workgraph.any", "_outputs")
 
@@ -40,20 +40,20 @@ class TestSumDiff(CalcFunctionTask):
     catalog = "Test"
 
     def create_properties(self) -> None:
-        self.properties._new("workgraph.aiida_float", "t", default=1.0)
+        self.add_property("workgraph.float", "t", default=1.0)
 
     def create_sockets(self) -> None:
         self.inputs._clear()
         self.outputs._clear()
-        inp = self.add_input("workgraph.aiida_float", "x")
-        inp.add_property("workgraph.aiida_float", "x", default=0.0)
-        inp = self.add_input("workgraph.aiida_float", "y")
-        inp.add_property("workgraph.aiida_float", "y", default=0.0)
+        inp = self.add_input("workgraph.float", "x")
+        inp.add_property("workgraph.float", "x", default=0.0)
+        inp = self.add_input("workgraph.float", "y")
+        inp.add_property("workgraph.float", "y", default=0.0)
         self.add_input(
             "workgraph.any", "_wait", metadata={"arg_type": "none"}, link_limit=100000
         )
-        self.add_output("workgraph.aiida_float", "sum")
-        self.add_output("workgraph.aiida_float", "diff")
+        self.add_output("workgraph.float", "sum")
+        self.add_output("workgraph.float", "diff")
         self.add_output("workgraph.any", "_wait")
         self.add_output("workgraph.any", "_outputs")
 
@@ -78,16 +78,16 @@ class TestArithmeticMultiplyAdd(WorkChainTask):
         self.inputs._clear()
         self.outputs._clear()
         self.add_input("workgraph.any", "code")
-        inp = self.add_input("workgraph.aiida_int", "x")
-        inp.add_property("workgraph.aiida_int", "x", default=0)
-        inp = self.add_input("workgraph.aiida_int", "y")
-        inp.add_property("workgraph.aiida_int", "y", default=0)
-        inp = self.add_input("workgraph.aiida_int", "z")
-        inp.add_property("workgraph.aiida_int", "z", default=0)
+        inp = self.add_input("workgraph.int", "x")
+        inp.add_property("workgraph.int", "x", default=0)
+        inp = self.add_input("workgraph.int", "y")
+        inp.add_property("workgraph.int", "y", default=0)
+        inp = self.add_input("workgraph.int", "z")
+        inp.add_property("workgraph.int", "z", default=0)
         self.add_input(
             "workgraph.any", "_wait", metadata={"arg_type": "none"}, link_limit=100000
         )
-        self.add_output("workgraph.aiida_int", "result")
+        self.add_output("workgraph.int", "result")
         self.add_output("workgraph.any", "_wait")
         self.add_output("workgraph.any", "_outputs")
 

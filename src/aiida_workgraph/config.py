@@ -19,12 +19,12 @@ builtin_inputs = [
     {
         "name": "_wait",
         "link_limit": 1e6,
-        "metadata": {"arg_type": "none", "is_builtin": True},
+        "metadata": {"arg_type": "none", "builtin_socket": True},
     },
 ]
 builtin_outputs = [
-    {"name": "_wait", "metadata": {"arg_type": "none", "is_builtin": True}},
-    {"name": "_outputs", "metadata": {"arg_type": "none", "is_builtin": True}},
+    {"name": "_wait", "metadata": {"arg_type": "none", "builtin_socket": True}},
+    {"name": "_outputs", "metadata": {"arg_type": "none", "builtin_socket": True}},
 ]
 
 

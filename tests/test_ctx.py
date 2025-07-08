@@ -1,4 +1,4 @@
-from aiida_workgraph import WorkGraph
+from aiida_workgraph import WorkGraph, task
 from typing import Callable
 from aiida.orm import Float, ArrayData
 import numpy as np
@@ -36,7 +36,7 @@ def test_workgraph_ctx(decorated_add: Callable) -> None:
 
 
 @pytest.mark.usefixtures("started_daemon_client")
-def test_task_set_ctx(decorated_add: Callable) -> None:
+def test_task_update_ctx(decorated_add: Callable) -> None:
     """Set/get data to/from context."""
 
     wg = WorkGraph(name="test_node_set_ctx")
@@ -49,3 +49,25 @@ def test_task_set_ctx(decorated_add: Callable) -> None:
     add2 = wg.add_task(decorated_add, "add2", x=add1.outputs[0], y=wg.ctx.sum)
     wg.run()
     assert add2.outputs.result.value == 10
+
+
+def test_task_update_nested_ctx():
+    @task(
+        outputs=[
+            {"name": "results", "identifier": "workgraph.namespace"},
+            {"name": "results.sum"},
+            {"name": "results.product"},
+        ]
+    )
+    def add(x, y):
+        return {"results": {"sum": x + y, "product": x * y}}
+
+    wg = WorkGraph()
+    wg.add_task(add, name="add", x=1, y=2)
+    wg.update_ctx({"data.sum": wg.tasks.add.outputs.results.sum})
+    wg.outputs.sum = wg.ctx.data.sum
+    wg.outputs.add = {}
+    wg.outputs.add.sum = wg.ctx.data.sum
+    wg.run()
+    assert wg.process.outputs.sum.value == 3
+    assert wg.process.outputs.add.sum.value == 3

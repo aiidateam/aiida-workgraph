@@ -23,8 +23,6 @@ class DecoratedFunctionTaskFactory(BaseTaskFactory):
         outputs: Optional[List[Union[str, dict]]] = None,
         error_handlers: Optional[List[Dict[str, Any]]] = None,
         catalog: str = "Others",
-        group_inputs: List[Tuple[str, str]] = None,
-        group_outputs: List[Tuple[str, str]] = None,
         additional_data: Optional[Dict[str, Any]] = None,
         node_class: Optional[Callable] = None,
     ):
@@ -56,10 +54,10 @@ class DecoratedFunctionTaskFactory(BaseTaskFactory):
         }
         for out in task_outputs["sockets"].values():
             out.setdefault("metadata", {})
-            out["metadata"]["is_function_output"] = True
+            out["metadata"]["function_socket"] = True
         # add built-in sockets
-        for input in builtin_inputs:
-            task_inputs["sockets"][input["name"]] = input.copy()
+        for input_data in builtin_inputs:
+            task_inputs["sockets"][input_data["name"]] = input_data.copy()
         for output in builtin_outputs:
             task_outputs["sockets"][output["name"]] = output.copy()
 
@@ -68,8 +66,6 @@ class DecoratedFunctionTaskFactory(BaseTaskFactory):
             "metadata": {
                 "node_type": task_type,
                 "catalog": catalog,
-                "group_inputs": group_inputs or [],
-                "group_outputs": group_outputs or [],
             },
             "properties": properties,
             "inputs": task_inputs,

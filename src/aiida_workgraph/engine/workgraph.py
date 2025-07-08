@@ -20,7 +20,6 @@ from aiida_workgraph.orm.workgraph import WorkGraphNode
 from aiida.engine.processes.exit_code import ExitCode
 from aiida.engine.processes.process import Process
 from aiida.engine.processes.workchains.workchain import Protect, WorkChainSpec
-from aiida_workgraph.utils import update_nested_dict
 from .context_manager import ContextManager
 from .awaitable_manager import AwaitableManager
 from .task_manager import TaskManager
@@ -91,13 +90,6 @@ class WorkGraphEngine(Process, metaclass=Protect):
         spec.exit_code(2, "ERROR_SUBPROCESS", message="A subprocess has failed.")
 
         spec.outputs.dynamic = True
-
-        spec.output(
-            "execution_count",
-            valid_type=orm.Int,
-            required=False,
-            help="The number of time the WorkGraph runs.",
-        )
         #
         spec.exit_code(
             201, "UNKNOWN_MESSAGE_TYPE", message="The message type is unknown."
@@ -292,11 +284,13 @@ class WorkGraphEngine(Process, metaclass=Protect):
         self.ctx._new_data = {}
         self.ctx._executed_tasks = []
         # read the latest workgraph data
-        self.wg = WorkGraph.load(self.node)
+        self.wg = WorkGraph.load(self.node, safe_load=False)
         # create a builtin `_context` task with its results as the context variables
-        self.ctx._task_results = {"ctx": self.wg.ctx._value}
-        #
-        self.ctx._execution_count = 1
+        self.ctx._task_results = {
+            "graph_ctx": self.wg.ctx._value,
+            "graph_inputs": self.wg.inputs._value,
+            "graph_outputs": self.wg.outputs._value,
+        }
         # init task results
         self.task_manager.set_task_results()
         # while workgraph
@@ -352,32 +346,32 @@ class WorkGraphEngine(Process, metaclass=Protect):
         # Didn't match any known intents
         raise RuntimeError("Unknown intent")
 
+    def submit(
+        self,
+        process: t.Type["Process"],
+        inputs: dict[str, t.Any] | None = None,
+        **kwargs,
+    ) -> orm.ProcessNode:
+        """Submit process for execution.
+
+        :param process: The process class.
+        :param inputs: The dictionary of process inputs.
+        :return: The process node.
+        """
+        from aiida_scheduler.control import submit_to_scheduler_inside_workchain
+
+        return submit_to_scheduler_inside_workchain(self, process, inputs, **kwargs)
+
     def finalize(self) -> t.Optional[ExitCode]:
-        """"""
+        """Finalize the workgraph.
+        Output the results of the workgraph and the new data.
+        """
         # expose outputs of the workgraph
-        group_outputs = {}
-        for output in self.wg.group_outputs:
-            names = output["from"].split(".", 1)
-            if len(names) == 1:
-                update_nested_dict(
-                    group_outputs,
-                    output["name"],
-                    self.ctx._task_results[names[0]],
-                )
-            else:
-                # expose one output of the task
-                # note, the output may not exist
-                if names[1] in self.ctx._task_results[names[0]]:
-                    update_nested_dict(
-                        group_outputs,
-                        output["name"],
-                        self.ctx._task_results[names[0]][names[1]],
-                    )
-        self.out_many(group_outputs)
+        self.task_manager.state_manager.update_meta_tasks("graph_ctx")
+        self.out_many(self.ctx._task_results["graph_outputs"])
         # output the new data
         if self.ctx._new_data:
             self.out("new_data", self.ctx._new_data)
-        self.out("execution_count", orm.Int(self.ctx._execution_count).store())
         self.report("Finalize workgraph.")
         for task in self.wg.tasks:
             if (

@@ -13,16 +13,23 @@ from typing import Any
         (float, 2.0, "workgraph.float"),
         (bool, True, "workgraph.bool"),
         (str, "abc", "workgraph.string"),
-        (orm.Int, 1, "workgraph.aiida_int"),
-        (orm.Float, 2.0, "workgraph.aiida_float"),
-        (orm.Str, "abc", "workgraph.aiida_string"),
-        (orm.Bool, True, "workgraph.aiida_bool"),
-        (orm.List, [1, 2, 3], "workgraph.aiida_list"),
-        (orm.Dict, {"a": 1}, "workgraph.aiida_dict"),
+        (orm.Int, 1, "workgraph.int"),
+        (orm.Float, 2.0, "workgraph.float"),
+        (orm.Str, "abc", "workgraph.string"),
+        (orm.Bool, True, "workgraph.bool"),
+        (orm.List, [1, 2, 3], "workgraph.list"),
+        (orm.Dict, {"a": 1}, "workgraph.dict"),
     ),
 )
 def test_type_mapping(data_type, data, identifier) -> None:
     """Test the mapping of data types to socket types."""
+
+    # Ensure mapping are up-to-date
+    from aiida_workgraph.orm.mapping import type_mapping
+
+    assert (
+        identifier in type_mapping.values()
+    ), f"Expected identifier {identifier} not found in type_mapping"
 
     @task()
     def add(x: data_type):
@@ -32,6 +39,10 @@ def test_type_mapping(data_type, data, identifier) -> None:
     assert add._TaskCls().inputs.x.property.identifier == identifier
     add_task = add._TaskCls()
     add_task.set({"x": data})
+
+    assert (
+        type_mapping.get(data_type, None) == identifier
+    ), f"Mismatch: Expected {identifier}, but got {type_mapping.get(data_type)}"
 
 
 def test_vector_socket() -> None:

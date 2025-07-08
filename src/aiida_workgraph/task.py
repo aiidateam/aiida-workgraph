@@ -5,7 +5,6 @@ from node_graph.executor import NodeExecutor
 from aiida_workgraph.properties import PropertyPool
 from aiida_workgraph.sockets import SocketPool
 from aiida_workgraph.socket import TaskSocketNamespace
-from node_graph_widget import NodeGraphWidget
 from aiida_workgraph.collection import (
     WorkGraphPropertyCollection,
 )
@@ -26,6 +25,7 @@ class Task(GraphNode):
     OutputCollectionClass = TaskSocketNamespace
     PropertyCollectionClass = WorkGraphPropertyCollection
 
+    identifier: str = "workgraph.task"
     is_aiida_component = False
     _error_handlers = None
 
@@ -44,10 +44,6 @@ class Task(GraphNode):
         self.waiting_on = WaitingTaskSet(parent=self)
         self.process = process
         self.pk = pk
-        self._widget = NodeGraphWidget(
-            settings={"minmap": False},
-            style={"width": "80%", "height": "600px"},
-        )
         self.state = "PLANNED"
         self.action = ""
         self.show_socket_depth = 0
@@ -56,10 +52,12 @@ class Task(GraphNode):
         self.mapped_tasks = None
         self.execution_count = 0
 
-    def to_dict(self, short: bool = False) -> Dict[str, Any]:
+    def to_dict(
+        self, short: bool = False, should_serialize: bool = False
+    ) -> Dict[str, Any]:
         from aiida.orm.utils.serialize import serialize
 
-        tdata = super().to_dict(short=short)
+        tdata = super().to_dict(short=short, should_serialize=should_serialize)
         # clear unused keys
         for key in ["ctrl_inputs", "ctrl_outputs"]:
             tdata.pop(key, None)
@@ -239,8 +237,8 @@ class Task(GraphNode):
         for key in ("properties", "executor", "node_class", "process"):
             tdata.pop(key, None)
 
-        for input in tdata["inputs"]["sockets"].values():
-            input.pop("property", None)
+        for input_data in tdata["inputs"]["sockets"].values():
+            input_data.pop("property", None)
 
         tdata["label"] = tdata["identifier"]
 
@@ -254,11 +252,11 @@ class Task(GraphNode):
 
     def _repr_mimebundle_(self, *args: Any, **kwargs: Any) -> any:
         # if ipywdigets > 8.0.0, use _repr_mimebundle_ instead of _ipython_display_
-        self._widget.value = self.to_widget_value()
-        if hasattr(self._widget, "_repr_mimebundle_"):
-            return self._widget._repr_mimebundle_(*args, **kwargs)
+        self.widget.value = self.to_widget_value()
+        if hasattr(self.widget, "_repr_mimebundle_"):
+            return self.widget._repr_mimebundle_(*args, **kwargs)
         else:
-            return self._widget._ipython_display_(*args, **kwargs)
+            return self.widget._ipython_display_(*args, **kwargs)
 
     def to_html(
         self, output: str = None, show_socket_depth: Optional[int] = None, **kwargs
@@ -266,8 +264,8 @@ class Task(GraphNode):
         """Write a standalone html file to visualize the task."""
         if show_socket_depth is None:
             show_socket_depth = self.show_socket_depth
-        self._widget.value = self.to_widget_value()
-        return self._widget.to_html(output=output, **kwargs)
+        self.widget.value = self.to_widget_value()
+        return self.widget.to_html(output=output, **kwargs)
 
 
 class TaskSet:

@@ -121,11 +121,12 @@ def test_reset_message(wg_calcjob):
 
     wg = wg_calcjob
     wg.submit()
-    wg.wait(tasks={"add1": ["RUNNING"]}, timeout=30, interval=1)
+    timeout = 30
+    wg.wait(tasks={"add1": ["RUNNING"]}, timeout=timeout, interval=1)
     wg = WorkGraph.load(wg.process.pk)
     wg.tasks.add1.set({"y": orm.Int(10).store()})
     wg.save()
-    wg.wait(timeout=60)
+    wg.wait(timeout=timeout * 2)
     report = get_workchain_report(wg.process, "REPORT")
     assert "Action: RESET. Tasks: ['add1']" in report
 
@@ -139,23 +140,23 @@ def test_restart_and_reset(wg_calcfunction):
         "workgraph.test_sum_diff",
         "sumdiff3",
         x=4,
-        y=wg.tasks["sumdiff2"].outputs.sum,
+        y=wg.tasks.sumdiff2.outputs.sum,
     )
     wg.name = "test_restart_0"
     wg.run()
     wg1 = WorkGraph.load(wg.process.pk)
     wg1.restart()
     wg1.name = "test_restart_1"
-    wg1.tasks["sumdiff2"].set({"x": orm.Int(10).store()})
+    wg1.tasks.sumdiff2.set({"x": orm.Int(10).store()})
     wg1.run()
-    assert wg1.tasks["sumdiff1"].node.pk == wg.tasks["sumdiff1"].pk
-    assert wg1.tasks["sumdiff2"].node.pk != wg.tasks["sumdiff2"].pk
-    assert wg1.tasks["sumdiff3"].node.pk != wg.tasks["sumdiff3"].pk
-    assert wg1.tasks["sumdiff3"].node.outputs.sum == 19
+    assert wg1.tasks.sumdiff1.pk == wg.tasks.sumdiff1.pk
+    assert wg1.tasks.sumdiff2.pk != wg.tasks.sumdiff2.pk
+    assert wg1.tasks.sumdiff3.pk != wg.tasks.sumdiff3.pk
+    assert wg1.tasks.sumdiff3.outputs.sum == 19
     wg1.reset()
     assert wg1.process is None
-    assert wg1.tasks["sumdiff3"].process is None
-    assert wg1.tasks["sumdiff3"].state == "PLANNED"
+    assert wg1.tasks.sumdiff3.process is None
+    assert wg1.tasks.sumdiff3.state == "PLANNED"
 
 
 def test_extend_workgraph(decorated_add_multiply_group):
@@ -165,24 +166,19 @@ def test_extend_workgraph(decorated_add_multiply_group):
     add1 = wg.add_task("workgraph.test_add", "add1", x=2, y=3)
     add_multiply_wg = decorated_add_multiply_group(x=0, y=4, z=5)
     # test wait
-    add_multiply_wg.tasks["multiply1"].waiting_on.add("add1")
+    add_multiply_wg.tasks.multiply1.waiting_on.add("add1")
     # extend workgraph
     wg.extend(add_multiply_wg, prefix="group_")
-    assert "group_add1" in [
-        task.name for task in wg.tasks["group_multiply1"].waiting_on
-    ]
-    wg.add_link(add1.outputs[0], wg.tasks["group_add1"].inputs.x)
+    assert "group_add1" in [task.name for task in wg.tasks.group_multiply1.waiting_on]
+    wg.add_link(add1.outputs[0], wg.tasks.group_add1.inputs.x)
     wg.run()
-    assert wg.tasks["group_multiply1"].node.outputs.result == 45
+    assert wg.tasks.group_multiply1.outputs.result == 45
 
 
-def test_workgraph_group_outputs(decorated_add):
-    wg = WorkGraph("test_workgraph_group_outputs")
+def test_workgraph_outputs(decorated_add):
+    wg = WorkGraph("test_workgraph_outputs")
     wg.add_task(decorated_add, "add1", x=2, y=3)
-    wg.group_outputs = [
-        {"name": "sum", "from": "add1.result"},
-        # {"name": "add1", "from": "add1"},
-    ]
+    wg.outputs.sum = wg.tasks.add1.outputs.result
     wg.run()
     assert wg.process.outputs.sum.value == 5
     # assert wg.process.outputs.add1.result.value == 5
@@ -197,3 +193,28 @@ def test_wait_timeout(create_workgraph_process_node):
         match="Timeout reached after 1 seconds while waiting for the WorkGraph:",
     ):
         wg.wait(timeout=1, interval=1)
+
+
+def test_inputs_outputs(decorated_namespace_sum_diff):
+    """Test the group inputs and outputs of the WorkGraph."""
+
+    wg = WorkGraph(name="test_inputs_outputs")
+    wg.inputs = {"x": 1, "nested.x": 2}
+    # same as
+    # wg.add_input("workgraph.any", "x")
+    # wg.add_input("workgraph.namespace", "nested")
+    # wg.add_input("workgraph.any", "nested.x")
+    # wg.inputs.x = 1
+    # wg.inputs.nested.x = 2
+    wg.add_task(decorated_namespace_sum_diff, name="sum_diff1", x=wg.inputs.x, y=3)
+    wg.tasks.sum_diff1.inputs.nested.x = wg.inputs.nested.x
+    wg.tasks.sum_diff1.inputs.nested.y = 3
+    wg.outputs.sum = wg.tasks.sum_diff1.outputs.sum
+    wg.outputs.nested = {}
+    wg.outputs.nested.sum = wg.tasks.sum_diff1.outputs.nested.sum
+    # same as
+    # wg.add_output("workgraph.namespace", "nested")
+    # wg.add_output("workgraph.any", "nested.sum")
+    wg.run()
+    assert wg.outputs.sum.value == 4
+    assert wg.outputs.nested.sum.value == 5

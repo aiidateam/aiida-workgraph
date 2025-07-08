@@ -10,4 +10,4 @@ eps = get_entry_points("workgraph.cmdline")
 for ep in eps:
     ep.load()
 
-__all__ = ["cmd_graph", "cmd_web", "cmd_task"]
+__all__ = ["cmd_graph", "cmd_task"]

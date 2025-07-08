@@ -61,7 +61,7 @@
         const { RenderUtils } = ReteRenderUtils;
         const styled = window.styled;
 
-        const workgraphData = {"name": "first_workflow", "uuid": "3ae129ca-71ab-11ef-9079-906584de3e5b", "state": "CREATED", "nodes": {"add": {"label": "add", "node_type": "PYTHONJOB", "inputs": [{"name": "x"}, {"name": "y"}], "properties": {"x": null, "y": null, "_wait": null, "computer": null, "code_label": null, "code_path": null, "prepend_text": null, "metadata": null, "metadata.store_provenance": null, "metadata.description": null, "metadata.label": null, "metadata.call_link_label": null, "metadata.disable_cache": null, "metadata.dry_run": null, "metadata.computer": null, "metadata.options": null, "metadata.options.input_filename": null, "metadata.options.output_filename": null, "metadata.options.submit_script_filename": null, "metadata.options.scheduler_stdout": null, "metadata.options.scheduler_stderr": null, "metadata.options.resources": null, "metadata.options.max_wallclock_seconds": null, "metadata.options.custom_scheduler_commands": null, "metadata.options.queue_name": null, "metadata.options.rerunnable": null, "metadata.options.account": null, "metadata.options.qos": null, "metadata.options.withmpi": null, "metadata.options.mpirun_extra_params": null, "metadata.options.import_sys_environment": null, "metadata.options.environment_variables": null, "metadata.options.environment_variables_double_quotes": null, "metadata.options.priority": null, "metadata.options.max_memory_kb": null, "metadata.options.prepend_text": null, "metadata.options.append_text": null, "metadata.options.parser_name": null, "metadata.options.additional_retrieve_list": null, "metadata.options.stash": null, "metadata.options.stash.target_base": null, "metadata.options.stash.source_list": null, "metadata.options.stash.stash_mode": null, "code": null, "monitors": null, "remote_folder": null, "function": null, "function_source_code": null, "function_name": null, "process_label": null, "function_inputs": null, "function_outputs": null, "parent_folder": null, "parent_folder_name": null, "parent_output_folder": null, "upload_files": null, "copy_files": null, "additional_retrieve_list": null}, "outputs": [{"name": "result"}], "position": [30, 30], "children": []}, "multiply": {"label": "multiply", "node_type": "PYTHONJOB", "inputs": [{"name": "x"}, {"name": "y"}, {"name": "x"}], "properties": {"x": null, "y": null, "_wait": null, "computer": null, "code_label": null, "code_path": null, "prepend_text": null, "metadata": null, "metadata.store_provenance": null, "metadata.description": null, "metadata.label": null, "metadata.call_link_label": null, "metadata.disable_cache": null, "metadata.dry_run": null, "metadata.computer": null, "metadata.options": null, "metadata.options.input_filename": null, "metadata.options.output_filename": null, "metadata.options.submit_script_filename": null, "metadata.options.scheduler_stdout": null, "metadata.options.scheduler_stderr": null, "metadata.options.resources": null, "metadata.options.max_wallclock_seconds": null, "metadata.options.custom_scheduler_commands": null, "metadata.options.queue_name": null, "metadata.options.rerunnable": null, "metadata.options.account": null, "metadata.options.qos": null, "metadata.options.withmpi": null, "metadata.options.mpirun_extra_params": null, "metadata.options.import_sys_environment": null, "metadata.options.environment_variables": null, "metadata.options.environment_variables_double_quotes": null, "metadata.options.priority": null, "metadata.options.max_memory_kb": null, "metadata.options.prepend_text": null, "metadata.options.append_text": null, "metadata.options.parser_name": null, "metadata.options.additional_retrieve_list": null, "metadata.options.stash": null, "metadata.options.stash.target_base": null, "metadata.options.stash.source_list": null, "metadata.options.stash.stash_mode": null, "code": null, "monitors": null, "remote_folder": null, "function": null, "function_source_code": null, "function_name": null, "process_label": null, "function_inputs": null, "function_outputs": null, "parent_folder": null, "parent_folder_name": null, "parent_output_folder": null, "upload_files": null, "copy_files": null, "additional_retrieve_list": null}, "outputs": [], "position": [60, 60], "children": []}}, "links": [{"from_socket": "result", "from_node": "add", "to_socket": "x", "to_node": "multiply", "state": false}]}
+        const nodegraphData = {"name": "first_workflow", "uuid": "c1c91b68-0a7c-11f0-88a8-906584de3e5b", "state": "CREATED", "nodes": {"add": {"label": "add", "node_type": "PYTHONJOB", "inputs": [{"name": "x", "identifier": "workgraph.any"}, {"name": "y", "identifier": "workgraph.any"}, {"name": "function_data", "identifier": "workgraph.namespace"}], "properties": {"x": {"identifier": "workgraph.any", "value": null}, "y": {"identifier": "workgraph.any", "value": null}, "_wait": {"identifier": "workgraph.any", "value": null}, "computer": {"identifier": "workgraph.string", "value": null}, "command_info": {"identifier": "workgraph.any", "value": null}, "register_pickle_by_value": {"identifier": "workgraph.any", "value": null}, "code": {"identifier": "workgraph.any", "value": null}, "remote_folder": {"identifier": "workgraph.any", "value": null}, "process_label": {"identifier": "workgraph.any", "value": null}, "parent_folder": {"identifier": "workgraph.any", "value": null}, "parent_folder_name": {"identifier": "workgraph.any", "value": null}, "parent_output_folder": {"identifier": "workgraph.any", "value": null}, "additional_retrieve_list": {"identifier": "workgraph.any", "value": null}, "deserializers": {"identifier": "workgraph.any", "value": null}, "serializers": {"identifier": "workgraph.any", "value": null}}, "outputs": [{"name": "result"}], "position": [30, 30], "children": []}, "multiply": {"label": "multiply", "node_type": "PYTHONJOB", "inputs": [{"name": "x", "identifier": "workgraph.any"}, {"name": "y", "identifier": "workgraph.any"}, {"name": "function_data", "identifier": "workgraph.namespace"}, {"name": "x"}], "properties": {"x": {"identifier": "workgraph.any", "value": null}, "y": {"identifier": "workgraph.any", "value": null}, "_wait": {"identifier": "workgraph.any", "value": null}, "computer": {"identifier": "workgraph.string", "value": null}, "command_info": {"identifier": "workgraph.any", "value": null}, "register_pickle_by_value": {"identifier": "workgraph.any", "value": null}, "code": {"identifier": "workgraph.any", "value": null}, "remote_folder": {"identifier": "workgraph.any", "value": null}, "process_label": {"identifier": "workgraph.any", "value": null}, "parent_folder": {"identifier": "workgraph.any", "value": null}, "parent_folder_name": {"identifier": "workgraph.any", "value": null}, "parent_output_folder": {"identifier": "workgraph.any", "value": null}, "additional_retrieve_list": {"identifier": "workgraph.any", "value": null}, "deserializers": {"identifier": "workgraph.any", "value": null}, "serializers": {"identifier": "workgraph.any", "value": null}}, "outputs": [], "position": [30, 30], "children": []}}, "links": [{"from_socket": "result", "from_node": "add", "to_socket": "x", "to_node": "multiply"}]}
 
         // Define Schemes to use in vanilla JS
         const Schemes = {
@@ -133,23 +133,23 @@
           }
         }
 
-        async function loadJSON(editor, area, layout, workgraphData) {
-          for (const nodeId in workgraphData.nodes) {
-            const nodeData = workgraphData.nodes[nodeId];
+        async function loadJSON(editor, area, layout, nodegraphData) {
+          for (const nodeId in nodegraphData.nodes) {
+            const nodeData = nodegraphData.nodes[nodeId];
             await addNode(editor, area, nodeData);
           }
 
-          // Adding connections based on workgraphData
-          workgraphData.links.forEach(async (link) => { // Specify the type of link here
+          // Adding connections based on nodegraphData
+          nodegraphData.links.forEach(async (link) => { // Specify the type of link here
             await addLink(editor, area, layout, link);
           });
 
           // Add while zones
           console.log("Adding while zone: ");
-          for (const nodeId in workgraphData.nodes) {
-            const nodeData = workgraphData.nodes[nodeId];
+          for (const nodeId in nodegraphData.nodes) {
+            const nodeData = nodegraphData.nodes[nodeId];
             const node_type = nodeData['node_type'];
-            if (node_type === "WHILE" || node_type === "IF" || node_type === "ZONE") {
+            if (node_type === "WHILE" || node_type === "IF" || node_type === "ZONE" || node_type === "MAP") {
               // find the node
               const node = editor.nodeMap[nodeData.label];
               const children = nodeData['children'];
@@ -162,6 +162,18 @@
           }
         }
 
+        /**
+        * Defines custom padding for a scope layout.
+        * The padding values are used by the ScopesPlugin to avoid node overlapping with the socket of the parent node.
+        */
+        const customScopePadding = () => ({
+          top: 80,
+          left: 30,
+          right: 30,
+          bottom: 50
+        });
+
+
         async function createEditor(container) {
             const socket = new ClassicPreset.Socket("socket");
 
@@ -169,7 +181,7 @@
             const area = new AreaPlugin(container);
             const connection = new ConnectionPlugin();
             const render = new ReactPlugin({ createRoot });
-            const scopes = new ScopesPlugin();
+            const scopes = new ScopesPlugin({padding: customScopePadding});
             const arrange = new AutoArrangePlugin();
 
             const minimap = new MinimapPlugin({
@@ -209,7 +221,7 @@
               AreaExtensions.zoomAt(area, editor.getNodes());
             }
 
-            // Adding nodes based on workgraphData
+            // Adding nodes based on nodegraphData
             const nodeMap = {}; // To keep track of created nodes for linking
             editor.nodeMap = nodeMap;
 
@@ -238,7 +250,7 @@
                 if (containerRef.current && !editor) {
                     createEditor(containerRef.current).then((editor) => {
                         setEditor(editor);
-                        loadJSON(editor.editor, editor.area, editor.layout, workgraphData).then(() => {
+                        loadJSON(editor.editor, editor.area, editor.layout, nodegraphData).then(() => {
                           // aplly layout twice to ensure all nodes are arranged
                           editor?.layout(false).then(() => editor?.layout(true));
                         });

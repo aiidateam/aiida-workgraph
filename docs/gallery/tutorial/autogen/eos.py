@@ -62,16 +62,16 @@ def eos(**datas):
 #
 #
 
-from aiida_workgraph import WorkGraph, active_map_zone, active_graph
+from aiida_workgraph import WorkGraph, Map
 from aiida_quantumespresso.calculations.pw import PwCalculation
 
 
 def eos_workgraph(
     structure: orm.StructureData = None, scales: list = None, scf_inputs: dict = None
 ):
-    with active_graph(WorkGraph("eos_tutorial")) as wg:
+    with WorkGraph("eos_tutorial") as wg:
         wg.add_task(scale_structure, name="scale", structure=structure, scales=scales)
-        with active_map_zone(wg.tasks.scale.outputs.structures) as map_zone:
+        with Map(wg.tasks.scale.outputs.structures) as map_zone:
             scf_task = map_zone.add_task(
                 PwCalculation, name=f"scf", structure=map_zone.item
             )
@@ -181,21 +181,22 @@ print("B: {B}\nv0: {v0}\ne0: {e0}\nv0: {v0}".format(**data))
 # We can use the `graph_builder` decorator. The Graph Builder allow user to create a dynamic workflow based on the input value, as well as nested workflows.
 #
 
-from aiida_workgraph import WorkGraph, task, active_map_zone, active_graph
+from aiida_workgraph import WorkGraph, task, Map, active_graph
 
 
-@task.graph_builder(outputs=[{"name": "result", "from": "eos.result"}])
+@task.graph_builder(outputs=[{"name": "result"}])
 def eos_workgraph(
     structure: orm.StructureData = None, scales: list = None, scf_inputs: dict = None
 ):
-    with active_graph(WorkGraph("eos")) as wg:
+    with WorkGraph("eos") as wg:
         wg.add_task(scale_structure, name="scale", structure=structure, scales=scales)
-        with active_map_zone(wg.tasks.scale.outputs.structures) as map_zone:
+        with Map(wg.tasks.scale.outputs.structures) as map_zone:
             scf_task = map_zone.add_task(
                 PwCalculation, name=f"scf", structure=map_zone.item
             )
             scf_task.set(scf_inputs)
         wg.add_task(eos, name="eos", datas=scf_task.outputs.output_parameters)
+        wg.outputs.result = wg.tasks.eos.outputs.result
         return wg
 
 

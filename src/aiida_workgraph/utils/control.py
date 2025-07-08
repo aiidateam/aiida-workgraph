@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from aiida.manage import get_manager
 from aiida import orm
 from aiida.engine.processes import control

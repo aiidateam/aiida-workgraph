@@ -9,8 +9,7 @@ def test_run(wg_calcfunction: WorkGraph) -> None:
     wg.run()
     print("state: ", wg.state)
     # print("results: ", results[])
-    assert wg.tasks["sumdiff2"].node.outputs.sum == 9
-    assert wg.tasks["sumdiff2"].outputs.sum.value == 9
+    assert wg.tasks.sumdiff2.outputs.sum.value == 9
 
 
 def test_dynamic_inputs() -> None:

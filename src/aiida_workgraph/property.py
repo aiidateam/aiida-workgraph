@@ -1,25 +1,16 @@
-from typing import Any, Type, Union, Dict, Optional, Callable
+from typing import Any, Type, Union, Optional, Callable
 from node_graph.property import NodeProperty
-import re
 
 
 class TaskProperty(NodeProperty):
     """Represent a property of a Task in the AiiDA WorkGraph."""
 
     def validate(self, value: any) -> None:
-        if isinstance(value, str) and not re.search(r"\{\{.*?\}\}", value):
-            raise TypeError(
-                f"""Expected value of type {self.allowed_types}, got {type(value).__name__} instead.
-If you want to use variable from context, use double curly braces like this: {{{{variable_name}}}}"""
-            )
         super().validate(value)
 
     @classmethod
     def new(
-        cls,
-        identifier: Union[Callable, str],
-        name: Optional[str] = None,
-        data: Dict[str, Any] = {},
+        cls, identifier: Union[Callable, str], name: Optional[str] = None, **kwargs
     ) -> "TaskProperty":
         """Create a property from a identifier."""
         # use PropertyPool from aiida_workgraph.properties
@@ -29,7 +20,7 @@ If you want to use variable from context, use double curly braces like this: {{{
         # build the task on the fly if the identifier is a callable
         if callable(identifier):
             identifier = build_property_from_AiiDA(identifier)
-        return super().new(identifier, name=name, data=data, PropertyPool=PropertyPool)
+        return super().new(identifier, name=name, PropertyPool=PropertyPool, **kwargs)
 
 
 def build_property_from_AiiDA(DataClass: Type[Any]) -> Type[TaskProperty]:

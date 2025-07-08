@@ -1,6 +1,4 @@
-import pytest
-from aiida_workgraph import task, WorkGraph, TaskPool
-from aiida import orm
+from aiida_workgraph import WorkGraph, TaskPool
 
 
 def test_while_instruction(decorated_add, decorated_multiply, decorated_smaller_than):
@@ -122,58 +120,3 @@ def test_while_task(decorated_add, decorated_smaller_than):
     # print("assert check")
     # assert add2.outputs.result.value.value == raw_python_code().value
     assert add2.outputs.result.value.value == 18
-
-
-@pytest.mark.usefixtures("started_daemon_client")
-def test_while_workgraph(decorated_add, decorated_multiply, decorated_smaller_than):
-    # Create a WorkGraph will repeat itself based on the conditions
-    wg = WorkGraph("while_workgraph")
-    wg.graph_type = "WHILE"
-    wg.conditions = ["compare1.result"]
-    wg.ctx = {"n": 1}
-    wg.max_iteration = 5
-    wg.add_task(decorated_smaller_than, name="compare1", x=wg.ctx.n, y=20)
-    multiply1 = wg.add_task(
-        decorated_multiply, name="multiply1", x=wg.ctx.n, y=orm.Int(2)
-    )
-    add1 = wg.add_task(decorated_add, name="add1", y=3)
-    wg.update_ctx({"n": add1.outputs.result})
-    wg.add_link(multiply1.outputs.result, add1.inputs.x)
-    wg.submit(wait=True, timeout=100)
-    assert wg.execution_count == 4
-    assert wg.tasks.add1.outputs.result.value == 29
-
-
-@pytest.mark.usefixtures("started_daemon_client")
-def test_while_graph_builder(decorated_add, decorated_multiply, decorated_smaller_than):
-    """Test the while WorkGraph in graph builder.
-    Also test the max_iteration parameter."""
-
-    @task.graph_builder(outputs=[{"name": "result", "from": "ctx.n"}])
-    def my_while(n=0, limit=100):
-        wg = WorkGraph("while_workgraph")
-        wg.graph_type = "WHILE"
-        wg.max_iteration = 2
-        wg.conditions = ["compare1.result"]
-        wg.ctx = {"n": n}
-        wg.add_task(
-            decorated_smaller_than, name="compare1", x=wg.ctx.n, y=orm.Int(limit)
-        )
-        multiply1 = wg.add_task(
-            decorated_multiply, name="multiply1", x=wg.ctx.n, y=orm.Int(2)
-        )
-        add1 = wg.add_task(decorated_add, name="add1", y=3)
-        wg.update_ctx({"n": add1.outputs.result})
-        wg.add_link(multiply1.outputs.result, add1.inputs.x)
-        return wg
-
-    # -----------------------------------------
-    wg = WorkGraph("while")
-    add1 = wg.add_task(decorated_add, name="add1", x=orm.Int(25), y=orm.Int(25))
-    my_while1 = wg.add_task(my_while, n=orm.Int(1))
-    add2 = wg.add_task(decorated_add, name="add2", y=orm.Int(2))
-    wg.add_link(add1.outputs.result, my_while1.inputs["limit"])
-    wg.add_link(my_while1.outputs.result, add2.inputs.x)
-    wg.run()
-    assert add2.outputs.result.value < 31
-    assert my_while1.node.outputs.execution_count == 2

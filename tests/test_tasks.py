@@ -18,7 +18,7 @@ def test_normal_task(decorated_add) -> None:
         decorated_add, name="add", x=task1.outputs.sum, y=task1.outputs["diff"]
     )
     wg.run()
-    print("node: ", task2.node.outputs.result)
+    print("node: ", task2.outputs.result)
     wg.update()
     assert task2.outputs.result.value == 4
 
@@ -277,7 +277,7 @@ def test_task_from_builder_multiply_add(add_code, decorated_add) -> None:
 
     assert len(wg.tasks) == 2
     assert len(wg.links) == 1
-    assert wg.links_to_dict() == [
+    assert wg.links_to_dict()[0] == [
         {
             "from_node": multiply_add_task_name,
             "from_socket": "result",

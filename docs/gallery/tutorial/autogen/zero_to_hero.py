@@ -36,18 +36,16 @@ load_profile()
 # ===============
 # Suppose we want to calculate ```(x + y) * z ``` in two steps. First, add `x` and `y`, then multiply the result with `z`.
 #
-# In AiiDA, we can define two `calcfunction` to do the `add` and `mutiply`:
-#
 
 from aiida_workgraph import task
 
 
-@task.calcfunction()
+@task()
 def add(x, y):
     return x + y
 
 
-@task.calcfunction()
+@task()
 def multiply(x, y):
     return x * y
 
@@ -103,7 +101,7 @@ generate_node_graph(wg.pk)
 # %%
 # CalcJob and WorkChain
 # =======================
-# AiiDA uses `CalcJob` to run a calculation on a remote computer. AiiDA community also provides a lot of well-written `calcfunction` and `WorkChain`. One can use these AiiDA component direclty in the WorkGraph. The inputs and outputs of the task is automatically generated based on the input and output port of the AiiDA component.
+# One can use AiiDA components (``CalcJob`` and ``WorkChain``). The inputs and outputs of the task is automatically generated based on the input and output port of the AiiDA component.
 #
 # Here is an example of using the `ArithmeticAddCalculation` Calcjob inside the workgraph. Suppose we want to calculate ```(x + y) + z ``` in two steps.
 #
@@ -159,13 +157,10 @@ wg.tasks.add1.to_html()
 
 
 from aiida_workgraph import WorkGraph
-from aiida.engine import calcfunction
 from aiida_quantumespresso.calculations.pw import PwCalculation
 
-#
 
-
-@calcfunction
+@task()
 def atomization_energy(output_atom, output_mol):
     from aiida.orm import Float
 
@@ -342,7 +337,7 @@ generate_node_graph(wg.pk)
 from aiida_workgraph import task
 
 #
-@task.graph_builder(outputs=[{"name": "result", "from": "ctx.result"}])
+@task.graph_builder(outputs=[{"name": "result"}])
 def add_multiply_if_generator(x, y):
     wg = WorkGraph()
     if x.value > 0:
@@ -353,6 +348,7 @@ def add_multiply_if_generator(x, y):
         multiply1 = wg.add_task(multiply, name="multiply1", x=x, y=y)
         # export the result of multiply1 to the context
         wg.update_ctx({"result": multiply1.outputs.result})
+    wg.outputs.result = wg.ctx.result
     return wg
 
 
@@ -381,6 +377,7 @@ wg.submit(
     wait=True,
 )
 # ------------------------- Print the output -------------------------
+print("result: ", wg.tasks.add2.outputs.result.value)
 assert wg.tasks.add2.outputs.result.value == 7
 print("\nResult of add2 is {} \n\n".format(wg.tasks.add2.outputs.result.value))
 #
@@ -390,7 +387,7 @@ print("\nResult of add2 is {} \n\n".format(wg.tasks.add2.outputs.result.value))
 # Second Real-world Workflow: Equation of state (EOS) WorkGraph
 # =============================================================
 #
-# First, create the calcfunction for the job.
+# First, create the task.
 #
 
 from aiida import orm
@@ -398,7 +395,7 @@ from aiida_workgraph import task
 
 #
 # explicitly define the output socket name to match the return value of the function
-@task.calcfunction(outputs=[{"name": "structures"}])
+@task(outputs=[{"name": "structures"}])
 def scale_structure(structure, scales):
     """Scale the structure by the given scales."""
     atoms = structure.get_ase()
@@ -413,7 +410,7 @@ def scale_structure(structure, scales):
 
 #
 # Output result from context to the output socket
-@task.graph_builder(outputs=[{"name": "result", "from": "ctx.result"}])
+@task.graph_builder(outputs=[{"name": "result"}])
 def all_scf(structures, scf_inputs):
     """Run the scf calculation for each structure."""
     from aiida_workgraph import WorkGraph
@@ -425,14 +422,15 @@ def all_scf(structures, scf_inputs):
         pw1.set(scf_inputs)
         # save the output parameters to the context
         wg.update_ctx({f"result.{key}": pw1.outputs.output_parameters})
+    wg.outputs.result = wg.ctx.result
     return wg
 
 
 #
 
 
-@task.calcfunction()
-# because this is a calcfunction, and the input datas are dynamic, we need use **datas.
+@task()
+# because the input datas are dynamic, we need use **datas.
 def eos(**datas):
     """Fit the EOS of the data."""
     from ase.eos import EquationOfState
@@ -479,7 +477,7 @@ from aiida_workgraph import WorkGraph, task
 from aiida_quantumespresso.calculations.pw import PwCalculation
 
 #
-@task.graph_builder(outputs=[{"name": "result", "from": "eos1.result"}])
+@task.graph_builder(outputs=[{"name": "result"}])
 def eos_workgraph(structure=None, scales=None, scf_inputs=None):
     wg = WorkGraph("eos")
     scale_structure1 = wg.add_task(
@@ -489,6 +487,7 @@ def eos_workgraph(structure=None, scales=None, scf_inputs=None):
     eos1 = wg.add_task(eos, name="eos1")
     wg.add_link(scale_structure1.outputs.structures, all_scf1.inputs.structures)
     wg.add_link(all_scf1.outputs.result, eos1.inputs.datas)
+    wg.outputs.result = wg.ctx.eos1.result
     return wg
 
 

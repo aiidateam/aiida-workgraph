@@ -13,6 +13,9 @@ Create and launch workgraph
 #
 
 from aiida_workgraph import WorkGraph, task
+from aiida import load_profile
+
+load_profile()
 
 wg = WorkGraph(name="my_first_workgraph")
 
@@ -20,8 +23,8 @@ wg = WorkGraph(name="my_first_workgraph")
 # Define and use tasks
 #
 
-# Define a task using a `calcfunction`:
-@task.calcfunction()
+# Define a task:
+@task()
 def add(x, y):
     return x + y
 
@@ -58,15 +61,34 @@ wg_loaded = WorkGraph.load(wg.pk)
 #
 # - No input task
 # - All input tasks are finished.
-# Group outputs
-# -------------
-# You can output the results of the tasks as the output of the WorkGraph.
+#
+#
+# Grouping Inputs and Outputs in a WorkGraph
+# ------------------------------------------
+# Defining **group-level** inputs and outputs allows you to:
+#
+# - Reuse inputs across multiple tasks (e.g., when several tasks share the same parameter).
+# - Present only the necessary inputs to users, simplify the external interface of a complex workflow.
+# - Collect and optionally rename outputs from individual tasks as grouped outputs.
 
-wg = WorkGraph("test_workgraph_group_outputs")
-wg.add_task(add, "add1", x=2, y=3)
-wg.group_outputs = [{"name": "sum", "from": "add1.result"}]
+wg = WorkGraph("test_workgraph_outputs")
+
+# Define group-level input
+wg.inputs.x = 2
+
+# Add tasks using the group-level input
+wg.add_task(add, "add1", x=wg.inputs.x, y=3)
+wg.add_task(add, "add2", x=wg.inputs.x, y=wg.tasks.add1.outputs.result)
+
+# Define group-level outputs to expose selected task results
+wg.outputs.sum1 = wg.tasks.add1.outputs.result
+wg.outputs.sum2 = wg.tasks.add2.outputs.result
+
+# Run the workgraph
 wg.submit(wait=True)
-assert wg.process.outputs.sum.value == 5
+
+# Verify the final output
+assert wg.outputs.sum2.value == 2 + (2 + 3)
 
 # %%
 # List of all Methods

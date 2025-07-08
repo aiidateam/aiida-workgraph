@@ -60,16 +60,14 @@ class ShellJobTask(Task):
     node_type = "ShellJob"
     catalog = "AIIDA"
 
-    def to_dict(self, short: bool = False) -> Dict[str, Any]:
-        """Overwrite the to_dict method to handle the parser function."""
+    def serialize_data(self, data: Dict[str, Any]) -> Dict[str, Any]:
+        """Overwrite the serialize_data method to handle the parser function."""
         import inspect
 
-        if self.inputs.parser.property.value is not None:
-            prop = self.inputs.parser.property
-            if inspect.isfunction(prop.value):
-                prop.value = NodeExecutor.from_callable(prop.value).to_dict()
-        data = super().to_dict(short=short)
-        return data
+        prop = data["inputs"]["sockets"]["parser"]["property"]
+        if prop["value"] is not None:
+            if inspect.isfunction(prop["value"]):
+                prop["value"] = NodeExecutor.from_callable(prop["value"]).to_dict()
 
     def execute(self, engine_process, args=None, kwargs=None, var_kwargs=None):
         from aiida_workgraph.utils import create_and_pause_process
@@ -133,8 +131,8 @@ class ShellJobTaskFactory(BaseTaskFactory):
                 tdata["outputs"]["sockets"][output["name"]] = output.copy()
         #
         tdata["identifier"] = "ShellJob"
-        for input in additional_inputs:
-            tdata["inputs"]["sockets"][input["name"]] = input.copy()
+        for input_data in additional_inputs:
+            tdata["inputs"]["sockets"][input_data["name"]] = input_data.copy()
         tdata["metadata"]["node_type"] = "SHELLJOB"
         tdata["metadata"]["node_class"] = ShellJobTask
 

@@ -24,58 +24,6 @@ from aiida import load_profile
 
 load_profile()
 
-# %%
-# Dynamic input ports vs orm.Dict
-# ---------------------------------
-# We want to first focus shortly on the difference between a dynamic input ports and a orm.Dict as input
-# as this is essential for understanding the aggregation mechanism. For that we firstly
-# imitate the `aggregate` function using a Dict as input.
-
-from aiida.orm import Int, Dict
-from aiida_workgraph.utils import generate_node_graph
-from aiida_workgraph import task, WorkGraph
-from aiida.engine import calcfunction
-
-
-@calcfunction
-def aggregate(
-    **collected_values,
-):  # We use the double asterisk to mark it as an dynamic input port
-    for key, value in collected_values.items():
-        print("key:", key, "value:", value)
-    return Int(sum(collected_values.values()))
-
-
-@calcfunction
-def aggregate_dict(
-    collected_values,
-):  # We use the double asterisk to mark it as an dynamic input port
-    for key, value in collected_values.items():
-        print("key:", key, "value:", value)
-    return Int(sum(collected_values.get_dict().values()))
-
-
-some_dict = {f"value{i}": Int(i) for i in range(3)}
-aggregate_sum = aggregate(**some_dict)
-# Note that it is generally not recommended to have nested orm.Data types like
-# in this case orm.Int in an orm.Data This will only work for json serializable
-# types as orm.Int in this case. You will see in the provenance graph later
-# that the information about the orm.Int's is completely lost.
-aggregate_dict_sum = aggregate_dict(Dict(some_dict))
-
-# %%
-# We plot the provenance graph for both
-
-generate_node_graph(aggregate_sum.pk)
-
-# %%
-
-generate_node_graph(aggregate_dict_sum.pk)
-
-# %%
-# We can see while the Dict version only considers the whole dictionary as one
-# entity in the provenance graph, while the dynamic input port allows us to consider the different orm.Data instances.
-
 
 # %%
 # Using multi-linking to create dynamic input ports
@@ -85,24 +33,25 @@ generate_node_graph(aggregate_dict_sum.pk)
 # the outputs of the tasks to the input of one final task
 
 
-from aiida_workgraph import WorkGraph
+from aiida_workgraph import task, WorkGraph
+from aiida_workgraph.utils import generate_node_graph
 
 
-@task.calcfunction()
-def generator(seed: Int):
+@task()
+def generator(seed: int):
     import random
 
-    random.seed(seed.value)
-    return Int(random.randint(0, 1))  # one can also use
+    random.seed(seed)
+    return random.randint(0, 1)
 
 
-@task.calcfunction(outputs=[{"name": "sum"}])
+@task()
 def aggregate(
     **collected_values,
 ):  # We use the double asterisk to mark it as an dynamic input port
     for key, value in collected_values.items():
         print("key:", key, "value:", value)
-    return {"sum": Int(sum(collected_values.values()))}
+    return sum(collected_values.values())
 
 
 wg = WorkGraph("aggregate_by_multilinking")
@@ -113,7 +62,7 @@ aggregate_task = wg.add_task(aggregate, name="aggregate_task")
 aggregate_task.inputs["collected_values"]._link_limit = 50
 
 for i in range(2):  # this can be chosen as wanted
-    generator_task = wg.add_task(generator, name=f"generator{i}", seed=Int(i))
+    generator_task = wg.add_task(generator, name=f"generator{i}", seed=i)
     wg.add_link(
         generator_task.outputs.result,
         aggregate_task.inputs["collected_values"],
@@ -129,12 +78,12 @@ wg.submit(wait=True)
 
 # %%
 # Print the output
-print("aggregate_task result", aggregate_task.outputs.sum.value)
+print("aggregate_task result", aggregate_task.outputs.result.value)
 
 
 # %%
 # The provenance is in this example also tracked. One can see how the generated
-# integers are linked to the aggregate task and one final integer, the sum, is
+# integers are linked to the aggregate task and one final integer, the result, is
 # returned.
 
 generate_node_graph(wg.pk)
@@ -149,30 +98,43 @@ generate_node_graph(wg.pk)
 # To support this additional dynamic input ports, we can define multiple input
 # sockets in the decorator, as shown in the code example below:
 
+from aiida_workgraph import task, WorkGraph
+from aiida import load_profile
 
-from aiida.orm import Float
+load_profile()
 
 
-@task.calcfunction()
-def generator_int(seed: Int):
+@task()
+def generator_int(seed: int):
     import random
 
-    random.seed(seed.value)
-    return Int(random.randint(0, 1))
+    random.seed(seed)
+    return random.randint(0, 1)
 
 
-@task.calcfunction()
-def generator_float(seed: Int):
+@task()
+def generator_float(seed: int):
     import random
 
-    random.seed(seed.value)
-    return Float(random.random())
+    random.seed(seed)
+    return random.random()
 
 
 # The variable keyword arguments (**collected_values) declare the input as dynamic.
 # Thus, we can safely and flexibly add numerous input sockets.
-@task.calcfunction(
-    inputs=[{"name": "collected_ints"}, {"name": "collected_floats"}],
+@task(
+    inputs=[
+        {
+            "name": "collected_ints",
+            "identifier": "workgraph.namespace",
+            "metadata": {"dynamic": True},
+        },
+        {
+            "name": "collected_floats",
+            "identifier": "workgraph.namespace",
+            "metadata": {"dynamic": True},
+        },
+    ],
     outputs=[{"name": "int_sum"}, {"name": "float_sum"}],
 )
 def aggregate(**collected_values):
@@ -187,19 +149,14 @@ wg = WorkGraph("aggregate")
 
 aggregate_task = wg.add_task(aggregate, name="aggregate_task")
 
-# we have to increase the link limit because by default workgraph only supports
-# one link per input socket.
-aggregate_task.inputs["collected_ints"]._link_limit = 50
-aggregate_task.inputs["collected_floats"]._link_limit = 50
-
-
-for i in range(2):  # this can be chosen as wanted
-    seed = Int(i)
+for i in range(2):
+    seed = i
     generator_int_task = wg.add_task(generator_int, name=f"generator_int{i}", seed=seed)
     generator_float_task = wg.add_task(
         generator_float, name=f"generator_float{i}", seed=seed
     )
 
+    # A dynamic namespace can has multipe link limit
     wg.add_link(
         generator_int_task.outputs.result,
         aggregate_task.inputs["collected_ints"],
@@ -232,31 +189,24 @@ generate_node_graph(wg.pk)
 # If your are not familiar with `context` please refer to the `doc page explaining it in detail <../context.html>`_.
 
 
-@task.calcfunction()
-def generator(seed: Int):
-    import random
-
-    random.seed(seed.value)
-    return Int(random.randint(0, 1))  # one can also use
-
-
-@task.calcfunction()
+@task()
 def aggregate(**collected_values):  # We use a keyword argument to obtain a dictionary
     for key, value in collected_values.items():
         print("key:", key, "value:", value)
-    return {"result": sum(collected_values.values())}
+    return sum(collected_values.values())
 
 
 # For this use case it is more convenient to use the graph_builder as we can
 # expose the context under a more convenient name.
 @task.graph_builder(
-    outputs=[{"name": "result", "from": "ctx.generated"}]
+    outputs=[{"name": "result"}]
 )  # this port is created by `update_ctx`
-def generator_loop(nb_iterations: Int):
+def generator_loop(nb_iterations: int):
     wg = WorkGraph()
-    for i in range(nb_iterations.value):  # this can be chosen as wanted
-        generator_task = wg.add_task(generator, name=f"generator{i}", seed=Int(i))
+    for i in range(nb_iterations):  # this can be chosen as wanted
+        generator_task = wg.add_task(generator, name=f"generator{i}", seed=i)
         wg.update_ctx({f"generated.seed{i}": generator_task.outputs.result})
+    wg.outputs.result = wg.ctx.generated
     return wg
 
 
@@ -264,7 +214,7 @@ wg = WorkGraph("generate_aggregate_by_context")
 
 
 generator_loop_task = wg.add_task(
-    generator_loop, name="generator_loop", nb_iterations=Int(2)
+    generator_loop, name="generator_loop", nb_iterations=2
 )
 
 aggregate_task = wg.add_task(
@@ -294,3 +244,40 @@ generate_node_graph(wg.pk)
 
 # %%
 # To support multiple dynamically sized inputs we can add another context and link it.
+
+
+# %%
+# Why namespace input is important
+# -------------------------------------
+# Here is an example of a task that take a single dict as input:
+#
+
+
+@task()
+def aggregate(
+    collected_values,
+):  # We use the double asterisk to mark it as an dynamic input port
+    for key, value in collected_values.items():
+        print("key:", key, "value:", value)
+    return sum(collected_values.get_dict().values())
+
+
+wg = WorkGraph("aggregate_by_a_dict")
+aggregate_task = wg.add_task(aggregate, name="aggregate")
+
+# we have to increase the link limit because by default workgraph only supports one link per input socket
+aggregate_task.inputs["collected_values"]._link_limit = 50
+
+for i in range(2):  # this can be chosen as wanted
+    generator_task = wg.add_task(generator, name=f"generator{i}", seed=i)
+    wg.add_link(
+        generator_task.outputs.result,
+        aggregate_task.inputs["collected_values"],
+    )
+
+wg.run()
+
+
+# %%
+# We can see it gives an error because the task try to pickle the whole dictionary as one
+# data node, while the namespace input can accept multiple data nodes.

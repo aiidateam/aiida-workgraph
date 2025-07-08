@@ -29,7 +29,7 @@ def test_shell_command(fixture_localhost):
     # also check if we can set the computer explicitly
     job1.set({"metadata.computer": load_computer("localhost")})
     wg.run()
-    assert job1.node.outputs.stdout.get_content() == "string astring b"
+    assert job1.outputs.stdout.value.get_content() == "string astring b"
 
 
 def test_shell_code():
@@ -46,7 +46,7 @@ def test_shell_code():
         },
     )
     wg.run()
-    assert job1.node.outputs.stdout.get_content() == "string astring b"
+    assert job1.outputs.stdout.value.get_content() == "string astring b"
 
 
 def test_dynamic_port():
@@ -83,7 +83,7 @@ def test_shell_graph_builder():
     And the parser is also defined in the graph builder."""
     from aiida.orm import Int
 
-    @task.graph_builder(outputs=[{"name": "result", "from": "job2.result"}])
+    @task.graph_builder(outputs=[{"name": "result"}])
     def add_multiply(x, y):
         """Add two numbers and multiply the result by 2."""
         # define the parser function
@@ -116,6 +116,7 @@ def test_shell_graph_builder():
                 {"identifier": "workgraph.any", "name": "result"}
             ],  # add a "result" output socket from the parser
         )
+        wg.outputs.result = wg.tasks.job2.outputs.result
         return wg
 
     wg = WorkGraph(name="test_shell_graph_builder")
