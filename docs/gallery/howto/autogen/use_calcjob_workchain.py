@@ -1,16 +1,3 @@
-# ---
-# jupyter:
-#   jupytext:
-#     text_representation:
-#       extension: .py
-#       format_name: percent
-#       format_version: '1.3'
-#       jupytext_version: 1.17.2
-#   kernelspec:
-#     display_name: Python 3 (ipykernel)
-#     language: python
-#     name: python3
-# ---
 """
 =================================================
 How to use aiida-core components inside WorkGraph
@@ -20,16 +7,17 @@ How to use aiida-core components inside WorkGraph
 # %%
 # Introduction
 # ============
-# If you’re already familiar with AiiDA, you may be interested in how to integrate ``aiida-core`` components—such as ``CalcJob``, ``calcfunction``, ``WorkChain``, and ``workfunction`` within a ``WorkGraph``. This integration enables you to seamlessly reuse existing workflows built with these paradigms inside a more flexible graph-based structure.
+# If you’re already familiar with AiiDA, you may be interested in how to integrate ``aiida-core`` components—such as ``CalcJob``, ``calcfunction``, ``WorkChain``, ``workfunction``, and ``ProcessBuilder`` within a ``WorkGraph``. This integration enables you to seamlessly reuse existing workflows built with these paradigms inside a more flexible graph-based structure.
 #
 # Adding these components as tasks in an aiida-workgraph is straightforward, and their inputs and outputs can be easily connected to form complex workflows.
+#
 # .. note::
 #
-#    This guide assumes prior knowledge of AiiDA’s core components. If you’re unfamiliar with them, refer to the official documentation on `Calculations <https://aiida.readthedocs.io/projects/aiida-core/en/stable/topics/calculations/index.html>`_ and `Workflows <https://aiida.readthedocs.io/projects/aiida-core/en/stable/topics/workflows/index.html>`_.
+#    This guide assumes prior knowledge of ``aiida-core`` components. If you’re unfamiliar with them, refer to the official documentation on `Calculations <https://aiida.readthedocs.io/projects/aiida-core/en/stable/topics/calculations/index.html>`_ and `Workflows <https://aiida.readthedocs.io/projects/aiida-core/en/stable/topics/workflows/index.html>`_.
 
 # %%
-# Preamble
-# ========
+# Setting up AiiDA entities
+# =========================
 # We need to initialize the computer and code resources to establish where the workflow is run.
 
 from aiida import load_profile
@@ -38,23 +26,6 @@ load_profile()
 
 from aiida import orm
 from aiida.common.exceptions import NotExistent
-
-try:
-    computer = orm.Computer.collection.get(label="localhost")
-except NotExistent:
-    import tempfile
-
-    computer = orm.Computer(
-        label="localhost",
-        description="localhoscomputer set up by test manager",
-        hostname=label,
-        workdir=str(tempfile.mkdtemp()),
-        transport_type="core.local",
-        scheduler_type="core.direct",
-    )
-    computer.store()
-    computer.set_minimum_job_poll_interval(0.0)
-    computer.configure()
 
 try:
     bash_code = orm.load_code(
@@ -69,9 +40,10 @@ except NotExistent:
     ).store()
 
 # %%
-# Integrating AiiDA's components
+# Integrating ``aiida-core`` components
 # ==============================
-# We first have a look how the ``aiida-core`` components are represented in the workgraph widget as single tasks. We will see that the inputs and outputs that the components are visible in the widget.
+# We begin by examining how the ``aiida-core`` components are visualized in the task view. The following examples show that key information—such as inputs and outputs—is clearly displayed for each component.
+
 
 from aiida_workgraph import WorkGraph
 
@@ -80,7 +52,7 @@ wg = WorkGraph("aiida_components")
 # %%
 # CalcJob
 # -------
-# As ``CalcJob`` we use the ``ArithmeticAddCalculation`` that adds to numbers ``x+y``.
+# As ``CalcJob`` we use the ``ArithmeticAddCalculation`` that adds two numbers ``x+y``.
 
 from aiida.calculations.arithmetic.add import ArithmeticAddCalculation
 
@@ -116,7 +88,7 @@ task_workfunction.to_html()
 # %%
 # workfunction
 # ------------
-# We create a ``workfunction`` that adds two three numbers ``x+y+z``.
+# We create a ``workfunction`` that adds three numbers ``x+y+z``.
 
 from aiida.engine import workfunction
 
@@ -130,16 +102,31 @@ def add_more(x, y, z):
 task_workfunction = wg.add_task(add_more, name="workfunction")
 task_workfunction.to_html()
 
+
 # %%
 # Putting all together
 # --------------------
 # Now we create a workflow using all of these components, linking their inputs and outputs just as in earlier ``WorkGraph`` examples.
 
 wg = WorkGraph("integrate_aiida_core_components")
+
+# We demonstrate how to use the process builder to set inputs for the first task
+builder = ArithmeticAddCalculation.get_builder()
+
+# Assign code and inputs to the builder
+builder.code = bash_code
+builder.x = orm.Int(1)
+builder.y = orm.Int(2)
+
 # 1+2 = 3
-wg.add_task(
-    ArithmeticAddCalculation, name="add_calcjob", x=1, y=2, code=bash_code
-)  # Note, that we add the code here
+add_calcjob_task = wg.add_task(ArithmeticAddCalculation, name="add_calcjob")
+add_calcjob_task.set_from_builder(builder)
+
+# Alternatively, we can initalize the ``add_calcjob`` task without the process builder
+# add_calcjob_task = wg.add_task(
+#     ArithmeticAddCalculation, name="add_calcjob", x=1, y=2, code=bash_code
+# )
+
 # 3+4 = 7
 wg.add_task(
     add, name="add_calcfunction", x=wg.tasks.add_calcjob.outputs.sum, y=4
@@ -163,6 +150,7 @@ wg.add_task(
 )
 wg.run()
 assert wg.tasks.add_more_workfunction.outputs.result.value == 22
+print("Result:", wg.tasks.add_more_workfunction.outputs.result.value)
 
 # %%
 wg.to_html()
@@ -175,4 +163,4 @@ generate_node_graph(wg.pk)
 # %%
 # Further reading
 # ===============
-# One can also use ``WorkGraph`` inside a ``WorkChain``, please refer to the [Calling WorkGraph within a WorkChain](workchain_call_workgraph.ipynb) for more details.
+# One can also use ``WorkGraph`` inside a ``WorkChain``, please refer to the `Calling WorkGraph within a WorkChain <workchain_call_workgraph.ipynb>`_ for more details.
