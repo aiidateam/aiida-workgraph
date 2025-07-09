@@ -1,149 +1,226 @@
 """
-=======================
-Run tasks in parallel
-=======================
+============================
+How to run tasks in parallel
+============================
 """
+
 # %%
 # Introduction
 # ============
-# In this tutorial, you will learn how to run task in parallel.
-#
-# Load the AiiDA profile.
-#
+# Once you have developed a correct and functioning workflow, the next step is often to scale it up for large datasets.
+# This typically involves applying the same workflow to many independent data points.
+# In this how-to, we show how to run the workflow in parallel for each data point to improve performance and scalability.
 
+# %%
+# Setting up the AiiDA environment
+# --------------------------------
 
 from aiida import load_profile
 
 load_profile()
 
-
-# %%
-# First workflow
-# ==============
-# Suppose we want to calculate ```(x + y) * z ``` in two steps. First, add `x` and `y`, then multiply the result with `z`. And `X` is a list of values. We want to calculate these in parallel.
-#
-# Create task
-# ------------
-# We need a create a `WorkGraph` to run tasksin parallel. And then treat this `WorkGraph` as a task.
-#
-
-
-from aiida_workgraph import task, WorkGraph
-
-# define multiply task
-@task()
-def multiply(x, y):
-    return x * y
-
-
-# Create a WorkGraph as a task
-@task.graph_builder()
-def multiply_parallel(X, y):
-    wg = WorkGraph()
-    # here the task `multiply` is created and will run in parallel
-    for key, value in X.items():
-        wg.add_task(multiply, name=f"multiply_{key}", x=value, y=y)
-    return wg
-
-
-# %%
-# Create the workflow
-# ---------------------
-#
-
-from aiida_workgraph import WorkGraph
-from aiida.orm import Int, List
-
-X = {"a": Int(1), "b": Int(2), "c": Int(3)}
-y = Int(2)
-z = Int(3)
-wg = WorkGraph("parallel_tasks")
-multiply_parallel1 = wg.add_task(multiply_parallel, name="multiply_parallel1", X=X, y=y)
-
-wg.submit(wait=True)
-
-
-# %%
-# Check the status and results
-# -----------------------------
-#
-
-
-print("State of WorkGraph:   {}".format(wg.state))
-
-# %%
-# Generate node graph from the AiiDA process:
-#
-
 from aiida_workgraph.utils import generate_node_graph
-
-generate_node_graph(wg.pk)
+from aiida_workgraph import WorkGraph, task, Map
 
 # %%
-# Second workflow: gather results
+# Perfectly parallelizable problem
 # ================================
-# Now I want to gather the results from the previous `multiply_parallel` tasks and calculate the sum of all their results.
-# Let's update the `multiply_parallel` function to `multiply_parallel_gather`.
+# A perfectly parallelizable problem can be broken down into smaller, independent subproblems that require no shared resources.
+# For example, consider an addition operation ``x + y`` applied element-wise to two lists: ``[x₁, ..., xₙ]`` and ``[y₁, ..., yₙ]``.
+# Each individual addition can be performed independently of the others.
+# ``WorkGraph`` automatically parallelizes task execution when there are no data dependencies between tasks (for more details on this concept, refer to `Dataflow programming <../../concept/autogen/dataflow_programming>`_).
+# We will take advanatge of this concept and create three different show three different ways how one can parallelize the add operation over the list with ``WorkGraph``.
 #
-
-
-@task.graph_builder(outputs=[{"name": "result"}])
-def multiply_parallel_gather(X, y):
-    wg = WorkGraph()
-    for key, value in X.items():
-        multiply1 = wg.add_task(multiply, x=value, y=y)
-        # add result of multiply1 to `self.context.mul`
-        # self.context.mul is a dict {"a": value1, "b": value2, "c": value3}
-        wg.update_ctx({f"mul.{key}": multiply1.outputs.result})
-        wg.outputs.result = wg.ctx.mul
-    return wg
-
-
-@task()
-# the input is dynamic, we must use a variable kewword argument. **datas
-def sum(**datas):
-    from aiida.orm import Float
-
-    total = 0
-    for key, data in datas.items():
-        total += data
-    return Float(total)
+# .. note::
+#
+#     In practice, a simple element-wise addition like this would typically be parallelized at a lower level, such as using NumPy vectorization or multithreading.
+#     However, we use it here for illustrative purposes.
+#     The concepts demonstrated in this guide can be applied to any workflow that is perfectly parallelizable.
 
 
 # %%
-# Now, let's create a `WorkGraph` to use the new task:
-#
+# Conventional for-loop
+# ---------------------
 
-from aiida_workgraph import WorkGraph
-from aiida.orm import Int, List
 
-X = {"a": Int(1), "b": Int(2), "c": Int(3)}
-y = Int(2)
-z = Int(3)
-wg = WorkGraph("parallel_tasks")
-multiply_parallel_gather1 = wg.add_task(multiply_parallel_gather, X=X, y=y)
-sum1 = wg.add_task(sum, name="sum1")
-# wg.add_link(add1.outputs[0], multiply_parallel_gather1.inputs["uuids"])
-wg.add_link(multiply_parallel_gather1.outputs[0], sum1.inputs[0])
+@task
+def add(x, y):
+    return x + y
 
-wg.submit(wait=True)
+
+len_list = 4
+x_list = list(range(len_list))
+y_list = list(range(len_list))
+sums = []
+
+wg = WorkGraph("parallel_for_loop")
+for i in range(len_list):
+    add_task = wg.add_task(add, x=x_list[i], y=y_list[i])
+    sums.append(add_task.outputs.result)
+
+wg.run()
+print("Result:", sums)
+# (1+1) + (2+2) + (3+3) = 12
+assert sum(sum_socket.value for sum_socket in sums) == 12
 
 # %%
-# Get the result of the tasks:
-#
-
-print("State of WorkGraph:   {}".format(wg.state))
-print("Result of task add1: {}".format(wg.tasks.sum1.outputs.result.value))
-
+# Workflow view
+# ~~~~~~~~~~~~~
+wg.to_html()
 
 # %%
-# Generate node graph from the AiiDA process:
-#
-
-from aiida_workgraph.utils import generate_node_graph
-
+# Provenance graph
+# ~~~~~~~~~~~~~~~~
 generate_node_graph(wg.pk)
 
 # %%
-# You can see that the outputs of `multiply_parallel_gather` workgraph is linked to the input of the `sum` task.
+# Graph builder
+# -------------
+# We continue with creating the same task for the graph builder.
+# We will perform the for loop within the graph builder task.
 #
+# .. note::
+#
+#     We pack the two lists into a dictionary to pass the data to a task, because ``aiida-core`` supports dynamically sized data structures only through dictionaries.
+#     While lists are supported to some extent, their usage is limited to primitive types.
+
+
+@task.graph_builder
+def parallel_add_workflow(data):
+    wg = WorkGraph()
+    for i, item in enumerate(data.values()):
+        add_task = wg.add_task(add, x=item["x"], y=item["y"])
+        wg.outputs.result = {f"sum_{i}": add_task.outputs.result}
+    return wg
+
+
+len_list = 4
+data = {f"list_{i}": {"x": i, "y": i} for i in range(len_list)}
+
+wg = WorkGraph("parallel_graph_builder")
+wg.add_task(parallel_add_workflow, data=data)
+wg.outputs.result = wg.tasks.parallel_add_workflow.outputs.result
+wg.run()
+print("Result:", wg.outputs.result.value)
+# (1+1) + (2+2) + (3+3) = 12
+assert sum(wg.outputs.result.value.values()) == 12
+
+# %%
+# Workflow view
+# ~~~~~~~~~~~~~
+wg.to_html()
+
+# %%
+# Provenance graph
+# ~~~~~~~~~~~~~~~~
+generate_node_graph(wg.pk)
+
+# %%
+# Map context
+# -----------
+# The ``Map`` works similar as python's inbuilt map.
+# By accessing the member ``item`` of the map context we can directly pass the socket item to tasks passing creating for each element a new task behind the curtain.
+# There is a caveat, to apply the add operation we need to access the ``x`` and ``y`` elements in a separate task since we cannot run a task within a task.
+# The ``Map`` context works similarly to Python's built-in ``map``.
+# By accessing the ``item`` member of the ``Map`` context, we can pass each individual element (e.g. a dictionary entry) to tasks.
+# This creates a new task behind the scenes for each element.
+#
+# .. note::
+#
+#   To perform an addition operation, we must extract the `x` and `y` values in separate tasks.
+#   This is because tasks cannot be nested within other tasks, one of ``aiida-core`` concepts to be able to strictly track created data.
+
+
+@task
+def get_value(data, key):
+    return data[key]
+
+
+len_list = 4
+data = {f"data_{i}": {"x": i, "y": i} for i in range(len_list)}
+
+with WorkGraph("parallel_map") as wg:
+    with Map(data) as map_:
+        wg.outputs.result = add(
+            x=get_value(map_.item, "x"), y=get_value(map_.item, "y")
+        )
+
+wg.run()
+print("Result:", wg.outputs.result.value)
+# (1+1) + (2+2) + (3+3) = 12
+assert sum(wg.outputs.result.value.values()) == 12
+
+# %%
+# Workflow view
+# ~~~~~~~~~~~~~
+wg.to_html()
+
+# %%
+# Provenance graph
+# ~~~~~~~~~~~~~~~~
+generate_node_graph(wg.pk)
+
+
+# %%
+# Gather results
+# ==============
+# We now extend the workflow by adding a task that sums the intermediate results.
+# This step is commonly known as a gather, aggregate, or reduce operation.
+# It is often used to automatically analyze or summarize the output of the parallel computations.
+
+# %%
+# Graph builder
+# -------------
+# We will extend it the whole workflow only by the ``aggregate_sum`` task
+@task
+def aggregate_sum(data):
+    return sum(data.values())
+
+
+@task.graph_builder
+def parallel_add_workflow(data):
+    wg = WorkGraph()
+    for i, item in enumerate(data.values()):
+        add_task = wg.add_task(add, x=item["x"], y=item["y"])
+        wg.outputs.result = {f"sum_{i}": add_task.outputs.result}
+    return wg
+
+
+len_list = 4
+data = {f"list_{i}": {"x": i, "y": i} for i in range(len_list)}
+
+wg = WorkGraph("parallel_graph_builder")
+wg.add_task(parallel_add_workflow, data=data)
+wg.add_task(aggregate_sum, data=wg.tasks.parallel_add_workflow.outputs.result)
+wg.outputs.result = wg.tasks.aggregate_sum.outputs.result
+wg.run()
+print("Result:", wg.outputs.result.value)
+assert wg.outputs.result == 12
+
+# %%
+# Map context
+# -----------
+# Similarly for the map context approach we only need do extend it by the ``aggregate_sum`` task
+
+
+@task
+def aggregate_sum(data):
+    return sum(data.values())
+
+
+@task
+def get_value(data, key):
+    return data[key]
+
+
+len_list = 4
+data = {f"data_{i}": {"x": i, "y": i} for i in range(len_list)}
+
+with WorkGraph("parallel_map") as wg:
+    with Map(data) as map_:
+        added_numbers = add(x=get_value(map_.item, "x"), y=get_value(map_.item, "y"))
+    wg.outputs.result = aggregate_sum(added_numbers)
+
+wg.run()
+print("Result:", wg.outputs.result.value)
+assert wg.outputs.result == 12
