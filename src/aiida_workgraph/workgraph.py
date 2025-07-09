@@ -73,11 +73,13 @@ class WorkGraph(node_graph.NodeGraph):
     def prepare_inputs(
         self, metadata: Optional[Dict[str, Any]] = None
     ) -> Dict[str, Any]:
-        from aiida_workgraph.utils import remove_output_values
+        from aiida_workgraph.utils import remove_output_values, serialize_socket_data
 
         wgdata = self.to_dict(should_serialize=True)
         for task in wgdata["tasks"].values():
             remove_output_values(task["outputs"])
+        serialize_socket_data(wgdata["meta_sockets"]["graph_ctx"])
+        serialize_socket_data(wgdata["meta_sockets"]["graph_inputs"])
         metadata = metadata or {}
         inputs = {"workgraph_data": wgdata, "metadata": metadata}
         return inputs

@@ -17,3 +17,8 @@ def select(condition, true=None, false=None):
     if condition:
         return true
     return false
+
+
+def get_item(data: dict, key: str) -> Any:
+    """Get an item from a dictionary."""
+    return data.get(key, None)
