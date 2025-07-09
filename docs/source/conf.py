@@ -54,11 +54,11 @@ gallery_src_relative_dir = (
     "../gallery"  # relative path of the gallery src wrt. sphinx src
 )
 sphinx_src_autogen_dirs = [
-    "autogen",
-    "concept/autogen",
-    "tutorial/autogen",
+    # "autogen",
+    # "concept/autogen",
+    # "tutorial/autogen",
     "howto/autogen",
-    "built-in/autogen",
+    # "built-in/autogen",
 ]
 # we mimik the structure in the sphinx src directory in the gallery src directory
 
