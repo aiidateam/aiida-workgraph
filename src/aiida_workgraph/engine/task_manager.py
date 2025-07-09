@@ -511,7 +511,7 @@ class TaskManager:
             links = self.process.wg.tasks[child_task].inputs._all_links
             all_links.extend(links)
         # fix references in the newly mapped tasks (children, input_links, etc.)
-        new_links = self._patch_cloned_tasks(zone_task, prefix, new_tasks, all_links)
+        new_links = self._patch_cloned_tasks(new_tasks, all_links)
         # update process.wg.connectivity so the new tasks are recognized in child_node, zone references, etc.
         self._patch_connectivity(new_tasks)
         return new_tasks, new_links
@@ -547,8 +547,6 @@ class TaskManager:
 
     def _patch_cloned_tasks(
         self,
-        zone_task: Task,
-        prefix: str,
         new_tasks: dict[str, "Task"],
         all_links: List[NodeLink],
     ):
@@ -572,8 +570,6 @@ class TaskManager:
                     task.parent_task = orginal_task.parent_task
         # fix links references
         new_links = []
-        share_key = f"map_zone_{zone_task.name}_item"
-        item_key = f"map_zone_{zone_task.name}_item_{prefix}"
         for link in all_links:
             if link.to_node.name in new_tasks:
                 to_node = new_tasks[link.to_node.name]
@@ -585,19 +581,12 @@ class TaskManager:
             if link.from_node.name in new_tasks:
                 from_node = new_tasks[link.from_node.name]
                 from_socket = from_node.outputs[link.from_socket._scoped_name]
-            # TODO: check if this is necessary, should we also consider "graph_inputs" and "graph_outputs"?
-            elif (
-                link.from_node.name == "graph_ctx"
-                and link.from_socket._name == share_key
-            ):
-                from_socket = self.process.wg.ctx[item_key]
             else:
                 from_socket = link.from_socket
             self.process.wg.add_link(
                 from_socket,
                 to_socket,
             )
-            # update the link with the new name
         return new_links
 
     def _patch_connectivity(self, new_tasks: dict[str, "Task"]) -> None:
