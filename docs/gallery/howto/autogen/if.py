@@ -75,9 +75,8 @@ def multiply(x, y):
 # %%
 # To then define define the conditional logic for the workflow, we use the ``If`` context manager provided by
 # AiiDA WorkGraph.
-# Using a context manager for the ``If`` also requires the ``WorkGraph`` itself being constructed as a context
-# manager:
-# PRCOMMENT: Maybe explain better here why also context manager for the WorkGraph
+# Note that to use the ``If`` context manager, we also need to construct our top-level WorkGraph via the context manager
+# approach. More information on this is provided in :doc:`../concept/workgraph`.
 
 from aiida_workgraph import WorkGraph, If
 
@@ -196,8 +195,8 @@ generate_node_graph(wg.pk)
 # In the WorkGraph user interface, the ``If`` ``Task`` is visually represented as an "If Zone".
 # This zone encapsulates all its child tasks, which are executed based on the defined conditions.
 #
-# - **Conditions**: The If Zone includes a ``conditions`` socket, which determines when the tasks inside the zone should be executed.
-# - **Invert_condition**: If this input is True, it will invert the conditions.
+# - **conditions**: The If Zone includes a ``conditions`` socket, which determines when the tasks inside the zone should be executed.
+# - **invert_condition**: If this input is True, it will invert the conditions.
 # - **Task Linking**: Tasks located outside the If Zone can be directly linked to tasks within the zone, allowing for dynamic workflow adjustments based on conditional outcomes.
 #
 # Here is an example of how to add an ``If`` ``Task`` to a WorkGraph:
@@ -205,7 +204,7 @@ generate_node_graph(wg.pk)
 # .. code-block:: python
 #
 #     if_task = wg.add_task(
-#        "If",
+#        "workgraph.if_zone",
 #        name="if_false",
 #        conditions=condition1.outputs["result"],
 #        invert_condition=True
@@ -269,4 +268,6 @@ wg.to_html()
 # Summary
 # =======
 #
-# The ``If`` provides a visual and structured approach to managing conditional tasks within a defined zone. In contrast, the ``graph_builder`` decorator offers flexibility by dynamically generating the workflow based on runtime inputs, suitable for complex and adaptive process flows.
+# The ``If`` provides a visual and structured approach to managing conditional tasks within a defined zone. In contrast,
+# the ``graph_builder`` decorator offers flexibility by dynamically generating the workflow based on runtime inputs,
+# suitable for complex and adaptive process flows.
