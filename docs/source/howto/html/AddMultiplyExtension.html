@@ -21,6 +21,7 @@
     <script src="https://cdn.jsdelivr.net/npm/rete-react-plugin@2.0.5/rete-react-plugin.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/rete-auto-arrange-plugin@2.0.1/rete-auto-arrange-plugin.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/rete-minimap-plugin@2.0.1/rete-minimap-plugin.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/rete-scopes-plugin@2.1.0/rete-scopes-plugin.min.js"></script>
 
     <style>
         .App {
@@ -52,6 +53,7 @@
         const { createRoot } = ReactDOM;
         const { NodeEditor, ClassicPreset } = Rete;
         const { AreaPlugin, AreaExtensions } = ReteAreaPlugin;
+        const { ScopesPlugin, Presets: ScopesPresets } = ReteScopesPlugin;
         const { ConnectionPlugin, Presets: ConnectionPresets } = ReteConnectionPlugin;
         const { ReactPlugin, Presets } = ReteReactPlugin;
         const { AutoArrangePlugin, Presets: ArrangePresets, ArrangeAppliers} = ReteAutoArrangePlugin;
@@ -59,7 +61,7 @@
         const { RenderUtils } = ReteRenderUtils;
         const styled = window.styled;
 
-        const workgraphData = {"name": "Relax_Bands_PDOS_graph_builder", "uuid": "9ddde900-230e-11ef-bbeb-906584de3e5b", "state": "CREATED", "nodes": {"relax": {"label": "relax", "inputs": [{"name": "base", "identifier": "General", "uuid": "9de0083e-230e-11ef-bbeb-906584de3e5b", "node_uuid": "9de00474-230e-11ef-bbeb-906584de3e5b", "type": "INPUT", "link_limit": 1, "links": [], "serialize": {"path": "node_graph.serializer", "name": "serialize_pickle"}, "deserialize": {"path": "node_graph.serializer", "name": "deserialize_pickle"}}, {"name": "base.pw", "identifier": "General", "uuid": "9de00b86-230e-11ef-bbeb-906584de3e5b", "node_uuid": "9de00474-230e-11ef-bbeb-906584de3e5b", "type": "INPUT", "link_limit": 1, "links": [], "serialize": {"path": "node_graph.serializer", "name": "serialize_pickle"}, "deserialize": {"path": "node_graph.serializer", "name": "deserialize_pickle"}}, {"name": "base.pw.parameters", "identifier": "General", "uuid": "9de01d4c-230e-11ef-bbeb-906584de3e5b", "node_uuid": "9de00474-230e-11ef-bbeb-906584de3e5b", "type": "INPUT", "link_limit": 1, "links": [], "serialize": {"path": "node_graph.serializer", "name": "serialize_pickle"}, "deserialize": {"path": "node_graph.serializer", "name": "deserialize_pickle"}}, {"name": "base.pw.pseudos", "identifier": "General", "uuid": "9de01ed2-230e-11ef-bbeb-906584de3e5b", "node_uuid": "9de00474-230e-11ef-bbeb-906584de3e5b", "type": "INPUT", "link_limit": 1, "links": [], "serialize": {"path": "node_graph.serializer", "name": "serialize_pickle"}, "deserialize": {"path": "node_graph.serializer", "name": "deserialize_pickle"}}, {"name": "structure", "identifier": "General", "uuid": "9de04c86-230e-11ef-bbeb-906584de3e5b", "node_uuid": "9de00474-230e-11ef-bbeb-906584de3e5b", "type": "INPUT", "link_limit": 1, "links": [], "serialize": {"path": "node_graph.serializer", "name": "serialize_pickle"}, "deserialize": {"path": "node_graph.serializer", "name": "deserialize_pickle"}}], "outputs": [{"name": "output_structure"}, {"name": "output_structure"}], "position": [30, 30]}, "bands_group": {"label": "bands_group", "inputs": [{"name": "structure"}], "outputs": [], "position": [60, 60]}, "pdos_group": {"label": "pdos_group", "inputs": [{"name": "structure"}], "outputs": [], "position": [90, 90]}}, "links": [{"from_socket": "output_structure", "from_node": "relax", "from_socket_uuid": "9de05460-230e-11ef-bbeb-906584de3e5b", "to_socket": "structure", "to_node": "bands_group", "state": false}, {"from_socket": "output_structure", "from_node": "relax", "from_socket_uuid": "9de05460-230e-11ef-bbeb-906584de3e5b", "to_socket": "structure", "to_node": "pdos_group", "state": false}]}
+        const nodegraphData = {"name": "AddMultiplyExtension", "uuid": "4c18e2a8-5c85-11f0-a8c5-00155dc4a75e", "state": "CREATED", "nodes": {"generate_random_number": {"identifier": "workgraph.pyfunction", "label": "generate_random_number", "node_type": "PYFUNCTION", "inputs": [{"name": "minimum", "identifier": "workgraph.any"}, {"name": "maximum", "identifier": "workgraph.any"}, {"name": "function_data", "identifier": "workgraph.namespace"}], "properties": {"minimum": {"identifier": "workgraph.any", "value": null}, "maximum": {"identifier": "workgraph.any", "value": null}, "_wait": {"identifier": "workgraph.any", "value": null}, "process_label": {"identifier": "workgraph.any", "value": null}, "deserializers": {"identifier": "workgraph.any", "value": null}, "serializers": {"identifier": "workgraph.any", "value": null}}, "outputs": [{"name": "result"}], "position": [30, 30], "children": []}, "add": {"identifier": "workgraph.pyfunction", "label": "add", "node_type": "PYFUNCTION", "inputs": [{"name": "a", "identifier": "workgraph.any"}, {"name": "b", "identifier": "workgraph.any"}, {"name": "function_data", "identifier": "workgraph.namespace"}], "properties": {"a": {"identifier": "workgraph.any", "value": null}, "b": {"identifier": "workgraph.any", "value": null}, "_wait": {"identifier": "workgraph.any", "value": null}, "process_label": {"identifier": "workgraph.any", "value": null}, "deserializers": {"identifier": "workgraph.any", "value": null}, "serializers": {"identifier": "workgraph.any", "value": null}}, "outputs": [{"name": "result"}], "position": [30, 30], "children": []}, "multiply": {"identifier": "workgraph.pyfunction", "label": "multiply", "node_type": "PYFUNCTION", "inputs": [{"name": "a", "identifier": "workgraph.any"}, {"name": "b", "identifier": "workgraph.any"}, {"name": "function_data", "identifier": "workgraph.namespace"}, {"name": "a"}, {"name": "b"}], "properties": {"a": {"identifier": "workgraph.any", "value": null}, "b": {"identifier": "workgraph.any", "value": null}, "_wait": {"identifier": "workgraph.any", "value": null}, "process_label": {"identifier": "workgraph.any", "value": null}, "deserializers": {"identifier": "workgraph.any", "value": null}, "serializers": {"identifier": "workgraph.any", "value": null}}, "outputs": [], "position": [30, 30], "children": []}}, "links": [{"from_socket": "result", "from_node": "add", "to_socket": "a", "to_node": "multiply"}, {"from_socket": "result", "from_node": "generate_random_number", "to_socket": "b", "to_node": "multiply"}]}
 
         // Define Schemes to use in vanilla JS
         const Schemes = {
@@ -131,17 +133,46 @@
           }
         }
 
-        async function loadJSON(editor, area, layout, workgraphData) {
-          for (const nodeId in workgraphData.nodes) {
-            const nodeData = workgraphData.nodes[nodeId];
+        async function loadJSON(editor, area, layout, nodegraphData) {
+          for (const nodeId in nodegraphData.nodes) {
+            const nodeData = nodegraphData.nodes[nodeId];
             await addNode(editor, area, nodeData);
           }
 
-          // Adding connections based on workgraphData
-          workgraphData.links.forEach(async (link) => { // Specify the type of link here
+          // Adding connections based on nodegraphData
+          nodegraphData.links.forEach(async (link) => { // Specify the type of link here
             await addLink(editor, area, layout, link);
           });
+
+          // Add while zones
+          console.log("Adding while zone: ");
+          for (const nodeId in nodegraphData.nodes) {
+            const nodeData = nodegraphData.nodes[nodeId];
+            const node_type = nodeData['node_type'];
+            if (node_type === "WHILE" || node_type === "IF" || node_type === "ZONE" || node_type === "MAP") {
+              // find the node
+              const node = editor.nodeMap[nodeData.label];
+              const children = nodeData['children'];
+              // find the id of all nodes in the editor that has a label in while_zone
+              for (const nodeId in children) {
+                const node1 = editor.nodeMap[children[nodeId]];
+                node1.parent = node.id;
+              }
+            }
+          }
         }
+
+        /**
+        * Defines custom padding for a scope layout.
+        * The padding values are used by the ScopesPlugin to avoid node overlapping with the socket of the parent node.
+        */
+        const customScopePadding = () => ({
+          top: 80,
+          left: 30,
+          right: 30,
+          bottom: 50
+        });
+
 
         async function createEditor(container) {
             const socket = new ClassicPreset.Socket("socket");
@@ -150,6 +181,7 @@
             const area = new AreaPlugin(container);
             const connection = new ConnectionPlugin();
             const render = new ReactPlugin({ createRoot });
+            const scopes = new ScopesPlugin({padding: customScopePadding});
             const arrange = new AutoArrangePlugin();
 
             const minimap = new MinimapPlugin({
@@ -164,6 +196,7 @@
             render.addPreset(Presets.minimap.setup({ size: 200 }));
 
             connection.addPreset(ConnectionPresets.classic.setup());
+            scopes.addPreset(ScopesPresets.classic.setup());
 
             const applier = new ArrangeAppliers.TransitionApplier({
               duration: 500,
@@ -179,18 +212,16 @@
             editor.use(area);
             // area.use(connection);
             area.use(render);
+            area.use(scopes);
             area.use(arrange);
             area.use(minimap);
-
-
-            AreaExtensions.simpleNodesOrder(area);
 
             async function layout(animate) {
               await arrange.layout({ applier: animate ? applier : undefined });
               AreaExtensions.zoomAt(area, editor.getNodes());
             }
 
-            // Adding nodes based on workgraphData
+            // Adding nodes based on nodegraphData
             const nodeMap = {}; // To keep track of created nodes for linking
             editor.nodeMap = nodeMap;
 
@@ -219,10 +250,11 @@
                 if (containerRef.current && !editor) {
                     createEditor(containerRef.current).then((editor) => {
                         setEditor(editor);
-                        loadJSON(editor.editor, editor.area, editor.layout, workgraphData).then(() => {
+                        loadJSON(editor.editor, editor.area, editor.layout, nodegraphData).then(() => {
                           // aplly layout twice to ensure all nodes are arranged
                           editor?.layout(false).then(() => editor?.layout(true));
                         });
+                        window.editor = editor;
                     });
                 }
                 if (document.getElementById('fullscreen-btn')) {
