@@ -16,9 +16,8 @@ Flow control: Using ``if`` conditions
 # 3. **Programmatic approach using the If Task**
 #
 # For simple cases, we recommend option 1), the ``If`` context manager approach, while option 2), using the Graph
-# Builder provides additional advantages, such as dynamic runtime dependence (see :doc:`graph_builder`).
-# Finally, option 3) is the most complex approach that requires the largest amount of code, however, it allows to
-# programmatically construct the ``if`` condition and offers the biggest flexibility.
+# Builder provides additional advantages, see :doc:`graph_builder`.
+# Finally, option 3) use the `If Task` directly without the context manager. This approach requires a lot of boilerplate code and is generally not recommended. However, it is the method if you want to program using the node-graph programming approach.
 #
 
 # %%
@@ -191,7 +190,7 @@ generate_node_graph(wg.pk)
 # If Task
 # =======
 #
-# Internally, the ``If`` instruction is implemented using the ``If`` ``Task`` from the WorkGraph library.
+# Internally, the ``If`` context manager is implemented using the ``If`` ``Task`` from the WorkGraph library.
 # In the WorkGraph user interface, the ``If`` ``Task`` is visually represented as an "If Zone".
 # This zone encapsulates all its child tasks, which are executed based on the defined conditions.
 #
