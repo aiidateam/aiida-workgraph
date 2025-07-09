@@ -17,7 +17,9 @@ Flow control: Using ``if`` conditions
 #
 # For simple cases, we recommend option 1), the ``If`` context manager approach, while option 2), using the Graph
 # Builder provides additional advantages, see :doc:`graph_builder`.
-# Finally, option 3) use the `If Task` directly without the context manager. This approach requires a lot of boilerplate code and is generally not recommended. However, it is the method if you want to program using the node-graph programming approach.
+# Finally, option 3) uses the ``If`` ``Task`` directly without the context manager. This approach requires a lot of
+# boilerplate code and is generally not recommended. However, it presents the programmatic method if you want to
+# construct the ``If`` flow control element using a node-graph programming approach.
 #
 
 # %%
