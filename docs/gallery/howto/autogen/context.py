@@ -164,10 +164,9 @@ wg.show()
 # is invisible in the visualization.
 
 # %%
-wg.submit(wait=True)
+wg.run()
 print("State of WorkGraph         : {}".format(wg.state))
 print('Result of add1            : {}'.format(wg.tasks.add1.outputs.result.value))
-print('Final result in context   : {}'.format(wg.ctx.final_result))
 
 # %%
 
