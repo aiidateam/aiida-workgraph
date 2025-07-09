@@ -126,49 +126,54 @@ final_task = wg_main.add_task(add, x=builder_task.outputs.result, y=100)
 #
 
 # %%
-# ## First workflow
+# Context Tasks in the GUI
+# ~~~~~~~~~~~~~~~~~~~~~~~~
+#
+# This example shows how context operations appear in the workflow visualization
+# when using explicit context tasks instead of direct context access.
+#
+# .. note::
+#    Context tasks make data flow visible in the GUI, which is helpful for
+#    debugging and understanding workflow execution. Use them when you want
+#    explicit visibility of context operations.
 
 # %%
-from aiida_workgraph import WorkGraph, task
-from aiida import load_profile
 
-load_profile()
+wg = WorkGraph(name="context_gui_demo")
 
+# Set initial context values
+wg.ctx = {"x": 2, "multiplier": 10}
 
-@task.calcfunction()
-def add(x, y):
-    return x + y
+# Use context tasks - these appear as nodes in the GUI
+get_x = wg.add_task("workgraph.get_context", name="get_x", key="x")
+get_multiplier = wg.add_task("workgraph.get_context", name="get_multiplier", key="multiplier")
 
+# Perform calculation using context values
+add1 = wg.add_task(add, "add1", x=get_x.outputs.result, y=get_multiplier.outputs.result)
 
-wg = WorkGraph(name="test_workgraph_ctx")
-# Set the context of the workgraph
-wg.ctx = {"x": 2, "data.y": 3}
-get_ctx1 = wg.add_task("workgraph.get_context", name="get_ctx1", key="x")
-add1 = wg.add_task(add, "add1", x=get_ctx1.outputs.result, y=wg.ctx.data.y)
-set_ctx1 = wg.add_task("workgraph.set_context", name="set_ctx1", key="x", value=add1.outputs.result)
+# Store result back to context - also appears in GUI
+wg.add_task("workgraph.set_context", name="store_result", key="final_result", value=add1.outputs.result)
+
 wg.to_html()
-# wg
+wg.show()
 
 # %%
-# As shown in the GUI, the `get_context` task and `to_context` tasks are shown in the GUI. However, the context variable using the `update_ctx` method or `wg.ctx.x` is not shown in the GUI.
-
-# %%
-# ### Submit the workflow and check the results
+# As shown in the GUI, the ``get_context`` and ``set_context`` tasks appear as
+# visible nodes in the workflow graph. This makes the data flow through context
+# explicit and traceable, unlike direct context access via ``wg.ctx.x`` which
+# is invisible in the visualization.
 
 # %%
 wg.submit(wait=True)
 print("State of WorkGraph         : {}".format(wg.state))
 print('Result of add1            : {}'.format(wg.tasks.add1.outputs.result.value))
+print('Final result in context   : {}'.format(wg.ctx.final_result))
 
 # %%
-# Generate node graph from the AiiDA process,and we can see that the `multiply` task is executed.
 
-# %%
+# Generate node graph from the AiiDA process
 from aiida_workgraph.utils import generate_node_graph
 generate_node_graph(wg.pk)
 
 # %%
 # > **_NOTE:_**  If you pass data from one task to another task trough context, you may need to use `wait` to wait for the data to be ready. See [How to wait for another task](waiting_on.ipynb).
-
-#%%
-
