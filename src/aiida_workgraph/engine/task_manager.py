@@ -312,14 +312,16 @@ class TaskManager:
             self.state_manager.update_zone_task_state(name)
         else:
             self.state_manager.set_task_runtime_info(name, "state", "RUNNING")
+            item_task = [
+                child
+                for child in task.children
+                if child.identifier == "workgraph.map_item"
+            ][0]
             source = kwargs["source"]
             map_info["prefix"] = list(source.keys())
             for prefix, value in source.items():
-                key = f"map_zone_{name}_item_{prefix}"
-                # add a new item to the wg.ctx, as well as the results of the ctx node
-                self.process.wg.update_ctx({key: value})
-                self.ctx._task_results["graph_ctx"][key] = value
                 new_tasks, new_links = self.generate_mapped_tasks(task, prefix=prefix)
+                self.update_map_item_task_state(item_task, prefix, value)
             map_info["children"] = list(new_tasks.keys())
             map_info["links"] = new_links
         self.state_manager.set_task_runtime_info(name, "map_info", map_info)
@@ -509,11 +511,15 @@ class TaskManager:
             links = self.process.wg.tasks[child_task].inputs._all_links
             all_links.extend(links)
         # fix references in the newly mapped tasks (children, input_links, etc.)
-        new_links = self._patch_cloned_tasks(zone_task, prefix, new_tasks, all_links)
-
+        new_links = self._patch_cloned_tasks(new_tasks, all_links)
         # update process.wg.connectivity so the new tasks are recognized in child_node, zone references, etc.
         self._patch_connectivity(new_tasks)
         return new_tasks, new_links
+
+    def update_map_item_task_state(self, item_task, prefix, value: Any):
+        new_name = f"{prefix}_{item_task.name}"
+        self.ctx._task_results[new_name]["item"] = value
+        self.state_manager.set_task_runtime_info(new_name, "state", "FINISHED")
 
     def copy_task(self, name: str, prefix: str) -> "Task":
         from aiida_workgraph.task import Task
@@ -541,8 +547,6 @@ class TaskManager:
 
     def _patch_cloned_tasks(
         self,
-        zone_task: Task,
-        prefix: str,
         new_tasks: dict[str, "Task"],
         all_links: List[NodeLink],
     ):
@@ -566,8 +570,6 @@ class TaskManager:
                     task.parent_task = orginal_task.parent_task
         # fix links references
         new_links = []
-        share_key = f"map_zone_{zone_task.name}_item"
-        item_key = f"map_zone_{zone_task.name}_item_{prefix}"
         for link in all_links:
             if link.to_node.name in new_tasks:
                 to_node = new_tasks[link.to_node.name]
@@ -579,12 +581,6 @@ class TaskManager:
             if link.from_node.name in new_tasks:
                 from_node = new_tasks[link.from_node.name]
                 from_socket = from_node.outputs[link.from_socket._scoped_name]
-            # TODO: check if this is necessary, should we also consider "graph_inputs" and "graph_outputs"?
-            elif (
-                link.from_node.name == "graph_ctx"
-                and link.from_socket._name == share_key
-            ):
-                from_socket = self.process.wg.ctx[item_key]
             else:
                 from_socket = link.from_socket
             self.process.wg.add_link(
