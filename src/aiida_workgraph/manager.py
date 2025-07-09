@@ -87,7 +87,7 @@ def active_graph(graph):
 
 
 @contextmanager
-def active_if_zone(condition_socket: TaskSocket, invert_condition: bool = False):
+def If(condition_socket: TaskSocket, invert_condition: bool = False):
     """
     Context manager to create a "conditional zone" in the current graph.
 
@@ -115,7 +115,7 @@ def active_if_zone(condition_socket: TaskSocket, invert_condition: bool = False)
 
 
 @contextmanager
-def active_while_zone(condition_socket: TaskSocket, max_iterations: int = 10000):
+def While(condition_socket: TaskSocket, max_iterations: int = 10000):
     """
     Context manager to create a "while zone" in the current graph.
 
@@ -143,9 +143,7 @@ def active_while_zone(condition_socket: TaskSocket, max_iterations: int = 10000)
 
 
 @contextmanager
-def active_map_zone(
-    source_socket: TaskSocket, placeholder: str = DEFAULT_MAP_PLACEHOLDER
-):
+def Map(source_socket: TaskSocket, placeholder: str = DEFAULT_MAP_PLACEHOLDER):
     """
     Context manager to create a "map zone" in the current graph.
 
@@ -158,8 +156,13 @@ def active_map_zone(
     zone_task = wg.add_task(
         TaskPool.workgraph.map_zone,
         source=source_socket,
-        placeholder=placeholder,
     )
+
+    map_item_task = wg.add_task(
+        TaskPool.workgraph.map_item,
+    )
+
+    zone_task.children.add(map_item_task)
 
     old_zone = getattr(wg, "_active_zone", None)
     if old_zone:

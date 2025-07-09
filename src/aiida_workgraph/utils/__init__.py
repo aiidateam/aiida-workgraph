@@ -398,6 +398,7 @@ def workgraph_to_short_json(
 
         properties = process_properties(task)
         wgdata_short["nodes"][name] = {
+            "identifier": task["identifier"],
             "label": task["name"],
             "node_type": task["metadata"]["node_type"].upper(),
             "inputs": inputs,
@@ -406,7 +407,7 @@ def workgraph_to_short_json(
             "position": task["position"],
             "children": task["children"],
         }
-    for name, socket in wgdata["meta_sockets"].items():
+    for name, socket in wgdata.get("meta_sockets", {}).items():
         inputs = []
         for input in socket["sockets"].values():
             metadata = input.get("metadata", {}) or {}
@@ -436,48 +437,11 @@ def workgraph_to_short_json(
             }
         )
     # hide meta nodes if there is no link to them
-    for name, socket in wgdata["meta_sockets"].items():
+    for name, socket in wgdata.get("meta_sockets", {}).items():
         node = wgdata_short["nodes"][name]
         if len(node["inputs"]) == 0 and len(node["outputs"]) == 0:
             del wgdata_short["nodes"][name]
-    # split ctx node into two nodes, one with only inputs and one with only outputs
-    ctx_node = wgdata_short["nodes"].get("graph_ctx")
-    if ctx_node:
-        ctx_inputs = []
-        ctx_outputs = []
-        for input in ctx_node["inputs"]:
-            if input.get("identifier") == "_wait":
-                continue
-            ctx_inputs.append(input)
-        for output in ctx_node["outputs"]:
-            if output.get("identifier") == "_wait":
-                continue
-            ctx_outputs.append(output)
-        wgdata_short["nodes"]["ctx_inputs"] = {
-            "label": "ctx_inputs",
-            "node_type": "graph_ctx",
-            "inputs": ctx_inputs,
-            "properties": {},
-            "outputs": [],
-            "position": [0, 0],
-            "children": [],
-        }
-        wgdata_short["nodes"]["ctx_outputs"] = {
-            "label": "ctx_outputs",
-            "node_type": "graph_ctx",
-            "inputs": [],
-            "properties": {},
-            "outputs": ctx_outputs,
-            "position": [0, 0],
-            "children": [],
-        }
-        del wgdata_short["nodes"]["graph_ctx"]
-        # update the links
-        for link in wgdata_short["links"]:
-            if link["from_node"] == "graph_ctx":
-                link["from_node"] = "ctx_inputs"
-            if link["to_node"] == "graph_ctx":
-                link["to_node"] = "ctx_outputs"
+
     return wgdata_short
 
 
@@ -675,3 +639,19 @@ def query_terminated_processes(pks: list[int]) -> list[int]:
     results = qb.all()
     terminated_pks = [res[0] for res in results]
     return terminated_pks
+
+
+def serialize_socket_data(input_socket: Dict[str, Any]) -> None:
+    """Recursively walk over the sockets and convert raw Python
+    values to AiiDA Data nodes, if needed.
+    """
+    from aiida_pythonjob.data.serializer import general_serializer
+
+    if input_socket["identifier"] == "workgraph.namespace":
+        for socket in input_socket["sockets"].values():
+            serialize_socket_data(socket)
+    else:
+        value = input_socket.get("property", {}).get("value")
+        if value is None or isinstance(value, orm.Data):
+            return
+        input_socket["property"]["value"] = general_serializer(value)
