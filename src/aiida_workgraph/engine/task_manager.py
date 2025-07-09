@@ -312,14 +312,16 @@ class TaskManager:
             self.state_manager.update_zone_task_state(name)
         else:
             self.state_manager.set_task_runtime_info(name, "state", "RUNNING")
+            item_task = [
+                child
+                for child in task.children
+                if child.identifier == "workgraph.map_item"
+            ][0]
             source = kwargs["source"]
             map_info["prefix"] = list(source.keys())
             for prefix, value in source.items():
-                key = f"map_zone_{name}_item_{prefix}"
-                # add a new item to the wg.ctx, as well as the results of the ctx node
-                self.process.wg.update_ctx({key: value})
-                self.ctx._task_results["graph_ctx"][key] = value
                 new_tasks, new_links = self.generate_mapped_tasks(task, prefix=prefix)
+                self.update_map_item_task_state(item_task, prefix, value)
             map_info["children"] = list(new_tasks.keys())
             map_info["links"] = new_links
         self.state_manager.set_task_runtime_info(name, "map_info", map_info)
@@ -510,10 +512,14 @@ class TaskManager:
             all_links.extend(links)
         # fix references in the newly mapped tasks (children, input_links, etc.)
         new_links = self._patch_cloned_tasks(zone_task, prefix, new_tasks, all_links)
-
         # update process.wg.connectivity so the new tasks are recognized in child_node, zone references, etc.
         self._patch_connectivity(new_tasks)
         return new_tasks, new_links
+
+    def update_map_item_task_state(self, item_task, prefix, value: Any):
+        new_name = f"{prefix}_{item_task.name}"
+        self.ctx._task_results[new_name]["item"] = value
+        self.state_manager.set_task_runtime_info(new_name, "state", "FINISHED")
 
     def copy_task(self, name: str, prefix: str) -> "Task":
         from aiida_workgraph.task import Task
@@ -591,6 +597,7 @@ class TaskManager:
                 from_socket,
                 to_socket,
             )
+            # update the link with the new name
         return new_links
 
     def _patch_connectivity(self, new_tasks: dict[str, "Task"]) -> None:
