@@ -150,6 +150,7 @@ def add_multiply_if(x, y):
         wg.outputs.result = multiply1.outputs.result
     return wg
 
+
 # %%
 # Create the workflow
 # -------------------
@@ -180,7 +181,9 @@ wg.to_html()
 wg.run()
 print(f"State of WorkGraph: {wg.state}")
 print(f"Result            : {wg.tasks.add2.outputs.result.value}")
-import ipdb; ipdb.set_trace()
+import ipdb
+
+ipdb.set_trace()
 
 # %%
 # Generate node graph from the AiiDA process,and we can see that the ``multiply`` task is executed.
