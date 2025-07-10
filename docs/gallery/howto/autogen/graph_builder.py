@@ -55,6 +55,7 @@ def add_multiply(x=None, y=None, z=None):
     wg.add_link(wg.tasks.add.outputs.result, wg.tasks.multiply.inputs.y)
     return wg
 
+
 wg = WorkGraph("nested_workgraph")
 
 # Creating a task from the WorkGraph
@@ -273,7 +274,7 @@ wg.to_html()
 # Running the workgraph.
 
 wg.submit(wait=True)
-print("Output of first task", task1.outputs.result.value)   # 1 + 1 result
+print("Output of first task", task1.outputs.result.value)  # 1 + 1 result
 print("Output of second task", task2.outputs.result.value)  # 2 % 2 result
 
 # %%
