@@ -135,20 +135,20 @@ generate_node_graph(wg.pk)
 #   both branches were shown
 # - **Dynamic Generation**: Upon running, it generates the WorkGraph dynamically, allowing for complex conditional logic and flow adjustments based on runtime data.
 
-# Create a WorkGraph which is dynamically generated based on the input then we output the result from the context
-@task.graph_builder(outputs=[{"name": "result", "from": "ctx.data"}])
+# Create a WorkGraph which is dynamically generated based on the input
+# then we output the result as a graph-level output
+@task.graph_builder(outputs=[{"name": "result"}])
 def add_multiply_if(x, y):
     wg = WorkGraph()
     if x.value > 0:
         add1 = wg.add_task(add, name="add1", x=x, y=y)
-        # export the result of add1 to the context.data
-        wg.ctx.data = add1.outputs.result
+        # export the result of add1 to the graph-lvel outputs
+        wg.outputs.result = add1.outputs.result
     else:
         multiply1 = wg.add_task(multiply, name="multiply1", x=x, y=y)
-        # export the result of multiply1 to the context.dadta
-        wg.ctx.data = multiply1.outputs.result
+        # export the result of multiply1 to the graph-lvel outputs
+        wg.outputs.result = multiply1.outputs.result
     return wg
-
 
 # %%
 # Create the workflow
