@@ -56,9 +56,8 @@ gallery_src_relative_dir = (
 sphinx_src_autogen_dirs = [
     "autogen",
     "concept/autogen",
-    #"tutorial/autogen",
+    "tutorial/autogen",
     "howto/autogen",
-    #"built-in/autogen",
 ]
 # we mimik the structure in the sphinx src directory in the gallery src directory
 

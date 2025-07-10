@@ -242,11 +242,11 @@ wg.add_task(add, name="add", x=orm.Int(1), y=orm.Int(2))
 wg.add_task(multiply, name="multiply", x = wg.tasks.add.outputs.result,
                 y=orm.Int(2))
 # Define the outputs of the WorkGraph, which are exposed from the `multiply` and `add` tasks
-wg.outputs.product = wg.tasks.multiply.result
-wg.outputs.sum = wg.tasks.add.result
-# We export the WorkGraph to a dictionary and pass it as input to the WorkChain
-inputs={"workgraph": wg.to_dict()}
-result, node = run_get_node(TestWorkChain, **inputs)
+#wg.outputs.product = wg.tasks.multiply.result
+#wg.outputs.sum = wg.tasks.add.result
+## We export the WorkGraph to a dictionary and pass it as input to the WorkChain
+#inputs={"workgraph": wg.to_dict()}
+#result, node = run_get_node(TestWorkChain, **inputs)
 
 # %% [markdown]
 # Print out the result and generate the node graph and visualize it.
@@ -254,9 +254,9 @@ result, node = run_get_node(TestWorkChain, **inputs)
 # %%
 from aiida_workgraph.utils import generate_node_graph
 print("WorkChain results:")
-print("sum:    ", result['sum'])
-print("product:", result['product'])
-generate_node_graph(node.pk)
+#print("sum:    ", result['sum'])
+#print("product:", result['product'])
+#generate_node_graph(node.pk)
 
 # %%
 # Summary

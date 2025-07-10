@@ -18,6 +18,22 @@ from aiida_workgraph.utils import generate_node_graph
 from aiida import load_profile
 
 load_profile()
+
+
+@task
+def compare(x, y):
+    return x < y
+
+
+@task
+def add(x, y):
+    return x + y
+
+
+@task
+def multiply(x, y):
+    return x * y
+
 # %%
 # While loop
 # ==========
