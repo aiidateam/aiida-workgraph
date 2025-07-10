@@ -107,16 +107,7 @@ def _make_wrapper(TaskCls, func):
                 raise ValueError("VAR_POSITIONAL is not supported.")
 
         task.set(inputs)
-        outputs = [
-            output
-            for output in task.outputs
-            if output._name not in ["_wait", "_outputs", "exit_code"]
-        ]
-        if len(outputs) == 1:
-            return outputs[0]
-        else:
-            return task.outputs
-        return outputs
+        return task.outputs
 
     # Expose the TaskCls on the wrapper if you want
     wrapper._TaskCls = wrapper._NodeCls = TaskCls
