@@ -227,6 +227,35 @@ def test_decorator_workfunction(decorated_add_multiply: Callable) -> None:
     assert wg.tasks["add_multiply1"].outputs.result.value == 20
 
 
+def test_decorator_graph_builder_namespace_outputs(decorated_add: Callable) -> None:
+    """=Test namespace outputs in graph builder."""
+    from aiida_workgraph.socket import TaskSocketNamespace, TaskSocket
+
+    @task.graph_builder(
+        outputs=[
+            {
+                "name": "add1",
+                "identifier": "workgraph.namespace",
+                "metadata": {"dynamic": True},
+            },
+            {
+                "name": "sum",
+            },
+        ]
+    )
+    def add_group(x, y, z):
+        wg = WorkGraph("add_group")
+        add1 = wg.add_task(decorated_add, "add1", x=x, y=y)
+        wg.outputs.add1 = add1.outputs
+        wg.outputs.sum = add1.outputs.result
+        return wg
+
+    wg = WorkGraph()
+    wg.add_task(add_group, x=2, y=3, z=4)
+    assert isinstance(wg.tasks.add_group.outputs.add1, TaskSocketNamespace)
+    assert isinstance(wg.tasks.add_group.outputs.sum, TaskSocket)
+
+
 @pytest.mark.usefixtures("started_daemon_client")
 def test_decorator_graph_builder(decorated_add_multiply_group: Callable) -> None:
     """Test graph build."""
