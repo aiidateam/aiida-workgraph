@@ -9,21 +9,16 @@ This section contains a collection of HowTos for various topics.
    :caption: Contents:
 
    autogen/use_calcjob_workchain
+   autogen/control_flow
    graph_inputs_outputs
    autogen/graph_builder
    autogen/parallel
-   if
-   autogen/while
-   autogen/context
    waiting_on
    combine_workgraph
    restart
    error_resistant
-   continue_finished_workgraph
-   zone
    monitor
    protocol
-   cli
-   control
-   transfer_workchain
-   workchain_call_workgraph
+   autogen/generative
+   pythonjob
+   autogen/shell
