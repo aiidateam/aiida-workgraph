@@ -7,12 +7,13 @@ Using the ``Context``
 # %%
 # Introduction
 # ============
-# In AiiDA workflows (both, traditional ``WorkChain``s, as well as the ``WorkGraph``), the **Context** (typically
+# In AiiDA workflows (both, traditional ``WorkChain`` s, as well as the ``WorkGraph``), the **Context** (typically
 # represented by ``ctx``), is an internal container that can hold data shared between different tasks.
 # It's particularly useful for more complex workflows.
 
+# %%
 # When to use
-# ~~~~~~~~~~~
+# -----------
 # 1. Many-to-many relationships where direct linking becomes unwieldy
 # 2. Conditional workflows where links depend on runtime conditions
 # 3. Graph builders that need to expose selective internal state
@@ -20,7 +21,7 @@ Using the ``Context``
 #
 # %%
 # Passing data to the context
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# ---------------------------
 #
 # There are three ways to set data in the **Context**:
 # - Setting the ``ctx`` attribute of the WorkGraph directly
@@ -45,9 +46,11 @@ wg1.ctx = {"x": Int(2), "data.y": Int(3)}
 # 2. Using the ``update_ctx`` method
 wg2 = WorkGraph(name="context_2")
 
+
 @task.calcfunction()
 def add(x, y):
     return x + y
+
 
 add1 = wg2.add_task(add, "add1", x=2, y=3)
 
@@ -57,11 +60,13 @@ wg2.update_ctx({"sum": add1.outputs.result})
 # 3. Using the ``workgraph.set_context`` task to set either a task result (socket) or a resolved value to the ctx
 wg3 = WorkGraph(name="context_3")
 add1 = wg3.add_task(add, "add1", x=2, y=3)
-wg3.add_task("workgraph.set_context", name="set_ctx1", key="sum", value=add1.outputs.result)
+wg3.add_task(
+    "workgraph.set_context", name="set_ctx1", key="sum", value=add1.outputs.result
+)
 
 #%%
 # Nested context keys
-# ~~~~~~~~~~~~~~~~~~~
+# -------------------
 # To organize the context data in a hierarchical structure, the keys may contain dots ``.``` that create nesting
 # Here is an example, to group the results of multipl add tasks to `ctx.sum`:
 #
@@ -84,7 +89,7 @@ print(wg.ctx.sum)
 
 #%%
 # Use data from the context
-# ~~~~~~~~~~~~~~~~~~~~~~~~~
+# -------------------------
 #
 # Also for accessing data from the context, there are different approaches:
 
@@ -116,6 +121,7 @@ def internal_add(x, y):
     wg.update_ctx({"sum": add2.outputs.sum})  # Store result in context
     return wg
 
+
 # Usage in a main WorkGraph
 wg_main = WorkGraph("main")
 builder_task = wg_main.add_task(internal_add, x=10, y=20)
@@ -127,7 +133,7 @@ final_task = wg_main.add_task(add, x=builder_task.outputs.result, y=100)
 
 # %%
 # Context Tasks in the GUI
-# ~~~~~~~~~~~~~~~~~~~~~~~~
+# ------------------------
 #
 # This example shows how context operations appear in the workflow visualization
 # when using explicit context tasks instead of direct context access.
@@ -146,13 +152,20 @@ wg.ctx = {"x": 2, "multiplier": 10}
 
 # Use context tasks - these appear as nodes in the GUI
 get_x = wg.add_task("workgraph.get_context", name="get_x", key="x")
-get_multiplier = wg.add_task("workgraph.get_context", name="get_multiplier", key="multiplier")
+get_multiplier = wg.add_task(
+    "workgraph.get_context", name="get_multiplier", key="multiplier"
+)
 
 # Perform calculation using context values
 add1 = wg.add_task(add, "add1", x=get_x.outputs.result, y=get_multiplier.outputs.result)
 
 # Store result back to context - also appears in GUI
-wg.add_task("workgraph.set_context", name="store_result", key="final_result", value=add1.outputs.result)
+wg.add_task(
+    "workgraph.set_context",
+    name="store_result",
+    key="final_result",
+    value=add1.outputs.result,
+)
 
 wg.to_html()
 wg.show()
@@ -166,12 +179,13 @@ wg.show()
 # %%
 wg.run()
 print("State of WorkGraph         : {}".format(wg.state))
-print('Result of add1            : {}'.format(wg.tasks.add1.outputs.result.value))
+print("Result of add1            : {}".format(wg.tasks.add1.outputs.result.value))
 
 # %%
 
 # Generate node graph from the AiiDA process
 from aiida_workgraph.utils import generate_node_graph
+
 generate_node_graph(wg.pk)
 
 # %%
