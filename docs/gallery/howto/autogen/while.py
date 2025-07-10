@@ -122,12 +122,10 @@ while_task = wg.add_task(
 )
 
 add_task = while_task.add_task(add, x=wg.ctx.n, y=1)
-multiply_task = while_task.add_task(
-    multiply, name="multiply1", x=add_task.outputs.result, y=2
-)
+multiply_task = while_task.add_task(multiply, x=add_task.outputs.result, y=2)
 wg.ctx.n = multiply_task.outputs.result
 # --- while task ends
-wg.outputs.result = wg.add_task(add, x=wg.ctx.n, y=1).outputs.result
+wg.outputs.result = wg.add_task(add, x=multiply_task.outputs.result, y=1).outputs.result
 wg.run()
 
 print("State of WorkGraph:   {}".format(wg.state))
