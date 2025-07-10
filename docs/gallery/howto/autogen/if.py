@@ -8,30 +8,34 @@ Flow control: Using ``if`` conditions
 # Introduction
 # ============
 #
-# This tutorial provides a step-by-step guide on how to implement conditional logic in WorkGraph using three different
-# methods:
+# This tutorial provides a step-by-step guide on how to implement conditional ``if`` logic in WorkGraph using three
+# different methods:
 #
 # 1. **If context manager**
-# 2. **graph_builder Decorator**
-# 3. **Programmatic approach using the If Task**
+# 2. **graph_builder decorator**
+# 3. **If Task**
 #
-# For simple cases, we recommend option 1), the ``If`` context manager approach, while option 2), using the Graph
+# For simple cases, we recommend option 1), the ``If`` context manager approach, while option 2), the Graph
 # Builder provides additional advantages, see :doc:`graph_builder`.
 # Finally, option 3) uses the ``If`` ``Task`` directly without the context manager. This approach requires a lot of
-# boilerplate code and is generally not recommended. However, it presents the programmatic method if you want to
-# construct the ``If`` flow control element using a node-graph programming approach.
+# boilerplate code and is generally not recommended.
+# It presents the node-graph programming approach to construct the ``If`` flow control element.
 #
 
 # %%
-# Using the ``If`` context manager
-# ================================
+# Setting up the AiiDA environment
+# --------------------------------
 #
-# WorkGraph provides the ``If`` context manager that allows you to define conditional logic in your workflow. The ``If``
-# block encapsulates all its child tasks, which are executed based on the defined conditions.
+from aiida_workgraph import WorkGraph, task, If
+from aiida_workgraph.utils import generate_node_graph
+
+from aiida import load_profile
+
+load_profile()
 
 # %%
-# Pure Python Example
-# -------------------
+# If conditional workflow
+# =======================
 #
 # Suppose you have the following Python workflow:
 
@@ -44,23 +48,23 @@ def multiply(x, y):
     return x * y
 
 
-# step 1
-result = add(1, 1)  # First addition
-# step 2
+# First addition
+result = add(1, 1)
+
+# Conditionally execute addition or multiplication
 if result < 0:
-    result = add(result, 2)  # Conditionally execute addition
+    result = add(result, 2)
 else:
-    result = multiply(result, 2)  # Or multiplication
-# step 3
-result = add(result, 1)  # Last addition
+    result = multiply(result, 2)
+
+# Last addition
+result = add(result, 1)
 
 print("Result is", result)
 
 # %%
-# To convert this workflow into a WorkGraph, we first convert the Python functions, ``add`` and ``multiply`` to WG tasks, as
-# usual:
-
-from aiida_workgraph import task
+# Now, to convert this workflow into a WorkGraph, we first convert the Python functions, ``add`` and ``multiply`` to
+# tasks:
 
 
 @task.calcfunction
@@ -74,27 +78,36 @@ def multiply(x, y):
 
 
 # %%
+# Using the ``If`` context manager
+# --------------------------------
+#
+# WorkGraph provides the ``If`` context manager that allows you to define conditional logic in your workflow. The ``If``
+# block encapsulates all its child tasks, which are executed based on the defined conditions.
+
+# %%
 # To then define define the conditional logic for the workflow, we use the ``If`` context manager provided by
 # AiiDA WorkGraph.
 # Note that to use the ``If`` context manager, we also need to construct our top-level WorkGraph via the context manager
 # approach. More information on this is provided in :doc:`../concept/workgraph`.
 
-from aiida_workgraph import WorkGraph, If
-
 with WorkGraph("if_context") as wg:
     result = add(x=1, y=1)
     with If(result < 0):
         wg.ctx.result = add(x=result, y=2)
+        # wg.update_ctx({"result": add(x=result, y=2)})
+
     with If(result >= 0):
         wg.ctx.result = multiply(x=result, y=2)
+        # wg.update_ctx({"result": multiply(x=result, y=2)})
     # -----------------------------------------
     result = add(x=wg.ctx.result, y=1)
 
-# We export the workgraph to an html file so that it can be visualized in a browser
+#%%
+# We export the workgraph to an html file so that it can be visualized in a browser:
+#
 wg.to_html()
-
-# Comment out the following line to visualize the workgraph in jupyter-notebook
-# wg
+wg.run()
+import ipdb; ipdb.set_trace()
 
 # %%
 # In the GUI, two boxes, or **Zone**\ s are being shown, one for each branch as defined by the ``If``, where each **If Zone**
@@ -104,10 +117,6 @@ wg.to_html()
 # Submit the WorkGraph and check the results
 # ------------------------------------------
 
-from aiida import load_profile
-
-load_profile()
-
 wg.run()
 print(f"State of WorkGraph: {wg.state}")
 print(f"Result:             {result.value}")
@@ -116,8 +125,6 @@ print(f"Result:             {result.value}")
 # Finally, after the WG has finished, we generate the node (provenance) graph from the AiiDA process, where we can see
 # that the result of the ``op_lt`` (larger than) comparison is ``False``, while for the ``og_ge`` (greater or equal)
 # comparison it is ``True``, meaning that the branch with the intermediate multiplication was executed.
-
-from aiida_workgraph.utils import generate_node_graph
 
 generate_node_graph(wg.pk)
 
@@ -137,10 +144,10 @@ generate_node_graph(wg.pk)
 
 # Create a WorkGraph which is dynamically generated based on the input
 # then we output the result as a graph-level output
-@task.graph_builder(outputs=[{"name": "result"}])
+@task.graph_builder(outputs=["result"])
 def add_multiply_if(x, y):
     wg = WorkGraph()
-    if x.value > 0:
+    if x.value < 0:
         add1 = wg.add_task(add, name="add1", x=x, y=y)
         # export the result of add1 to the graph-level outputs
         wg.outputs.result = add1.outputs.result
@@ -154,8 +161,6 @@ def add_multiply_if(x, y):
 # %%
 # Create the workflow
 # -------------------
-
-from aiida_workgraph import WorkGraph
 
 wg = WorkGraph("if_graph_builer")
 add1 = wg.add_task(add, name="add1", x=1, y=1)
@@ -187,8 +192,6 @@ ipdb.set_trace()
 
 # %%
 # Generate node graph from the AiiDA process,and we can see that the ``multiply`` task is executed.
-
-from aiida_workgraph.utils import generate_node_graph
 
 generate_node_graph(wg.pk)
 
@@ -235,8 +238,6 @@ generate_node_graph(wg.pk)
 #    - **condition**: Provide the condition that dictates the selection between ``true`` and ``false`` outputs.
 #    - **true**: Specify the output to be used if the condition evaluates to ``true``.
 #    - **false**: Define the output for when the condition evaluates to ``false``.
-
-from aiida_workgraph import WorkGraph
 
 with WorkGraph("if_task") as wg:
     condition = add(x=1, y=1)
