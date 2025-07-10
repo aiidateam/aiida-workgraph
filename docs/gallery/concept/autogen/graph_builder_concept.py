@@ -1,29 +1,29 @@
 """
 ==============================================
-Concepts: The Graph Builder
+Graph Builder
 ==============================================
 """
 # %%
-# The `graph builder` provides a powerful and flexible way to create dynamic, reusable,
+# The *graph builder* provides a powerful and flexible way to create dynamic, reusable,
 # and shareable workflows.
 #
-# At its core, a **Graph Builder** is a Python function decorated with
-# `@task.graph_builder` that returns a `WorkGraph` instance. This design pattern allows
+# At its core, a *graph builder* is a Python function decorated with
+# ``@task.graph_builder`` that returns a ``WorkGraph`` instance. This design pattern allows
 # you to use standard Python logic, including conditionals, loops, and complex data
 # manipulation, to construct a workflow graph *dynamically* based on the inputs you provide.
 #
-# This guide addresses common questions about the `graph builder`:
+# This guide addresses common questions about the *graph builder*:
 #
 # - What are its primary use cases?
-# - How does it compare to context managers like `If` and `Map`?
-# - How does it differ from nesting a `WorkGraph` directly?
+# - How does it compare to context managers like ``If`` and ``Map``?
+# - How does it differ from nesting a ``WorkGraph`` directly?
 # - How should I handle input data types (Python vs. AiiDA nodes)?
 
 # %%
 # The `graph builder` as a workflow factory
 # ============================================
 #
-# Think of a `graph builder` as a **factory for your workflows**. As a workflow
+# Think of a *graph builder* as a **factory for your workflows**. As a workflow
 # developer, you encapsulate the logic for constructing a specific `WorkGraph` within a
 # single, reusable function. Users can then call this function with their desired
 # parameters to generate a ready-to-run `WorkGraph` instance without needing to
