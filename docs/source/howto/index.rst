@@ -14,7 +14,7 @@ This section contains a collection of HowTos for various topics.
    autogen/parallel
    autogen/aggregate
    if
-   while
+   autogen/while
    map
    context
    waiting_on
