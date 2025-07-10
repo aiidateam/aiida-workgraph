@@ -92,9 +92,9 @@ Sections
    autogen/quick_start
    installation
    tutorial/index
-   built-in/index
    howto/index
    concept/index
+   cli/index
    gui/index
    development/index
    gallery

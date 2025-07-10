@@ -11,7 +11,6 @@ This section contains a collection of HowTos for various topics.
    autogen/use_calcjob_workchain
    autogen/control_flow
    graph_inputs_outputs
-   autogen/graph_builder
    autogen/parallel
    waiting_on
    combine_workgraph
@@ -19,6 +18,6 @@ This section contains a collection of HowTos for various topics.
    error_resistant
    monitor
    protocol
-   autogen/generative
    pythonjob
    autogen/shell
+   autogen/generative
