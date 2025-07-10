@@ -12,10 +12,8 @@ This section contains a collection of HowTos for various topics.
    graph_inputs_outputs
    autogen/graph_builder
    autogen/parallel
-   autogen/aggregate
    if
    autogen/while
-   map
    context
    waiting_on
    combine_workgraph
