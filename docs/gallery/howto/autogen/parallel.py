@@ -28,7 +28,7 @@ from aiida_workgraph import WorkGraph, task, Map
 # A perfectly parallelizable problem can be broken down into smaller, independent subproblems that require no shared resources.
 # For example, consider an addition operation ``x + y`` applied element-wise to two lists: ``[x₁, ..., xₙ]`` and ``[y₁, ..., yₙ]``.
 # Each individual addition can be performed independently of the others.
-# ``WorkGraph`` automatically parallelizes task execution when there are no data dependencies between tasks (for more details on this concept, refer to `Dataflow programming <../../concept/autogen/dataflow_programming>`_).
+# ``WorkGraph`` automatically parallelizes task execution when there are no data dependencies between tasks (for more details on this concept, refer to `WorkGraph Engine <../../concept/autogen/engine>`_).
 # We will take advanatge of this concept and create three different show three different ways how one can parallelize the add operation over the list with ``WorkGraph``.
 #
 # .. note::
@@ -116,7 +116,7 @@ wg.to_html()
 generate_node_graph(wg.pk)
 
 # %%
-# Map context
+# Map context manager
 # -----------
 # The ``Map`` works similar as python's inbuilt map.
 # By accessing the member ``item`` of the map context we can directly pass the socket item to tasks passing creating for each element a new task behind the curtain.
