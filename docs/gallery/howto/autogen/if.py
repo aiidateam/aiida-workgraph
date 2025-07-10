@@ -30,8 +30,8 @@ Flow control: Using ``if`` conditions
 # block encapsulates all its child tasks, which are executed based on the defined conditions.
 
 # %%
-# Example
-# -------
+# Pure Python Example
+# -------------------
 #
 # Suppose you have the following Python workflow:
 
@@ -102,7 +102,7 @@ wg.to_html()
 
 # %%
 # Submit the WorkGraph and check the results
-# ===========================================
+# ------------------------------------------
 
 from aiida import load_profile
 
@@ -123,7 +123,7 @@ generate_node_graph(wg.pk)
 
 
 # %%
-# Using the graph_builder Decorator
+# Using the graph_builder decorator
 # ==================================
 #
 # The ``graph_builder`` decorator is used for creating a dynamic ``WorkGraph`` during runtime based on input values (see `this
@@ -137,35 +137,22 @@ generate_node_graph(wg.pk)
 
 # Create a WorkGraph which is dynamically generated based on the input
 # then we output the result as a graph-level output
-# @task.graph_builder(outputs=[{"name": "result"}])
-# def add_multiply_if(x, y):
-#     wg = WorkGraph()
-#     if x.value > 0:
-#         add1 = wg.add_task(add, name="add1", x=x, y=y)
-#         # export the result of add1 to the graph-lvel outputs
-#         wg.outputs.result = add1.outputs.result
-#     else:
-#         multiply1 = wg.add_task(multiply, name="multiply1", x=x, y=y)
-#         # export the result of multiply1 to the graph-lvel outputs
-#         wg.outputs.result = multiply1.outputs.result
-#     return wg
-
-@task.graph_builder(outputs=[{"name": "result", "from": "ctx.result"}])
+@task.graph_builder(outputs=[{"name": "result"}])
 def add_multiply_if(x, y):
     wg = WorkGraph()
     if x.value > 0:
         add1 = wg.add_task(add, name="add1", x=x, y=y)
-        # Use the correct socket name 'result', not 'sum'
-        wg.update_ctx({"result": add1.outputs.result})
+        # export the result of add1 to the graph-level outputs
+        wg.outputs.result = add1.outputs.result
     else:
         multiply1 = wg.add_task(multiply, name="multiply1", x=x, y=y)
-        # Use the correct socket name 'result', not 'sum'
-        wg.update_ctx({"result": multiply1.outputs.result})
+        # export the result of multiply1 to the graph-level outputs
+        wg.outputs.result = multiply1.outputs.result
     return wg
 
 # %%
 # Create the workflow
-# ===================
+# -------------------
 
 from aiida_workgraph import WorkGraph
 
@@ -188,7 +175,7 @@ wg.to_html()
 
 # %%
 # Submit the WorkGraph and check the results
-# ===========================================
+# ------------------------------------------
 
 wg.run()
 print(f"State of WorkGraph: {wg.state}")
@@ -203,8 +190,8 @@ from aiida_workgraph.utils import generate_node_graph
 generate_node_graph(wg.pk)
 
 # %%
-# If Task
-# =======
+# Using the If Task
+# =================
 #
 # Internally, the ``If`` context manager is implemented using the ``If`` ``Task`` from the WorkGraph library.
 # In the WorkGraph user interface, the ``If`` ``Task`` is visually represented as an "If Zone".
@@ -227,7 +214,7 @@ generate_node_graph(wg.pk)
 
 # %%
 # Adding tasks to the If Zone
-# ===========================
+# ---------------------------
 # We can add tasks to the ``If`` zone using the ``children`` attribute.
 #
 # .. code-block:: python
@@ -237,7 +224,7 @@ generate_node_graph(wg.pk)
 
 # %%
 # Creating the workflow
-# =====================
+# ---------------------
 # To construct the workflow, we'll utilize the built-in ``If`` and ``Select`` tasks from the Workgraph library. The ``Select`` task enables us to choose between two data sources based on a specified condition.
 #
 # The ``Select`` task has the following inputs:
