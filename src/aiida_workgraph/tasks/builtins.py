@@ -87,23 +87,46 @@ class Map(Zone):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        if self.graph is not None:
-            # init a ctx variable to placeholder the item
-            key = f"map_zone_{self.name}_item"
-            self.graph.update_ctx({key: None})
-            self.item = self.graph.ctx[key]
-        else:
-            raise ValueError("Map zone must be added to a graph.")
+
+    @property
+    def item(self):
+        for child in self.children:
+            if child.identifier == "workgraph.map_item":
+                return child.outputs.item
+        raise ValueError("Map zone must contain a 'map_item' task to access the item.")
 
     def create_sockets(self) -> None:
         self.inputs._clear()
         self.outputs._clear()
+        self.add_input("workgraph.any", "source", link_limit=100000)
         self.add_input(
             "workgraph.any", "_wait", link_limit=100000, metadata={"arg_type": "none"}
         )
-        self.add_input("workgraph.any", "source", link_limit=100000)
-        self.add_input("workgraph.any", "placeholder")
         self.add_output("workgraph.any", "_wait")
+
+
+class MapItem(Task):
+    """MapItem"""
+
+    identifier = "workgraph.map_item"
+    name = "MapItem"
+    node_type = "Normal"
+    catalog = "Control"
+
+    def create_sockets(self) -> None:
+        self.inputs._clear()
+        self.outputs._clear()
+        self.add_input("workgraph.any", "source", link_limit=100000)
+        self.add_input("workgraph.any", "key")
+        self.add_output("workgraph.any", "item")
+        self.add_output("workgraph.any", "_wait")
+
+    def get_executor(self):
+        executor = {
+            "module_path": "aiida_workgraph.executors.builtins",
+            "callable_name": "get_item",
+        }
+        return executor
 
 
 class SetContext(Task):

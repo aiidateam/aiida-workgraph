@@ -28,7 +28,7 @@ dependencies = [
     "numpy~=1.21",
     "scipy",
     "ase",
-    "node-graph==0.2.7",
+    "node-graph==0.2.8",
     "node-graph-widget>=0.0.5",
     "aiida-core>=2.3,<=2.6.3",
     "cloudpickle",
@@ -96,6 +96,7 @@ workgraph = "aiida_workgraph.cli.cmd_workgraph:workgraph"
 "workgraph.while_zone" = "aiida_workgraph.tasks.builtins:While"
 "workgraph.if_zone" = "aiida_workgraph.tasks.builtins:If"
 "workgraph.map_zone" = "aiida_workgraph.tasks.builtins:Map"
+"workgraph.map_item" = "aiida_workgraph.tasks.builtins:MapItem"
 "workgraph.select" = "aiida_workgraph.tasks.builtins:Select"
 "workgraph.set_context" = "aiida_workgraph.tasks.builtins:SetContext"
 "workgraph.get_context" = "aiida_workgraph.tasks.builtins:GetContext"

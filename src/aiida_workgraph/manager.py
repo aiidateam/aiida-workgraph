@@ -156,8 +156,13 @@ def Map(source_socket: TaskSocket, placeholder: str = DEFAULT_MAP_PLACEHOLDER):
     zone_task = wg.add_task(
         TaskPool.workgraph.map_zone,
         source=source_socket,
-        placeholder=placeholder,
     )
+
+    map_item_task = wg.add_task(
+        TaskPool.workgraph.map_item,
+    )
+
+    zone_task.children.add(map_item_task)
 
     old_zone = getattr(wg, "_active_zone", None)
     if old_zone:
