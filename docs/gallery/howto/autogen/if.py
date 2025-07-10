@@ -137,17 +137,30 @@ generate_node_graph(wg.pk)
 
 # Create a WorkGraph which is dynamically generated based on the input
 # then we output the result as a graph-level output
-@task.graph_builder(outputs=[{"name": "result"}])
+# @task.graph_builder(outputs=[{"name": "result"}])
+# def add_multiply_if(x, y):
+#     wg = WorkGraph()
+#     if x.value > 0:
+#         add1 = wg.add_task(add, name="add1", x=x, y=y)
+#         # export the result of add1 to the graph-lvel outputs
+#         wg.outputs.result = add1.outputs.result
+#     else:
+#         multiply1 = wg.add_task(multiply, name="multiply1", x=x, y=y)
+#         # export the result of multiply1 to the graph-lvel outputs
+#         wg.outputs.result = multiply1.outputs.result
+#     return wg
+
+@task.graph_builder(outputs=[{"name": "result", "from": "ctx.result"}])
 def add_multiply_if(x, y):
     wg = WorkGraph()
     if x.value > 0:
         add1 = wg.add_task(add, name="add1", x=x, y=y)
-        # export the result of add1 to the graph-lvel outputs
-        wg.outputs.result = add1.outputs.result
+        # Use the correct socket name 'result', not 'sum'
+        wg.update_ctx({"result": add1.outputs.result})
     else:
         multiply1 = wg.add_task(multiply, name="multiply1", x=x, y=y)
-        # export the result of multiply1 to the graph-lvel outputs
-        wg.outputs.result = multiply1.outputs.result
+        # Use the correct socket name 'result', not 'sum'
+        wg.update_ctx({"result": multiply1.outputs.result})
     return wg
 
 # %%
@@ -180,6 +193,7 @@ wg.to_html()
 wg.run()
 print(f"State of WorkGraph: {wg.state}")
 print(f"Result            : {wg.tasks.add2.outputs.result.value}")
+import ipdb; ipdb.set_trace()
 
 # %%
 # Generate node graph from the AiiDA process,and we can see that the ``multiply`` task is executed.
