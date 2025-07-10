@@ -16,7 +16,7 @@ Interoperate with aiida-core components
 #    This guide assumes prior knowledge of ``aiida-core`` components. If you’re unfamiliar with them, refer to the official documentation on `Calculations <https://aiida.readthedocs.io/projects/aiida-core/en/stable/topics/calculations/index.html>`_ and `Workflows <https://aiida.readthedocs.io/projects/aiida-core/en/stable/topics/workflows/index.html>`_.
 
 # %%
-# Setting up AiiDA environment 
+# Setting up AiiDA environment
 # ----------------------------
 # We need to initialize the computer and code resources to establish where the workflow is run.
 
@@ -187,26 +187,28 @@ class TestWorkChain(WorkChain):
     @classmethod
     def define(cls, spec):
         super().define(spec)
-        spec.input_namespace('workgraph', dynamic=True)
+        spec.input_namespace("workgraph", dynamic=True)
         spec.outline(
             cls.run_workgraph,
             cls.results,
         )
-        spec.output('sum')
-        spec.output('product')
+        spec.output("sum")
+        spec.output("product")
 
     def run_workgraph(self):
         from aiida_workgraph.engine.workgraph import WorkGraphEngine
-        inputs = {'workgraph_data': self.inputs.workgraph,
-                 'metadata': {'call_link_label': 'workgraph'}}
+
+        inputs = {
+            "workgraph_data": self.inputs.workgraph,
+            "metadata": {"call_link_label": "workgraph"},
+        }
         process = self.submit(WorkGraphEngine, **inputs)
         self.to_context(workgraph=process)
 
     def results(self):
         # make sure that workgraph has outputs: `sum` and `product`
-        self.out('sum', self.ctx.workgraph.outputs.sum)
-        self.out('product', self.ctx.workgraph.outputs.product)
-    
+        self.out("sum", self.ctx.workgraph.outputs.sum)
+        self.out("product", self.ctx.workgraph.outputs.product)
 
 
 # %%
@@ -232,31 +234,33 @@ load_profile()
 def add(x, y):
     return x + y
 
+
 @calcfunction
 def multiply(x, y):
     return x * y
 
+
 # Create a `add_multiply` WorkGraph
 wg = WorkGraph("add_multiply_workflow")
 wg.add_task(add, name="add", x=orm.Int(1), y=orm.Int(2))
-wg.add_task(multiply, name="multiply", x = wg.tasks.add.outputs.result,
-                y=orm.Int(2))
+wg.add_task(multiply, name="multiply", x=wg.tasks.add.outputs.result, y=orm.Int(2))
 # Define the outputs of the WorkGraph, which are exposed from the `multiply` and `add` tasks
-#wg.outputs.product = wg.tasks.multiply.result
-#wg.outputs.sum = wg.tasks.add.result
+# wg.outputs.product = wg.tasks.multiply.result
+# wg.outputs.sum = wg.tasks.add.result
 ## We export the WorkGraph to a dictionary and pass it as input to the WorkChain
-#inputs={"workgraph": wg.to_dict()}
-#result, node = run_get_node(TestWorkChain, **inputs)
+# inputs={"workgraph": wg.to_dict()}
+# result, node = run_get_node(TestWorkChain, **inputs)
 
 # %% [markdown]
 # Print out the result and generate the node graph and visualize it.
 
 # %%
 from aiida_workgraph.utils import generate_node_graph
+
 print("WorkChain results:")
-#print("sum:    ", result['sum'])
-#print("product:", result['product'])
-#generate_node_graph(node.pk)
+# print("sum:    ", result['sum'])
+# print("product:", result['product'])
+# generate_node_graph(node.pk)
 
 # %%
 # Summary

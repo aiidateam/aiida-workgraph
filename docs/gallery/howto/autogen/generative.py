@@ -34,6 +34,7 @@ def add(x, y):
 def multiply(x, y):
     return x * y
 
+
 # %%
 # While loop
 # ==========
@@ -98,7 +99,7 @@ assert wg.outputs.result.value == 15
 # The `Select task has the following inputs:
 #
 #    - **condition**: Provide the condition that dictates the selection between `true` and `false` outputs.
-#    - **true**: Specify the output to be used if the condition evaluates to `true`. 
+#    - **true**: Specify the output to be used if the condition evaluates to `true`.
 #    - **false**: Define the output for when the condition evaluates to `false`.
 #
 
@@ -108,17 +109,25 @@ from aiida_workgraph import task, WorkGraph
 
 with WorkGraph("if_task") as wg:
     condition = add(x=1, y=1)
-    if_true_zone = wg.add_task("workgraph.if_zone", name="if_true",
-                            conditions=condition)
+    if_true_zone = wg.add_task(
+        "workgraph.if_zone", name="if_true", conditions=condition
+    )
     add2 = if_true_zone.add_task(add, name="add2", x=condition, y=2)
-    if_false_zone = wg.add_task("workgraph.if_zone", name="if_false",
-                            conditions=condition,
-                            invert_condition=True)
+    if_false_zone = wg.add_task(
+        "workgraph.if_zone",
+        name="if_false",
+        conditions=condition,
+        invert_condition=True,
+    )
     multiply1 = if_false_zone.add_task(multiply, name="multiply1", x=condition, y=2)
-    #---------------------------------------------------------------------
-    select1 = wg.add_task("workgraph.select", name="select1", true=add2.outputs["result"],
-                        false=multiply1.outputs["result"],
-                        condition = condition)
+    # ---------------------------------------------------------------------
+    select1 = wg.add_task(
+        "workgraph.select",
+        name="select1",
+        true=add2.outputs["result"],
+        false=multiply1.outputs["result"],
+        condition=condition,
+    )
     add3 = wg.add_task(add, name="add3", x=select1.outputs["result"], y=1)
 # export the workgraph to html file so that it can be visualized in a browser
 wg.to_html()

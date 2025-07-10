@@ -1,8 +1,7 @@
 """
-=======================
-ShellJob
-=======================
-
+===========================
+Run shell commands as tasks
+===========================
 """
 
 # %%
@@ -93,7 +92,7 @@ date_task = wg.add_task("workgraph.shelljob", command="date", arguments=["--iso-
 wg.submit(wait=True)
 
 # Print out the result:
-#print("\nResult: ", date_task.outputs.stdout.value.get_content())
+# print("\nResult: ", date_task.outputs.stdout.value.get_content())
 
 # %%
 # Running a shell command with files as arguments

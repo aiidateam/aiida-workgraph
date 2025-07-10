@@ -19,5 +19,5 @@ This section contains a collection of HowTos for various topics.
    monitor
    protocol
    pythonjob
-   autogen/shell
+   autogen/shelljob
    autogen/generative
