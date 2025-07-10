@@ -175,4 +175,5 @@ from aiida_workgraph.utils import generate_node_graph
 generate_node_graph(wg.pk)
 
 # %%
-# > **_NOTE:_**  If you pass data from one task to another task trough context, you may need to use `wait` to wait for the data to be ready. See [How to wait for another task](waiting_on.ipynb).
+# .. note:: If you pass data from one task to another task through the context, you may need to use ``wait`` to wait for
+# the data to be ready. See :doc:`waiting_on`.
