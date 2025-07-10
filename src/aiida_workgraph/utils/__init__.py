@@ -407,7 +407,7 @@ def workgraph_to_short_json(
             "position": task["position"],
             "children": task["children"],
         }
-    for name, socket in wgdata["meta_sockets"].items():
+    for name, socket in wgdata.get("meta_sockets", {}).items():
         inputs = []
         for input in socket["sockets"].values():
             metadata = input.get("metadata", {}) or {}
@@ -437,7 +437,7 @@ def workgraph_to_short_json(
             }
         )
     # hide meta nodes if there is no link to them
-    for name, socket in wgdata["meta_sockets"].items():
+    for name, socket in wgdata.get("meta_sockets", {}).items():
         node = wgdata_short["nodes"][name]
         if len(node["inputs"]) == 0 and len(node["outputs"]) == 0:
             del wgdata_short["nodes"][name]

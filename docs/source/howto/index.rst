@@ -8,7 +8,7 @@ This section contains a collection of HowTos for various topics.
    :maxdepth: 1
    :caption: Contents:
 
-   use_calcjob_workchain
+   autogen/use_calcjob_workchain
    graph_inputs_outputs
    autogen/graph_builder
    autogen/parallel
