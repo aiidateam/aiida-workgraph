@@ -44,10 +44,6 @@ Sections
          :doc:`/tutorial/index`
             A step-by-step guide to creating a real-world workflow using AiiDA WorkGraph.
 
-      .. container:: descr
-
-         :doc:`/built-in/index`
-            Run a Python function, Shell command on a remote computer
 
       .. container:: descr
 
@@ -96,9 +92,9 @@ Sections
    autogen/quick_start
    installation
    tutorial/index
-   built-in/index
    howto/index
    concept/index
+   cli/index
    gui/index
    development/index
    gallery
