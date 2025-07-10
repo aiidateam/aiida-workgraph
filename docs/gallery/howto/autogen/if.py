@@ -67,12 +67,12 @@ print("Result is", result)
 # tasks:
 
 
-@task.calcfunction
+@task.calcfunction()
 def add(x, y):
     return x + y
 
 
-@task.calcfunction
+@task.calcfunction()
 def multiply(x, y):
     return x * y
 
@@ -94,20 +94,17 @@ with WorkGraph("if_context") as wg:
     result = add(x=1, y=1)
     with If(result < 0):
         wg.ctx.result = add(x=result, y=2)
-        # wg.update_ctx({"result": add(x=result, y=2)})
-
     with If(result >= 0):
         wg.ctx.result = multiply(x=result, y=2)
-        # wg.update_ctx({"result": multiply(x=result, y=2)})
     # -----------------------------------------
     result = add(x=wg.ctx.result, y=1)
+
 
 #%%
 # We export the workgraph to an html file so that it can be visualized in a browser:
 #
 wg.to_html()
 wg.run()
-import ipdb; ipdb.set_trace()
 
 # %%
 # In the GUI, two boxes, or **Zone**\ s are being shown, one for each branch as defined by the ``If``, where each **If Zone**
