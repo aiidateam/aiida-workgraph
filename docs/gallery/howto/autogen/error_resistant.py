@@ -17,7 +17,7 @@ Write error-resistant workflows
 # 
 # Note that we error handling only works using by using concepts of the
 # node graph programming. You might to first a look at the `node graph
-# programming section <../node_graph_programming>`__.
+# programming section <../concept/node_graph_programming>`__.
 # 
 
 
@@ -79,8 +79,8 @@ ArithmeticAddCalculation.exit_codes.ERROR_NEGATIVE_NUMBER
 # fails with exit code 410.
 # 
 
-with WorkGraph("error_negative_number") as wg:
-    wg.add_task(ArithmeticAddCalculation, name="add", x=1, y=-6, code= bash_code)
+wg = WorkGraph("error_negative_number")
+wg.add_task(ArithmeticAddCalculation, name="add", x=1, y=-6, code= bash_code)
 
 
 wg.run()
@@ -122,11 +122,11 @@ def handle_negative_sum(task: Task):
     task.set({"x": abs(task.inputs.x.value),
               "y": abs(task.inputs.y.value)})
 
-with WorkGraph("handling_error_negative_number") as wg:
-    wg.add_task(ArithmeticAddCalculation, name="add", x=1, y=-6, code=bash_code)
-    # Adding error handler logic
-    wg.add_error_handler(handle_negative_sum, name="handle_negative_sum",
-                         tasks={"add": {"exit_codes": [410], "max_retries": 5}})
+wg = WorkGraph("handling_error_negative_number")
+wg.add_task(ArithmeticAddCalculation, name="add", x=1, y=-6, code=bash_code)
+# Adding error handler logic
+wg.add_error_handler(handle_negative_sum, name="handle_negative_sum",
+                     tasks={"add": {"exit_codes": [410], "max_retries": 5}})
 
 wg.run()
 print("Task finished OK?:", wg.tasks.add.process.is_finished_ok)
@@ -157,13 +157,13 @@ def handle_negative_sum(task: Task, increment: int = 1):
     task.set({"x": task.inputs.x.value + increment,
               "y": task.inputs.y.value + increment})
 
-with WorkGraph("handling_error_negative_number") as wg:
-    wg.add_task(ArithmeticAddCalculation, name="add", x=1, y=-6, code=bash_code)
-    # Adding error handler logic
-    wg.add_error_handler(handle_negative_sum, name="handle_negative_sum",
-                         tasks={"add": {"exit_codes": [410],
-                                        "max_retries": 5, # Note that retrying 5 times results in executing 6 times
-                                        "kwargs": {"increment": 1}}})
+wg = WorkGraph("handling_error_negative_number")
+wg.add_task(ArithmeticAddCalculation, name="add", x=1, y=-6, code=bash_code)
+# Adding error handler logic
+wg.add_error_handler(handle_negative_sum, name="handle_negative_sum",
+                     tasks={"add": {"exit_codes": [410],
+                                    "max_retries": 5, # Note that retrying 5 times results in executing 6 times
+                                    "kwargs": {"increment": 1}}})
 
 wg.run()
 print("Task finished OK?:", wg.tasks.add.process.is_finished_ok)
@@ -178,10 +178,6 @@ print("Exit Message:    :", wg.tasks.add.process.exit_message)
 # WorkGraph restarts the task with the new inputs, and it finishes
 # successfully.
 # 
-
-wg.reset()
-wg.error_handlers.handle_negative_sum.tasks.add.kwargs.increment = 3
-wg.run()
 
 wg.reset()
 wg.error_handlers['handle_negative_sum']['tasks']['add']['kwargs']['increment'] = 3
