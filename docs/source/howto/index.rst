@@ -18,7 +18,7 @@ This section contains a collection of HowTos for various topics.
    waiting_on
    combine_workgraph
    restart
-   error_resistant
+   autogen/error_resistant
    continue_finished_workgraph
    autogen/zone
    monitor
