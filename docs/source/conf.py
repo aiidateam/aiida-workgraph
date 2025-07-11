@@ -42,7 +42,6 @@ extensions = [
     "sphinx.ext.coverage",
     "sphinx.ext.napoleon",
     "sphinx.ext.viewcode",
-    "nbsphinx",
     "sphinx_gallery.gen_gallery",
 ]
 
@@ -56,7 +55,6 @@ gallery_src_relative_dir = (
 sphinx_src_autogen_dirs = [
     "autogen",
     "concept/autogen",
-    "tutorial/autogen",
     "howto/autogen",
     "built-in/autogen",
 ]
