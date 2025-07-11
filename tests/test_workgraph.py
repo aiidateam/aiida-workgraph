@@ -239,3 +239,25 @@ def test_run_workgraph_builder():
     wg.process = node
     wg.update()
     assert wg.tasks.add.outputs.result.value == 3
+
+
+def test_calling_workgraph_in_context_manager():
+    """Test calling a `WorkGraph` in a context manager."""
+
+    @task
+    def add(x, y):
+        return x + y
+
+    with WorkGraph() as wg1:
+        add_outputs = add(x=2, y=1)  # add
+        add1_outputs = add(x=add_outputs.result)
+        wg1.outputs.sum = add1_outputs.result
+
+    with WorkGraph() as wg2:
+        sub_outputs = wg1({"add1": {"y": 4}})
+        add_outputs = add(x=sub_outputs.sum, y=5)
+        wg2.outputs.sum = add_outputs.result
+
+    wg2.run()
+
+    assert wg2.outputs.sum == 12
