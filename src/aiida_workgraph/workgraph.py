@@ -635,3 +635,20 @@ class WorkGraph(node_graph.NodeGraph):
         set_current_graph(self._previous_graph)
         self._previous_graph = None
         return None
+
+    def __call__(self, inputs: Dict[str, Any] = None) -> Any:
+        """Call the graph with inputs and return as a task.
+
+        Used in context managers as a simple assignment.
+
+        >>> wg1 = WorkGraph()
+        >>> with WorkGraph() as wg2:
+        >>>     task_outputs = wg1({'input1': 42, 'input2': 'hello'})
+        """
+        from aiida_workgraph.manager import get_current_graph
+
+        graph = get_current_graph()
+        task = graph.add_task(self)
+        inputs = inputs or {}
+        task.set(inputs)
+        return task.outputs
