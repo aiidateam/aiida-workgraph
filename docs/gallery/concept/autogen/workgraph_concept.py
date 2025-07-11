@@ -4,7 +4,7 @@ WorkGraph
 
 This :class:`~aiida_workgraph.workgraph.WorkGraph` object is a collection of tasks and links.
 
-Create and launch workgraph
+Create workgraph
 ----------------------------
 """
 
@@ -40,7 +40,8 @@ wg.add_link(add1.outputs.result, add2.inputs.x)
 wg.to_html()
 
 # %%
-# Submit the workgraph:
+# Run the workgraph
+# -------------------------
 
 wg.submit(inputs={"add1": {"x": 1, "y": 2}, "add2": {"y": 3}}, wait=True)
 
@@ -54,16 +55,8 @@ from aiida_workgraph import WorkGraph
 
 wg_loaded = WorkGraph.load(wg.pk)
 
-# %%
-# Execute order
-# -------------
-# The tasks will be executed under the following conditions:
 #
-# - No input task
-# - All input tasks are finished.
-#
-#
-# Grouping Inputs and Outputs in a WorkGraph
+# Inputs and Outputs in a WorkGraph
 # ------------------------------------------
 # Defining **group-level** inputs and outputs allows you to:
 #
@@ -91,8 +84,18 @@ wg.submit(wait=True)
 assert wg.outputs.sum2.value == 2 + (2 + 3)
 
 # %%
-# List of all Methods
-# ----------------------------
+# Context variables
+# --------------------------
+# Context variables are used to store intermediate results or state information during the execution of a WorkGraph.
+
+
+# %%
+# WorkGraph engine
+# --------------------
+# After a WorkGraph is created and submitted, it is executed by the WorkGraph engine.
+# The engine follow the dataflow programming paradigm, where tasks are executed based on their dependencies.
+# The tasks will be executed under the following conditions:
 #
-# .. autoclass:: aiida_workgraph.workgraph.WorkGraph
-#    :members:
+# - No input task
+# - All input tasks are finished.
+#
