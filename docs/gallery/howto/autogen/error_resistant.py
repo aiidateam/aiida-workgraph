@@ -8,18 +8,11 @@ Write error-resistant workflows
 # Introduction
 # ------------
 #
-# In this tutorial, we will show how to implement the error handling in a
-# WorkGraph. We will show how to implement the error handlers. They allow
-# to execute a specific functions on a specific exit code of a
-# ``CalcJob``. Every ``CalcJob`` defines its exit codes, on these exit
-# codes we can define a function that is executed to handle the error and
-# possibly restart the calculation.
-#
-# Note that we error handling only works using by using concepts of the
-# node graph programming. You might to first a look at the `node graph
-# programming section <../concept/node_graph_programming>`__.
-#
-
+# In this how-to, we will show how to implement custom error handler functions that respond to exit codes with ``WorkGraph``, allowing you to automatically recover from errors, or to gracefully exit.
+# We will walk through how to create error handlers that execute specific tasks based on the exit codes of ``CalcJob`` calculations.
+# Error handling functionality requires using *nodegraph programming*.
+# If you are unfamiliar with this approach, we recommend reviewing the `node graph programming section <../concept/workgraph_concept>`__ first.
+# We exemplify the error handling with the ``ArithmeticAddCalculation`` from ``aiida-core``, but the methods we learn in this section can be applied to any ``CalcJob``, including also ``ShellJob`` and ``PythonJob``.
 
 ######################################################################
 # Load the AiiDA environment
@@ -51,33 +44,26 @@ except NotExistent:
 # Exit codes
 # ----------
 #
-# We will take as example the ``ArithmeticAddCalculation`` from
-# ``aiida-core`` CalcJob the methods we learn in this section can be
-# applied to any ``CalcJob`` including also ``ShellJob`` and
-# ``PythonJob``. If you are not familiar with the concept you might want
-# to familiarize yourself in the `aiida-core
-# documentation <https://aiida.readthedocs.io/projects/aiida-core/en/latest/topics/processes/concepts.html#topics-processes-concepts-exit-codes>`__
-# Every ``CalcJob`` defines a serias of exit codes. we can print the exit
-# codes simply by
+# In AiiDA we can create error handlers for exit codes that are defined in the ``CalcJob`` specification.
+# If you are not familiar with the concept of exit codes in ``CalcJobs`` s you might want to familiarize yourself in the `aiida-core documentation <https://aiida.readthedocs.io/projects/aiida-core/en/latest/topics/processes/concepts.html#topics-processes-concepts-exit-codes>`__
+# For example for the ``ArithmeticAddCalculation`` we can the defined exit codes with
 #
 
 from aiida.calculations.arithmetic.add import ArithmeticAddCalculation
 
-ArithmeticAddCalculation.exit_codes
+print(ArithmeticAddCalculation.exit_codes)
 
 
 ######################################################################
-# For this how-to we will write an error handler for exit code 410
-# ``ERROR_NEGATIVE_NUMBER``.
+# We will write an error handler for the exit code 410 ``ERROR_NEGATIVE_NUMBER``.
 #
 
-ArithmeticAddCalculation.exit_codes.ERROR_NEGATIVE_NUMBER
+print(ArithmeticAddCalculation.exit_codes.ERROR_NEGATIVE_NUMBER)
 
 
 ######################################################################
-# Let us run a calculation that invokes this error code. If the computed
-# sum of the inputs x and y is negative, the ``ArithmeticAddCalculation``
-# fails with exit code 410.
+# If the computed sum of the inputs x and y is negative, the ``ArithmeticAddCalculation`` fails with exit code 410.
+# We will run a calculation that exits with this error.
 #
 
 wg = WorkGraph("error_negative_number")
@@ -94,24 +80,20 @@ print("Exit Message:    :", wg.tasks.add.process.exit_message)
 # We can confirm that the task fails with this exit code in the CLI.
 #
 
-# %verdi process status {wg.pk}
+%verdi process status {wg.pk}
 
 
 ######################################################################
 # Error handling
 # --------------
 #
-# To “register” a error handler for a WorkGraph, you simply define a
-# function that takes the ``self`` and ``task_name`` as its arguments, and
-# attach it as the ``error_hanlders`` of the WorkGraph.
-#
-# You can specify the tasks and their exit codes that should trigger the
-# error handler, as well as the maximum number of retries for a task:
+# To “register” a error handler for a WorkGraph, you simply define a function that takes the ``task`` as its arguments, and attach it as the ``error_handler`` of the ``WorkGraph``.
+# You can specify the tasks and their exit codes that should trigger the error handler, as well as the maximum number of retries for a task:
 #
 # .. code:: python
 #
-#    tasks={"add1": {"exit_codes": [410],
-#                    "max_retries": 5}
+#    tasks={"add": {"exit_codes": [410],
+#                   "max_retries": 5}
 #          }
 #
 
@@ -138,19 +120,19 @@ print("Task finished OK?:", wg.tasks.add.process.is_finished_ok)
 print("Exit code        :", wg.tasks.add.process.exit_code)
 print("Exit Message:    :", wg.tasks.add.process.exit_message)
 
-# %verdi process status {wg.pk}
+######################################################################
+#
+
+%verdi process status {wg.pk}
 
 
 ######################################################################
 # Parametrized error handlers
 # ---------------------------
 #
-# One can also pass custom parameters to the error handler. For example,
-# instead of simply make the inputs positive by taking the absolute value,
-# we add an increment to the inputs. And the ``increment`` is a custom
-# parameter of the error handler, which the user can specify when
-# attaching the error handler to the WorkGraph, or update it during the
-# execution of the WorkGraph.
+# We can also pass custom parameters to the error handler.
+# For example, instead of simply making the inputs positive by taking the absolute value, we increment by an integer.
+# The integer ``increment`` is a custom parameter of the error handler, which the user can specify when attaching the error handler to the WorkGraph.
 #
 
 
@@ -184,37 +166,40 @@ print("Task finished OK?:", wg.tasks.add.process.is_finished_ok)
 print("Exit code        :", wg.tasks.add.process.exit_code)
 print("Exit Message:    :", wg.tasks.add.process.exit_message)
 
-# %verdi process status {wg.pk}
+######################################################################
+#
+
+%verdi process status {wg.pk}
 
 
 ######################################################################
-# We can confirm that the task first fails again with a 410. Then the
-# WorkGraph restarts the task with the new inputs, and it finishes
-# successfully.
+# We can confirm that the task first fails again with a 410.
+# Then the WorkGraph restarts the task with the new inputs, and it finishes successfully.
 #
 
+######################################################################
+# We can also update the arguments of the error handler.
+# Let us update the ``increment`` argument to 3 and restart the ``WorkGraph``.
+#
+
+# reset workgraph to start from the beginning
 wg.reset()
 wg.error_handlers["handle_negative_sum"]["tasks"]["add"]["kwargs"]["increment"] = 3
 wg.run()
 
 
 ######################################################################
-# Since we increase the inputs by a ``increment``, so it takes three
-# retries before it finished successfully
+# In this case, it only needs one retry to finish successfully as adding two times 3 makes the y positive
 #
 
-# %verdi process status {wg.pk}
+%verdi process status {wg.pk}
 
 
 ######################################################################
-# In this case, it only needs one retry to finish successfully.
+# .. note::
 #
-
-
-######################################################################
-# Note that ``PythonJob`` task allows the user to attach the error handler
-# directly to the task. Please check out the `aiida-pythonjob
-# docs <https://aiida-pythonjob.readthedocs.io/en/latest/index.html>`__
+#    ``PythonJob`` task allows the user to attach the error handler directly to the task.
+#    Please check out the `aiida-pythonjob documentation <https://aiida-pythonjob.readthedocs.io/en/stable/index.html>`__
 #
 
 
@@ -222,8 +207,4 @@ wg.run()
 # Summary
 # -------
 #
-
-
-######################################################################
-# Here we have shown how to implement error handling in a WorkGraph.
-#
+# Here we have shown how to implement error handling in a WorkGraph. TODO
