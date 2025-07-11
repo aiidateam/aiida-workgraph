@@ -202,10 +202,3 @@ print(format_call_graph(orm.load_node(wg.pk)))
 #    ``PythonJob`` task allows the user to attach the error handler directly to the task.
 #    Please check out the `aiida-pythonjob documentation <https://aiida-pythonjob.readthedocs.io/en/stable/index.html>`__
 #
-
-
-######################################################################
-# Summary
-# -------
-#
-# Here we have shown how to implement error handling in a WorkGraph. TODO
