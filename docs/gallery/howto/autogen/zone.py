@@ -26,9 +26,11 @@ load_profile()
 # Here is an example of a Zone task:
 # """
 
+
 @task.calcfunction()
 def add(x, y):
     return x + y
+
 
 wg = WorkGraph("test_zone")
 wg.ctx = {}
