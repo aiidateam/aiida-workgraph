@@ -11,7 +11,7 @@ Write error-resistant workflows
 # In this how-to, we will show how to implement custom error handler functions that respond to exit codes with ``WorkGraph``, allowing you to automatically recover from errors, or to gracefully exit.
 # We will walk through how to create error handlers that execute specific tasks based on the exit codes of ``CalcJob`` calculations.
 # Error handling functionality requires using *nodegraph programming*.
-# If you are unfamiliar with this approach, we recommend reviewing the `node graph programming section <../concept/workgraph_concept>`__ first.
+# If you are unfamiliar with this approach, we recommend reviewing the `node graph programming section <../../concept/autogen/workgraph_concept.py>`__ first.
 # We exemplify the error handling with the ``ArithmeticAddCalculation`` from ``aiida-core``, but the methods we learn in this section can be applied to any ``CalcJob``, including also ``ShellJob`` and ``PythonJob``.
 
 ######################################################################
