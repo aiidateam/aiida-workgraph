@@ -11,8 +11,7 @@ This section contains a collection of HowTos for various topics.
    autogen/use_calcjob_workchain
    autogen/graph_level
    autogen/parallel
-   autogen/if
-   autogen/while
+   autogen/control-flow
    autogen/context
    autogen/shelljob
    autogen/remote_job
