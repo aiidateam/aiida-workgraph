@@ -15,13 +15,15 @@ from aiida import orm
 # Load the AiiDA profile to interact with the database
 load_profile()
 
-######################################################################
+# %%
 # Automatic Socket Creation
-# -------------------------
+# ===========================
 # The easiest way to create sockets is to let WorkGraph do it for you. When you decorate a Python function as a ``@task``, WorkGraph automatically inspects its signature:
 #
 # * Function arguments become **input sockets**.
 # * The return value becomes a single **output socket** named ``result``.
+#
+# Beside, there are also some built-in sockets from the WorkGraph, like ``_wait`` and ``_outputs``.
 
 
 @task()
@@ -37,9 +39,9 @@ print("Input sockets: ", task1.get_input_names())
 print("Output sockets: ", task1.get_output_names())
 
 
-######################################################################
+# %%
 # Customizing Output Sockets
-# --------------------------
+# ==============================
 # Often, a task needs to return multiple, named values. You can explicitly define the output sockets using the ``outputs`` argument in the ``@task`` decorator.
 #
 # When you define custom outputs, your function must return a dictionary where the keys match the specified output socket names.
@@ -52,13 +54,13 @@ def add_and_subtract(x, y):
 
 
 # Inspect the new input and output sockets
-task2 = wg.add_task(multiply, x=3, y=4)
+task2 = wg.add_task(add_and_subtract, x=3, y=4)
 print("Input sockets: ", task2.get_input_names())
 print("Output sockets: ", task2.get_output_names())
 
-######################################################################
+# %%
 # Socket Types from Python Type Hints
-# -----------------------------------
+# =========================================
 # To ensure data integrity and leverage AiiDA's data provenance, sockets have types. WorkGraph can automatically assign AiiDA-compatible socket types based on standard Python type hints in your function signature. This is the recommended modern approach.
 #
 # =================== ==================
@@ -85,9 +87,9 @@ task3 = wg.add_task(add_typed, x=orm.Int(3), y=orm.Int(4))
 print("Input x: ", task3.inputs.x)
 
 
-######################################################################
+# %%
 # Default Values as Socket Properties
-# -----------------------------------
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~``
 # A socket can have a **property**, which is a default value used when no data is linked to an input. The most Pythonic way to define a property is by using a default argument in your function definition.
 
 
@@ -108,9 +110,9 @@ with WorkGraph() as wg:
     print(f"3 to the power of 3 is: {outputs2.result.value}")
 
 
-######################################################################
-# Organizing Sockets with Namespaces
-# ==================================
+# %%
+# # Organizing Sockets with Namespaces
+# =====================================
 # As workflows grow, you might have many related inputs or outputs. To keep them organized and avoid name clashes, you can group them into a **namespace**.
 #
 # Simple Output Namespace
@@ -129,7 +131,7 @@ with WorkGraph("simple_namespace_example") as wg:
     print(f"  Difference: {outputs.difference.value}")
 
 
-######################################################################
+# %%
 # Nested Namespaces
 # -----------------
 # For more complex data structures, you can define nested namespaces. This allows you to create a hierarchical organization for your sockets.
@@ -171,7 +173,7 @@ with WorkGraph("nested_namespace_example") as wg:
     print(f"  Squared product: {outputs.squared.product.value}")
 
 
-######################################################################
+# %%
 # Dynamic Namespaces
 # ------------------
 # Sometimes, you don't know the number of outputs a task will generate beforehand. A **dynamic namespace** can accept a variable number of sockets at runtime.
@@ -215,7 +217,9 @@ with WorkGraph("dynamic_namespace_example") as wg:
 
     print(f"Sum of all dynamic outputs: {total.result.value}")
 
-######################################################################
+# %%
 # Advanced: Serialization
-# -----------------------
-# When using general-purpose ``@task.python`` tasks, you might want to pass complex Python objects that are not standard AiiDA data types (e.g., a custom class instance). The socket's type information is also used to determine how to **serialize** (save) and **deserialize** (load) this data, ensuring your workflow can be checkpointed and resumed. This is an advanced feature for users implementing custom data handlers.
+# =================================
+# When using general-purpose ``@task.python`` tasks, you might want to pass complex Python objects that are not standard AiiDA data types (e.g., a custom class instance).
+# The socket's type information is also used to determine how to **serialize** (save) and **deserialize** (load) this data, ensuring your workflow can be checkpointed and resumed.
+# This is an advanced feature for users implementing custom data handlers.
