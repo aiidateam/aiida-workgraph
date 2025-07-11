@@ -25,5 +25,4 @@ This section contains a collection of HowTos for various topics.
    protocol
    cli
    control
-   transfer_workchain
    workchain_call_workgraph
