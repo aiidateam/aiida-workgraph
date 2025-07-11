@@ -42,7 +42,6 @@ extensions = [
     "sphinx.ext.coverage",
     "sphinx.ext.napoleon",
     "sphinx.ext.viewcode",
-    "nbsphinx",
     "sphinx_gallery.gen_gallery",
 ]
 
