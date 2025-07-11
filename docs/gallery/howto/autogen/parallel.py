@@ -142,8 +142,8 @@ data = {f"data_{i}": {"x": i, "y": i} for i in range(len_list)}
 with WorkGraph("parallel_map") as wg:
     with Map(data) as map_:
         wg.outputs.result = add(
-            x=get_value(map_.item, "x"), y=get_value(map_.item, "y")
-        )
+            x=get_value(map_.item, "x").result, y=get_value(map_.item, "y").result
+        ).result
 
 wg.run()
 print("Result:", wg.outputs.result.value)
@@ -218,8 +218,10 @@ data = {f"data_{i}": {"x": i, "y": i} for i in range(len_list)}
 
 with WorkGraph("parallel_map") as wg:
     with Map(data) as map_:
-        added_numbers = add(x=get_value(map_.item, "x"), y=get_value(map_.item, "y"))
-    wg.outputs.result = aggregate_sum(added_numbers)
+        added_numbers = add(
+            x=get_value(map_.item, "x").result, y=get_value(map_.item, "y").result
+        ).result
+    wg.outputs.result = aggregate_sum(added_numbers).result
 
 wg.run()
 print("Result:", wg.outputs.result.value)

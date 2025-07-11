@@ -1,5 +1,5 @@
 import pytest
-from aiida_workgraph import WorkGraph
+from aiida_workgraph import WorkGraph, task
 from aiida import orm
 from aiida.calculations.arithmetic.add import ArithmeticAddCalculation
 
@@ -218,3 +218,24 @@ def test_inputs_outputs(decorated_namespace_sum_diff):
     wg.run()
     assert wg.outputs.sum.value == 4
     assert wg.outputs.nested.sum.value == 5
+
+
+def test_run_workgraph_builder():
+    """Test running a WorkGraph using the WorkGraphEngine builder."""
+    from aiida_workgraph.engine.workgraph import WorkGraphEngine
+    from aiida.engine import run_get_node
+
+    @task
+    def add(x, y):
+        """A simple task that adds two numbers."""
+        return x + y
+
+    wg = WorkGraph()
+    wg.add_task(add, x=1, y=2)
+    wgdata = wg.prepare_inputs()
+    builder = WorkGraphEngine.get_builder()
+    builder._update(wgdata)
+    _, node = run_get_node(builder)
+    wg.process = node
+    wg.update()
+    assert wg.tasks.add.outputs.result.value == 3

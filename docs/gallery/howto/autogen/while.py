@@ -64,20 +64,20 @@ def multiply(x, y):
 
 with WorkGraph("while_context_manager") as wg:
     # set a context variable before running.
-    initial_n = add(x=1, y=1)
-    wg.ctx.n = initial_n
+    outputs1 = add(x=1, y=1)
+    wg.ctx.n = outputs1.result
     # We need to use context or static variables here
-    should_run = compare(x=wg.ctx.n, y=8)
+    outputs2 = compare(x=wg.ctx.n, y=8)
     # Because context variables do not follow the dataflow programming paradigm,
     # we have to state the dependency of the context variable explicitely.
-    # The syntax below reads "`should_run` associated task waits for its executaion till `initial_n` has been successfully set its value"
-    should_run << initial_n
-    with While(should_run, max_iterations=10):
-        n = add(x=wg.ctx.n, y=1)
-        n = multiply(x=n, y=2)
+    # The syntax below reads "`should_run` associated task waits for its executaion till `outputs1` has been successfully set its value"
+    outputs2 << outputs1
+    with While(outputs2.result, max_iterations=10):
+        outputs3 = add(x=wg.ctx.n, y=1)
+        outputs4 = multiply(x=outputs3.result, y=2)
         # We need to update the context variable since it is accessed in should_run task
-        wg.ctx.n = n
-    wg.outputs.result = add(x=n, y=1)
+        wg.ctx.n = outputs4.result
+    wg.outputs.result = add(x=outputs4.result, y=1).result
 
 wg.run()
 print("State of WorkGraph:   {}".format(wg.state))
