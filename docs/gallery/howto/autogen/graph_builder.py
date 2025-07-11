@@ -8,13 +8,13 @@ Graph Builder for nested and dynamic workflows
 # Introduction
 # ============
 # In this example we learn how to create nested workflows by creating a task
-# out of a WorkGraph. Further, we will learn how to do the same with the Graph
-# Builder, a decorator that allows us to move the creation of the WorkGraph to
+# out of a WorkGraph. Further, we will learn how to do the same with the `Graph
+# Builder`, a decorator that allows us to move the creation of the WorkGraph to
 # runtime, so we can create dynamic workflows that change depending on the inputs.
 # This is of particular interest for integrating for-loops and if-then-else
 # logic into your workflow.
 
-# Load the AiiDA profile.
+# First, we load the AiiDA profile.
 from aiida import load_profile
 
 load_profile()
@@ -22,19 +22,19 @@ load_profile()
 # %%
 # Nested workflows with WorkGraph
 # ===============================
-# We will discuss how to use WorkGraph's
-# nested workflows. Suppose we want to reuse the WorkGraph computing `(x+y)*z`
-# to perform the operation
+# We will discuss how to construct nested workflows with WorkGraph.
+# Suppose we want to reuse a WorkGraph that computes `(x+y)*z`
+# to perform the following operation:
 #
 # .. code-block:: Python
 #
 #    wg_out = (x+y)*z
 #    out = (x+y)*wg_out
 #
-# We can integrate a WorkGraph to another WorkGraph by creating a task out of it.
+# To achieve this, we can easily integrate a WorkGraph into another WorkGraph by creating a task out of it.
 
-from aiida_workgraph import task, WorkGraph
 from aiida.orm import Int
+from aiida_workgraph import task, WorkGraph
 
 # define add task
 @task()
@@ -57,6 +57,7 @@ def add_multiply(x=None, y=None, z=None):
 
 
 wg = WorkGraph("nested_workgraph")
+
 # Creating a task from the WorkGraph
 add_multiply1 = wg.add_task(
     add_multiply(x=Int(2), y=Int(3), z=Int(4)), name="add_multiply1"
@@ -67,9 +68,8 @@ wg.add_link(add_multiply1.outputs.multiply.result, add_multiply2.inputs.multiply
 wg.to_html()
 
 # %%
-# The created WorkGraphTask behaves similarly as a normal WorkGraph would (and indeed actually has the associated
-# `WorkGraph` attached as an attribute).That means we can access elements of the sub-WorkGraph, for instance, its tasks,
-# inputs, etc., via:
+# The automatically created ``WorkGraphTask`` behaves similarly as a normal WorkGraph would (and indeed actually has the associated
+# ``WorkGraph`` attached as an attribute). That means we can access elements of the sub-WorkGraph, for instance, its tasks, inputs, etc., via:
 
 print(wg.tasks.add_multiply1.tasks)
 print(wg.tasks.add_multiply1.tasks.add.inputs.x)
@@ -81,7 +81,7 @@ print(wg.tasks.add_multiply1.outputs)
 
 
 # %%
-# Finally, we run the workgraph
+# Finally, we run the WorkGraph
 
 wg.submit(wait=True)
 # (2+3)*4 = 20
@@ -100,15 +100,20 @@ generate_node_graph(wg.pk)
 # Graph builder
 # =============
 # A much more powerful tool to create nested WorkGraphs is the Graph Builder.
-# It is a decorator that we can add to a function that returns a WorkGraph
-# similar as `add_multiply` to have more control what we want to expose to the
-# user and to create dynamic workflows.
+# It is a decorator that we can add to a function that returns a WorkGraph.
+# The main advantages of using the Graph Builder are the following:
+# * **Clean interfaces** - Expose only necessary inputs/outputs while hiding internal complexity
+# * **Control flow** - Use Python ``if`` and ``for`` statements directly in workflows
+# * **Reusable components** - Use Graph Builders as modular tasks in larger workflows
+# * **Dynamic workflows** - Create different task structures based on input values at runtime
+# * **Runtime flexibility** - Workflow structure adapts to actual data rather than being fixed at design time
 
+# Let's have a look at these points individually!
 
 # %%
-# Expose outputs
+# Exposing outputs
 # --------------
-# We add `task.graph_builder` decorator to a function to define a graph builder
+# We add the ``task.graph_builder``` decorator to a function to define a graph builder
 # function. The function constructs a WorkGraph based on the inputs, and returns
 # it at the end.
 # We can expose the outputs of the WorkGraph as the outputs of the task.
@@ -117,11 +122,10 @@ generate_node_graph(wg.pk)
 #
 #     @task.graph_builder(outputs = [{"name": "multiply"}])
 #
-# This will expose the `multiply` output of the workgraph as the `multiply` output of the task.
+# This will expose the `multiply` output of the WorkGraph as the `multiply` output of the task.
 #
 
-
-# We use task.graph_builder decorator and expose the output of the "multiply"
+# We use ``task.graph_builder`` decorator and expose the output of the "multiply"
 # task as the output of the graph builder function.
 @task.graph_builder(outputs=[{"name": "multiply"}])
 def add_multiply(x, y, z):
@@ -155,17 +159,17 @@ wg.to_html()
 
 
 # %%
-# Generate node graph from the AiiDA process,and we can see that the `multiply` task was executed.
+# When we generate the node graph from the AiiDA process, we can see that the ``multiply`` task was executed.
 
 generate_node_graph(wg.pk)
 
 # %%
-# Looking at the process list we can also that multiple WorkGraphs have been submitted.
+# Looking at the process list we can also see that multiple WorkGraphs have been submitted.
 # Please run this now in the terminal:
 #
 # .. code-block:: bash
 #
-#     verdi process list -a
+#     verdi process list -ap 1
 
 
 # %%
@@ -183,7 +187,7 @@ wg.submit(wait=True)
 # %%
 # Dynamic workflows
 # -----------------
-# The `Graph Builder` also allows us to create dynamic workflows that can change depending on the input.
+# The ``Graph Builder`` also allows us to create dynamic workflows that can change depending on the input.
 
 
 # %%
@@ -207,15 +211,12 @@ def for_loop(nb_iterations: Int):
     # We cannot refer to a specific task as output in the graph builder decorator
     # as in the examples before since the name of the last task depends on the input.
     # Remember that each task is always assigned unique name automatically.
-    # Therefore we use the context to not directly refer to the name but the last
-    # task object that was created. The context can then be referred in the outputs
-    # of the graph builder decorator.
+    # Therefore we instead assign the last task object that was created.
+    wg.outputs.result = task.outputs.result
 
-    # Put result of the task to the context under the name task_out
-    wg.update_ctx({"task_out": task.outputs.result})
-    wg.outputs.result = wg.ctx.task_out
-    # If want to know more about the usage of the context please refer to the
-    # context howto in the documentation
+    # Instead, one can also use the WorkGraph context, which is a powerful tool
+    # especially for complex workflows. For more information, please refer to the
+    # relevant context HowTo section in the documentation.
     return wg
 
 
@@ -242,8 +243,8 @@ generate_node_graph(wg.pk)
 # add_one task if the number is below 2 otherwise we run a modulo 2
 # task.
 
-from aiida_workgraph import task, WorkGraph
 from aiida.orm import Int
+from aiida_workgraph import task, WorkGraph
 
 
 @task()
@@ -260,8 +261,7 @@ def if_then_else(i: Int):
         task = wg.add_task(modulo_two, x=i)
 
     # same concept as before, please read the for loop example for explanation
-    wg.update_ctx({"task_out": task.outputs.result})
-    wg.outputs.result = wg.ctx.task_out
+    wg.outputs.result = task.outputs.result
     return wg
 
 

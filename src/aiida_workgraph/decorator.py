@@ -107,16 +107,7 @@ def _make_wrapper(TaskCls, func):
                 raise ValueError("VAR_POSITIONAL is not supported.")
 
         task.set(inputs)
-        outputs = [
-            output
-            for output in task.outputs
-            if output._name not in ["_wait", "_outputs", "exit_code"]
-        ]
-        if len(outputs) == 1:
-            return outputs[0]
-        else:
-            return task.outputs
-        return outputs
+        return task.outputs
 
     # Expose the TaskCls on the wrapper if you want
     wrapper._TaskCls = wrapper._NodeCls = TaskCls
@@ -240,17 +231,13 @@ class TaskDecoratorCollection:
         def decorator(func):
             from aiida_workgraph.tasks.builtins import GraphBuilderTask
 
-            task_outputs = [
-                {"identifier": "workgraph.any", "name": output["name"]}
-                for output in outputs or []
-            ]
             TaskCls = DecoratedFunctionTaskFactory.from_function(
                 func=func,
                 identifier=identifier,
                 task_type="graph_builder",
                 properties=properties,
                 inputs=inputs,
-                outputs=task_outputs,
+                outputs=outputs,
                 catalog=catalog,
                 node_class=GraphBuilderTask,
             )
@@ -331,14 +318,10 @@ class TaskDecoratorCollection:
                 AwaitableFunctionTaskFactory,
             )
 
-            # at least one output is required
-            task_outputs = outputs or [
-                {"identifier": "workgraph.any", "name": "result"}
-            ]
             TaskCls = AwaitableFunctionTaskFactory.from_function(
                 func=func,
                 inputs=inputs,
-                outputs=task_outputs,
+                outputs=outputs,
             )
 
             return _make_wrapper(TaskCls, func)
@@ -356,14 +339,10 @@ class TaskDecoratorCollection:
                 MonitorFunctionTaskFactory,
             )
 
-            # at least one output is required
-            task_outputs = outputs or [
-                {"identifier": "workgraph.any", "name": "result"}
-            ]
             TaskCls = MonitorFunctionTaskFactory.from_function(
                 func=func,
                 inputs=inputs,
-                outputs=task_outputs,
+                outputs=outputs,
             )
 
             return _make_wrapper(TaskCls, func)

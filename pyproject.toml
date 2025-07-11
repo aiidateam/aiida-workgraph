@@ -28,7 +28,7 @@ dependencies = [
     "numpy~=1.21",
     "scipy",
     "ase",
-    "node-graph==0.2.7",
+    "node-graph==0.2.10",
     "node-graph-widget>=0.0.5",
     "aiida-core>=2.3,<=2.6.3",
     "cloudpickle",

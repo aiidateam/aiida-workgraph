@@ -351,7 +351,7 @@ def get_raw_value(identifier, value: Any) -> Any:
 def process_properties(task: Dict) -> Dict:
     """Extract raw values."""
     result = {}
-    for name, prop in task["properties"].items():
+    for name, prop in task.get("properties", {}).items():
         identifier = prop["identifier"]
         value = prop.get("value")
         result[name] = {
@@ -409,7 +409,7 @@ def workgraph_to_short_json(
         }
     for name, socket in wgdata.get("meta_sockets", {}).items():
         inputs = []
-        for input in socket["sockets"].values():
+        for input in socket.get("sockets", {}).values():
             metadata = input.get("metadata", {}) or {}
             if metadata.get("required", False):
                 inputs.append(
@@ -425,7 +425,7 @@ def workgraph_to_short_json(
             "children": [],
         }
     # Add links to nodes
-    for link in wgdata_short["links"]:
+    for link in wgdata_short.get("links", []):
         wgdata_short["nodes"][link["to_node"]]["inputs"].append(
             {
                 "name": link["to_socket"],
