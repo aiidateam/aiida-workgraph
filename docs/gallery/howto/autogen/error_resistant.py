@@ -19,10 +19,11 @@ Write error-resistant workflows
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~
 #
 
-from aiida_workgraph import WorkGraph, task, Task
+from aiida_workgraph import WorkGraph, Task
 
 from aiida import load_profile, orm
 from aiida.common.exceptions import NotExistent
+from aiida.cmdline.utils.ascii_vis import format_call_graph
 
 load_profile()
 
@@ -80,7 +81,7 @@ print("Exit Message:    :", wg.tasks.add.process.exit_message)
 # We can confirm that the task fails with this exit code in the CLI.
 #
 
-%verdi process status {wg.pk}
+print(format_call_graph(orm.load_node(wg.pk)))
 
 
 ######################################################################
@@ -123,7 +124,7 @@ print("Exit Message:    :", wg.tasks.add.process.exit_message)
 ######################################################################
 #
 
-%verdi process status {wg.pk}
+print(format_call_graph(orm.load_node(wg.pk)))
 
 
 ######################################################################
@@ -169,7 +170,7 @@ print("Exit Message:    :", wg.tasks.add.process.exit_message)
 ######################################################################
 #
 
-%verdi process status {wg.pk}
+print(format_call_graph(orm.load_node(wg.pk)))
 
 
 ######################################################################
@@ -192,7 +193,7 @@ wg.run()
 # In this case, it only needs one retry to finish successfully as adding two times 3 makes the y positive
 #
 
-%verdi process status {wg.pk}
+print(format_call_graph(orm.load_node(wg.pk)))
 
 
 ######################################################################
