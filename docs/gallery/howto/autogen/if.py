@@ -188,9 +188,6 @@ wg.to_html()
 wg.run()
 print(f"State of WorkGraph: {wg.state}")
 print(f"Result            : {wg.tasks.add2.outputs.result.value}")
-import ipdb
-
-ipdb.set_trace()
 
 # %%
 # Generate node graph from the AiiDA process,and we can see that the ``multiply`` task is executed.
