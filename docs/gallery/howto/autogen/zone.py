@@ -25,7 +25,8 @@ load_profile()
 
 
 @task.calcfunction()
-def add(x, y): return x + y
+def add(x, y):
+    return x + y
 
 wg = WorkGraph("test_zone")
 wg.ctx = {}
