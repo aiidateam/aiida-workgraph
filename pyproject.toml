@@ -56,8 +56,6 @@ docs = [
     "nbsphinx",
     "furo",
     "aiida-core~=2.6.3",
-    "aiida-quantumespresso",
-    "aiida-pseudo",
     "anywidget",
     "sphinx-autobuild",
     "click~=8.1.0",
