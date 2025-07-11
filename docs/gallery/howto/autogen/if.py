@@ -91,16 +91,16 @@ def multiply(x, y):
 # approach. More information on this is provided in :doc:`../concept/workgraph`.
 
 with WorkGraph("if_context") as wg:
-    result = add(x=1, y=1)
+    result = add(x=1, y=1).result
     with If(result < 0):
-        r1 = add(x=result, y=2)
+        r1 = add(x=result, y=2).result
         wg.ctx.result = r1
     with If(result >= 0):
-        r2 = multiply(x=result, y=2)
+        r2 = multiply(x=result, y=2).result
         wg.ctx.result = r2
 
     # -----------------------------------------
-    result = add(x=wg.ctx.result, y=1)
+    result = add(x=wg.ctx.result, y=1).result
     r1 >> result
     r2 >> result
 
