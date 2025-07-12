@@ -212,14 +212,14 @@ class TaskDecoratorCollection:
 
     @staticmethod
     @nonfunctional_usage
-    def decorator_graph_builder(
+    def decorator_graph(
         identifier: Optional[str] = None,
         properties: Optional[List[Tuple[str, str]]] = None,
         inputs: Optional[List[Tuple[str, str]]] = None,
         outputs: Optional[List[Tuple[str, str]]] = None,
         catalog: str = "Others",
     ) -> Callable:
-        """Generate a decorator that register a function as a graph_builder task.
+        """Generate a decorator that register a function as a graph task.
         Attributes:
             indentifier (str): task identifier
             catalog (str): task catalog
@@ -234,7 +234,7 @@ class TaskDecoratorCollection:
             TaskCls = DecoratedFunctionTaskFactory.from_function(
                 func=func,
                 identifier=identifier,
-                task_type="graph_builder",
+                task_type="graph_task",
                 properties=properties,
                 inputs=inputs,
                 outputs=outputs,
@@ -242,8 +242,20 @@ class TaskDecoratorCollection:
                 node_class=GraphBuilderTask,
             )
 
-            func._TaskCls = func._NodeCls = TaskCls
-            return func
+            wrapped_func = _make_wrapper(TaskCls, func)
+
+            def get_graph(*args, **kwargs):
+                """This function is used to get the graph from the wrapped function."""
+                from aiida_workgraph.workgraph import WorkGraph
+
+                with WorkGraph() as wg:
+                    outputs = func(*args, **kwargs)
+                    wg.outputs = outputs
+                    return wg
+
+            wrapped_func.get_graph = get_graph
+
+            return wrapped_func
 
         return decorator
 
@@ -352,8 +364,8 @@ class TaskDecoratorCollection:
     # Making decorator_task accessible as 'task'
     task = decorator_task
 
-    # Making decorator_graph_builder accessible as 'graph_builder'
-    graph_builder = decorator_graph_builder
+    # Making decorator_graph accessible as 'graph'
+    graph = decorator_graph
 
     def __call__(self, *args, **kwargs):
         # This allows using '@task' to directly apply the decorator_task functionality

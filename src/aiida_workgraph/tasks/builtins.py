@@ -393,9 +393,9 @@ class Select(Task):
 class GraphBuilderTask(Task):
     """Graph builder task"""
 
-    identifier = "workgraph.graph_builder"
-    name = "graph_builder"
-    node_type = "graph_builder"
+    identifier = "workgraph.graph_task"
+    name = "graph_task"
+    node_type = "graph_task"
     catalog = "builtins"
 
     def execute(self, engine_process, args=None, kwargs=None, var_kwargs=None):
@@ -407,9 +407,11 @@ class GraphBuilderTask(Task):
         executor = NodeExecutor(**self.get_executor()).executor
 
         if var_kwargs is None:
-            wg = executor(*args, **kwargs)
+            with WorkGraph() as wg:
+                wg.outputs = executor(*args, **kwargs)
         else:
-            wg = executor(*args, **kwargs, **var_kwargs)
+            with WorkGraph() as wg:
+                wg.outputs = executor(*args, **kwargs, **var_kwargs)
         if wg is None:
             raise ValueError("The graph builder must return a WorkGraph, not None.")
         elif not isinstance(wg, WorkGraph):
