@@ -401,23 +401,12 @@ class GraphBuilderTask(Task):
     def execute(self, engine_process, args=None, kwargs=None, var_kwargs=None):
         from aiida_workgraph.utils import create_and_pause_process
         from aiida_workgraph.engine.workgraph import WorkGraphEngine
-        from aiida_workgraph import WorkGraph
+        from aiida_workgraph.decorator import _run_func_with_wg
         from node_graph.executor import NodeExecutor
 
         executor = NodeExecutor(**self.get_executor()).executor
 
-        if var_kwargs is None:
-            with WorkGraph() as wg:
-                wg.outputs = executor(*args, **kwargs)
-        else:
-            with WorkGraph() as wg:
-                wg.outputs = executor(*args, **kwargs, **var_kwargs)
-        if wg is None:
-            raise ValueError("The graph builder must return a WorkGraph, not None.")
-        elif not isinstance(wg, WorkGraph):
-            raise TypeError(
-                f"The graph builder must return a WorkGraph, not {type(wg)}."
-            )
+        wg = _run_func_with_wg(executor, args, kwargs, var_kwargs)
         wg.name = self.name
 
         wg.parent_uuid = engine_process.node.uuid
