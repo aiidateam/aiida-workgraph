@@ -220,6 +220,26 @@ def test_inputs_outputs(decorated_namespace_sum_diff):
     assert wg.outputs.nested.sum.value == 5
 
 
+def test_inputs_run_submit_api():
+    """Test running a WorkGraph with inputs provided in the `run` and `submit` APIs."""
+
+    def generate_workgraph():
+        with WorkGraph() as wg:
+            wg.inputs = dict.fromkeys(["x", "y"])
+            wg.outputs.sum = wg.inputs.x + wg.inputs.y
+        return wg
+
+    wg = generate_workgraph()
+    wg.run(inputs={"graph_inputs": {"x": 1, "y": 2}})
+
+    assert wg.outputs.sum.value == 3
+
+    wg = generate_workgraph()
+    wg.submit(inputs={"graph_inputs": {"x": 3, "y": 4}}, wait=True)
+
+    assert wg.outputs.sum.value == 7
+
+
 def test_run_workgraph_builder():
     """Test running a WorkGraph using the WorkGraphEngine builder."""
     from aiida_workgraph.engine.workgraph import WorkGraphEngine
