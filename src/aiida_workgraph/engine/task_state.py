@@ -312,7 +312,7 @@ class TaskStateManager:
 
         if finished:
             self.process.report(
-                f"Wihle Task {name}: this iteration finished. Try to reset for the next iteration."
+                f"While Task {name}: this iteration finished. Try to reset for the next iteration."
             )
             # reset the condition tasks
             for link in self.process.wg.tasks[name].inputs.conditions._links:
