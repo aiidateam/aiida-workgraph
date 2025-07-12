@@ -1,11 +1,13 @@
 
-Migration from AiiDA Core
+Migrating from AiiDA Core to Workgraph
 ===========================================
 
-This section provides guidance on how to migrate from AiiDA Core to the AiiDA Workgraph framework.
+Learn how to transition your existing workflows from AiiDA Core to the AiiDA Workgraph framework.
+This guide covers key concepts, and practical steps for a seamless migration.
 
 .. toctree::
    :maxdepth: 1
    :caption: Contents:
 
-   workchain
+   autogen/workchain
+   autogen/error_handlers
