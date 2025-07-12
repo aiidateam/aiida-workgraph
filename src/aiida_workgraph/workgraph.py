@@ -104,6 +104,9 @@ class WorkGraph(node_graph.NodeGraph):
         # set task inputs
         if inputs is not None:
             for name, input in inputs.items():
+                if name == "graph_inputs":
+                    self.inputs = input
+                    break
                 if name not in self.tasks:
                     raise KeyError(f"Task {name} not found in WorkGraph.")  # noqa: E713
                 self.tasks[name].set(input)
@@ -139,6 +142,9 @@ class WorkGraph(node_graph.NodeGraph):
         # set task inputs
         if inputs is not None:
             for name, input in inputs.items():
+                if name == "graph_inputs":
+                    self.inputs = input
+                    break
                 if name not in self.tasks:
                     raise KeyError(f"Task {name} not found in WorkGraph.")  # noqa: E713
                 self.tasks[name].set(input)

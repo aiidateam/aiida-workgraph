@@ -3,6 +3,7 @@ import functools
 from typing import Any, Callable, Dict, List, Optional, Union, Tuple
 from aiida.engine import calcfunction, workfunction, CalcJob, WorkChain
 from aiida_workgraph.task import Task
+from .workgraph import WorkGraph
 import inspect
 from node_graph.executor import NodeExecutor
 from aiida_workgraph.tasks.factory import (
@@ -19,7 +20,6 @@ def build_task(
     outputs: Optional[List[str | dict]] = None,
 ) -> Task:
     """Build task from executor."""
-    from aiida_workgraph.workgraph import WorkGraph
 
     if isinstance(executor, WorkGraph):
         return WorkGraphTaskFactory.create_task(executor)
@@ -69,6 +69,39 @@ def build_task_from_callable(
                 executor, inputs=inputs, outputs=outputs
             )
     raise ValueError(f"The executor {executor} is not supported.")
+
+
+def _assign_wg_outputs(outputs: Any, wg: WorkGraph):
+    """
+    Inspect the raw outputs from the function and attach them to the WorkGraph.
+    """
+    from node_graph.socket import BaseSocket
+
+    if isinstance(outputs, BaseSocket):
+        wg.outputs.result = outputs
+    elif isinstance(outputs, dict):
+        wg.outputs = outputs
+    elif outputs is None:
+        wg.outputs.result = None
+    else:
+        raise TypeError(f"Function returned {type(outputs)}, expected socket or dict.")
+
+
+def _run_func_with_wg(
+    func: Callable,
+    args: tuple,
+    kwargs: dict,
+    var_kwargs: Optional[dict] = None,
+) -> WorkGraph:
+    """
+    Run func(*args, **kwargs, **(var_kwargs or {})) inside a WorkGraph,
+    assign its outputs and return the WorkGraph.
+    """
+    merged = {**kwargs, **(var_kwargs or {})}
+    with WorkGraph() as wg:
+        raw = func(*args, **merged)
+        _assign_wg_outputs(raw, wg)
+        return wg
 
 
 def _make_wrapper(TaskCls, func):
@@ -212,14 +245,14 @@ class TaskDecoratorCollection:
 
     @staticmethod
     @nonfunctional_usage
-    def decorator_graph_builder(
+    def decorator_graph(
         identifier: Optional[str] = None,
         properties: Optional[List[Tuple[str, str]]] = None,
         inputs: Optional[List[Tuple[str, str]]] = None,
         outputs: Optional[List[Tuple[str, str]]] = None,
         catalog: str = "Others",
     ) -> Callable:
-        """Generate a decorator that register a function as a graph_builder task.
+        """Generate a decorator that register a function as a graph task.
         Attributes:
             indentifier (str): task identifier
             catalog (str): task catalog
@@ -234,7 +267,7 @@ class TaskDecoratorCollection:
             TaskCls = DecoratedFunctionTaskFactory.from_function(
                 func=func,
                 identifier=identifier,
-                task_type="graph_builder",
+                task_type="graph_task",
                 properties=properties,
                 inputs=inputs,
                 outputs=outputs,
@@ -242,8 +275,16 @@ class TaskDecoratorCollection:
                 node_class=GraphBuilderTask,
             )
 
-            func._TaskCls = func._NodeCls = TaskCls
-            return func
+            wrapped_func = _make_wrapper(TaskCls, func)
+
+            def get_graph(*args, **kwargs):
+                """This function is used to get the graph from the wrapped function."""
+
+                return _run_func_with_wg(func, args, kwargs)
+
+            wrapped_func.get_graph = get_graph
+
+            return wrapped_func
 
         return decorator
 
@@ -352,8 +393,8 @@ class TaskDecoratorCollection:
     # Making decorator_task accessible as 'task'
     task = decorator_task
 
-    # Making decorator_graph_builder accessible as 'graph_builder'
-    graph_builder = decorator_graph_builder
+    # Making decorator_graph accessible as 'graph'
+    graph = decorator_graph
 
     def __call__(self, *args, **kwargs):
         # This allows using '@task' to directly apply the decorator_task functionality
