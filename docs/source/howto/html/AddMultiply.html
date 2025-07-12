@@ -21,6 +21,7 @@
     <script src="https://cdn.jsdelivr.net/npm/rete-react-plugin@2.0.5/rete-react-plugin.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/rete-auto-arrange-plugin@2.0.1/rete-auto-arrange-plugin.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/rete-minimap-plugin@2.0.1/rete-minimap-plugin.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/rete-scopes-plugin@2.1.0/rete-scopes-plugin.min.js"></script>
 
     <style>
         .App {
@@ -52,6 +53,7 @@
         const { createRoot } = ReactDOM;
         const { NodeEditor, ClassicPreset } = Rete;
         const { AreaPlugin, AreaExtensions } = ReteAreaPlugin;
+        const { ScopesPlugin, Presets: ScopesPresets } = ReteScopesPlugin;
         const { ConnectionPlugin, Presets: ConnectionPresets } = ReteConnectionPlugin;
         const { ReactPlugin, Presets } = ReteReactPlugin;
         const { AutoArrangePlugin, Presets: ArrangePresets, ArrangeAppliers} = ReteAutoArrangePlugin;
@@ -59,7 +61,7 @@
         const { RenderUtils } = ReteRenderUtils;
         const styled = window.styled;
 
-        const workgraphData = {"name": "PDOS", "uuid": "9d8b8868-230e-11ef-bbeb-906584de3e5b", "state": "CREATED", "nodes": {"scf": {"label": "scf", "inputs": [{"name": "pw", "identifier": "General", "uuid": "9d8da4fe-230e-11ef-bbeb-906584de3e5b", "node_uuid": "9d8d9fd6-230e-11ef-bbeb-906584de3e5b", "type": "INPUT", "link_limit": 1, "links": [], "serialize": {"path": "node_graph.serializer", "name": "serialize_pickle"}, "deserialize": {"path": "node_graph.serializer", "name": "deserialize_pickle"}}, {"name": "pw.structure", "identifier": "General", "uuid": "9d8db67e-230e-11ef-bbeb-906584de3e5b", "node_uuid": "9d8d9fd6-230e-11ef-bbeb-906584de3e5b", "type": "INPUT", "link_limit": 1, "links": [], "serialize": {"path": "node_graph.serializer", "name": "serialize_pickle"}, "deserialize": {"path": "node_graph.serializer", "name": "deserialize_pickle"}}, {"name": "pw.parameters", "identifier": "General", "uuid": "9d8db700-230e-11ef-bbeb-906584de3e5b", "node_uuid": "9d8d9fd6-230e-11ef-bbeb-906584de3e5b", "type": "INPUT", "link_limit": 1, "links": [], "serialize": {"path": "node_graph.serializer", "name": "serialize_pickle"}, "deserialize": {"path": "node_graph.serializer", "name": "deserialize_pickle"}}, {"name": "pw.pseudos", "identifier": "General", "uuid": "9d8db912-230e-11ef-bbeb-906584de3e5b", "node_uuid": "9d8d9fd6-230e-11ef-bbeb-906584de3e5b", "type": "INPUT", "link_limit": 1, "links": [], "serialize": {"path": "node_graph.serializer", "name": "serialize_pickle"}, "deserialize": {"path": "node_graph.serializer", "name": "deserialize_pickle"}}], "outputs": [{"name": "remote_folder"}], "position": [30, 30]}, "nscf": {"label": "nscf", "inputs": [{"name": "pw", "identifier": "General", "uuid": "9d8fb0d2-230e-11ef-bbeb-906584de3e5b", "node_uuid": "9d8fabe6-230e-11ef-bbeb-906584de3e5b", "type": "INPUT", "link_limit": 1, "links": [], "serialize": {"path": "node_graph.serializer", "name": "serialize_pickle"}, "deserialize": {"path": "node_graph.serializer", "name": "deserialize_pickle"}}, {"name": "pw.structure", "identifier": "General", "uuid": "9d8fc216-230e-11ef-bbeb-906584de3e5b", "node_uuid": "9d8fabe6-230e-11ef-bbeb-906584de3e5b", "type": "INPUT", "link_limit": 1, "links": [], "serialize": {"path": "node_graph.serializer", "name": "serialize_pickle"}, "deserialize": {"path": "node_graph.serializer", "name": "deserialize_pickle"}}, {"name": "pw.parameters", "identifier": "General", "uuid": "9d8fc298-230e-11ef-bbeb-906584de3e5b", "node_uuid": "9d8fabe6-230e-11ef-bbeb-906584de3e5b", "type": "INPUT", "link_limit": 1, "links": [], "serialize": {"path": "node_graph.serializer", "name": "serialize_pickle"}, "deserialize": {"path": "node_graph.serializer", "name": "deserialize_pickle"}}, {"name": "pw.pseudos", "identifier": "General", "uuid": "9d8fc48c-230e-11ef-bbeb-906584de3e5b", "node_uuid": "9d8fabe6-230e-11ef-bbeb-906584de3e5b", "type": "INPUT", "link_limit": 1, "links": [], "serialize": {"path": "node_graph.serializer", "name": "serialize_pickle"}, "deserialize": {"path": "node_graph.serializer", "name": "deserialize_pickle"}}, {"name": "pw.parent_folder"}], "outputs": [{"name": "remote_folder"}, {"name": "_outputs"}, {"name": "remote_folder"}, {"name": "_outputs"}], "position": [60, 60]}, "dos": {"label": "dos", "inputs": [{"name": "parent_folder", "identifier": "General", "uuid": "9d91bc4c-230e-11ef-bbeb-906584de3e5b", "node_uuid": "9d91a892-230e-11ef-bbeb-906584de3e5b", "type": "INPUT", "link_limit": 1, "links": [{"from_node": "nscf", "from_socket": "remote_folder", "from_socket_uuid": "9d8fc81a-230e-11ef-bbeb-906584de3e5b"}], "serialize": {"path": "node_graph.serializer", "name": "serialize_pickle"}, "deserialize": {"path": "node_graph.serializer", "name": "deserialize_pickle"}}, {"name": "parent_folder"}, {"name": "parameters"}], "outputs": [], "position": [90, 90]}, "dos_parameters": {"label": "dos_parameters", "inputs": [{"name": "nscf_outputs", "identifier": "General", "uuid": "9d938658-230e-11ef-bbeb-906584de3e5b", "node_uuid": "9d9384e6-230e-11ef-bbeb-906584de3e5b", "type": "INPUT", "link_limit": 1, "links": [{"from_node": "nscf", "from_socket": "_outputs", "from_socket_uuid": "9d8fcab8-230e-11ef-bbeb-906584de3e5b"}], "serialize": {"path": "node_graph.serializer", "name": "serialize_pickle"}, "deserialize": {"path": "node_graph.serializer", "name": "deserialize_pickle"}}, {"name": "nscf_outputs"}], "outputs": [{"name": "result"}], "position": [120, 120]}, "projwfc": {"label": "projwfc", "inputs": [{"name": "parent_folder", "identifier": "General", "uuid": "9d958480-230e-11ef-bbeb-906584de3e5b", "node_uuid": "9d957116-230e-11ef-bbeb-906584de3e5b", "type": "INPUT", "link_limit": 1, "links": [{"from_node": "nscf", "from_socket": "remote_folder", "from_socket_uuid": "9d8fc81a-230e-11ef-bbeb-906584de3e5b"}], "serialize": {"path": "node_graph.serializer", "name": "serialize_pickle"}, "deserialize": {"path": "node_graph.serializer", "name": "deserialize_pickle"}}, {"name": "parent_folder"}, {"name": "parameters"}], "outputs": [], "position": [150, 150]}, "projwfc_parameters": {"label": "projwfc_parameters", "inputs": [{"name": "nscf_outputs", "identifier": "General", "uuid": "9d9740ea-230e-11ef-bbeb-906584de3e5b", "node_uuid": "9d973f8c-230e-11ef-bbeb-906584de3e5b", "type": "INPUT", "link_limit": 1, "links": [{"from_node": "nscf", "from_socket": "_outputs", "from_socket_uuid": "9d8fcab8-230e-11ef-bbeb-906584de3e5b"}], "serialize": {"path": "node_graph.serializer", "name": "serialize_pickle"}, "deserialize": {"path": "node_graph.serializer", "name": "deserialize_pickle"}}, {"name": "nscf_outputs"}], "outputs": [{"name": "result"}], "position": [180, 180]}}, "links": [{"from_socket": "remote_folder", "from_node": "scf", "from_socket_uuid": "9d8dbcb4-230e-11ef-bbeb-906584de3e5b", "to_socket": "pw.parent_folder", "to_node": "nscf", "state": false}, {"from_socket": "remote_folder", "from_node": "nscf", "from_socket_uuid": "9d8fc81a-230e-11ef-bbeb-906584de3e5b", "to_socket": "parent_folder", "to_node": "dos", "state": false}, {"from_socket": "_outputs", "from_node": "nscf", "from_socket_uuid": "9d8fcab8-230e-11ef-bbeb-906584de3e5b", "to_socket": "nscf_outputs", "to_node": "dos_parameters", "state": false}, {"from_socket": "result", "from_node": "dos_parameters", "from_socket_uuid": "9d9387de-230e-11ef-bbeb-906584de3e5b", "to_socket": "parameters", "to_node": "dos", "state": false}, {"from_socket": "remote_folder", "from_node": "nscf", "from_socket_uuid": "9d8fc81a-230e-11ef-bbeb-906584de3e5b", "to_socket": "parent_folder", "to_node": "projwfc", "state": false}, {"from_socket": "_outputs", "from_node": "nscf", "from_socket_uuid": "9d8fcab8-230e-11ef-bbeb-906584de3e5b", "to_socket": "nscf_outputs", "to_node": "projwfc_parameters", "state": false}, {"from_socket": "result", "from_node": "projwfc_parameters", "from_socket_uuid": "9d974252-230e-11ef-bbeb-906584de3e5b", "to_socket": "parameters", "to_node": "projwfc", "state": false}]}
+        const nodegraphData = {"name": "AddMultiply", "uuid": "b1a2bd30-5f3f-11f0-996e-00155dc4a75e", "state": "CREATED", "nodes": {"op_add": {"identifier": "workgraph.pyfunction", "label": "op_add", "node_type": "PYFUNCTION", "inputs": [{"name": "x", "identifier": "workgraph.any"}, {"name": "y", "identifier": "workgraph.any"}, {"name": "function_data", "identifier": "workgraph.namespace"}, {"name": "x"}, {"name": "y"}], "properties": {"x": {"identifier": "workgraph.any", "value": null}, "y": {"identifier": "workgraph.any", "value": null}, "_wait": {"identifier": "workgraph.any", "value": null}, "process_label": {"identifier": "workgraph.any", "value": null}, "deserializers": {"identifier": "workgraph.any", "value": null}, "serializers": {"identifier": "workgraph.any", "value": null}}, "outputs": [{"name": "result"}], "position": [30, 30], "children": []}, "op_mul": {"identifier": "workgraph.pyfunction", "label": "op_mul", "node_type": "PYFUNCTION", "inputs": [{"name": "x", "identifier": "workgraph.any"}, {"name": "y", "identifier": "workgraph.any"}, {"name": "function_data", "identifier": "workgraph.namespace"}, {"name": "x"}, {"name": "y"}], "properties": {"x": {"identifier": "workgraph.any", "value": null}, "y": {"identifier": "workgraph.any", "value": null}, "_wait": {"identifier": "workgraph.any", "value": null}, "process_label": {"identifier": "workgraph.any", "value": null}, "deserializers": {"identifier": "workgraph.any", "value": null}, "serializers": {"identifier": "workgraph.any", "value": null}}, "outputs": [{"name": "result"}], "position": [30, 30], "children": []}, "graph_inputs": {"label": "graph_inputs", "node_type": "graph_inputs", "inputs": [], "properties": {}, "outputs": [{"name": "x"}, {"name": "y"}, {"name": "z"}], "position": [0, 0], "children": []}, "graph_outputs": {"label": "graph_outputs", "node_type": "graph_outputs", "inputs": [{"name": "result"}], "properties": {}, "outputs": [], "position": [0, 0], "children": []}}, "links": [{"from_socket": "result", "from_node": "op_add", "to_socket": "x", "to_node": "op_mul"}, {"from_socket": "x", "from_node": "graph_inputs", "to_socket": "x", "to_node": "op_add"}, {"from_socket": "y", "from_node": "graph_inputs", "to_socket": "y", "to_node": "op_add"}, {"from_socket": "z", "from_node": "graph_inputs", "to_socket": "y", "to_node": "op_mul"}, {"from_socket": "result", "from_node": "op_mul", "to_socket": "result", "to_node": "graph_outputs"}]}
 
         // Define Schemes to use in vanilla JS
         const Schemes = {
@@ -131,17 +133,46 @@
           }
         }
 
-        async function loadJSON(editor, area, layout, workgraphData) {
-          for (const nodeId in workgraphData.nodes) {
-            const nodeData = workgraphData.nodes[nodeId];
+        async function loadJSON(editor, area, layout, nodegraphData) {
+          for (const nodeId in nodegraphData.nodes) {
+            const nodeData = nodegraphData.nodes[nodeId];
             await addNode(editor, area, nodeData);
           }
 
-          // Adding connections based on workgraphData
-          workgraphData.links.forEach(async (link) => { // Specify the type of link here
+          // Adding connections based on nodegraphData
+          nodegraphData.links.forEach(async (link) => { // Specify the type of link here
             await addLink(editor, area, layout, link);
           });
+
+          // Add while zones
+          console.log("Adding while zone: ");
+          for (const nodeId in nodegraphData.nodes) {
+            const nodeData = nodegraphData.nodes[nodeId];
+            const node_type = nodeData['node_type'];
+            if (node_type === "WHILE" || node_type === "IF" || node_type === "ZONE" || node_type === "MAP") {
+              // find the node
+              const node = editor.nodeMap[nodeData.label];
+              const children = nodeData['children'];
+              // find the id of all nodes in the editor that has a label in while_zone
+              for (const nodeId in children) {
+                const node1 = editor.nodeMap[children[nodeId]];
+                node1.parent = node.id;
+              }
+            }
+          }
         }
+
+        /**
+        * Defines custom padding for a scope layout.
+        * The padding values are used by the ScopesPlugin to avoid node overlapping with the socket of the parent node.
+        */
+        const customScopePadding = () => ({
+          top: 80,
+          left: 30,
+          right: 30,
+          bottom: 50
+        });
+
 
         async function createEditor(container) {
             const socket = new ClassicPreset.Socket("socket");
@@ -150,6 +181,7 @@
             const area = new AreaPlugin(container);
             const connection = new ConnectionPlugin();
             const render = new ReactPlugin({ createRoot });
+            const scopes = new ScopesPlugin({padding: customScopePadding});
             const arrange = new AutoArrangePlugin();
 
             const minimap = new MinimapPlugin({
@@ -164,6 +196,7 @@
             render.addPreset(Presets.minimap.setup({ size: 200 }));
 
             connection.addPreset(ConnectionPresets.classic.setup());
+            scopes.addPreset(ScopesPresets.classic.setup());
 
             const applier = new ArrangeAppliers.TransitionApplier({
               duration: 500,
@@ -179,18 +212,16 @@
             editor.use(area);
             // area.use(connection);
             area.use(render);
+            area.use(scopes);
             area.use(arrange);
             area.use(minimap);
-
-
-            AreaExtensions.simpleNodesOrder(area);
 
             async function layout(animate) {
               await arrange.layout({ applier: animate ? applier : undefined });
               AreaExtensions.zoomAt(area, editor.getNodes());
             }
 
-            // Adding nodes based on workgraphData
+            // Adding nodes based on nodegraphData
             const nodeMap = {}; // To keep track of created nodes for linking
             editor.nodeMap = nodeMap;
 
@@ -219,10 +250,11 @@
                 if (containerRef.current && !editor) {
                     createEditor(containerRef.current).then((editor) => {
                         setEditor(editor);
-                        loadJSON(editor.editor, editor.area, editor.layout, workgraphData).then(() => {
+                        loadJSON(editor.editor, editor.area, editor.layout, nodegraphData).then(() => {
                           // aplly layout twice to ensure all nodes are arranged
                           editor?.layout(false).then(() => editor?.layout(true));
                         });
+                        window.editor = editor;
                     });
                 }
                 if (document.getElementById('fullscreen-btn')) {
