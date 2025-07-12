@@ -83,16 +83,18 @@ def test_shell_graph_builder():
     And the parser is also defined in the graph builder."""
     from aiida.orm import Int
 
-    @task.graph_builder(outputs=[{"name": "result"}])
+    @task.graph(outputs=[{"name": "result"}])
     def add_multiply(x, y):
         """Add two numbers and multiply the result by 2."""
+        from aiida_workgraph.manager import get_current_graph
+
         # define the parser function
         def parser(dirpath):
             from aiida.orm import Int
 
             return {"result": Int((dirpath / "stdout").read_text().strip())}
 
-        wg = WorkGraph()
+        wg = get_current_graph()
         # echo x + y expression
         job1 = wg.add_task(
             TaskPool.workgraph.shelljob,
@@ -116,10 +118,9 @@ def test_shell_graph_builder():
                 {"identifier": "workgraph.any", "name": "result"}
             ],  # add a "result" output socket from the parser
         )
-        wg.outputs.result = wg.tasks.job2.outputs.result
-        return wg
+        return wg.tasks.job2.outputs.result
 
-    wg = WorkGraph(name="test_shell_graph_builder")
-    add_multiply1 = wg.add_task(add_multiply, x=Int(2), y=Int(3))
-    wg.submit(wait=True, timeout=60)
-    assert add_multiply1.outputs.result.value.value == 5
+    with WorkGraph() as wg:
+        outputs = add_multiply(x=Int(2), y=Int(3))
+        wg.submit(wait=True, timeout=60)
+        assert outputs.result.value.value == 5

@@ -12,7 +12,7 @@ This section contains a collection of HowTos for various topics.
    graph_inputs_outputs
    autogen/graph_builder
    autogen/parallel
-   if
+   autogen/if
    autogen/while
    autogen/context
    waiting_on
@@ -20,7 +20,7 @@ This section contains a collection of HowTos for various topics.
    restart
    error_resistant
    continue_finished_workgraph
-   zone
+   autogen/zone
    monitor
    protocol
    cli

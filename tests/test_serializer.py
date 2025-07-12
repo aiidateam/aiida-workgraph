@@ -4,12 +4,9 @@ Test serialize_input_values_recursively and deserialize_input_values_recursively
 from aiida_workgraph import WorkGraph, task
 
 
-@task.graph_builder()
+@task.graph()
 def sub_workflow(func):
-
-    wg = WorkGraph("sub_workflow")
-    wg.add_task(func)
-    return wg
+    func()
 
 
 def test_func_as_input(capsys):

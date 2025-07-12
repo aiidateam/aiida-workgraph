@@ -164,15 +164,15 @@ def test_extend_workgraph(decorated_add_multiply_group):
 
     wg = WorkGraph("test_graph_build")
     add1 = wg.add_task("workgraph.test_add", "add1", x=2, y=3)
-    add_multiply_wg = decorated_add_multiply_group(x=0, y=4, z=5)
+    add_multiply_wg = decorated_add_multiply_group.get_graph(x=0, y=4, z=5)
     # test wait
-    add_multiply_wg.tasks.multiply1.waiting_on.add("add1")
+    add_multiply_wg.tasks.multiply.waiting_on.add("add")
     # extend workgraph
     wg.extend(add_multiply_wg, prefix="group_")
-    assert "group_add1" in [task.name for task in wg.tasks.group_multiply1.waiting_on]
-    wg.add_link(add1.outputs[0], wg.tasks.group_add1.inputs.x)
+    assert "group_add" in [task.name for task in wg.tasks.group_multiply.waiting_on]
+    wg.add_link(add1.outputs[0], wg.tasks.group_add.inputs.x)
     wg.run()
-    assert wg.tasks.group_multiply1.outputs.result == 45
+    assert wg.tasks.group_multiply.outputs.result == 45
 
 
 def test_workgraph_outputs(decorated_add):
@@ -218,6 +218,26 @@ def test_inputs_outputs(decorated_namespace_sum_diff):
     wg.run()
     assert wg.outputs.sum.value == 4
     assert wg.outputs.nested.sum.value == 5
+
+
+def test_inputs_run_submit_api():
+    """Test running a WorkGraph with inputs provided in the `run` and `submit` APIs."""
+
+    def generate_workgraph():
+        with WorkGraph() as wg:
+            wg.inputs = dict.fromkeys(["x", "y"])
+            wg.outputs.sum = wg.inputs.x + wg.inputs.y
+        return wg
+
+    wg = generate_workgraph()
+    wg.run(inputs={"graph_inputs": {"x": 1, "y": 2}})
+
+    assert wg.outputs.sum.value == 3
+
+    wg = generate_workgraph()
+    wg.submit(inputs={"graph_inputs": {"x": 3, "y": 4}}, wait=True)
+
+    assert wg.outputs.sum.value == 7
 
 
 def test_run_workgraph_builder():

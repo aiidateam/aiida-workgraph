@@ -196,18 +196,13 @@ def multiply(x, y):
     return x * y
 
 
-# use task.graph_builder decorator, expose the "result" output of "multiply" task
+# use task.graph decorator, expose the "result" output of "multiply" task
 # as the "multiply" output of the `WorkGraph`.
-@task.graph_builder(outputs=[{"name": "multiply"}])
+@task.graph()
 def add_multiply(x, y, z):
-    # Create a WorkGraph
-    wg = WorkGraph()
-    wg.add_task(add, name="add", x=x, y=y)
-    wg.add_task(multiply, name="multiply", x=z)
-    wg.add_link(wg.tasks.add.outputs.result, wg.tasks.multiply.inputs.y)
-    wg.outputs.multiply = wg.tasks.multiply.outputs.result
-    # don't forget to return the `wg`
-    return wg
+    outputs1 = add(x=x, y=y)
+    outputs2 = multiply(x=z, y=outputs1.result)
+    return outputs2.result
 
 
 ######################################################################
@@ -218,21 +213,20 @@ def add_multiply(x, y, z):
 from aiida_workgraph import WorkGraph
 from aiida.orm import Int
 
-wg = WorkGraph("test_graph_build")
-# create a task using the graph builder
-add_multiply1 = wg.add_task(add_multiply, x=Int(2), y=Int(3), z=Int(4))
-add_multiply2 = wg.add_task(add_multiply, x=Int(2), y=Int(3))
-# link the output of a task to the input of another task
-wg.add_link(add_multiply1.outputs.multiply, add_multiply2.inputs.z)
-wg.run()
-print("WorkGraph state: ", wg.state)
+with WorkGraph("test_graph_build") as wg:
+    # create a task using the graph builder
+    outputs1 = add_multiply(x=Int(2), y=Int(3), z=Int(4))
+    # link the output of a task to the input of another task
+    outputs2 = add_multiply(x=Int(2), y=Int(3), z=outputs1.result)
+    wg.run()
 
 
 ######################################################################
 # Get the result of the tasks:
 #
 
-print("Result of task add_multiply1: {}".format(add_multiply1.outputs.multiply.value))
+print("WorkGraph state: ", wg.state)
+print("Result of task add_multiply1: {}".format(outputs2.result.value))
 
 
 ######################################################################

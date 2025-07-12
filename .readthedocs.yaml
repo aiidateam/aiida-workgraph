@@ -16,7 +16,7 @@ build:
       - verdi daemon start
       - verdi status
       - aiida-pseudo install sssp -x PBEsol
-      - verdi group list
+      - verdi config set logging.aiida_loglevel ERROR
       - cat /proc/cpuinfo | grep processor | wc -l
 
 conda:

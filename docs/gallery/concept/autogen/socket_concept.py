@@ -1,154 +1,218 @@
 """
-Port (Socket)
-=============
+========================================
+Sockets
+========================================
 
-In WorkGraph, we use ``sockets`` to indicate the type of data that can
-be transferred from one task to another. This is similar to AiiDA’s
-``port``. We will use the name ``port`` to reuse the concepts already in
-AiiDA as much as possible. Their differences will be introduced later.
+In WorkGraph, a **Socket** is a fundamental concept that defines the connection points for data to flow between tasks. Think of them as the inputs and outputs of each step in your workflow. They are analogous to AiiDA's `Ports` but with an important extension: sockets are designed to manage not just the data type but also the **links** between tasks in the graph.
 
-Usually, the ports are created automatically from an AiiDA component
-(e.g., WorkChain), or generated automatically based on the function
-arguments. There are also some built-in ports(sockets), like ``_wait``
-and ``_outputs``.
+This guide will walk you through how to define, customize, and organize sockets for your tasks.
 
 """
-
-from aiida_workgraph import task
 from aiida.manage import load_profile
+from aiida_workgraph import task, WorkGraph
+from aiida import orm
 
+# Load the AiiDA profile to interact with the database
 load_profile()
 
+# %%
+# Automatic Socket Creation
+# ===========================
+# The easiest way to create sockets is to let WorkGraph do it for you. When you decorate a Python function as a ``@task``, WorkGraph automatically inspects its signature:
+#
+# * Function arguments become **input sockets**.
+# * The return value becomes a single **output socket** named ``result``.
+#
+# Beside, there are also some built-in sockets from the WorkGraph, like ``_wait`` and ``_outputs``.
 
-@task.calcfunction()
+
+@task()
 def multiply(x, y):
+    """A simple task to multiply two numbers."""
     return x * y
 
 
-print("Input ports: ", multiply._TaskCls().get_input_names())
-print("Output ports: ", multiply._TaskCls().get_output_names())
+# Let's inspect the automatically generated sockets
+wg = WorkGraph()
+task1 = wg.add_task(multiply, x=3, y=4)
+print("Input sockets: ", task1.get_input_names())
+print("Output sockets: ", task1.get_output_names())
 
-multiply._TaskCls().to_html()
+
+# %%
+# Customizing Output Sockets
+# ==============================
+# Often, a task needs to return multiple, named values. You can explicitly define the output sockets using the ``outputs`` argument in the ``@task`` decorator.
+#
+# When you define custom outputs, your function must return a dictionary where the keys match the specified output socket names.
 
 
-######################################################################
-# If you want to change the name of the output ports, or if there are more
-# than one output. You can define the outputs explicitly.
+@task(outputs=["sum", "difference"])
+def add_and_subtract(x, y):
+    """This task returns both the sum and difference of two numbers."""
+    return {"sum": x + y, "difference": x - y}
+
+
+# Inspect the new input and output sockets
+task2 = wg.add_task(add_and_subtract, x=3, y=4)
+print("Input sockets: ", task2.get_input_names())
+print("Output sockets: ", task2.get_output_names())
+
+# %%
+# Socket Types from Python Type Hints
+# =========================================
+# To ensure data integrity and leverage AiiDA's data provenance, sockets have types. WorkGraph can automatically assign AiiDA-compatible socket types based on standard Python type hints in your function signature. This is the recommended modern approach.
+#
+# =================== ==================
+#  Python Type Hint    AiiDA Socket Type
+# =================== ==================
+#  ``int``             ``orm.Int``
+#  ``float``           ``orm.Float``
+#  ``str``             ``orm.Str``
+#  ``bool``            ``orm.Bool``
+#  ``list``            ``orm.List``
+#  ``dict``            ``orm.Dict``
+# =================== ==================
 #
 
-from aiida_workgraph import task
+
+@task.calcfunction()
+def add_typed(x: orm.Int, y: orm.Float) -> orm.Float:
+    """A task with typed sockets to add an Int and a Float."""
+    return orm.Float(x.value + y.value)
+
+
+# When you call this task, WorkGraph expects AiiDA data types
+task3 = wg.add_task(add_typed, x=orm.Int(3), y=orm.Int(4))
+print("Input x: ", task3.inputs.x)
+
+
+# %%
+# Default Values as Socket Properties
+# -----------------------------------------
+# A socket can have a **property**, which is a default value used when no data is linked to an input. The most Pythonic way to define a property is by using a default argument in your function definition.
+
+
+@task
+def power(base: int, exponent: int = 2):
+    """Calculates base to the power of exponent, defaulting to square."""
+    return base**exponent
+
+
+# The `exponent` socket now has a default value of 2.
+# We only need to provide the `base`.
+with WorkGraph() as wg:
+    outputs1 = power(base=3)
+    # We can still override the default value by providing an input.
+    outputs2 = power(base=3, exponent=3)
+    wg.run()
+    print(f"3 to the default power of 2 is: {outputs1.result.value}")
+    print(f"3 to the power of 3 is: {outputs2.result.value}")
+
+
+# %%
+# Organizing Sockets with Namespaces
+# =====================================
+# As workflows grow, you might have many related inputs or outputs. To keep them organized and avoid name clashes, you can group them into a **namespace**.
+#
+# Simple Output Namespace
+# -----------------------
+# If a task has multiple outputs (as defined in the `outputs` decorator argument), WorkGraph automatically groups them into a `SocketNamespace`.
+
+with WorkGraph("simple_namespace_example") as wg:
+    # The `add_and_subtract` task from before has two outputs.
+    # The `outputs` object becomes a namespace.
+    outputs = add_and_subtract(x=10, y=4)
+    wg.run()
+
+    # You can access the results like attributes of an object:
+    print(f"Accessing outputs from a namespace:")
+    print(f"  Sum: {outputs.sum.value}")
+    print(f"  Difference: {outputs.difference.value}")
+
+
+# %%
+# Nested Namespaces
+# -----------------
+# For more complex data structures, you can define nested namespaces. This allows you to create a hierarchical organization for your sockets.
 
 
 @task(
     outputs=[
-        {"identifier": "workgraph.Any", "name": "sum"},
-        {"identifier": "workgraph.Any", "name": "diff"},
+        {
+            "name": "normal",
+            "identifier": "workgraph.namespace",
+            "sockets": {
+                "sum": {"identifier": "workgraph.any"},
+                "product": {"identifier": "workgraph.any"},
+            },
+        },
+        {
+            "name": "squared",
+            "identifier": "workgraph.namespace",
+            "sockets": {
+                "sum": {"identifier": "workgraph.any"},
+                "product": {"identifier": "workgraph.any"},
+            },
+        },
     ]
 )
-def add_minus(x, y):
-    return {"sum": x + y, "difference": x - y}
+def advanced_math(x, y):
+    """A task with a nested output structure."""
+    return {
+        "normal": {"sum": x + y, "product": x * y},
+        "squared": {"sum": x**2 + y**2, "product": x**2 * y**2},
+    }
 
 
-print("Input ports: ", add_minus._TaskCls().get_input_names())
-print("Ouput ports: ", add_minus._TaskCls().get_output_names())
-add_minus._TaskCls().to_html()
+with WorkGraph("nested_namespace_example") as wg:
+    outputs = advanced_math(x=2, y=3)
+    wg.run()
+    print("\nAccessing outputs from a nested namespace:")
+    print(f"  Normal sum: {outputs.normal.sum.value}")
+    print(f"  Squared product: {outputs.squared.product.value}")
 
 
-######################################################################
-# Two values are needed to define a port, e.g.,
-# ``{"identifier": "General", "name": "sum"}``, where the ``identifier``
-# indicates the data type, and the name of the port. We use ``General``
-# for any data type.
+# %%
+# Dynamic Namespaces
+# ------------------
+# Sometimes, you don't know the number of outputs a task will generate beforehand. A **dynamic namespace** can accept a variable number of sockets at runtime.
 #
-# Assign socket type based on typing hints
-# ----------------------------------------
-#
-# The type hints in the function signature can be used to assign the
-# socket type. The following table shows the mapping between the type
-# hints and the socket type.
-#
-# ============= ===============
-# Type hint     Socket type
-# ============= ===============
-# ``orm.Int``   ``AiiDAInt``
-# ``orm.Str``   ``AiiDAString``
-# ``orm.Float`` ``AiiDAFloat``
-# ``orm.Bool``  ``AiiDABool``
-# ============= ===============
-#
-
-from aiida_workgraph import task
+# To create one, set `"metadata": {"dynamic": True}` on a namespace socket.
 
 
-@task.calcfunction()
-def add(x: int, y: float) -> float:
-    return x + y
-
-
-print("inputs: ", add._TaskCls().inputs)
-
-
-######################################################################
-# Data validation (**Experimental**)
-# ----------------------------------
-#
-# One can use the class of the data directly when defining the port.
-#
-# **For the moment, data validation is experimentally supported.** Thus, I
-# suggest you always use ``workgraph.Any`` for the port.
-#
-
-from aiida_workgraph import task
-from aiida import orm
-
-
-@task.calcfunction(
-    inputs=[
-        {"identifier": orm.Int, "name": "x"},
-        {"identifier": orm.Float, "name": "y"},
-    ],
-    outputs=[{"idenfier": orm.Float, "name": "result"}],
+@task(
+    outputs=[
+        {
+            "name": "squares",
+            "identifier": "workgraph.namespace",
+            "metadata": {"dynamic": True},
+        }
+    ]
 )
-def add(x, y):
-    result = x + y
-    return result
+def generate_squares(n: int):
+    """Generates a dynamic number of square values."""
+    return {"squares": {f"n_{i}": i**2 for i in range(n)}}
 
 
-######################################################################
-# Advanced concept of Socket
-# --------------------------
-#
-# In the GUI of node graph programming, a socket is displayed as a circle
-# only. In order to set the value for a socket directly in the GUI, one
-# can add a property to it. A property is the data that can be
-# displayed/edited in the GUI directly, which is usually a simple data
-# type, such as int, string, boolean, etc.
-#
-# Property
-# ~~~~~~~~
-#
-# A socket can has a property. The data of the property will be used when
-# there is no connection to the input port. The property can be added when
-# define a custom port. Or it can be added later by using ``add_property``
-# method.
-#
-# In ``aiida-workgraph``, all socket must have a property. The value of
-# the property will be used when there is no connection to the input port.
-#
+@task
+def sum_all(**inputs):
+    """A task to sum all values from a dictionary."""
+    return sum(inputs.values())
 
 
-def create_sockets(self):
-    # create a General port.
-    inp = self.add_input("workgraph.Any", "symbols")
-    # add a string property to the port with default value "H".
-    inp.add_property("String", "default", default="H")
+with WorkGraph("dynamic_namespace_example") as wg:
+    # The first task generates a dynamic set of outputs under the "squares" namespace.
+    dynamic_outputs = generate_squares(n=4)
 
+    # The entire dynamic namespace `dynamic_outputs.squares` is linked as a
+    # single dictionary input to the next task.
+    total = sum_all(inputs=dynamic_outputs.squares)
+    wg.run()
 
-######################################################################
-# Serialization
-# ~~~~~~~~~~~~~
-#
-# If you use non-AiiDA data as inputs/outputs of a ``Normal`` task, the
-# data type of the socket will also indicate how to serialize data and
-# deserialize the data.
-#
+    # You can access the individual dynamic outputs
+    print(f"\nIndividual dynamic outputs:")
+    for i in range(4):
+        print(f"  n_{i}: {dynamic_outputs.squares[f'n_{i}'].value}")
+
+    print(f"Sum of all dynamic outputs: {total.result.value}")
