@@ -3,7 +3,7 @@
 WorkGraph
 =================
 
-This :class:`~aiida_workgraph.workgraph.WorkGraph` object is a collection of tasks and links.
+WorkGraph is a collection of tasks and links.
 
 
 """
@@ -15,9 +15,6 @@ This :class:`~aiida_workgraph.workgraph.WorkGraph` object is a collection of tas
 #
 
 from aiida_workgraph import WorkGraph, task
-from aiida import load_profile
-
-load_profile()
 
 wg = WorkGraph(name="my_first_workgraph")
 
@@ -39,75 +36,88 @@ add2 = wg.add_task(add, name="add2")
 # Add a link between tasks:
 
 wg.add_link(add1.outputs.result, add2.inputs.x)
+
+# Visualize the graph
 wg.to_html()
 
 # %%
-# Run the workgraph
+# Execute the workgraph
 # ========================
+# With the graph defined, you can now execute it. You provide the inputs for the tasks.
 
-wg.submit(inputs={"add1": {"x": 1, "y": 2}, "add2": {"y": 3}}, wait=True)
+from aiida import load_profile
 
-# %%
-# Load workgraph from the AiiDA process
-# =======================================
-#
-# WorkGraph saves its data as an extra attribute in its process, allowing reconstruction of the WorkGraph from the process.
-
-from aiida_workgraph import WorkGraph
-
-wg_loaded = WorkGraph.load(wg.pk)
+load_profile()
+wg.run(inputs={"add1": {"x": 1, "y": 2}, "add2": {"y": 3}})
 
 # %%
-# Inputs and Outputs in a WorkGraph
+# Graph-level inputs and outputs
 # ========================================
-# Defining **group-level** inputs and outputs allows you to:
+# As workflows grow, managing inputs for many tasks can become cumbersome.
+# WorkGraph allows you to define **graph-level** inputs and outputs to create a
+# cleaner, more user-friendly interface for your complex logic.
 #
-# - Reuse inputs across multiple tasks (e.g., when several tasks share the same parameter).
-# - Present only the necessary inputs to users, simplify the external interface of a complex workflow.
-# - Collect and optionally rename outputs from individual tasks as grouped outputs.
+# This lets you:
+#
+# - **Reuse** a single input across multiple tasks.
+# - **Hide** internal complexity and only expose essential inputs.
+# - **Collect** and rename key results as named workflow outputs.
 
-wg = WorkGraph("test_workgraph_outputs")
+wg = WorkGraph("graph_inputs_outputs")
 
-# Define group-level input
+# Define graph-level input
 wg.inputs.x = 2
 
-# Add tasks using the group-level input
+# Add tasks using the graph-level input
 wg.add_task(add, "add1", x=wg.inputs.x, y=3)
 wg.add_task(add, "add2", x=wg.inputs.x, y=wg.tasks.add1.outputs.result)
 
-# Define group-level outputs to expose selected task results
+# Define graph-level outputs to expose selected task results
 wg.outputs.sum1 = wg.tasks.add1.outputs.result
 wg.outputs.sum2 = wg.tasks.add2.outputs.result
 
-# Run the workgraph
-wg.submit(wait=True)
+# Run the WorkGraph
+wg.run()
 
 # Verify the final output
 assert wg.outputs.sum2.value == 2 + (2 + 3)
 
+# Visualize the graph with inputs and outputs
+wg.to_html()
+
 # %%
 # Context variables
 # ========================================
-# Context variables are used to store intermediate results or state information during the execution of a WorkGraph.
-# It's particularly useful for workflows with conditional logic or loops.
+# Context variables (`ctx`) are used to store and pass intermediate data within a
+# workflow that isn't directly an input or output of a task. This is
+# especially useful for workflows with conditional logic (if/else) or loops,
+# where you need to manage state between steps.
 
-wg1 = WorkGraph(name="context_example")
+wg = WorkGraph(name="context_example")
 # Setting the ``ctx`` attribute of the WorkGraph directly, on initialization
-wg1.ctx = {"x": 2, "data.y": 3}
-wg.add_task(add, "add1", x=wg.inputs.x, y=3)
+wg.ctx = {"x": 2, "data.y": 3}
+wg.add_task(add, "add1", x=wg.ctx.x, y=wg.ctx.data.y)
 # Assign the result of a task to a context variable
-wg1.ctx.sum = wg1.tasks.add1.outputs.result
+wg.ctx.sum = wg.tasks.add1.outputs.result
 # Use the context variable in another task
-wg1.add_task(add, "add2", x=wg1.ctx.x, y=wg1.ctx.sum)
+wg.add_task(add, "add2", x=wg.ctx.x, y=wg.ctx.sum)
 
+# %%
+# Context variables can be nested, allowing you to organize complex data structures.
+# For example, you can store multiple results in a structured way:
+
+wg.ctx.data = {
+    "sum1": wg.tasks.add1.outputs.result,
+    "sum2": wg.tasks.add2.outputs.result,
+}
 
 # %%
 # WorkGraph engine
 # ========================================
-# After a WorkGraph is created and submitted, it is executed by the WorkGraph engine.
-# The engine follow the dataflow programming paradigm, where tasks are executed based on their dependencies.
-# The tasks will be executed under the following conditions:
+# The WorkGraph engine operates on a **dataflow programming** model. Once
+# submitted, the engine continuously monitors the tasks in the graph. A task
+# is executed only when all of its inputs are available. This means:
 #
-# - No input task
-# - All input tasks are finished.
+# - Tasks with no inputs are executed first.
+# - A task starts only after all the upstream tasks linked to its inputs are finished.
 #
