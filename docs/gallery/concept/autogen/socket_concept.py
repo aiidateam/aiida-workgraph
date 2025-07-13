@@ -89,7 +89,7 @@ print("Input x: ", task3.inputs.x)
 
 # %%
 # Default Values as Socket Properties
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~``
+# -----------------------------------------
 # A socket can have a **property**, which is a default value used when no data is linked to an input. The most Pythonic way to define a property is by using a default argument in your function definition.
 
 
@@ -111,7 +111,7 @@ with WorkGraph() as wg:
 
 
 # %%
-# # Organizing Sockets with Namespaces
+# Organizing Sockets with Namespaces
 # =====================================
 # As workflows grow, you might have many related inputs or outputs. To keep them organized and avoid name clashes, you can group them into a **namespace**.
 #
@@ -216,10 +216,3 @@ with WorkGraph("dynamic_namespace_example") as wg:
         print(f"  n_{i}: {dynamic_outputs.squares[f'n_{i}'].value}")
 
     print(f"Sum of all dynamic outputs: {total.result.value}")
-
-# %%
-# Advanced: Serialization
-# =================================
-# When using general-purpose ``@task.python`` tasks, you might want to pass complex Python objects that are not standard AiiDA data types (e.g., a custom class instance).
-# The socket's type information is also used to determine how to **serialize** (save) and **deserialize** (load) this data, ensuring your workflow can be checkpointed and resumed.
-# This is an advanced feature for users implementing custom data handlers.

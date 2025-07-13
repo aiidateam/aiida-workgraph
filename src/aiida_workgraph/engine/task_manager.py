@@ -14,7 +14,7 @@ MAX_NUMBER_AWAITABLES_MSG = "The maximum number of subprocesses has been reached
 process_task_types = [
     "CALCJOB",
     "WORKCHAIN",
-    "GRAPH_BUILDER",
+    "GRAPH_TASK",
     "WORKGRAPH",
     "PYTHONJOB",
     "SHELLJOB",
@@ -180,7 +180,7 @@ class TaskManager:
                 "SHELLJOB",
                 "PYTHONJOB",
                 "WORKGRAPH",
-                "GRAPH_BUILDER",
+                "GRAPH_TASK",
             ]:
                 self.execute_process_task(task, **inputs)
             elif task_type == "WHILE":

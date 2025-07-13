@@ -10,7 +10,6 @@ This section contains a collection of HowTos for various topics.
 
    autogen/use_calcjob_workchain
    graph_inputs_outputs
-   autogen/graph_builder
    autogen/parallel
    autogen/if
    autogen/while
@@ -24,5 +23,4 @@ This section contains a collection of HowTos for various topics.
    monitor
    cli
    control
-   transfer_workchain
    workchain_call_workgraph

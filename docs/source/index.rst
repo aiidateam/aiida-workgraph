@@ -98,6 +98,7 @@ Sections
    tutorial/index
    built-in/index
    howto/index
+   migration_from_aiida_core/index
    concept/index
    gui/index
    development/index
