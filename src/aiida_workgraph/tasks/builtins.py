@@ -390,7 +390,7 @@ class Select(Task):
         return executor
 
 
-class GraphBuilderTask(Task):
+class GraphTask(Task):
     """Graph builder task"""
 
     identifier = "workgraph.graph_task"
