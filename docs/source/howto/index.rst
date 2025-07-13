@@ -22,6 +22,7 @@ This section contains a collection of HowTos for various topics.
    continue_finished_workgraph
    autogen/zone
    monitor
+   async
    protocol
    cli
    control
