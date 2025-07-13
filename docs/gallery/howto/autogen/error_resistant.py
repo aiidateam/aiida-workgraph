@@ -91,12 +91,6 @@ print(format_call_graph(orm.load_node(wg.pk)))
 # To “register” a error handler for a WorkGraph, you simply define a function that takes the ``task`` as its arguments, and attach it as the ``error_handler`` of the ``WorkGraph``.
 # You can specify the tasks and their exit codes that should trigger the error handler, as well as the maximum number of retries for a task:
 #
-# .. code:: python
-#
-#    tasks={"add": {"exit_codes": [410],
-#                   "max_retries": 5}
-#          }
-#
 
 
 def handle_negative_sum(task: Task):
