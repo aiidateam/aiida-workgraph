@@ -1,5 +1,5 @@
 import pytest
-from aiida_workgraph import WorkGraph, task, TaskPool
+from aiida_workgraph import WorkGraph, task, TaskPool, shelljob
 from aiida_shell.launch import prepare_code
 from aiida.orm import SinglefileData, load_computer, Int
 
@@ -35,18 +35,18 @@ def test_shell_command(fixture_localhost):
 def test_shell_code():
     """Test the ShellJob with code."""
     cat_code = prepare_code("cat")
-    wg = WorkGraph(name="test_shell_code")
-    job1 = wg.add_task(
-        TaskPool.workgraph.shelljob,
-        command=cat_code,
-        arguments=["{file_a}", "{file_b}"],
-        nodes={
-            "file_a": SinglefileData.from_string("string a"),
-            "file_b": SinglefileData.from_string("string b"),
-        },
-    )
-    wg.run()
-    assert job1.outputs.stdout.value.get_content() == "string astring b"
+    with WorkGraph(name="test_shell_code") as wg:
+        # use the code object directly
+        outputs = shelljob(
+            command=cat_code,
+            arguments=["{file_a}", "{file_b}"],
+            nodes={
+                "file_a": SinglefileData.from_string("string a"),
+                "file_b": SinglefileData.from_string("string b"),
+            },
+        )
+        wg.run()
+        assert outputs.stdout.value.get_content() == "string astring b"
 
 
 def test_dynamic_port():

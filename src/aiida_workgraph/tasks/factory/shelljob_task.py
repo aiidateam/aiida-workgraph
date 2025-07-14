@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from typing import List, Optional, Union, Dict, Any
 from .base import BaseTaskFactory
 from aiida_shell import ShellJob
@@ -138,3 +140,36 @@ class ShellJobTaskFactory(BaseTaskFactory):
 
         TaskCls = cls(tdata)
         return TaskCls
+
+
+def shelljob(
+    command: str,
+    arguments: Optional[List[str]] = None,
+    nodes: Optional[Dict[str, Any]] = None,
+    filenames: dict[str, str] | None = None,
+    outputs: list[str] | None = None,
+    parser: Optional[Union[Dict, str]] = None,
+    parser_outputs: Optional[List[Dict[str, Any]]] = None,
+    metadata: dict[str, Any] | None = None,
+    resolve_command: bool = True,
+) -> Task:
+    """Create a ShellJob task for the WorkGraph."""
+    from aiida_workgraph.manager import get_current_graph
+
+    inputs = {
+        "command": command,
+        "arguments": arguments or [],
+        "nodes": nodes or {},
+        "parser": parser,
+        "parser_outputs": parser_outputs or [],
+        "resolve_command": resolve_command,
+        "metadata": metadata or {},
+        "filenames": filenames or {},
+        "outputs": outputs or [],
+    }
+    ItemClass = ShellJobTaskFactory.create_class(inputs)
+
+    wg = get_current_graph()
+    task = wg.add_task(ItemClass)
+    task.set(inputs)
+    return task.outputs

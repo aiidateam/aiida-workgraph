@@ -1,14 +1,15 @@
 """
-=======================
-ShellJob
-=======================
+==============================
+Run shell commands as a task
+==============================
 
 """
 
 # %%
 # Introduction
 # ============
-# ``ShellJob`` is a built-in task, which uses the `aiida-shell <https://aiida-shell.readthedocs.io/en/latest/>`_ package to run shell commands easily. Run any shell executable without writing a dedicated plugin or parser.
+# This document demonstrates how to use the built-in `shelljob` task within AiiDA-WorkGraph, which leverages the `aiida-shell <https://aiida-shell.readthedocs.io/en/latest/>`_ package, to easily execute shell commands.
+# This eliminates the need to write custom plugins or parsers for simple shell operations.
 #
 # This tutorial is based on the `docs <https://aiida-shell.readthedocs.io/en/latest/howto.html#>`_ of the ``aiida-shell``.
 #
@@ -21,17 +22,19 @@ load_profile()
 # %%
 # Running a shell command
 # ========================
-# Run a shell command without any arguments. Here we run the `date` command to show the date.
+# To execute a shell command, you can use `shelljob`.
+# Here's an example that runs the `date` command to retrieve the current date:
 #
 
-from aiida_workgraph import WorkGraph, TaskPool
+from aiida_workgraph import WorkGraph, shelljob
 
-wg = WorkGraph(name="test_shell_date")
-date_task = wg.add_task(TaskPool.workgraph.shelljob, command="date")
-wg.submit(wait=True)
+with WorkGraph(name="test_shell_date") as wg:
+    outputs = shelljob(command="date")
+    wg.run()
 
 # Print out the result:
-print("\nResult: ", date_task.outputs.stdout.value.get_content())
+print("\nResult: ", outputs.stdout.value.get_content())
+
 
 # %%
 # Under the hood, an AiiDA ``Code`` instance ``date`` will be created on the ``localhost`` computer. In addition, it is also
@@ -53,12 +56,12 @@ if created:
 
 # We can then specify the remote computer via the ``metadata``:
 
-wg = WorkGraph(name="test_shell_date_remote")
-date_task_remote = wg.add_task(
-    TaskPool.workgraph.shelljob,
-    command="date",
-    metadata={"computer": orm.load_computer("my-remote-computer")},
-)
+with WorkGraph(name="test_shell_date_remote") as wg:
+    outputs = shelljob(
+        command="date",
+        metadata={"computer": orm.load_computer("my-remote-computer")},
+    )
+
 
 #%%
 # In addition, it is possible to pass a pre-configured ``Code``. Let's again create a mock ``Code``:
@@ -73,10 +76,8 @@ mock_remote_code = get_or_create_code(
 
 # Which we can now directly pass to the ``command`` argument of ``add_task``:
 
-wg = WorkGraph(name="test_shell_date_preconfigured")
-preconf_task = wg.add_task(
-    TaskPool.workgraph.shelljob, command=orm.load_code("remote-date@my-remote-computer")
-)
+with WorkGraph(name="test_shell_date_preconfigured") as wg:
+    outputs = shelljob(command=orm.load_code("remote-date@my-remote-computer"))
 
 # Note, we are not running or submitting the ``WorkGraph`` in the above two examples, as we are using mocked
 # ``Computer`` and ``Code`` entities for demonstration purposes.
@@ -88,12 +89,12 @@ preconf_task = wg.add_task(
 #
 
 
-wg = WorkGraph(name="test_shell_date_with_arguments")
-date_task = wg.add_task("workgraph.shelljob", command="date", arguments=["--iso-8601"])
-wg.submit(wait=True)
+with WorkGraph(name="test_shell_date_with_arguments") as wg:
+    outputs = shelljob(command="date", arguments=["--iso-8601"])
+    wg.run()
 
 # Print out the result:
-print("\nResult: ", date_task.outputs.stdout.value.get_content())
+print("\nResult: ", outputs.stdout.value.get_content())
 
 # %%
 # Running a shell command with files as arguments
@@ -104,20 +105,19 @@ print("\nResult: ", date_task.outputs.stdout.value.get_content())
 
 from aiida.orm import SinglefileData
 
-wg = WorkGraph(name="test_shell_cat_with_file_arguments")
-cat_task = wg.add_task(
-    TaskPool.workgraph.shelljob,
-    command="cat",
-    arguments=["{file_a}", "{file_b}"],
-    nodes={
-        "file_a": SinglefileData.from_string("string a"),
-        "file_b": SinglefileData.from_string("string b"),
-    },
-)
-wg.submit(wait=True)
+with WorkGraph(name="test_shell_cat_with_file_arguments") as wg:
+    outputs = shelljob(
+        command="cat",
+        arguments=["{file_a}", "{file_b}"],
+        nodes={
+            "file_a": SinglefileData.from_string("string a"),
+            "file_b": SinglefileData.from_string("string b"),
+        },
+    )
+    wg.run()
 
-# Print out the result:
-print("\nResult: ", cat_task.outputs.stdout.value.get_content())
+    # Print out the result:
+    print("\nResult: ", outputs.stdout.value.get_content())
 
 # %%
 # Create a workflow
@@ -142,25 +142,21 @@ def parser(dirpath):
 
 
 # Create a workgraph
-wg = WorkGraph(name="shell_add_mutiply_workflow")
-expr_1 = wg.add_task(
-    TaskPool.workgraph.shelljob,
-    name="expr_1",
-    command="expr",
-    arguments=["{x}", "+", "{y}"],
-    nodes={"x": Int(2), "y": Int(3)},
-    parser=PickledData(parser),
-    parser_outputs=[{"name": "result"}],
-)
-expr_2 = wg.add_task(
-    TaskPool.workgraph.shelljob,
-    name="expr_2",
-    command="expr",
-    arguments=["{result}", "*", "{z}"],
-    nodes={"z": Int(4), "result": expr_1.outputs.result},
-    parser=PickledData(parser),
-    parser_outputs=[{"name": "result"}],
-)
+with WorkGraph(name="shell_add_mutiply_workflow") as wg:
+    outputs1 = shelljob(
+        command="expr",
+        arguments=["{x}", "+", "{y}"],
+        nodes={"x": Int(2), "y": Int(3)},
+        parser=PickledData(parser),
+        parser_outputs=[{"name": "result"}],
+    )
+    outputs2 = shelljob(
+        command="expr",
+        arguments=["{result}", "*", "{z}"],
+        nodes={"z": Int(4), "result": outputs1.result},
+        parser=PickledData(parser),
+        parser_outputs=[{"name": "result"}],
+    )
 wg.to_html()
 
 
@@ -168,9 +164,9 @@ wg.to_html()
 # Submit the workgraph
 #
 
-wg.submit(wait=True, timeout=100)
+wg.run()
 print("State of WorkGraph    : {}".format(wg.state))
-print("Result               : {}".format(expr_2.outputs.result.value))
+print("Result               : {}".format(outputs2.result.value))
 
 
 # %%
