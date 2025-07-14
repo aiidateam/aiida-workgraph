@@ -154,22 +154,20 @@ def shelljob(
     resolve_command: bool = True,
 ) -> Task:
     """Create a ShellJob task for the WorkGraph."""
-    from aiida_workgraph.manager import get_current_graph
+    from aiida_workgraph.decorator import _make_wrapper
 
-    inputs = {
-        "command": command,
-        "arguments": arguments or [],
-        "nodes": nodes or {},
-        "parser": parser,
-        "parser_outputs": parser_outputs or [],
-        "resolve_command": resolve_command,
-        "metadata": metadata or {},
-        "filenames": filenames or {},
-        "outputs": outputs or [],
-    }
-    ItemClass = ShellJobTaskFactory.create_class(inputs)
-
-    wg = get_current_graph()
-    task = wg.add_task(ItemClass)
-    task.set(inputs)
-    return task.outputs
+    TaskCls = ShellJobTaskFactory.create_class(
+        {"outputs": outputs, "parser_outputs": parser_outputs}
+    )
+    task = _make_wrapper(TaskCls)
+    outputs = task(
+        command=command,
+        arguments=arguments,
+        nodes=nodes,
+        filenames=filenames,
+        outputs=outputs,
+        parser=parser,
+        metadata=metadata,
+        resolve_command=resolve_command,
+    )
+    return outputs

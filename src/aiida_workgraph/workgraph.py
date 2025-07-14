@@ -569,6 +569,10 @@ class WorkGraph(node_graph.NodeGraph):
         from aiida_workgraph.tasks.factory.workgraph_task import WorkGraphTaskFactory
         from aiida.engine import ProcessBuilder
         from aiida_workgraph.utils import get_dict_from_builder
+        from aiida_workgraph.tasks.factory.shelljob_task import (
+            ShellJobTaskFactory,
+            shelljob,
+        )
 
         if name in ["graph_ctx", "graph_inputs", "graph_inputs"]:
             raise ValueError(f"Task name {name} can not be used, it is reserved.")
@@ -580,7 +584,9 @@ class WorkGraph(node_graph.NodeGraph):
             identifier = build_task_from_callable(identifier.process_class)
         # build the task on the fly if the identifier is a callable
         elif callable(identifier):
-            if hasattr(identifier, "_TaskCls"):
+            if identifier is shelljob:
+                identifier = ShellJobTaskFactory.create_class(kwargs)
+            elif hasattr(identifier, "_TaskCls"):
                 identifier = identifier._TaskCls
             else:
                 identifier = build_task_from_callable(identifier)

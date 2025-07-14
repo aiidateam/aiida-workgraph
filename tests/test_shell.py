@@ -1,5 +1,5 @@
 import pytest
-from aiida_workgraph import WorkGraph, task, TaskPool, shelljob
+from aiida_workgraph import WorkGraph, task, shelljob
 from aiida_shell.launch import prepare_code
 from aiida.orm import SinglefileData, load_computer, Int
 
@@ -17,7 +17,7 @@ def test_shell_command(fixture_localhost):
     """Test the ShellJob with command as a string."""
     wg = WorkGraph(name="test_shell_command")
     job1 = wg.add_task(
-        TaskPool.workgraph.shelljob,
+        shelljob,
         command="cat",
         resolve_command=True,
         arguments=["{file_a}", "{file_b}"],
@@ -53,7 +53,7 @@ def test_dynamic_port():
     """Set the nodes during/after the creation of the task."""
     wg = WorkGraph(name="test_dynamic_port")
     echo_task = wg.add_task(
-        TaskPool.workgraph.shelljob,
+        shelljob,
         name="echo",
         command="cp",
         arguments=["{file}", "copied_file"],
@@ -62,7 +62,7 @@ def test_dynamic_port():
     )
 
     cat_task = wg.add_task(
-        TaskPool.workgraph.shelljob,
+        shelljob,
         name="cat",
         command="cat",
         arguments=["{input}"],
@@ -97,7 +97,7 @@ def test_shell_graph_builder():
         wg = get_current_graph()
         # echo x + y expression
         job1 = wg.add_task(
-            TaskPool.workgraph.shelljob,
+            shelljob,
             name="job1",
             command="echo",
             arguments=["{x}", "+", "{y}"],
@@ -108,7 +108,7 @@ def test_shell_graph_builder():
         )
         # bc command to calculate the expression
         wg.add_task(
-            TaskPool.workgraph.shelljob,
+            shelljob,
             name="job2",
             command="bc",
             arguments=["{expression}"],
