@@ -14,6 +14,7 @@ This section contains a collection of HowTos for various topics.
    autogen/if
    autogen/while
    autogen/context
+   autogen/shelljob
    waiting_on
    combine_workgraph
    restart
