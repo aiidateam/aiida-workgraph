@@ -524,6 +524,7 @@ class WorkGraph(node_graph.NodeGraph):
         # so that the WorkGraphSaver can compare the difference, and reset the modified tasks
         self.restart_process = self.process
         self.process = None
+        self.state = "PLANNED"
 
     def reset(self) -> None:
         """Reset the workgraph to create a new submission."""

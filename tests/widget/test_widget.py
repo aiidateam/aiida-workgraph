@@ -28,7 +28,8 @@ def test_workgraph_task(wg_calcfunction):
     wg = wg_calcfunction
     value = wg.tasks["sumdiff2"].to_widget_value()
     assert len(value["nodes"]) == 1
-    assert len(value["nodes"]["sumdiff2"]["inputs"]) == len(wg.tasks["sumdiff2"].inputs)
+    # all the inputs are optional, so no inputs are shown
+    assert len(value["nodes"]["sumdiff2"]["inputs"]) == 0
     assert len(value["links"]) == 0
     # to html
     data = wg.tasks["sumdiff2"].to_html()

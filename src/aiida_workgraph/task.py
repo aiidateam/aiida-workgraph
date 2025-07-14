@@ -229,25 +229,11 @@ class Task(GraphNode):
         return result, "FINISHED"
 
     def to_widget_value(self):
-        from aiida_workgraph.utils import filter_keys_namespace_depth
+        from aiida_workgraph.utils import workgraph_to_short_json
 
         tdata = self.to_dict()
-
-        # Remove certain elements of the dict-representation of the Node that we don't want to show
-        for key in ("properties", "executor", "node_class", "process"):
-            tdata.pop(key, None)
-
-        for input_data in tdata["inputs"]["sockets"].values():
-            input_data.pop("property", None)
-
-        tdata["label"] = tdata["identifier"]
-
-        filtered_inputs = filter_keys_namespace_depth(
-            dict_=tdata["inputs"]["sockets"], max_depth=self.show_socket_depth
-        )
-        tdata["inputs"] = list(filtered_inputs.values())
-        tdata["outputs"] = list(tdata["outputs"]["sockets"].values())
-        wgdata = {"name": self.name, "nodes": {self.name: tdata}, "links": []}
+        wgdata = {"name": self.name, "tasks": {self.name: tdata}, "links": []}
+        wgdata = workgraph_to_short_json(wgdata)
         return wgdata
 
     def _repr_mimebundle_(self, *args: Any, **kwargs: Any) -> any:
