@@ -15,6 +15,7 @@ This section contains a collection of HowTos for various topics.
    autogen/while
    autogen/context
    autogen/shelljob
+   autogen/remote_job
    waiting_on
    combine_workgraph
    autogen/error_resistant
