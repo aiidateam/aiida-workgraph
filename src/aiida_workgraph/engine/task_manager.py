@@ -63,10 +63,10 @@ class TaskManager:
         return task
 
     def set_task_results(self) -> None:
-        from node_graph.node_graph import BUILTINS_NODES
+        from node_graph.node_graph import BUILTIN_NODES
 
         for task in self.process.wg.tasks:
-            if task.name in BUILTINS_NODES:
+            if task.name in BUILTIN_NODES:
                 # skip built-in nodes, they are not executed
                 continue
             if (

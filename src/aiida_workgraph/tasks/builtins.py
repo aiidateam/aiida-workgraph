@@ -44,7 +44,7 @@ class GraphOutputs(GraphLevelTask):
     name = "Graph_Outputs"
 
 
-class GraphCtx(GraphLevelTask):
+class GraphContext(GraphLevelTask):
     identifier = "workgraph.graph_ctx"
     name = "Graph_Ctx"
 

@@ -574,9 +574,9 @@ class WorkGraph(node_graph.NodeGraph):
             ShellJobTaskFactory,
             shelljob,
         )
-        from node_graph.node_graph import BUILTINS_NODES
+        from node_graph.node_graph import BUILTIN_NODES
 
-        if name in BUILTINS_NODES and not include_builtins:
+        if name in BUILTIN_NODES and not include_builtins:
             raise ValueError(f"Task name {name} can not be used, it is reserved.")
 
         if isinstance(identifier, WorkGraph):

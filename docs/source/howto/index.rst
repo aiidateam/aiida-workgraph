@@ -17,11 +17,11 @@ This section contains a collection of HowTos for various topics.
    autogen/shelljob
    waiting_on
    combine_workgraph
-   restart
    autogen/error_resistant
    continue_finished_workgraph
    autogen/zone
    monitor
+   async
    protocol
    cli
    control
