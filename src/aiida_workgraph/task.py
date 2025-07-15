@@ -47,7 +47,7 @@ class Task(GraphNode):
         self.state = "PLANNED"
         self.action = ""
         self.show_socket_depth = 0
-        self.parent_task = None
+        self.parent = None
         self.map_data = None
         self.mapped_tasks = None
         self.execution_count = 0
@@ -64,7 +64,7 @@ class Task(GraphNode):
         tdata["wait"] = [task.name for task in self.waiting_on]
         tdata["children"] = []
         tdata["execution_count"] = self.execution_count
-        tdata["parent_task"] = [self.parent_task.name] if self.parent_task else [None]
+        tdata["parent_task"] = [self.parent.name] if self.parent else [None]
         tdata["process"] = serialize(self.process) if self.process else serialize(None)
         tdata["metadata"]["pk"] = self.process.pk if self.process else None
         tdata["metadata"]["is_aiida_component"] = self.is_aiida_component
@@ -340,11 +340,9 @@ class ChildTaskSet(TaskSet):
         """Add tasks to the collection. Tasks can be a list or a single Task or task name."""
         normalize_tasks = super().add(tasks)
         for task in normalize_tasks:
-            if task.parent_task is not None:
-                raise ValueError(
-                    "Task is already a child of the task: {task.parent_task}"
-                )
-            task.parent_task = self.parent
+            if task.parent is not None:
+                raise ValueError("Task is already a child of the task: {task.parent}")
+            task.parent = self.parent
 
 
 class WaitingTaskSet(TaskSet):
