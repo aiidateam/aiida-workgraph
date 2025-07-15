@@ -16,7 +16,7 @@ This section contains a collection of HowTos for various topics.
    autogen/context
    autogen/shelljob
    autogen/remote_job
-   autogen/combine_workgraph
+   autogen/combine_workgraphs
    autogen/continue_workgraph
    autogen/async
    autogen/monitor
