@@ -65,11 +65,6 @@ class WorkGraph(node_graph.NodeGraph):
         """Add alias to `nodes` for WorkGraph"""
         return self.nodes
 
-    @property
-    def meta_tasks(self) -> dict:
-        """Meta tasks are the context and group inputs/outputs"""
-        return self.meta_nodes
-
     def prepare_inputs(
         self, metadata: Optional[Dict[str, Any]] = None
     ) -> Dict[str, Any]:
@@ -78,8 +73,10 @@ class WorkGraph(node_graph.NodeGraph):
         wgdata = self.to_dict(should_serialize=True)
         for task in wgdata["tasks"].values():
             remove_output_values(task["outputs"])
-        serialize_socket_data(wgdata["meta_sockets"]["graph_ctx"])
-        serialize_socket_data(wgdata["meta_sockets"]["graph_inputs"])
+        # serialize the meta tasks
+        for task_name in ["graph_ctx", "graph_inputs"]:
+            if task_name in wgdata["tasks"]:
+                serialize_socket_data(wgdata["tasks"][task_name]["inputs"])
         metadata = metadata or {}
         inputs = {"workgraph_data": wgdata, "metadata": metadata}
         return inputs
@@ -562,7 +559,11 @@ class WorkGraph(node_graph.NodeGraph):
         }
 
     def add_task(
-        self, identifier: Union[str, callable], name: str = None, **kwargs
+        self,
+        identifier: Union[str, callable],
+        name: str = None,
+        include_builtins: bool = False,
+        **kwargs,
     ) -> Task:
         """Add a task to the workgraph."""
         from aiida_workgraph.decorator import build_task_from_callable
@@ -573,8 +574,9 @@ class WorkGraph(node_graph.NodeGraph):
             ShellJobTaskFactory,
             shelljob,
         )
+        from node_graph.node_graph import BUILTINS_NODES
 
-        if name in ["graph_ctx", "graph_inputs", "graph_inputs"]:
+        if name in BUILTINS_NODES and not include_builtins:
             raise ValueError(f"Task name {name} can not be used, it is reserved.")
 
         if isinstance(identifier, WorkGraph):

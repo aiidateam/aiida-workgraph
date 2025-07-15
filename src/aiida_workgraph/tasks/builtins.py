@@ -1,5 +1,52 @@
 from typing import Any, Dict
 from aiida_workgraph.task import Task, ChildTaskSet
+from aiida_workgraph.tasks.factory.base import BaseTaskFactory
+
+
+class GraphLevelTask(Task):
+    """Base class for graph level tasks"""
+
+    catalog = "Builtins"
+    is_dynamic: bool = True
+    node_class = Task
+    factory_class = BaseTaskFactory
+
+    @property
+    def outputs(self):
+        return self.inputs
+
+    @outputs.setter
+    def outputs(self, _value):
+        """Outputs are the same as inputs for ctx node."""
+        pass
+
+    def get_metadata(self):
+
+        metadata = super().get_metadata()
+        metadata["node_class"] = {
+            "module_path": self.node_class.__module__,
+            "callable_name": self.node_class.__name__,
+        }
+        metadata["factory_class"] = {
+            "module_path": self.factory_class.__module__,
+            "callable_name": self.factory_class.__name__,
+        }
+        return metadata
+
+
+class GraphInputs(GraphLevelTask):
+    identifier = "workgraph.graph_inputs"
+    name = "Graph_Inputs"
+
+
+class GraphOutputs(GraphLevelTask):
+    identifier = "workgraph.graph_outputs"
+    name = "Graph_Outputs"
+
+
+class GraphCtx(GraphLevelTask):
+    identifier = "workgraph.graph_ctx"
+    name = "Graph_Ctx"
 
 
 class Zone(Task):
@@ -20,7 +67,7 @@ class Zone(Task):
         """Syntactic sugar to add a task to the zone."""
         task = self.graph.add_task(*args, **kwargs)
         self.children.add(task)
-        task.parent_task = self
+        task.parent = self
         return task
 
     def create_sockets(self) -> None:
