@@ -383,7 +383,7 @@ def workgraph_to_short_json(
         "uuid": wgdata.get("uuid", ""),
         "state": wgdata.get("state", ""),
         "nodes": {},
-        "links": deepcopy(wgdata.get("links", []) + wgdata.get("meta_links", [])),
+        "links": deepcopy(wgdata.get("links", [])),
     }
     #
     for name, task in wgdata["tasks"].items():

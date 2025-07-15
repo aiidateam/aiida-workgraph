@@ -25,6 +25,7 @@ from .awaitable_manager import AwaitableManager
 from .task_manager import TaskManager
 from .error_handler_manager import ErrorHandlerManager
 from aiida.engine.processes.workchains.awaitable import Awaitable
+from node_graph.node_graph import BUILTIN_NODES
 
 if t.TYPE_CHECKING:
     from aiida.engine.runners import Runner  # pylint: disable=unused-import
@@ -285,14 +286,21 @@ class WorkGraphEngine(Process, metaclass=Protect):
         self.ctx._executed_tasks = []
         # read the latest workgraph data
         self.wg = WorkGraph.load(self.node, safe_load=False)
+        # init task results
+        self.ctx._task_results = {}
+        self.task_manager.set_task_results()
         # create a builtin `_context` task with its results as the context variables
         self.ctx._task_results = {
             "graph_ctx": self.wg.ctx._value,
             "graph_inputs": self.wg.inputs._value,
             "graph_outputs": self.wg.outputs._value,
         }
-        # init task results
-        self.task_manager.set_task_results()
+        print("task results: ", self.ctx._task_results)
+        # set meta-tasks state
+        for task_name in BUILTIN_NODES:
+            self.task_manager.state_manager.set_task_runtime_info(
+                task_name, "state", "FINISHED"
+            )
         # while workgraph
         if self.wg.graph_type.upper() == "WHILE":
             self.ctx._max_iteration = self.wg.max_iteration

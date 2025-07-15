@@ -21,6 +21,6 @@ def test_group_inputs_outputs(decorated_add):
     assert wg.outputs.results.sum2 == 6
     # the graph inputs will be serialized as AiiDA nodes
     assert (
-        wg.process.inputs.workgraph_data.meta_sockets.graph_inputs.sockets.add.sockets.x.property.value
+        wg.process.inputs.workgraph_data.tasks.graph_inputs.inputs.sockets.add.sockets.x.property.value
         == 1
     )

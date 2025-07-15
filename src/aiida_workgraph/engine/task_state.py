@@ -247,7 +247,7 @@ class TaskStateManager:
         For tasks inside a ZONE or with a parent task, we require the parent
         to be in a running state, and the zone's input tasks finished or failed.
         """
-        parent_task = self.process.wg.tasks[name].parent_task
+        parent_task = self.process.wg.tasks[name].parent
         parent_states = [True, True]
 
         # If the task has a parent zone
@@ -290,7 +290,7 @@ class TaskStateManager:
         If a task has a parent (WHILE, IF, ZONE, MAP), notify the parent to update
         its own state. Also handle mapped tasks referencing a 'map_data.parent' node.
         """
-        parent_task = self.process.wg.tasks[name].parent_task
+        parent_task = self.process.wg.tasks[name].parent
         if parent_task:
             node_type = parent_task.node_type.upper()
             if node_type == "WHILE":
