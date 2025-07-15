@@ -9,14 +9,16 @@ Run tasks asynchronously
 #
 # The ``awaitable`` decorator allows for the integration of ``asyncio`` within tasks, letting users control asynchronous functions.
 
-from aiida_workgraph import WorkGraph, task
-from aiida import load_profile
-
-_ = load_profile()
-
+# %%
 import asyncio
 
+from aiida import load_profile
+from aiida_workgraph import WorkGraph, task
 
+load_profile()
+
+
+# %%
 @task.awaitable
 async def awaitable_task(x, y):
     await asyncio.sleep(0.5)
@@ -26,6 +28,7 @@ async def awaitable_task(x, y):
 with WorkGraph("AwaitableGraph") as wg:
     wg.inputs = dict.fromkeys(["x", "y"])
     awaitable_task(x=wg.inputs.x, y=wg.inputs.y)
+    wg.inputs.x + wg.inputs.y
 
 wg.run(
     inputs={
@@ -33,14 +36,21 @@ wg.run(
             "x": 1,
             "y": 2,
         }
-    }
+    },
 )
 
 # %%
-# Notes on asyncio Integration
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# Note the timestamps. The addition task runs while the awaitable task sleeps.
+# As the above tasks are functional, they would block one another.
+# The ``awaitable`` decorator allows them to run concurrently.
+
+
+# %%
+# Notes on ``asyncio`` integration
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #
-# The awaitable task lets the workgraph enter a ``Waiting`` state, yielding control to the asyncio event loop. This enables other tasks to run concurrently, though long-running calculations may delay the execution of awaitable tasks.
+# The ``awaitable`` task lets the workgraph enter a ``WAITING`` state, yielding control to the ``asyncio`` event loop.
+# This enables other tasks to run concurrently, though long-running calculations may delay the execution of awaitable tasks.
 
 # %%
 # Summary

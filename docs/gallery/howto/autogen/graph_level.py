@@ -8,7 +8,8 @@ Define graph-level inputs and outputs
 # Introduction
 # ------------
 #
-# When constructing complex workflows, you may encounter tasks that share input parameters (e.g. ``code``). Also, you may wish to reorder or rename internal task outputs at the top level (e.g. ``wg.outputs.optimized_stuff`` instead of ``wg.outputs.optimize.stuff``).
+# When constructing complex workflows, you may encounter tasks that share input parameters (e.g. ``code``).
+# Also, you may wish to reorder or rename internal task outputs at the top level (e.g. ``wg.outputs.optimized_stuff`` instead of ``wg.outputs.optimize.stuff``).
 #
 # ``WorkGraph`` allows you to define **graph-level inputs and outputs** to:
 #
@@ -19,7 +20,7 @@ Define graph-level inputs and outputs
 from aiida_workgraph import WorkGraph, task
 from aiida import load_profile
 
-_ = load_profile()
+load_profile()
 
 # %%
 # Defining graph-level inputs and outputs
@@ -37,8 +38,9 @@ with WorkGraph("GraphLevelInput") as wg:
     wg.outputs.sum = the_sum
     wg.outputs.product = the_product
 
-wg
+wg.to_html()
 
+# %%
 wg.submit(
     {
         "graph_inputs": {
@@ -50,6 +52,7 @@ wg.submit(
     wait=True,
 )
 
+# %%
 print("\nGraph-level outputs:")
 print("  Sum:", wg.outputs.sum.value)
 print("  Product:", wg.outputs.product.value)
@@ -58,7 +61,9 @@ print("  Product:", wg.outputs.product.value)
 # Providing graph-level inputs metadata
 # -------------------------------------
 #
-# Graph-level inputs can also be defined using ``wg.add_input(...)``. The method allows you to provide an identifier (e.g. ``workgraph.int``) to the input, which is used for validation. Also, if you use the AiiDA GUI, providing an ``identifier`` will associate the input with a GUI component, allowing users to interact with the input in a more user-friendly type-specific way.
+# Graph-level inputs can also be defined using ``wg.add_input(...)``.
+# The method allows you to provide an identifier (e.g. ``workgraph.int``) to the input, which is used for validation.
+# Also, if you use the AiiDA GUI, providing an ``identifier`` will associate the input with a GUI component, allowing users to interact with the input in a more user-friendly type-specific way.
 
 with WorkGraph("GraphLevelInputMetadata") as wg:
     wg.add_input("workgraph.int", "x")  # validated as an integer
@@ -66,13 +71,15 @@ with WorkGraph("GraphLevelInputMetadata") as wg:
     wg.add_input("workgraph.int", "z")
     wg.outputs.result = (wg.inputs.x + wg.inputs.y) * wg.inputs.z
 
+# %%
 # In the future, further details may be added when defining inputs, e.g., default values, descriptions, help messages, etc.
 
 # %%
 # Nested graph-level inputs and outputs
 # -------------------------------------
 #
-# Graph-level inputs and outputs can be **nested** allowing you to group related parameters and results. Here we're using the ``add_task`` interface to more clearly define the names of our tasks.
+# Graph-level inputs and outputs can be **nested** allowing you to group related parameters and results.
+# Here we're using the ``add_task`` interface to more clearly define the names of our tasks.
 
 
 @task
@@ -109,13 +116,15 @@ with WorkGraph("GraphLevelInputOutputNested") as wg:
     }
 
 
-wg
+wg.to_html()
 
+# %%
 # We can now run our workgraph with a clear input layout.
 #
 # .. note:
 #
-#    ``WorkGraph`` will automatically serialize the raw Python data into the corresponding AiiDA Data nodes (e.g., an ``int`` becomes ``orm.Int``, a ``str`` becomes ``orm.Str``, etc.) before execution. The exact serialization logic and all supported types (and how to register your own custom serializers) are described in detail in the **Data Serialization** section.
+#    ``WorkGraph`` will automatically serialize the raw Python data into the corresponding AiiDA Data nodes (e.g., an ``int`` becomes ``orm.Int``, a ``str`` becomes ``orm.Str``, etc.) before execution.
+# The exact serialization logic and all supported types (and how to register your own custom serializers) are described in detail in the **Data Serialization** section.
 
 wg.submit(
     inputs={
@@ -138,6 +147,7 @@ wg.submit(
     wait=True,
 )
 
+# %%
 print("\nResults:")
 print("  Sums:")
 print("    First:", wg.outputs.results.sums.first.value)
@@ -145,9 +155,12 @@ print("    Second:", wg.outputs.results.sums.second.value)
 print("    Third:", wg.outputs.results.sums.third.value)
 print("  Product:", wg.outputs.results.product.value)
 
+# %%
 # When we inspect the outputs of the workgraph process, we see ``sums`` and ``product`` are grouped under the ``results`` output.
 
-# !verdi process show {wg.pk}
+import subprocess
+
+subprocess.run(["verdi", "process", "show", str(wg.pk)], check=True)
 
 # %%
 # Summary

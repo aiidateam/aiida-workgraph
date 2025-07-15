@@ -8,23 +8,15 @@ Assign a monitoring task
 # Introduction
 # ------------
 #
-# The ``monitor`` decorator is designed for tasks that need to poll a specific state at regular intervals until a success criterion is met. This is useful for various scenarios, including time-based triggers, file existence checks, and monitoring other tasks or workgraphs.
-#
-# Possible use Cases
-# ~~~~~~~~~~~~~~~~~~
+# The ``monitor`` decorator is designed for tasks that need to poll a specific state at regular intervals until a success criterion is met.
+# Some possible use cases include:
 #
 # - **Time-based events**: Start a task at a specified time
 # - **File-based events**: Execute a task when a particular file exists
 # - **Monitor a task**: Observe the state of another task and act based on certain conditions
 # - **Cross-workGraph dependencies**: Check the state of a task in a different workgraph
 #
-# Behavior
-# ~~~~~~~~
-#
 # While polling, the task sleeps for a specified interval (default 1.0 second), allowing the workgraph engine to manage other tasks.
-#
-# Example usage
-# ~~~~~~~~~~~~~
 #
 # The monitor task has two built-in parameters:
 #
@@ -32,13 +24,12 @@ Assign a monitoring task
 # - ``timeout``: The maximum time to wait for the success criterion to be met
 #
 # In the following sections, we will walk through examples of how to use the `monitor` task decorator for these scenarios.
-#
 
+# %%
 from aiida_workgraph import WorkGraph, task
 from aiida import load_profile
 
-_ = load_profile()
-
+load_profile()
 
 # %%
 # Time-based events
@@ -61,8 +52,9 @@ with WorkGraph("TimeMonitor") as wg:
     }
     time_monitor(time=wg.inputs.monitor.time) >> wg.inputs.add.x + wg.inputs.add.y
 
-wg
+wg.to_html()
 
+# %%
 wg.run(
     inputs={
         "graph_inputs": {
@@ -79,8 +71,8 @@ wg.run(
     }
 )
 
+# %%
 # Note the time difference between the monitor task and the next (~5 seconds)
-
 
 # %%
 # File-based events
@@ -141,8 +133,9 @@ with WorkGraph("FileMonitor") as wg:
         >> the_sum * wg.inputs.multiply.factor
     )
 
-wg
+wg.to_html()
 
+# %%
 wg.run(
     inputs={
         "graph_inputs": {
@@ -157,6 +150,7 @@ wg.run(
     }
 )
 
+# %%
 # You can inspect the process reports above to verify the order of events.
 
 # %%
