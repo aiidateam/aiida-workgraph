@@ -19,6 +19,13 @@ Run calculation remotely
 # For `ShellJob`, please refer to the `Run shell commands as a task <../../howto/autogen/shelljob.html>`_.
 # In this tutorial, we will focus on `PythonJob`.
 
+
+import subprocess
+
+subprocess.run(
+    ["verdi", "config", "set", "logging.aiida_loglevel", "REPORT"], check=True
+)
+
 # First, load the AiiDA profile.
 from aiida import load_profile
 
@@ -92,3 +99,7 @@ print("\nResult {} \n\n".format(wg.outputs.result.value))
 # `CalcJob`, `ShellJob`, and `PythonJob`. We focused on `PythonJob`, showing how to
 # define and execute Python functions as remote jobs,
 # including managing the remote Python environment via custom scheduler commands.
+
+subprocess.run(
+    ["verdi", "config", "set", "logging.aiida_loglevel", "ERROR"], check=True
+)
