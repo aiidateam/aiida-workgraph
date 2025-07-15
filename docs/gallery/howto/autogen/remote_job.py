@@ -26,9 +26,15 @@ subprocess.run(
     ["verdi", "config", "set", "logging.aiida_loglevel", "REPORT"], check=True
 )
 
+from aiida.manage import get_manager
+from aiida.manage.configuration import reset_config
+
 # First, load the AiiDA profile.
 from aiida import load_profile
 
+manager = get_manager()
+# manager.unload_profile()
+reset_config()
 load_profile()
 
 # %%
