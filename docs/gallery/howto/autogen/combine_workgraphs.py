@@ -67,12 +67,10 @@ wg2.to_html()
 
 wg2.submit(
     inputs={
-        "graph_inputs": {
-            "min": 1,
-            "max": 10,
-            "x": 1,
-            "y": 2,
-        }
+        "min": 1,
+        "max": 10,
+        "x": 1,
+        "y": 2,
     },
     wait=True,
 )

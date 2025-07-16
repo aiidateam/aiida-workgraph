@@ -64,17 +64,15 @@ wg.to_html()
 # %%
 wg.run(
     inputs={
-        "graph_inputs": {
-            "monitor": {
-                "time": (
-                    datetime.datetime.now() + datetime.timedelta(seconds=5)
-                ).isoformat(),
-            },
-            "add": {
-                "x": 1,
-                "y": 2,
-            },
-        }
+        "monitor": {
+            "time": (
+                datetime.datetime.now() + datetime.timedelta(seconds=5)
+            ).isoformat(),
+        },
+        "add": {
+            "x": 1,
+            "y": 2,
+        },
     }
 )
 
@@ -145,15 +143,13 @@ wg.to_html()
 # %%
 wg.run(
     inputs={
-        "graph_inputs": {
-            "add": {
-                "x": 1,
-                "y": 2,
-            },
-            "multiply": {
-                "factor": 3,
-            },
-        }
+        "add": {
+            "x": 1,
+            "y": 2,
+        },
+        "multiply": {
+            "factor": 3,
+        },
     }
 )
 
