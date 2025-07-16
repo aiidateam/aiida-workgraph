@@ -295,18 +295,11 @@ class WorkGraphEngine(Process, metaclass=Protect):
             "graph_inputs": self.wg.inputs._value,
             "graph_outputs": self.wg.outputs._value,
         }
-        print("task results: ", self.ctx._task_results)
         # set meta-tasks state
         for task_name in BUILTIN_NODES:
             self.task_manager.state_manager.set_task_runtime_info(
                 task_name, "state", "FINISHED"
             )
-        # while workgraph
-        if self.wg.graph_type.upper() == "WHILE":
-            self.ctx._max_iteration = self.wg.max_iteration
-            should_run = self.task_manager.check_while_conditions()
-            if not should_run:
-                self.task_manager.set_tasks_state(self.ctx._tasks.keys(), "SKIPPED")
 
     def apply_action(self, msg: dict) -> None:
 
