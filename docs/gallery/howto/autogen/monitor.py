@@ -1,6 +1,6 @@
 """
-Assign a monitoring task
-========================
+Monitor external events as a task
+=================================
 """
 
 

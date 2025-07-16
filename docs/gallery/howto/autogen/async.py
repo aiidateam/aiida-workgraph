@@ -1,6 +1,6 @@
 """
-Run tasks asynchronously
-========================
+Run ``async`` functions as tasks
+================================
 """
 
 # %%
@@ -26,6 +26,9 @@ load_profile()
 
 
 # %%
+# Use the ``@task.awaitable`` decorator on an ``async`` function to make it non‑blocking:
+
+
 @task.awaitable
 async def awaitable_task(x, y):
     await asyncio.sleep(0.5)

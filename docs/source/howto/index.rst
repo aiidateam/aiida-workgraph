@@ -9,7 +9,7 @@ This section contains a collection of HowTos for various topics.
    :caption: Contents:
 
    autogen/use_calcjob_workchain
-   autogen/graph_inputs_outputs
+   autogen/graph_level
    autogen/parallel
    autogen/if
    autogen/while
