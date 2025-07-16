@@ -50,6 +50,7 @@ load_profile()
 # %%
 # First, we define the relevant arithmetic operations as WorkGraph tasks.
 
+
 @task
 def add(x, y):
     return x + y
@@ -58,6 +59,7 @@ def add(x, y):
 @task
 def multiply(x, y):
     return x * y
+
 
 # Those will present the processes executed in the workflow, such that their provenance is tracked.
 
@@ -141,6 +143,7 @@ def add_multiply_if(x, y, z):
     else:
         return multiply(x=x, y=z).result
 
+
 #%%
 # Inside the function body of our decorated function, we can thus write code in
 # the same way as in a ``with WorkGraph`` context manager (that's one of the
@@ -216,9 +219,11 @@ generate_node_graph(wg.pk)
 # To convert this simple workflow into a WorkGraph, we again require the necessary ``task``s.
 # As we already have the ``add`` and ``multiply`` tasks defined above, we only require one for the comparison:
 
+
 @task
 def compare_lt(x, y):
     return x < y
+
 
 # %%
 # Context manager
