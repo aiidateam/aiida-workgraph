@@ -6,8 +6,9 @@ Control flow in WorkGraph
 # %%
 # Introduction
 # ============
-# In this how-to we show you how you can implement the ``while`` loop and ``if`` conditional flow control elements in ``WorkGraph``.
-# You can implement both using the context manager approach, as well as using the ``@task.graph`` decorator for the ``if`` conditional (``while`` is currently not supported).
+# In this how-to we show you how you can achieve the ``while`` loop and ``if`` conditional
+# flow control elements in ``WorkGraph`` using the context manager approach.
+# In addition, the ``if`` conditional can also be expressed using the ``@task.graph`` decorator.
 # So let's dive right into it!
 
 # %%
@@ -47,8 +48,7 @@ load_profile()
 #    result = result + 1
 
 # %%
-# We now define the relevant arithmetic operations as WorkGraph tasks.
-# They will present the processes executed in the workflow and their provenance will be tracked.
+# First, we define the relevant arithmetic operations as WorkGraph tasks.
 
 @task
 def add(x, y):
@@ -59,45 +59,57 @@ def add(x, y):
 def multiply(x, y):
     return x * y
 
+# Those will present the processes executed in the workflow, such that their provenance is tracked.
+
 # %%
 # Context manager
 # ---------------
 #
-# For this, WorkGraph also provides an ``If`` context manager, which allows you to define conditional logic in your workflow.
-# The ``If`` block encapsulates all its child tasks, which are executed based on the defined conditions.
+# To define the conditional logic of the workflow, WorkGraph provides an ``If`` context manager.
+# Using the ``with If`` block, all the child tasks are automatically encapsulated.
+# Their execution when the workflow is run is based on the defined conditions.
 
-with WorkGraph("if_task") as wg:
-    outputs1 = add(x=1, y=1)
-    with If(outputs1.result < 0):
-        outputs2 = add(x=outputs1.result, y=2)
-        wg.ctx.result = outputs2.result
-    with If(outputs1.result >= 0):
-        outputs3 = multiply(x=outputs1.result, y=3)
-        wg.ctx.result = outputs3.result
+with WorkGraph("if_context_manager") as wg:
 
-    outputs4 = add(x=wg.ctx.result, y=1)
-    # Again, we have to use the ``>>`` syntax here to explicitly tell WG to wait with the execution of the last task,
-    # until the previous two tasks have finished.
-    outputs2 >> outputs4
-    outputs3 >> outputs4
-    # In principle, as we are dealing with python functions that are run in a blocking manner here, the example would
-    # also work without ``>>``. However, if the tasks would be submitted to the deamon in a non-blocking fashion, the
-    # explicit waiting enforced by ``>>`` is required.
+    add1_outputs = add(x=1, y=1)
+
+    with If(add1_outputs.result < 0):
+        cond_add_outputs = add(x=add1_outputs.result, y=2)
+        wg.ctx.result = cond_add_outputs.result
+
+    with If(add1_outputs.result >= 0):
+        cond_mult_outputs = multiply(x=add1_outputs.result, y=3)
+        wg.ctx.result = cond_mult_outputs.result
+
+    final_outputs = add(x=wg.ctx.result, y=1)
+
+    # In the following, we have to use the ``<<`` syntax to explicitly tell WG to wait
+    # with the execution of the last task until the previous two tasks have finished.
+    # In principle, as we are dealing with python functions that are run in a blocking
+    # manner here, the example would also work without ``<<``. However, if the tasks
+    # would be submitted to the deamon in a non-blocking fashion, the explicit waiting
+    # enforced by ``<<`` is strictly required, so we also apply it here for consistency
+    # and correctness.
+    final_outputs << cond_add_outputs
+    final_outputs << cond_mult_outputs
 
     # Finally, we set the result of the last task as the global workflow output result
-    wg.outputs.result = outputs4.result
+    wg.outputs.result = final_outputs.result
 
 wg.run()
 print(f"State of WorkGraph: {wg.state}")
 print(f"Result            : {wg.outputs.result.value}")
-
 assert wg.outputs.result.value == 7
 
 # %%
 # Workflow view
 # ~~~~~~~~~~~~~
-# In the graphical workflow view, two boxes, or ``zone``s are being shown, one for each branch as defined by the ``If``
-# Here, each ``If`` ``zone`` has a ``conditions`` socket, and the ``result``s are fed into the ``Select`` ``zone``.
+# In the graphical workflow view, one can see two operator zones, ``op_lt`` and ``op_ge``, for our two comparisons
+# ("less than" and "greater equal"), as well as one ``if_zone`` for each branch as defined by the two ``If`` context
+# managers.
+# Here, each ``if_zone`` has a ``conditions`` input socket, with both ``result``s being fed into the ``graph_ctx``.
+# From there, only one result is then fed as the input to the last add task (``add2``), and, finally, the global ``graph_outputs``.
+# Lastly, we can see connections from each ``if_zone``'s special ``_wait`` output socket to the ``_wait`` input socket of the ``add2`` task, which represent the explicit waiting between the tasks as request by the ``<<`` syntax.
 
 wg.to_html()
 
@@ -105,26 +117,24 @@ wg.to_html()
 # Provenance graph
 # ~~~~~~~~~~~~~~~~
 # Finally, after the WG has finished, we generate the node (provenance) graph from the AiiDA process, where we can see
-# that the result of the ``op_lt`` (larger than) comparison is ``False``, while for the ``og_ge`` (greater or equal)
-# comparison it is ``True``, meaning that the branch with the intermediate multiplication was executed.
+# that the result of the ``op_lt`` (larger than) comparison is ``False`` and the branch ends there, while for the ``og_ge`` (greater or equal) comparison it is ``True``, meaning that the branch with the intermediate multiplication was executed.
 
 generate_node_graph(wg.pk)
 
 # %%
-# Graph decorator
-# ---------------
+# Graph Task
+# ----------
 #
-# The ``graph`` decorator is used for creating a dynamic ``WorkGraph`` during runtime based on input values (see `this
-# section <https://aiida-workgraph.readthedocs.io/en/latest/howto/autogen/graph.html>`_).
-#
+# With the ``@task.graph`` decorator, we can create a Graph Task (see relevant section).
 # This method differs significantly from the ``If`` context manager:
 #
-# - **Visibility**: In the GUI, only the ``graph`` task is visible before execution, while for the ``If``,
-#   both branches were shown
-# - **Dynamic Generation**: Upon running, it generates the WorkGraph dynamically, allowing for complex conditional logic and flow adjustments based on runtime data.
+# - **Dynamic generation**: The WorkGraph is dynamically generated during runtime, allowing for complex conditional logic and flow adjustments based on runtime data.
+# - **Visibility**: In the workgraph view, only the ``graph`` task is visible before execution, with its internal
+#   workings being hidden inside this *black box*, while for the ``If`` context manager, both branches were shown.
+# - **Use as task**: The Graph Task can be seamlessly added to other WGs, in the same way as a normal task, making
+#   the combination of multiple WGs easy.
 
-# Create a WorkGraph which is dynamically generated based on the input
-# then we output the result as a graph-level output
+# To achieve this, we use the ``@task.graph`` decorator, like so:
 @task.graph()
 def add_multiply_if(x, y, z):
     if x.value < 0:
@@ -132,30 +142,49 @@ def add_multiply_if(x, y, z):
     else:
         return multiply(x=x, y=z).result
 
-with WorkGraph("if_graph") as wg:
-    add1 = wg.add_task(add, name="add1", x=1, y=1)
-    add_multiply_if1 = wg.add_task(
-        add_multiply_if, name="add_multiply_if1", x=add1.outputs.result, y=2, z=3
-    )
-    add1 = wg.add_task(add, name="add2", x=add_multiply_if1.outputs.result, y=1)
+# Inside the function body of our decorated function, we can thus write code in the same way as in a ``with WorkGraph``
+# context manager (that's one of the actual things the ``task.graph`` decorators implicitly does).
+# In this example, we define the three inputs, ``x``, ``y``, and ``z``, as we use different values for addition and
+# multiplication, thus assigned to ``y`` and ``z``.
+# We can further diretly use Python native ``if``, ``elif``, and ``else`` flow control elements.
+# In each branch, we return the actual ``result`` of the respective task, which will be wrapped in the ``outputs``
+# (``TaskSocketNamespace``) of the *graph task*.
+
+#%%
+#
+# Let's now see how we can use our graph task in another WG:
+
+with WorkGraph("if_graph_task") as wg:
+    first_add_result = add(x=1, y=1).result
+    add_multiply_if_result = add_multiply_if(x=first_add_result, y=2, z=3).result
+    final_add_result = add(x=add_multiply_if_result, y=1).result
+
+    wg.outputs.result = final_add_result
 
 wg.run()
 print(f"State of WorkGraph: {wg.state}")
-print(f"Result            : {wg.tasks.add2.outputs.result.value}")
+print(f"Result            : {wg.outputs.result.value}")
+assert wg.outputs.result.value == 7
+
+# As mentioned above, we can directly use our *graph task* as any other task, even though it contains an entire WG
+# inside.
+# Hence, we accessed its return value via ``.result``, to pass it into the last task of the overall workflow.
 
 # %%
 # Workflow view
 # ~~~~~~~~~~~~~
 #
-# TODO: Continue here
-# In the GUI, we only see the ``add_multiply_if1`` task. When this task run, it will generate a ``WorkGraph`` based on the input value. This is different from the ``If`` task, in which we see all tasks before the WorkGraph run.
+# In the graphical workflow view, we only see the ``add_multiply_if1`` task, but the logic that was executed inside.
+# Thus, it presents somewhat of a "black box".
+# This can be seen as a disadvantage, as it hides some of the actual workflow execution logic, however, in the case of complex top-level workflows that combine multiple sub-WGs, it can also be seen as an advantage, as it prevents a cluttering of the GUI.
 
 wg.to_html()
 
 # %%
 # Provenance graph
 # ~~~~~~~~~~~~~~~~
-# Generate node graph from the AiiDA process,and we can see that the ``multiply`` task is executed.
+# In the provenance graph, we see that another WorkGraph was created and executed, as orchestrated by the top-level WG.
+# Again, only the ``multiply`` branch was run with the given values.
 
 generate_node_graph(wg.pk)
 
@@ -166,7 +195,7 @@ generate_node_graph(wg.pk)
 # %%
 # Workflow description
 # --------------------
-# Suppose we want to implement a workflow with the following logic:
+# Suppose we have an arithmetic workflow in Python with the following logic:
 
 # .. code-block:: python
 #
@@ -178,12 +207,14 @@ generate_node_graph(wg.pk)
 #    result = n + 1
 
 # %%
-# We have to define our comparison operation as a task, as well
-# PRCOMMENT: Why??
+# To convert this into a WorkGraph, we again require the necessary ``task``s. As we already have the ``add`` and
+# ``multiply`` operations defined above, we only require the one for the comparison, in addition:
+# # PRCOMMENT: Why do we have to define the condition here as task? For the if, we could use the Python operators directly.
 
 @task
 def compare_lt(x, y):
     return x < y
+
 
 # %%
 # Context manager
@@ -213,7 +244,9 @@ print(f"Result            : {wg.outputs.result.value}")
 assert wg.outputs.result.value == 15
 
 
+
 # %% Notes on the example before
+# TODO: Continue here
 
 # set a context variable before running.
 # We need to use context or static variables here
