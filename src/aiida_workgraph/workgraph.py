@@ -101,12 +101,12 @@ class WorkGraph(node_graph.NodeGraph):
         # set task inputs
         if inputs is not None:
             for name, input in inputs.items():
-                if name == "graph_inputs":
-                    self.inputs = input
-                    break
-                if name not in self.tasks:
-                    raise KeyError(f"Task {name} not found in WorkGraph.")  # noqa: E713
-                self.tasks[name].set(input)
+                if name in self.inputs:
+                    setattr(self.inputs, name, input)
+                elif name in self.tasks:
+                    self.tasks[name].set(input)
+                else:
+                    raise KeyError(f"{name} not found in WorkGraph inputs or tasks.")
         # One can not run again if the process is alreay created. otherwise, a new process node will
         # be created again.
         if self.process is not None:
@@ -139,12 +139,12 @@ class WorkGraph(node_graph.NodeGraph):
         # set task inputs
         if inputs is not None:
             for name, input in inputs.items():
-                if name == "graph_inputs":
-                    self.inputs = input
-                    break
-                if name not in self.tasks:
-                    raise KeyError(f"Task {name} not found in WorkGraph.")  # noqa: E713
-                self.tasks[name].set(input)
+                if name in self.inputs:
+                    setattr(self.inputs, name, input)
+                elif name in self.tasks:
+                    self.tasks[name].set(input)
+                else:
+                    raise KeyError(f"{name} not found in WorkGraph inputs or tasks.")
 
         # save the workgraph to the process node
         self.save(metadata=metadata)
