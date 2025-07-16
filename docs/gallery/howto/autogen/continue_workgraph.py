@@ -36,10 +36,8 @@ with WorkGraph("AddMultiplyToBeContinued") as wg1:
 
 wg1.submit(
     inputs={
-        "graph_inputs": {
-            "x": 1,
-            "y": 2,
-        }
+        "x": 1,
+        "y": 2,
     },
     wait=True,
 )
@@ -102,9 +100,7 @@ print(f"State of new add   : {wg3.tasks.op_add1.state}")
 # %%
 wg3.submit(
     inputs={
-        "graph_inputs": {
-            "z": 5,
-        }
+        "z": 5,
     },
     wait=True,
 )

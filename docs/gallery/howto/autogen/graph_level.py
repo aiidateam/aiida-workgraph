@@ -42,12 +42,10 @@ wg.to_html()
 
 # %%
 wg.submit(
-    {
-        "graph_inputs": {
-            "x": 1,
-            "y": 2,
-            "z": 3,
-        },
+    inputs={
+        "x": 1,
+        "y": 2,
+        "z": 3,
     },
     wait=True,
 )
@@ -128,21 +126,19 @@ wg.to_html()
 
 wg.submit(
     inputs={
-        "graph_inputs": {
-            "add": {
-                "first": {
-                    "x": 1,
-                    "y": 2,
-                },
-                "second": {
-                    "x": 3,
-                    "y": 4,
-                },
+        "add": {
+            "first": {
+                "x": 1,
+                "y": 2,
             },
-            "multiply": {
-                "factor": 5,
+            "second": {
+                "x": 3,
+                "y": 4,
             },
-        }
+        },
+        "multiply": {
+            "factor": 5,
+        },
     },
     wait=True,
 )

@@ -42,10 +42,8 @@ with WorkGraph("AwaitableGraph") as wg:
 
 wg.run(
     inputs={
-        "graph_inputs": {
-            "x": 1,
-            "y": 2,
-        }
+        "x": 1,
+        "y": 2,
     },
 )
 
