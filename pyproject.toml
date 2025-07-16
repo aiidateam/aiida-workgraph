@@ -35,7 +35,6 @@ dependencies = [
     "aiida-shell~=0.8",
     "aiida-pythonjob>=0.2.3",
     "jsonschema",
-    "aiida-scheduler>=0.1.2",
 ]
 
 [project.urls]
