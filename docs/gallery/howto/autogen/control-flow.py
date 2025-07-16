@@ -130,9 +130,8 @@ generate_node_graph(wg.pk)
 #
 # - **Dynamic generation**: The WorkGraph is dynamically generated during runtime, allowing for complex conditional logic and flow adjustments based on runtime data.
 # - **Visibility**: In the workgraph view, only the ``graph`` task is visible before execution, with its internal
-#   workings being hidden inside this *black box*, while for the ``If`` context manager, both branches were shown.
-# - **Use as task**: The Graph Task can be seamlessly added to other WGs, in the same way as a normal task, making
-#   the combination of multiple WGs easy.
+#   workings being hidden inside this *black box*. This is in contrast to the ``If`` context manager, for which both branches were shown.
+# - **Use as task**: The *Graph Task* can be seamlessly added to other WGs, in the same way as a normal task, making the combination of multiple WGs easy.
 
 # To achieve this, we use the ``@task.graph`` decorator, like so:
 @task.graph()
@@ -142,13 +141,18 @@ def add_multiply_if(x, y, z):
     else:
         return multiply(x=x, y=z).result
 
-# Inside the function body of our decorated function, we can thus write code in the same way as in a ``with WorkGraph``
-# context manager (that's one of the actual things the ``task.graph`` decorators implicitly does).
-# In this example, we define the three inputs, ``x``, ``y``, and ``z``, as we use different values for addition and
-# multiplication, thus assigned to ``y`` and ``z``.
-# We can further diretly use Python native ``if``, ``elif``, and ``else`` flow control elements.
-# In each branch, we return the actual ``result`` of the respective task, which will be wrapped in the ``outputs``
-# (``TaskSocketNamespace``) of the *graph task*.
+#%%
+# Inside the function body of our decorated function, we can thus write code in
+# the same way as in a ``with WorkGraph`` context manager (that's one of the
+# actual things the ``@task.graph`` decorators implicitly does).
+# In this example, we define the three inputs, ``x``, ``y``, and ``z``, as we
+# use different values for addition and multiplication, thus assigned to ``y``
+# and ``z``.
+# We can further directly use Python native ``if``, ``elif``, and ``else`` flow
+# control elements.
+# In each branch, we return the actual ``result`` of the respective task, which
+# will be wrapped in the ``outputs`` (``TaskSocketNamespace``) of the *graph
+# task*.
 
 #%%
 #
@@ -156,8 +160,8 @@ def add_multiply_if(x, y, z):
 
 with WorkGraph("if_graph_task") as wg:
     first_add_result = add(x=1, y=1).result
-    add_multiply_if_result = add_multiply_if(x=first_add_result, y=2, z=3).result
-    final_add_result = add(x=add_multiply_if_result, y=1).result
+    add_multiply_if_outputs = add_multiply_if(x=first_add_result, y=2, z=3)
+    final_add_result = add(x=add_multiply_if_outputs.result, y=1).result
 
     wg.outputs.result = final_add_result
 
@@ -166,17 +170,19 @@ print(f"State of WorkGraph: {wg.state}")
 print(f"Result            : {wg.outputs.result.value}")
 assert wg.outputs.result.value == 7
 
-# As mentioned above, we can directly use our *graph task* as any other task, even though it contains an entire WG
-# inside.
-# Hence, we accessed its return value via ``.result``, to pass it into the last task of the overall workflow.
+#%%
+# As mentioned above, we can directly use our *graph task* the same as any
+# other task, despite it containing an entire WG inside.
+# Only its output namespace is returned, so we accessed the value via ``.result`` to pass it into the last task of the overall workflow.
 
 # %%
 # Workflow view
 # ~~~~~~~~~~~~~
 #
-# In the graphical workflow view, we only see the ``add_multiply_if1`` task, but the logic that was executed inside.
-# Thus, it presents somewhat of a "black box".
-# This can be seen as a disadvantage, as it hides some of the actual workflow execution logic, however, in the case of complex top-level workflows that combine multiple sub-WGs, it can also be seen as an advantage, as it prevents a cluttering of the GUI.
+# In the graphical workflow view, we only see the ``add_multiply_if1`` task, but the logic that was executed inside is hidden.
+# Thus, the *graph task* presents somewhat of a "black box" in the graphical interface.
+# This can be seen as a disadvantage, as it hides some of the actual workflow execution logic.
+# Alternatively, it can also be seen as an advantage, for example in the case of complex top-level workflows that combine multiple sub-WGs, as it prevents a cluttering of the graphical interface by exposing all internal logic.
 
 wg.to_html()
 
@@ -196,7 +202,7 @@ generate_node_graph(wg.pk)
 # Workflow description
 # --------------------
 # Suppose we have an arithmetic workflow in Python with the following logic:
-
+#
 # .. code-block:: python
 #
 #    n = 1 + 1
@@ -207,23 +213,22 @@ generate_node_graph(wg.pk)
 #    result = n + 1
 
 # %%
-# To convert this into a WorkGraph, we again require the necessary ``task``s. As we already have the ``add`` and
-# ``multiply`` operations defined above, we only require the one for the comparison, in addition:
-# # PRCOMMENT: Why do we have to define the condition here as task? For the if, we could use the Python operators directly.
+# To convert this simple workflow into a WorkGraph, we again require the necessary ``task``s.
+# As we already have the ``add`` and ``multiply`` tasks defined above, we only require one for the comparison:
 
 @task
 def compare_lt(x, y):
     return x < y
 
-
 # %%
 # Context manager
 # ---------------
-# Now, we can construct the WorkGraph using the ``While`` context manager,
+# To construct the WorkGraph, we can again use the ``While`` context manager,
 # which effectively creates a ``while zone`` (as seen in the workflow view below).
 # Unlike regular tasks, the *while zone* lacks data input and output sockets.
-# Tasks outside the zone can directly link to those inside, facilitating workflow integration.
-# We have the option to specify the maximum number of iterations to prevent an infinite loop.
+# But, tasks outside the zone can directly link to those inside, facilitating workflow integration.
+# Finally, we have the option to specify the maximum number of iterations to prevent an infinite loop.
+# The whole code snippet is shown here, and additional comments are given below:
 
 with WorkGraph("while_context_manager") as wg:
     initial_n = add(x=1, y=1).result
@@ -243,19 +248,18 @@ print(f"Result            : {wg.outputs.result.value}")
 # 2 -> While(3, 6 -> 7, 14) -> 15
 assert wg.outputs.result.value == 15
 
-
-
-# %% Notes on the example before
-# TODO: Continue here
-
-# set a context variable before running.
-# We need to use context or static variables here
-# Because context variables do not follow the dataflow programming paradigm,
-# we have to state the dependency of the context variable explicitly.
-# The syntax below reads "``should_run`` associated task waits for its
-# execution till ``outputs1`` has been successfully set its value"
-
-# We need to update the context variable since it is accessed in should_run task
+#%%
+# First, we set ``initial_n`` as a context variable ``n`` before running the loop.
+# We further define condition ``should_run`` using the ``compare_lt`` task.
+# Further, because context variables do not follow the dataflow programming paradigm, we have to state the dependency of the
+# context variable explicitly using ``<<``.
+# Thus, the syntax reads "``should_run`` associated task waits for its execution till ``outputs1`` has been successfully set its value".
+# These preparatory tasks set the stage (that is, create the necessary tasks, sockets, and links) in the WG, that we can
+# now introduce the while-loop.
+# This is achieved with the ``While`` context manager, in which the context variable ``n`` is continuously updated by
+# the ``add`` and ``multiply`` operations.
+# Due to the previously created links, this is reflected in the ``should_run`` task.
+# Lastly, we execute the final addition once the while loop concludes.
 
 # %%
 # Workflow view
@@ -269,5 +273,6 @@ wg.to_html()
 # %%
 # Provenance graph
 # ~~~~~~~~~~~~~~~~
+# In the provenance graph, we can see the looping and execution of multiple tasks in the loop reflected in the deep tree structure:
 
 generate_node_graph(wg.pk)
