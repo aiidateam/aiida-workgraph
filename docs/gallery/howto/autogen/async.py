@@ -10,6 +10,13 @@ Run tasks asynchronously
 # The ``awaitable`` decorator allows for the integration of ``asyncio`` within tasks, letting users control asynchronous functions.
 
 # %%
+# We'll temporarily set the AiiDA log level to ``REPORT``, so that we can inspect the execution order of the workgraph.
+
+from aiida_workgraph.utils.logging import set_aiida_loglevel
+
+set_aiida_loglevel("REPORT")
+
+# %%
 import asyncio
 
 from aiida import load_profile
@@ -57,3 +64,5 @@ wg.run(
 # -------
 #
 # In this section, we've explored the ``awaitable`` decorator for integrating asynchronous functions within tasks.
+
+set_aiida_loglevel("ERROR")

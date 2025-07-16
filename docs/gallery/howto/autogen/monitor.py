@@ -26,6 +26,13 @@ Assign a monitoring task
 # In the following sections, we will walk through examples of how to use the `monitor` task decorator for these scenarios.
 
 # %%
+# We'll temporarily set the AiiDA log level to ``REPORT``, so that we can inspect the execution order of the workgraph.
+
+from aiida_workgraph.utils.logging import set_aiida_loglevel
+
+set_aiida_loglevel("REPORT")
+
+# %%
 from aiida_workgraph import WorkGraph, task
 from aiida import load_profile
 
@@ -188,3 +195,5 @@ wg.run(
 # -------
 #
 # You have learned how to use the ``monitor`` decorator to create tasks that poll for specific conditions, such as time-based events, file-based events, and task monitoring. You also learned how to kill a monitor task and about the built-in monitor tasks provided by `WorkGraph`.
+
+set_aiida_loglevel("ERROR")
