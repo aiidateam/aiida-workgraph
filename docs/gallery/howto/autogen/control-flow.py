@@ -49,7 +49,7 @@ load_profile()
 
 # %%
 # First, we define the relevant arithmetic operations as WorkGraph tasks.
-
+# Those will present the processes executed in the workflow, such that provenance is tracked.
 
 @task
 def add(x, y):
@@ -59,9 +59,6 @@ def add(x, y):
 @task
 def multiply(x, y):
     return x * y
-
-
-# Those will present the processes executed in the workflow, such that their provenance is tracked.
 
 # %%
 # Context manager
@@ -120,7 +117,7 @@ assert wg.outputs.result.value == 7
 # In the graphical workflow view, one can see two operator zones, ``op_lt`` and ``op_ge``, for our two comparisons
 # ("less than" and "greater equal"), as well as one ``if_zone`` for each branch as defined by the two ``If`` context
 # managers.
-# Here, each ``if_zone`` has a ``conditions`` input socket, with both ``result`` s being fed into the ``graph_ctx``.
+# Here, each ``if_zone`` has a ``conditions`` input socket, with both ``result``\ s being fed into the ``graph_ctx``.
 # From there, only one result is then fed as the input to the last add task (``add2``), and, finally, the global ``graph_outputs``.
 # Lastly, we can see connections from each ``if_zone``'s special ``_wait`` output socket to the ``_wait`` input socket of the ``add2`` task, which represent the explicit waiting between the tasks as request by the ``<<`` syntax.
 
@@ -145,8 +142,9 @@ generate_node_graph(wg.pk)
 # - **Visibility**: In the local workgraph view, only the ``graph`` task is visible before execution, with its internal
 #   workings being hidden inside this *black box*. This is in contrast to the ``If`` context manager, for which both branches were shown.
 # - **Use as task**: The *Graph Task* can be seamlessly added to other WGs, in the same way as a normal task, making the combination of multiple WGs easy.
-
 # To achieve this, we use the ``@task.graph`` decorator, like so:
+
+#%%
 @task.graph()
 def add_multiply_if(x, y, z):
     if x.value < 0:
@@ -230,7 +228,7 @@ generate_node_graph(wg.pk)
 #    result = n + 1
 
 # %%
-# To convert this simple workflow into a WorkGraph, we again require the necessary ``task`` s.
+# To convert this simple workflow into a WorkGraph, we again require the necessary ``task``\ s.
 # As we already have the ``add`` and ``multiply`` tasks defined above, we only require one for the comparison:
 
 
@@ -297,9 +295,9 @@ wg.to_html()
 generate_node_graph(wg.pk)
 
 # %%
-# Summary
-# =======
-
+# Conclusion
+# ==========
+# 
 # This tutorial demonstrates how to implement control flow structures (``if`` conditionals and ``while`` loops) in WorkGraph.
 # **Key concepts covered:**
 # - **If conditionals** can be implemented using either:
