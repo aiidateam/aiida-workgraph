@@ -51,6 +51,7 @@ load_profile()
 # First, we define the relevant arithmetic operations as WorkGraph tasks.
 # Those will present the processes executed in the workflow, such that provenance is tracked.
 
+
 @task
 def add(x, y):
     return x + y
@@ -59,6 +60,7 @@ def add(x, y):
 @task
 def multiply(x, y):
     return x * y
+
 
 # %%
 # Context manager
@@ -297,7 +299,7 @@ generate_node_graph(wg.pk)
 # %%
 # Conclusion
 # ==========
-# 
+#
 # This tutorial demonstrates how to implement control flow structures (``if`` conditionals and ``while`` loops) in WorkGraph.
 # **Key concepts covered:**
 # - **If conditionals** can be implemented using either:
