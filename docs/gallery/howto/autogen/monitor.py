@@ -87,7 +87,7 @@ wg.run(
 
 import os
 import asyncio
-from node_graph.group import group
+from aiida_workgraph.collection import group
 
 
 @task.awaitable
