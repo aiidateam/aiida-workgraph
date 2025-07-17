@@ -85,13 +85,13 @@ with WorkGraph("if_context_manager") as wg:
 
     final_outputs = add(x=wg.ctx.result, y=1)
 
-    # In the following, we have to use the ``<<`` syntax to explicitly tell WG to wait
-    # with the execution of the last task until the previous two tasks have finished.
-    # In principle, as we are dealing with python functions that are run in a blocking
-    # manner here, the example would also work without ``<<``. However, if the tasks
-    # would be submitted to the deamon in a non-blocking fashion, the explicit waiting
-    # enforced by ``<<`` is strictly required, so we also apply it here for consistency
-    # and correctness.
+    # -- Explicit dependency specification is required here --
+    # Because wg.ctx.result is a context variable and not a direct task output,
+    # WorkGraph cannot infer dependencies automatically (to avoid potential cycles).
+    # Both branches (cond_add_outputs and cond_mult_outputs) may update wg.ctx.result,
+    # so we must explicitly tell WorkGraph that ``final_outputs`` depends on each branch.
+    # This is achieved with the ``<<`` and ``>>`` syntax.
+
     final_outputs << cond_add_outputs
     final_outputs << cond_mult_outputs
 
@@ -104,12 +104,23 @@ print(f"Result            : {wg.outputs.result.value}")
 assert wg.outputs.result.value == 7
 
 # %%
+# .. note: WorkGraph doesn't track context variables (``wg.ctx``) for automatic dependency resolution because they could
+# introduce cyclical dependencies between tasks. By using the ``<<`` or ``>>`` operators, we explicitly declare that the
+# ``final_outputs`` task must wait for both ``cond_add_outputs`` and ``cond_mult_outputs`` to finish before running,
+# ensuring correct ordering when reading ``wg.ctx.result``. In the example above, as we are dealing with python
+# functions that are run in a blocking manner, the example would also work without explicit task dependency setting via
+# ``<<`` or ``>>``, as further execution would anyway wait until both tasks have finished. However, if the tasks would
+# be submitted to the daemon in a non-blocking fashion (common use case in scientific scenarios with long-running jobs),
+# the explicit waiting enforced by ``<<`` or ``>>`` is strictly required, so we also apply it here for consistency and
+# correctness.
+
+# %%
 # Workflow view
 # ~~~~~~~~~~~~~
 # In the graphical workflow view, one can see two operator zones, ``op_lt`` and ``op_ge``, for our two comparisons
 # ("less than" and "greater equal"), as well as one ``if_zone`` for each branch as defined by the two ``If`` context
 # managers.
-# Here, each ``if_zone`` has a ``conditions`` input socket, with both ``result``s being fed into the ``graph_ctx``.
+# Here, each ``if_zone`` has a ``conditions`` input socket, with both ``result`` s being fed into the ``graph_ctx``.
 # From there, only one result is then fed as the input to the last add task (``add2``), and, finally, the global ``graph_outputs``.
 # Lastly, we can see connections from each ``if_zone``'s special ``_wait`` output socket to the ``_wait`` input socket of the ``add2`` task, which represent the explicit waiting between the tasks as request by the ``<<`` syntax.
 
@@ -131,7 +142,7 @@ generate_node_graph(wg.pk)
 # This method differs significantly from the ``If`` context manager:
 #
 # - **Dynamic generation**: The WorkGraph is dynamically generated during runtime, allowing for complex conditional logic and flow adjustments based on runtime data.
-# - **Visibility**: In the workgraph view, only the ``graph`` task is visible before execution, with its internal
+# - **Visibility**: In the local workgraph view, only the ``graph`` task is visible before execution, with its internal
 #   workings being hidden inside this *black box*. This is in contrast to the ``If`` context manager, for which both branches were shown.
 # - **Use as task**: The *Graph Task* can be seamlessly added to other WGs, in the same way as a normal task, making the combination of multiple WGs easy.
 
@@ -182,10 +193,13 @@ assert wg.outputs.result.value == 7
 # Workflow view
 # ~~~~~~~~~~~~~
 #
-# In the graphical workflow view, we only see the ``add_multiply_if1`` task, but the logic that was executed inside is hidden.
-# Thus, the *graph task* presents somewhat of a "black box" in the graphical interface.
-# This can be seen as a disadvantage, as it hides some of the actual workflow execution logic.
-# Alternatively, it can also be seen as an advantage, for example in the case of complex top-level workflows that combine multiple sub-WGs, as it prevents a cluttering of the graphical interface by exposing all internal logic.
+# In the local graphical workflow view, we only see the ``add_multiply_if1`` task, but the logic that was executed
+# inside is hidden. Thus, the *graph task* presents somewhat of a "black box" in the graphical interface. This can be
+# seen as a disadvantage, as it hides some of the actual workflow execution logic. Alternatively, it can also be seen as
+# an advantage, for example in the case of complex top-level workflows that combine multiple sub-WorkGraphs, as it
+# prevents a cluttering of the graphical interface by exposing all internal logic.  Instead in the WorkGraph web UI (see
+# dedicated section), the task also appears as a black box  *before* execution, however, once it is executed, it can be
+# expanded, and the individual tasks inside be visualized.
 
 wg.to_html()
 
@@ -216,7 +230,7 @@ generate_node_graph(wg.pk)
 #    result = n + 1
 
 # %%
-# To convert this simple workflow into a WorkGraph, we again require the necessary ``task``s.
+# To convert this simple workflow into a WorkGraph, we again require the necessary ``task`` s.
 # As we already have the ``add`` and ``multiply`` tasks defined above, we only require one for the comparison:
 
 
