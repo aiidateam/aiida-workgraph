@@ -295,3 +295,16 @@ wg.to_html()
 # In the provenance graph, we can see the looping and execution of multiple tasks in the loop reflected in the deep tree structure:
 
 generate_node_graph(wg.pk)
+
+# %%
+# Summary
+# =======
+
+# This tutorial demonstrates how to implement control flow structures (``if`` conditionals and ``while`` loops) in WorkGraph.
+# **Key concepts covered:**
+# - **If conditionals** can be implemented using either:
+#   - ``If`` context managers for explicit workflow visualization with visible branches
+#   - ``@task.graph`` decorators for dynamic runtime generation with "black box" encapsulation
+# - **While loops** use the ``While`` context manager to create iterative workflows with configurable maximum iterations to prevent infinite loops
+# - **Context variables** (``wg.ctx``) require explicit dependency management using ``<<`` and ``>>`` operators since WorkGraph cannot automatically infer dependencies to avoid potential cycles
+# - **Provenance tracking** is maintained throughout all control flow operations during workflow execution
