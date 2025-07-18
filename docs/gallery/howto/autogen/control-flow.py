@@ -103,15 +103,15 @@ print(f"Result            : {wg.outputs.result.value}")
 assert wg.outputs.result.value == 7
 
 # %%
-# .. note: WorkGraph doesn't track context variables (``wg.ctx``) for automatic dependency resolution because they could
-# introduce cyclical dependencies between tasks. By using the ``<<`` or ``>>`` operators, we explicitly declare that the
-# ``final_outputs`` task must wait for both ``cond_add_outputs`` and ``cond_mult_outputs`` to finish before running,
-# ensuring correct ordering when reading ``wg.ctx.result``. In the example above, as we are dealing with python
-# functions that are run in a blocking manner, the example would also work without explicit task dependency setting via
-# ``<<`` or ``>>``, as further execution would anyway wait until both tasks have finished. However, if the tasks would
-# be submitted to the daemon in a non-blocking fashion (common use case in scientific scenarios with long-running jobs),
-# the explicit waiting enforced by ``<<`` or ``>>`` is strictly required, so we also apply it here for consistency and
-# correctness.
+# .. note:: WorkGraph doesn't track context variables (``wg.ctx``) for automatic dependency resolution because they could
+#    introduce cyclical dependencies between tasks. By using the ``<<`` or ``>>`` operators, we explicitly declare that the
+#    ``final_outputs`` task must wait for both ``cond_add_outputs`` and ``cond_mult_outputs`` to finish before running,
+#    ensuring correct ordering when reading ``wg.ctx.result``. In the example above, as we are dealing with python
+#    functions that are run in a blocking manner, the example would also work without explicit task dependency setting via
+#    ``<<`` or ``>>``, as further execution would anyway wait until both tasks have finished. However, if the tasks would
+#    be submitted to the daemon in a non-blocking fashion (common use case in scientific scenarios with long-running jobs),
+#    the explicit waiting enforced by ``<<`` or ``>>`` is strictly required, so we also apply it here for consistency and
+#    correctness.
 
 # %%
 # Workflow view
@@ -296,15 +296,22 @@ wg.to_html()
 
 generate_node_graph(wg.pk)
 
+
 # %%
 # Conclusion
 # ==========
 #
-# This tutorial demonstrates how to implement control flow structures (``if`` conditionals and ``while`` loops) in WorkGraph.
-# **Key concepts covered:**
+# This tutorial demonstrates how to implement control flow structures (``if`` conditionals and ``while`` loops) 
+# in WorkGraph. **Key concepts covered:**
+#
 # - **If conditionals** can be implemented using either:
+#
 #   - ``If`` context managers for explicit workflow visualization with visible branches
 #   - ``@task.graph`` decorators for dynamic runtime generation with "black box" encapsulation
-# - **While loops** use the ``While`` context manager to create iterative workflows with configurable maximum iterations to prevent infinite loops
-# - **Context variables** (``wg.ctx``) require explicit dependency management using ``<<`` and ``>>`` operators since WorkGraph cannot automatically infer dependencies to avoid potential cycles
+#
+# - **While loops** use the ``While`` context manager to create iterative workflows with configurable 
+#   maximum iterations to prevent infinite loops
+# - **Context variables** (``wg.ctx``) require explicit dependency management using ``<<`` and ``>>`` operators 
+#   since WorkGraph cannot automatically infer dependencies to avoid potential cycles
 # - **Provenance tracking** is maintained throughout all control flow operations during workflow execution
+
