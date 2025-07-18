@@ -140,7 +140,9 @@ class Map(Zone):
         for child in self.children:
             if child.identifier == "workgraph.map_item":
                 return child.outputs.item
-        raise ValueError("Map zone must contain a 'map_item' task to access the item.")
+        # create a child map_item_task if it does not exist
+        map_item_task = self.add_task("workgraph.map_item")
+        return map_item_task.outputs.item
 
     def create_sockets(self) -> None:
         self.inputs._clear()
