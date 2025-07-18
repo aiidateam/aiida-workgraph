@@ -23,7 +23,6 @@ This section contains a collection of HowTos for various topics.
    waiting_on
    autogen/error_resistant
    autogen/zone
-   protocol
    cli
    control
    workchain_call_workgraph
