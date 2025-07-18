@@ -8,7 +8,7 @@ Control flow in WorkGraph
 # ============
 # In this how-to we show you how you can achieve the ``while`` loop and ``if`` conditional
 # flow control elements in ``WorkGraph`` using the context manager approach.
-# In addition, the ``if`` conditional can also be expressed using the ``@task.graph`` decorator.
+# In addition, the ``if`` conditional can also be implemented using the ``@task.graph`` decorator.
 # So let's dive right into it!
 
 # %%
@@ -270,9 +270,7 @@ assert wg.outputs.result.value == 15
 #%%
 # First, we set ``initial_n`` as a context variable ``n`` before running the loop.
 # We further define condition ``should_run`` using the ``compare_lt`` task.
-# Further, because context variables do not follow the dataflow programming paradigm, we have to state the dependency of the
-# context variable explicitly using ``<<``.
-# Thus, the syntax reads "``should_run`` associated task waits for its execution till ``outputs1`` has been successfully set its value".
+# The syntax reads "``should_run`` associated task waits for its execution till ``outputs1`` has been successfully set its value" (see note above).
 # These preparatory tasks set the stage (that is, create the necessary tasks, sockets, and links) in the WG, that we can
 # now introduce the while-loop.
 # This is achieved with the ``While`` context manager, in which the context variable ``n`` is continuously updated by
