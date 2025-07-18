@@ -104,7 +104,7 @@ def _run_func_with_wg(
         return wg
 
 
-def _make_wrapper(TaskCls, func):
+def _make_wrapper(TaskCls, func=None):
     """
     Common wrapper that, when called, adds a node to the current graph
     and returns the outputs.
@@ -116,29 +116,29 @@ def _make_wrapper(TaskCls, func):
 
         graph = get_current_graph()
         if graph is None:
-            raise RuntimeError(f"No active Graph available for {func.__name__}.")
+            raise RuntimeError(f"No active Graph available for {TaskCls.name}.")
         task = graph.add_task(TaskCls)
         active_zone = getattr(graph, "_active_zone", None)
         if active_zone:
             active_zone.children.add(task)
 
         inputs = dict(call_kwargs or {})
-        arguments = list(call_args)
-        orginal_func = func._func if hasattr(func, "_func") else func
+        if func is not None:
+            arguments = list(call_args)
+            orginal_func = func._func if hasattr(func, "_func") else func
 
-        for name, parameter in inspect.signature(orginal_func).parameters.items():
-            if parameter.kind in [
-                parameter.POSITIONAL_ONLY,
-                parameter.POSITIONAL_OR_KEYWORD,
-            ]:
-                try:
-                    inputs[name] = arguments.pop(0)
-                except IndexError:
-                    pass
-            elif parameter.kind is parameter.VAR_POSITIONAL:
-                # not supported
-                raise ValueError("VAR_POSITIONAL is not supported.")
-
+            for name, parameter in inspect.signature(orginal_func).parameters.items():
+                if parameter.kind in [
+                    parameter.POSITIONAL_ONLY,
+                    parameter.POSITIONAL_OR_KEYWORD,
+                ]:
+                    try:
+                        inputs[name] = arguments.pop(0)
+                    except IndexError:
+                        pass
+                elif parameter.kind is parameter.VAR_POSITIONAL:
+                    # not supported
+                    raise ValueError("VAR_POSITIONAL is not supported.")
         task.set(inputs)
         return task.outputs
 
@@ -238,8 +238,10 @@ class TaskDecoratorCollection:
                     TaskCls = AiiDAComponentTaskFactory.from_aiida_component(
                         callable, inputs=inputs, outputs=outputs
                     )
-
-            return _make_wrapper(TaskCls, callable)
+            # if callable is a function, we pass it to the make_wrapper
+            if not inspect.isfunction(callable):
+                callable = None
+            return _make_wrapper(TaskCls, func=callable)
 
         return decorator
 
@@ -262,7 +264,7 @@ class TaskDecoratorCollection:
         """
 
         def decorator(func):
-            from aiida_workgraph.tasks.builtins import GraphBuilderTask
+            from aiida_workgraph.tasks.builtins import GraphTask
 
             TaskCls = DecoratedFunctionTaskFactory.from_function(
                 func=func,
@@ -272,7 +274,7 @@ class TaskDecoratorCollection:
                 inputs=inputs,
                 outputs=outputs,
                 catalog=catalog,
-                node_class=GraphBuilderTask,
+                node_class=GraphTask,
             )
 
             wrapped_func = _make_wrapper(TaskCls, func)
@@ -380,9 +382,33 @@ class TaskDecoratorCollection:
                 MonitorFunctionTaskFactory,
             )
 
+            sig = inspect.signature(func)
+            forbidden = {"interval", "timeout"}
+            conflicts = forbidden.intersection(sig.parameters)
+            if conflicts:
+                raise ValueError(
+                    f"Function '{func.__name__}' defines parameter(s) {sorted(conflicts)}, "
+                    "which conflict with default 'monitor' arguments."
+                )
+            task_inputs = inputs if inputs is not None else []
+            # Add default interval and timeout
+            task_inputs.extend(
+                [
+                    {
+                        "name": "interval",
+                        "identifier": "workgraph.float",
+                        "property": {"default": 5},
+                    },
+                    {
+                        "name": "timeout",
+                        "identifier": "workgraph.float",
+                        "property": {"default": 3600},
+                    },
+                ]
+            )
             TaskCls = MonitorFunctionTaskFactory.from_function(
                 func=func,
-                inputs=inputs,
+                inputs=task_inputs,
                 outputs=outputs,
             )
 

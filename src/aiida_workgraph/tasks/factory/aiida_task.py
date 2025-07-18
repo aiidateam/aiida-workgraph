@@ -162,13 +162,15 @@ def get_task_data_from_aiida_component(
 
     tdata["identifier"] = tdata.pop("identifier", callable.__name__)
     tdata["executor"] = NodeExecutor.from_callable(callable).to_dict()
-    if task_type.upper() in ["CALCFUNCTION", "AUTO_CALCFUNCTION", "WORKFUNCTION"]:
+    # Add default output result for function tasks
+    if task_type.upper() in ["CALCFUNCTION", "WORKFUNCTION"]:
         outputs = (
             [{"identifier": "workgraph.any", "name": "result"}]
             if not outputs
             else outputs
         )
-        tdata["default_name"] = callable.__name__
+    # Add default name for the task
+    tdata["default_name"] = callable.__name__
     # add built-in sockets
     for output in builtin_outputs:
         outputs.append(output.copy())

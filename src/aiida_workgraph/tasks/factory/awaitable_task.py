@@ -41,6 +41,9 @@ class MonitorFunctionTask(Task):
         from aiida_workgraph.executors.monitors import monitor
 
         executor = NodeExecutor(**self.get_executor()).executor
+        # get the raw function without the decorator
+        if hasattr(executor, "_func"):
+            executor = executor._func
         # add function and interval to the args
         args = [
             executor,

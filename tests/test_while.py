@@ -23,7 +23,7 @@ def test_while_instruction(decorated_add, decorated_multiply, decorated_smaller_
     wg.update_ctx({"n": wg.tasks.multiply1.outputs.result})
     add3 = wg.add_task(decorated_add, name="add3", x=1, y=1)
     wg.add_link(wg.tasks.multiply1.outputs["result"], add3.inputs["x"])
-    assert len(wg.tasks) == 6
+    assert len(wg.tasks) == 7
     assert "while_1" in wg.tasks
     assert len(wg.tasks.while_1.children) == 2
     wg.run()

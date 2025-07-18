@@ -1,8 +1,15 @@
 from node_graph.collection import (
     NodeCollection,
     PropertyCollection,
+    group,
 )
 from typing import Any, Callable, Optional, Union
+
+__all__ = [
+    "TaskCollection",
+    "WorkGraphPropertyCollection",
+    "group",
+]
 
 
 class TaskCollection(NodeCollection):
@@ -14,7 +21,7 @@ class WorkGraphPropertyCollection(PropertyCollection):
         self,
         identifier: Union[Callable, str],
         name: Optional[str] = None,
-        **kwargs: Any
+        **kwargs: Any,
     ) -> Any:
         from aiida_workgraph.property import build_property_from_AiiDA
 

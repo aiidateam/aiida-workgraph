@@ -230,12 +230,12 @@ def test_inputs_run_submit_api():
         return wg
 
     wg = generate_workgraph()
-    wg.run(inputs={"graph_inputs": {"x": 1, "y": 2}})
+    wg.run(inputs={"x": 1, "y": 2})
 
     assert wg.outputs.sum.value == 3
 
     wg = generate_workgraph()
-    wg.submit(inputs={"graph_inputs": {"x": 3, "y": 4}}, wait=True)
+    wg.submit(inputs={"x": 3, "y": 4}, wait=True)
 
     assert wg.outputs.sum.value == 7
 

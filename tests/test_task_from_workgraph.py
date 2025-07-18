@@ -29,8 +29,8 @@ def test_inputs_outptus_auto_generate(wg_calcfunction: WorkGraph) -> None:
     noutput = 0
     for sub_task in wg_calcfunction.tasks:
         noutput += len(sub_task.outputs) - 2 + 1
-    assert len(task1.inputs) == len(wg_calcfunction.tasks) + 1
-    assert len(task1.outputs) == len(wg_calcfunction.tasks) + 2
+    assert len(task1.inputs) == 3
+    assert len(task1.outputs) == 4
     assert "sumdiff1.x" in task1.inputs
     assert "sumdiff1.sum" in task1.outputs
 
