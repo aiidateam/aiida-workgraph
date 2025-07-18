@@ -302,12 +302,12 @@ generate_node_graph(wg.pk)
 # ==========
 #
 # This tutorial demonstrates how to implement control flow structures (``if`` conditionals and ``while`` loops)
-# in WorkGraph. **Key concepts covered:**
+# in WorkGraph. The key concepts covered:
 #
 # - **If conditionals** can be implemented using either:
 #
-#   - ``If`` context managers for explicit workflow visualization with visible branches
-#   - ``@task.graph`` decorators for dynamic runtime generation with "black box" encapsulation
+#   - The ``If`` context manager for explicit workflow visualization with visible branches
+#   - The ``@task.graph`` decorator for dynamic runtime generation with encapsulation
 #
 # - **While loops** use the ``While`` context manager to create iterative workflows with configurable
 #   maximum iterations to prevent infinite loops
