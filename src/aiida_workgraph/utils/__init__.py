@@ -383,7 +383,7 @@ def workgraph_to_short_json(
         "uuid": wgdata.get("uuid", ""),
         "state": wgdata.get("state", ""),
         "nodes": {},
-        "links": deepcopy(wgdata.get("links", []) + wgdata.get("meta_links", [])),
+        "links": deepcopy(wgdata.get("links", [])),
     }
     #
     for name, task in wgdata["tasks"].items():
@@ -546,28 +546,6 @@ def validate_task_inout(inout_list: list[str | dict], list_type: str) -> list[di
     return processed_inout_list
 
 
-def filter_keys_namespace_depth(
-    dict_: dict[Any, Any], max_depth: int = 0
-) -> dict[Any, Any]:
-    """
-    Filter top-level keys of a dictionary based on the namespace nesting level (number of periods) in the key.
-
-    :param dict dict_: The dictionary to filter.
-    :param int max_depth: Maximum depth of namespaces to retain (number of periods).
-    :return: The filtered dictionary with only keys satisfying the depth condition.
-    :rtype: dict
-    """
-    result: dict[Any, Any] = {}
-
-    for key, value in dict_.items():
-        depth = key.count(".")
-
-        if depth <= max_depth:
-            result[key] = value
-
-    return result
-
-
 def wait_to_link(wgdata: Dict[str, Any]) -> None:
     """Convert wait attribute to link."""
     for name, task in wgdata["tasks"].items():
@@ -606,39 +584,6 @@ def make_json_serializable(data):
         return [make_json_serializable(item) for item in data]
     else:
         return data
-
-
-def query_existing_processes(pks: list[int]) -> list[int]:
-    """Query all existing processes from the database."""
-    from aiida import orm
-
-    qb = orm.QueryBuilder()
-    qb.append(
-        orm.ProcessNode,
-        filters={"id": {"in": pks}},
-        project=["id"],
-    )
-    results = qb.all()
-    existing_pks = [res[0] for res in results]
-    return existing_pks
-
-
-def query_terminated_processes(pks: list[int]) -> list[int]:
-    """Query all terminated processes from the database."""
-    from aiida import orm
-
-    qb = orm.QueryBuilder()
-    qb.append(
-        orm.ProcessNode,
-        filters={
-            "id": {"in": pks},
-            "attributes.process_state": {"in": ["killed", "finished", "excepted"]},
-        },
-        project=["id"],
-    )
-    results = qb.all()
-    terminated_pks = [res[0] for res in results]
-    return terminated_pks
 
 
 def serialize_socket_data(input_socket: Dict[str, Any]) -> None:

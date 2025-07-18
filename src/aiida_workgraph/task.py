@@ -47,7 +47,7 @@ class Task(GraphNode):
         self.state = "PLANNED"
         self.action = ""
         self.show_socket_depth = 0
-        self.parent_task = None
+        self.parent = None
         self.map_data = None
         self.mapped_tasks = None
         self.execution_count = 0
@@ -64,7 +64,7 @@ class Task(GraphNode):
         tdata["wait"] = [task.name for task in self.waiting_on]
         tdata["children"] = []
         tdata["execution_count"] = self.execution_count
-        tdata["parent_task"] = [self.parent_task.name] if self.parent_task else [None]
+        tdata["parent_task"] = [self.parent.name] if self.parent else [None]
         tdata["process"] = serialize(self.process) if self.process else serialize(None)
         tdata["metadata"]["pk"] = self.process.pk if self.process else None
         tdata["metadata"]["is_aiida_component"] = self.is_aiida_component
@@ -229,25 +229,11 @@ class Task(GraphNode):
         return result, "FINISHED"
 
     def to_widget_value(self):
-        from aiida_workgraph.utils import filter_keys_namespace_depth
+        from aiida_workgraph.utils import workgraph_to_short_json
 
         tdata = self.to_dict()
-
-        # Remove certain elements of the dict-representation of the Node that we don't want to show
-        for key in ("properties", "executor", "node_class", "process"):
-            tdata.pop(key, None)
-
-        for input_data in tdata["inputs"]["sockets"].values():
-            input_data.pop("property", None)
-
-        tdata["label"] = tdata["identifier"]
-
-        filtered_inputs = filter_keys_namespace_depth(
-            dict_=tdata["inputs"]["sockets"], max_depth=self.show_socket_depth
-        )
-        tdata["inputs"] = list(filtered_inputs.values())
-        tdata["outputs"] = list(tdata["outputs"]["sockets"].values())
-        wgdata = {"name": self.name, "nodes": {self.name: tdata}, "links": []}
+        wgdata = {"name": self.name, "tasks": {self.name: tdata}, "links": []}
+        wgdata = workgraph_to_short_json(wgdata)
         return wgdata
 
     def _repr_mimebundle_(self, *args: Any, **kwargs: Any) -> any:
@@ -354,11 +340,9 @@ class ChildTaskSet(TaskSet):
         """Add tasks to the collection. Tasks can be a list or a single Task or task name."""
         normalize_tasks = super().add(tasks)
         for task in normalize_tasks:
-            if task.parent_task is not None:
-                raise ValueError(
-                    "Task is already a child of the task: {task.parent_task}"
-                )
-            task.parent_task = self.parent
+            if task.parent is not None:
+                raise ValueError("Task is already a child of the task: {task.parent}")
+            task.parent = self.parent
 
 
 class WaitingTaskSet(TaskSet):

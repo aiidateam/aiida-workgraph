@@ -113,13 +113,11 @@ wg.to_html()
 #
 # 2. One can export the data from context to the graph builder outputs.
 #
-@task.graph_builder(outputs=[{"name": "result", "from": "ctx.sum"}])
+@task.graph()
 def internal_add(x, y):
-    wg = WorkGraph("my_subgraph")
-    add1 = wg.add_task(add, x=x, y=y)
-    add2 = wg.add_task(add, x=add1.outputs.sum, y=5)
-    wg.update_ctx({"sum": add2.outputs.sum})  # Store result in context
-    return wg
+    outputs1 = add(x=x, y=y)
+    outputs2 = add(x=outputs1.sum, y=5)
+    return outputs2.sum
 
 
 # Usage in a main WorkGraph

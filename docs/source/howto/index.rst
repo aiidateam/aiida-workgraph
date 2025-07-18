@@ -9,21 +9,20 @@ This section contains a collection of HowTos for various topics.
    :caption: Contents:
 
    autogen/use_calcjob_workchain
-   graph_inputs_outputs
-   autogen/graph_builder
+   autogen/graph_level
    autogen/parallel
    autogen/if
    autogen/while
    autogen/context
+   autogen/shelljob
+   autogen/remote_job
+   autogen/combine_workgraphs
+   autogen/continue_workgraph
+   autogen/async
+   autogen/monitor
    waiting_on
-   combine_workgraph
-   restart
-   error_resistant
-   continue_finished_workgraph
+   autogen/error_resistant
    autogen/zone
-   monitor
-   protocol
    cli
    control
-   transfer_workchain
    workchain_call_workgraph

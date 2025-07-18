@@ -14,7 +14,7 @@ MAX_NUMBER_AWAITABLES_MSG = "The maximum number of subprocesses has been reached
 process_task_types = [
     "CALCJOB",
     "WORKCHAIN",
-    "GRAPH_BUILDER",
+    "GRAPH_TASK",
     "WORKGRAPH",
     "PYTHONJOB",
     "SHELLJOB",
@@ -63,7 +63,12 @@ class TaskManager:
         return task
 
     def set_task_results(self) -> None:
+        from node_graph.node_graph import BUILTIN_NODES
+
         for task in self.process.wg.tasks:
+            if task.name in BUILTIN_NODES:
+                # skip built-in nodes, they are not executed
+                continue
             if (
                 self.state_manager.get_task_runtime_info(task.name, "action").upper()
                 == "RESET"
@@ -180,7 +185,7 @@ class TaskManager:
                 "SHELLJOB",
                 "PYTHONJOB",
                 "WORKGRAPH",
-                "GRAPH_BUILDER",
+                "GRAPH_TASK",
             ]:
                 self.execute_process_task(task, **inputs)
             elif task_type == "WHILE":
@@ -563,11 +568,11 @@ class TaskManager:
             # since this is a newly created task, it should not have any mapped tasks
             task.mapped_tasks = None
             # fix parent reference
-            if orginal_task.parent_task is not None:
-                if orginal_task.parent_task.name in new_tasks:
-                    task.parent_task = new_tasks[orginal_task.parent_task.name]
+            if orginal_task.parent is not None:
+                if orginal_task.parent.name in new_tasks:
+                    task.parent = new_tasks[orginal_task.parent.name]
                 else:
-                    task.parent_task = orginal_task.parent_task
+                    task.parent = orginal_task.parent
         # fix links references
         new_links = []
         for link in all_links:

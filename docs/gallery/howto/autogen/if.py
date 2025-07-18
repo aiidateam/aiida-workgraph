@@ -12,11 +12,11 @@ Flow control: Using ``if`` conditions
 # different methods:
 #
 # 1. **If context manager**
-# 2. **graph_builder decorator**
+# 2. **graph decorator**
 # 3. **If Task**
 #
 # For simple cases, we recommend option 1), the ``If`` context manager approach, while option 2), the Graph
-# Builder provides additional advantages, see :doc:`graph_builder`.
+# Builder provides additional advantages, see :doc:`graph`.
 # Finally, option 3) uses the ``If`` ``Task`` directly without the context manager. This approach requires a lot of
 # boilerplate code and is generally not recommended.
 # It presents the node-graph programming approach to construct the ``If`` flow control element.
@@ -132,32 +132,27 @@ generate_node_graph(wg.pk)
 
 
 # %%
-# Using the graph_builder decorator
+# Using the graph decorator
 # ==================================
 #
-# The ``graph_builder`` decorator is used for creating a dynamic ``WorkGraph`` during runtime based on input values (see `this
-# section <https://aiida-workgraph.readthedocs.io/en/latest/howto/autogen/graph_builder.html>`_).
+# The ``graph`` decorator is used for creating a dynamic ``WorkGraph`` during runtime based on input values (see `this
+# section <https://aiida-workgraph.readthedocs.io/en/latest/howto/autogen/graph.html>`_).
 #
 # This method differs significantly from the ``If`` context manager:
 #
-# - **Visibility**: In the GUI, only the ``graph_builder`` task is visible before execution, while for the ``If``,
+# - **Visibility**: In the GUI, only the ``graph`` task is visible before execution, while for the ``If``,
 #   both branches were shown
 # - **Dynamic Generation**: Upon running, it generates the WorkGraph dynamically, allowing for complex conditional logic and flow adjustments based on runtime data.
 
 # Create a WorkGraph which is dynamically generated based on the input
 # then we output the result as a graph-level output
-@task.graph_builder(outputs=["result"])
+@task.graph()
 def add_multiply_if(x, y):
-    wg = WorkGraph()
     if x.value < 0:
-        add1 = wg.add_task(add, name="add1", x=x, y=y)
-        # export the result of add1 to the graph-level outputs
-        wg.outputs.result = add1.outputs.result
+        outputs = add(x=x, y=y)
     else:
-        multiply1 = wg.add_task(multiply, name="multiply1", x=x, y=y)
-        # export the result of multiply1 to the graph-level outputs
-        wg.outputs.result = multiply1.outputs.result
-    return wg
+        outputs = multiply(x=x, y=y)
+    return outputs.result
 
 
 # %%
@@ -274,5 +269,5 @@ wg.to_html()
 # =======
 #
 # The ``If`` provides a visual and structured approach to managing conditional tasks within a defined zone. In contrast,
-# the ``graph_builder`` decorator offers flexibility by dynamically generating the workflow based on runtime inputs,
+# the ``graph`` decorator offers flexibility by dynamically generating the workflow based on runtime inputs,
 # suitable for complex and adaptive process flows.

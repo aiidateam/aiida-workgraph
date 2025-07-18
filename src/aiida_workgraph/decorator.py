@@ -3,6 +3,7 @@ import functools
 from typing import Any, Callable, Dict, List, Optional, Union, Tuple
 from aiida.engine import calcfunction, workfunction, CalcJob, WorkChain
 from aiida_workgraph.task import Task
+from .workgraph import WorkGraph
 import inspect
 from node_graph.executor import NodeExecutor
 from aiida_workgraph.tasks.factory import (
@@ -19,7 +20,6 @@ def build_task(
     outputs: Optional[List[str | dict]] = None,
 ) -> Task:
     """Build task from executor."""
-    from aiida_workgraph.workgraph import WorkGraph
 
     if isinstance(executor, WorkGraph):
         return WorkGraphTaskFactory.create_task(executor)
@@ -71,7 +71,40 @@ def build_task_from_callable(
     raise ValueError(f"The executor {executor} is not supported.")
 
 
-def _make_wrapper(TaskCls, func):
+def _assign_wg_outputs(outputs: Any, wg: WorkGraph):
+    """
+    Inspect the raw outputs from the function and attach them to the WorkGraph.
+    """
+    from node_graph.socket import BaseSocket
+
+    if isinstance(outputs, BaseSocket):
+        wg.outputs.result = outputs
+    elif isinstance(outputs, dict):
+        wg.outputs = outputs
+    elif outputs is None:
+        wg.outputs.result = None
+    else:
+        raise TypeError(f"Function returned {type(outputs)}, expected socket or dict.")
+
+
+def _run_func_with_wg(
+    func: Callable,
+    args: tuple,
+    kwargs: dict,
+    var_kwargs: Optional[dict] = None,
+) -> WorkGraph:
+    """
+    Run func(*args, **kwargs, **(var_kwargs or {})) inside a WorkGraph,
+    assign its outputs and return the WorkGraph.
+    """
+    merged = {**kwargs, **(var_kwargs or {})}
+    with WorkGraph() as wg:
+        raw = func(*args, **merged)
+        _assign_wg_outputs(raw, wg)
+        return wg
+
+
+def _make_wrapper(TaskCls, func=None):
     """
     Common wrapper that, when called, adds a node to the current graph
     and returns the outputs.
@@ -83,29 +116,29 @@ def _make_wrapper(TaskCls, func):
 
         graph = get_current_graph()
         if graph is None:
-            raise RuntimeError(f"No active Graph available for {func.__name__}.")
+            raise RuntimeError(f"No active Graph available for {TaskCls.name}.")
         task = graph.add_task(TaskCls)
         active_zone = getattr(graph, "_active_zone", None)
         if active_zone:
             active_zone.children.add(task)
 
         inputs = dict(call_kwargs or {})
-        arguments = list(call_args)
-        orginal_func = func._func if hasattr(func, "_func") else func
+        if func is not None:
+            arguments = list(call_args)
+            orginal_func = func._func if hasattr(func, "_func") else func
 
-        for name, parameter in inspect.signature(orginal_func).parameters.items():
-            if parameter.kind in [
-                parameter.POSITIONAL_ONLY,
-                parameter.POSITIONAL_OR_KEYWORD,
-            ]:
-                try:
-                    inputs[name] = arguments.pop(0)
-                except IndexError:
-                    pass
-            elif parameter.kind is parameter.VAR_POSITIONAL:
-                # not supported
-                raise ValueError("VAR_POSITIONAL is not supported.")
-
+            for name, parameter in inspect.signature(orginal_func).parameters.items():
+                if parameter.kind in [
+                    parameter.POSITIONAL_ONLY,
+                    parameter.POSITIONAL_OR_KEYWORD,
+                ]:
+                    try:
+                        inputs[name] = arguments.pop(0)
+                    except IndexError:
+                        pass
+                elif parameter.kind is parameter.VAR_POSITIONAL:
+                    # not supported
+                    raise ValueError("VAR_POSITIONAL is not supported.")
         task.set(inputs)
         return task.outputs
 
@@ -205,21 +238,23 @@ class TaskDecoratorCollection:
                     TaskCls = AiiDAComponentTaskFactory.from_aiida_component(
                         callable, inputs=inputs, outputs=outputs
                     )
-
-            return _make_wrapper(TaskCls, callable)
+            # if callable is a function, we pass it to the make_wrapper
+            if not inspect.isfunction(callable):
+                callable = None
+            return _make_wrapper(TaskCls, func=callable)
 
         return decorator
 
     @staticmethod
     @nonfunctional_usage
-    def decorator_graph_builder(
+    def decorator_graph(
         identifier: Optional[str] = None,
         properties: Optional[List[Tuple[str, str]]] = None,
         inputs: Optional[List[Tuple[str, str]]] = None,
         outputs: Optional[List[Tuple[str, str]]] = None,
         catalog: str = "Others",
     ) -> Callable:
-        """Generate a decorator that register a function as a graph_builder task.
+        """Generate a decorator that register a function as a graph task.
         Attributes:
             indentifier (str): task identifier
             catalog (str): task catalog
@@ -229,21 +264,29 @@ class TaskDecoratorCollection:
         """
 
         def decorator(func):
-            from aiida_workgraph.tasks.builtins import GraphBuilderTask
+            from aiida_workgraph.tasks.builtins import GraphTask
 
             TaskCls = DecoratedFunctionTaskFactory.from_function(
                 func=func,
                 identifier=identifier,
-                task_type="graph_builder",
+                task_type="graph_task",
                 properties=properties,
                 inputs=inputs,
                 outputs=outputs,
                 catalog=catalog,
-                node_class=GraphBuilderTask,
+                node_class=GraphTask,
             )
 
-            func._TaskCls = func._NodeCls = TaskCls
-            return func
+            wrapped_func = _make_wrapper(TaskCls, func)
+
+            def get_graph(*args, **kwargs):
+                """This function is used to get the graph from the wrapped function."""
+
+                return _run_func_with_wg(func, args, kwargs)
+
+            wrapped_func.get_graph = get_graph
+
+            return wrapped_func
 
         return decorator
 
@@ -339,9 +382,33 @@ class TaskDecoratorCollection:
                 MonitorFunctionTaskFactory,
             )
 
+            sig = inspect.signature(func)
+            forbidden = {"interval", "timeout"}
+            conflicts = forbidden.intersection(sig.parameters)
+            if conflicts:
+                raise ValueError(
+                    f"Function '{func.__name__}' defines parameter(s) {sorted(conflicts)}, "
+                    "which conflict with default 'monitor' arguments."
+                )
+            task_inputs = inputs if inputs is not None else []
+            # Add default interval and timeout
+            task_inputs.extend(
+                [
+                    {
+                        "name": "interval",
+                        "identifier": "workgraph.float",
+                        "property": {"default": 5},
+                    },
+                    {
+                        "name": "timeout",
+                        "identifier": "workgraph.float",
+                        "property": {"default": 3600},
+                    },
+                ]
+            )
             TaskCls = MonitorFunctionTaskFactory.from_function(
                 func=func,
-                inputs=inputs,
+                inputs=task_inputs,
                 outputs=outputs,
             )
 
@@ -352,8 +419,8 @@ class TaskDecoratorCollection:
     # Making decorator_task accessible as 'task'
     task = decorator_task
 
-    # Making decorator_graph_builder accessible as 'graph_builder'
-    graph_builder = decorator_graph_builder
+    # Making decorator_graph accessible as 'graph'
+    graph = decorator_graph
 
     def __call__(self, *args, **kwargs):
         # This allows using '@task' to directly apply the decorator_task functionality

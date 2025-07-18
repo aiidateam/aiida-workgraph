@@ -1,5 +1,52 @@
 from typing import Any, Dict
 from aiida_workgraph.task import Task, ChildTaskSet
+from aiida_workgraph.tasks.factory.base import BaseTaskFactory
+
+
+class GraphLevelTask(Task):
+    """Base class for graph level tasks"""
+
+    catalog = "Builtins"
+    is_dynamic: bool = True
+    node_class = Task
+    factory_class = BaseTaskFactory
+
+    @property
+    def outputs(self):
+        return self.inputs
+
+    @outputs.setter
+    def outputs(self, _value):
+        """Outputs are the same as inputs for ctx node."""
+        pass
+
+    def get_metadata(self):
+
+        metadata = super().get_metadata()
+        metadata["node_class"] = {
+            "module_path": self.node_class.__module__,
+            "callable_name": self.node_class.__name__,
+        }
+        metadata["factory_class"] = {
+            "module_path": self.factory_class.__module__,
+            "callable_name": self.factory_class.__name__,
+        }
+        return metadata
+
+
+class GraphInputs(GraphLevelTask):
+    identifier = "workgraph.graph_inputs"
+    name = "Graph_Inputs"
+
+
+class GraphOutputs(GraphLevelTask):
+    identifier = "workgraph.graph_outputs"
+    name = "Graph_Outputs"
+
+
+class GraphContext(GraphLevelTask):
+    identifier = "workgraph.graph_ctx"
+    name = "Graph_Ctx"
 
 
 class Zone(Task):
@@ -20,7 +67,7 @@ class Zone(Task):
         """Syntactic sugar to add a task to the zone."""
         task = self.graph.add_task(*args, **kwargs)
         self.children.add(task)
-        task.parent_task = self
+        task.parent = self
         return task
 
     def create_sockets(self) -> None:
@@ -390,32 +437,23 @@ class Select(Task):
         return executor
 
 
-class GraphBuilderTask(Task):
+class GraphTask(Task):
     """Graph builder task"""
 
-    identifier = "workgraph.graph_builder"
-    name = "graph_builder"
-    node_type = "graph_builder"
+    identifier = "workgraph.graph_task"
+    name = "graph_task"
+    node_type = "graph_task"
     catalog = "builtins"
 
     def execute(self, engine_process, args=None, kwargs=None, var_kwargs=None):
         from aiida_workgraph.utils import create_and_pause_process
         from aiida_workgraph.engine.workgraph import WorkGraphEngine
-        from aiida_workgraph import WorkGraph
+        from aiida_workgraph.decorator import _run_func_with_wg
         from node_graph.executor import NodeExecutor
 
         executor = NodeExecutor(**self.get_executor()).executor
 
-        if var_kwargs is None:
-            wg = executor(*args, **kwargs)
-        else:
-            wg = executor(*args, **kwargs, **var_kwargs)
-        if wg is None:
-            raise ValueError("The graph builder must return a WorkGraph, not None.")
-        elif not isinstance(wg, WorkGraph):
-            raise TypeError(
-                f"The graph builder must return a WorkGraph, not {type(wg)}."
-            )
+        wg = _run_func_with_wg(executor, args, kwargs, var_kwargs)
         wg.name = self.name
 
         wg.parent_uuid = engine_process.node.uuid

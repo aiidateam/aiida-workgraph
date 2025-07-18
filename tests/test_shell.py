@@ -1,5 +1,5 @@
 import pytest
-from aiida_workgraph import WorkGraph, task, TaskPool
+from aiida_workgraph import WorkGraph, task, shelljob
 from aiida_shell.launch import prepare_code
 from aiida.orm import SinglefileData, load_computer, Int
 
@@ -17,7 +17,7 @@ def test_shell_command(fixture_localhost):
     """Test the ShellJob with command as a string."""
     wg = WorkGraph(name="test_shell_command")
     job1 = wg.add_task(
-        TaskPool.workgraph.shelljob,
+        shelljob,
         command="cat",
         resolve_command=True,
         arguments=["{file_a}", "{file_b}"],
@@ -35,25 +35,25 @@ def test_shell_command(fixture_localhost):
 def test_shell_code():
     """Test the ShellJob with code."""
     cat_code = prepare_code("cat")
-    wg = WorkGraph(name="test_shell_code")
-    job1 = wg.add_task(
-        TaskPool.workgraph.shelljob,
-        command=cat_code,
-        arguments=["{file_a}", "{file_b}"],
-        nodes={
-            "file_a": SinglefileData.from_string("string a"),
-            "file_b": SinglefileData.from_string("string b"),
-        },
-    )
-    wg.run()
-    assert job1.outputs.stdout.value.get_content() == "string astring b"
+    with WorkGraph(name="test_shell_code") as wg:
+        # use the code object directly
+        outputs = shelljob(
+            command=cat_code,
+            arguments=["{file_a}", "{file_b}"],
+            nodes={
+                "file_a": SinglefileData.from_string("string a"),
+                "file_b": SinglefileData.from_string("string b"),
+            },
+        )
+        wg.run()
+        assert outputs.stdout.value.get_content() == "string astring b"
 
 
 def test_dynamic_port():
     """Set the nodes during/after the creation of the task."""
     wg = WorkGraph(name="test_dynamic_port")
     echo_task = wg.add_task(
-        TaskPool.workgraph.shelljob,
+        shelljob,
         name="echo",
         command="cp",
         arguments=["{file}", "copied_file"],
@@ -62,7 +62,7 @@ def test_dynamic_port():
     )
 
     cat_task = wg.add_task(
-        TaskPool.workgraph.shelljob,
+        shelljob,
         name="cat",
         command="cat",
         arguments=["{input}"],
@@ -83,19 +83,21 @@ def test_shell_graph_builder():
     And the parser is also defined in the graph builder."""
     from aiida.orm import Int
 
-    @task.graph_builder(outputs=[{"name": "result"}])
+    @task.graph(outputs=[{"name": "result"}])
     def add_multiply(x, y):
         """Add two numbers and multiply the result by 2."""
+        from aiida_workgraph.manager import get_current_graph
+
         # define the parser function
         def parser(dirpath):
             from aiida.orm import Int
 
             return {"result": Int((dirpath / "stdout").read_text().strip())}
 
-        wg = WorkGraph()
+        wg = get_current_graph()
         # echo x + y expression
         job1 = wg.add_task(
-            TaskPool.workgraph.shelljob,
+            shelljob,
             name="job1",
             command="echo",
             arguments=["{x}", "+", "{y}"],
@@ -106,7 +108,7 @@ def test_shell_graph_builder():
         )
         # bc command to calculate the expression
         wg.add_task(
-            TaskPool.workgraph.shelljob,
+            shelljob,
             name="job2",
             command="bc",
             arguments=["{expression}"],
@@ -116,10 +118,9 @@ def test_shell_graph_builder():
                 {"identifier": "workgraph.any", "name": "result"}
             ],  # add a "result" output socket from the parser
         )
-        wg.outputs.result = wg.tasks.job2.outputs.result
-        return wg
+        return wg.tasks.job2.outputs.result
 
-    wg = WorkGraph(name="test_shell_graph_builder")
-    add_multiply1 = wg.add_task(add_multiply, x=Int(2), y=Int(3))
-    wg.submit(wait=True, timeout=60)
-    assert add_multiply1.outputs.result.value.value == 5
+    with WorkGraph() as wg:
+        outputs = add_multiply(x=Int(2), y=Int(3))
+        wg.submit(wait=True, timeout=60)
+        assert outputs.result.value.value == 5

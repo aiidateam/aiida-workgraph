@@ -85,15 +85,22 @@ class TaskStateManager:
                 if node.is_finished_ok:
                     self.set_task_runtime_info(task.name, "state", state)
                     if task.node_type.upper() == "WORKGRAPH":
-                        # expose the outputs of all the tasks in the workgraph
-                        outgoing = node.base.links.get_outgoing()
-                        for link in outgoing.all():
-                            if isinstance(link.node, ProcessNode) and getattr(
-                                link.node, "process_state", False
-                            ):
-                                self.ctx._task_results[name][
-                                    link.link_label
-                                ] = link.node.outputs
+                        # read the graph-level outputs
+                        keys = node.outputs._get_keys()
+                        if len(keys) > 0:
+                            # if graph-level outputs are defined, expose them
+                            for key in node.outputs._get_keys():
+                                self.ctx._task_results[name][key] = node.outputs[key]
+                        else:
+                            # otherwise, expose the outputs of all the tasks in the workgraph
+                            outgoing = node.base.links.get_outgoing()
+                            for link in outgoing.all():
+                                if isinstance(link.node, ProcessNode) and getattr(
+                                    link.node, "process_state", False
+                                ):
+                                    self.ctx._task_results[name][
+                                        link.link_label
+                                    ] = link.node.outputs
                     else:
                         self.ctx._task_results[name] = node.outputs
                         # self.ctx._new_data[name] = self.ctx._task_results[name]
@@ -240,7 +247,7 @@ class TaskStateManager:
         For tasks inside a ZONE or with a parent task, we require the parent
         to be in a running state, and the zone's input tasks finished or failed.
         """
-        parent_task = self.process.wg.tasks[name].parent_task
+        parent_task = self.process.wg.tasks[name].parent
         parent_states = [True, True]
 
         # If the task has a parent zone
@@ -283,7 +290,7 @@ class TaskStateManager:
         If a task has a parent (WHILE, IF, ZONE, MAP), notify the parent to update
         its own state. Also handle mapped tasks referencing a 'map_data.parent' node.
         """
-        parent_task = self.process.wg.tasks[name].parent_task
+        parent_task = self.process.wg.tasks[name].parent
         if parent_task:
             node_type = parent_task.node_type.upper()
             if node_type == "WHILE":
@@ -305,7 +312,7 @@ class TaskStateManager:
 
         if finished:
             self.process.report(
-                f"Wihle Task {name}: this iteration finished. Try to reset for the next iteration."
+                f"While Task {name}: this iteration finished. Try to reset for the next iteration."
             )
             # reset the condition tasks
             for link in self.process.wg.tasks[name].inputs.conditions._links:

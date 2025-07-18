@@ -1,7 +1,7 @@
 """
-============================
-How to run tasks in parallel
-============================
+=====================
+Run tasks in parallel
+=====================
 """
 
 # %%
@@ -85,19 +85,19 @@ generate_node_graph(wg.pk)
 #     While lists are supported to some extent, their usage is limited to primitive types.
 
 
-@task.graph_builder
+@task.graph()
 def parallel_add_workflow(data):
-    wg = WorkGraph()
+    result = {}
     for i, item in enumerate(data.values()):
-        add_task = wg.add_task(add, x=item["x"], y=item["y"])
-        wg.outputs.result = {f"sum_{i}": add_task.outputs.result}
-    return wg
+        outputs = add(x=item["x"], y=item["y"])
+        result[f"sum_{i}"] = outputs.result
+    return {"result": result}
 
 
 len_list = 4
 data = {f"list_{i}": {"x": i, "y": i} for i in range(len_list)}
 
-wg = WorkGraph("parallel_graph_builder")
+wg = WorkGraph("parallel_graph_task")
 wg.add_task(parallel_add_workflow, data=data)
 wg.outputs.result = wg.tasks.parallel_add_workflow.outputs.result
 wg.run()
@@ -177,19 +177,19 @@ def aggregate_sum(data):
     return sum(data.values())
 
 
-@task.graph_builder
+@task.graph()
 def parallel_add_workflow(data):
-    wg = WorkGraph()
+    result = {}
     for i, item in enumerate(data.values()):
-        add_task = wg.add_task(add, x=item["x"], y=item["y"])
-        wg.outputs.result = {f"sum_{i}": add_task.outputs.result}
-    return wg
+        outputs = add(x=item["x"], y=item["y"])
+        result[f"sum_{i}"] = outputs.result
+    return {"result": result}
 
 
 len_list = 4
 data = {f"list_{i}": {"x": i, "y": i} for i in range(len_list)}
 
-wg = WorkGraph("parallel_graph_builder")
+wg = WorkGraph("parallel_graph_task")
 wg.add_task(parallel_add_workflow, data=data)
 wg.add_task(aggregate_sum, data=wg.tasks.parallel_add_workflow.outputs.result)
 wg.outputs.result = wg.tasks.aggregate_sum.outputs.result
