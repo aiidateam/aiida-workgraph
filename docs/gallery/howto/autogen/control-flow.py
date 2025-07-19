@@ -294,6 +294,42 @@ wg.to_html()
 
 generate_node_graph(wg.pk)
 
+# %%
+# Graph Task
+# ----------
+# We can also implement the same workflow using a *graph task* with the ``@task.graph`` decorator.
+# Let's implement the same logic as above, but this time using the `Graph Task` approach.
+
+
+# Wrap the function in a class to avoid pickling issues with the recursive call
+# This works because cls.sum_to_n provides a persistent reference within the instance.
+class MySummer:
+    @classmethod
+    @task.graph()
+    def add_multiply_while(cls, n, N):
+        if n < 8:
+            n = add(x=n, y=1).result
+            n = multiply(x=n, y=2).result
+            # Recursive call to continue the loop
+            return cls.add_multiply_while(n=n, N=N).result
+        else:
+            return n
+
+
+with WorkGraph("while_graph_task") as wg:
+    first_add_result = add(x=1, y=1).result
+    add_multiply_while_result = MySummer.add_multiply_while(
+        n=first_add_result, N=8
+    ).result
+    final_add_result = add(x=add_multiply_while_result, y=1).result
+    wg.outputs.result = final_add_result
+    wg.run()
+    print(f"Result            : {wg.outputs.result.value}")
+    assert wg.outputs.result.value == 15
+
+
+#%%
+# In this example, the key idea is the recursive call to the `add_multiply_while` method.
 
 # %%
 # Conclusion

@@ -81,10 +81,10 @@ def _assign_wg_outputs(outputs: Any, wg: WorkGraph):
         wg.outputs.result = outputs
     elif isinstance(outputs, dict):
         wg.outputs = outputs
-    elif outputs is None:
-        wg.outputs.result = None
     else:
-        raise TypeError(f"Function returned {type(outputs)}, expected socket or dict.")
+        wg.outputs.result = outputs
+    # else:
+    # raise TypeError(f"Function returned {type(outputs)}, expected socket or dict.")
 
 
 def _run_func_with_wg(
