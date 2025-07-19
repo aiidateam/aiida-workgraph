@@ -83,8 +83,6 @@ def _assign_wg_outputs(outputs: Any, wg: WorkGraph):
         wg.outputs = outputs
     else:
         wg.outputs.result = outputs
-    # else:
-    # raise TypeError(f"Function returned {type(outputs)}, expected socket or dict.")
 
 
 def _run_func_with_wg(
@@ -145,6 +143,7 @@ def _make_wrapper(TaskCls, func=None):
     # Expose the TaskCls on the wrapper if you want
     wrapper._TaskCls = wrapper._NodeCls = TaskCls
     wrapper._func = func
+    wrapper.is_decoratored = True
     return wrapper
 
 

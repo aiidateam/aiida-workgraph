@@ -450,9 +450,21 @@ class GraphTask(Task):
         from aiida_workgraph.engine.workgraph import WorkGraphEngine
         from aiida_workgraph.decorator import _run_func_with_wg
         from node_graph.executor import NodeExecutor
+        from aiida_workgraph import task
 
         executor = NodeExecutor(**self.get_executor()).executor
-
+        # Cloudpickle doesn’t restore the function’s own name in its globals after unpickling,
+        # so any recursive calls would raise NameError. As a temporary workaround, we re-insert
+        # the decorated function into its globals under its original name.
+        # Downside: this mutates the module globals at runtime, if another symbol with the same name exists,
+        # we may introduce hard-to-trace bugs or collisions.
+        if executor.__name__ not in executor.__globals__:
+            if getattr(executor, "is_decoratored", False):
+                executor.__globals__[executor.__name__] = executor
+            else:
+                executor.__globals__[executor.__name__] = task.graph()(executor)
+        if getattr(executor, "is_decoratored", False):
+            executor = executor._func
         wg = _run_func_with_wg(executor, args, kwargs, var_kwargs)
         wg.name = self.name
 

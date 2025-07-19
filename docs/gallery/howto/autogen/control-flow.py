@@ -6,9 +6,12 @@ Control flow in WorkGraph
 # %%
 # Introduction
 # ============
-# In this how-to we show you how you can achieve the ``while`` loop and ``if`` conditional
-# flow control elements in ``WorkGraph`` using the context manager approach.
-# In addition, the ``if`` conditional can also be implemented using the ``@task.graph`` decorator.
+# In this how-to we show you how you can achieve the ``while`` loop and ``if`` conditional flow control elements in ``WorkGraph``.
+# We'll explore two primary methods for achieving this:
+#
+# - The context manager approach (``If``, ``While``), which explicitly defines control flow zones within the graph.
+# - The ``@task.graph`` decorator, which allows you to use native Python if/else statements and recursion to create dynamic, encapsulated workflows.
+#
 # So let's dive right into it!
 
 # %%
@@ -297,30 +300,29 @@ generate_node_graph(wg.pk)
 # %%
 # Graph Task
 # ----------
-# We can also implement the same workflow using a *graph task* with the ``@task.graph`` decorator.
-# Let's implement the same logic as above, but this time using the `Graph Task` approach.
+# We can also implement the same while loop logic using a graph task with the @task.graph decorator.
+# Instead of a native while loop, this approach uses recursion: the graph task calls itself repeatedly until a termination condition is met.
+# Each recursive call dynamically generates a new sub-workflow, effectively creating one "iteration" of the loop.
+# First, let's define the recursive graph task.
 
 
-# Wrap the function in a class to avoid pickling issues with the recursive call
-# This works because cls.sum_to_n provides a persistent reference within the instance.
-class MySummer:
-    @classmethod
-    @task.graph()
-    def add_multiply_while(cls, n, N):
-        if n < 8:
-            n = add(x=n, y=1).result
-            n = multiply(x=n, y=2).result
-            # Recursive call to continue the loop
-            return cls.add_multiply_while(n=n, N=N).result
-        else:
-            return n
+@task.graph()
+def add_multiply_while(n, N):
+    """A recursive graph task that mimics a while loop."""
+    # When n >= N, the recursion stops, and the current value of n is returned.
+    if n >= N:
+        return n
+    n = add(x=n, y=1).result
+    n = multiply(x=n, y=2).result
+    # Call the function itself with the updated value of n.
+    # This continues the loop, creating a new nested workflow.
+    return add_multiply_while(n=n, N=N).result
 
 
+# Now, we can use this recursive graph task within our main WorkGraph.
 with WorkGraph("while_graph_task") as wg:
     first_add_result = add(x=1, y=1).result
-    add_multiply_while_result = MySummer.add_multiply_while(
-        n=first_add_result, N=8
-    ).result
+    add_multiply_while_result = add_multiply_while(n=first_add_result, N=8).result
     final_add_result = add(x=add_multiply_while_result, y=1).result
     wg.outputs.result = final_add_result
     wg.run()
@@ -329,7 +331,22 @@ with WorkGraph("while_graph_task") as wg:
 
 
 #%%
-# In this example, the key idea is the recursive call to the `add_multiply_while` method.
+# This approach encapsulates the entire loop within a single, reusable task.
+
+# %%
+# Workflow view
+# ~~~~~~~~~~~~~
+# In the workflow view, add_multiply_while appears as a single "black box" task.
+
+wg.to_html()
+
+
+# %%
+# Provenance graph
+# ~~~~~~~~~~~~~~~~
+# The provenance graph clearly show the chain of nested WorkGraph calculations, revealing each "iteration" as a distinct sub-process spawned by the recursive calls.
+
+generate_node_graph(wg.pk)
 
 # %%
 # Conclusion
@@ -343,8 +360,11 @@ with WorkGraph("while_graph_task") as wg:
 #   - The ``If`` context manager for explicit workflow visualization with visible branches
 #   - The ``@task.graph`` decorator for dynamic runtime generation with encapsulation
 #
-# - **While loops** use the ``While`` context manager to create iterative workflows with configurable
-#   maximum iterations to prevent infinite loops
+# - **While loops** use:
+#
+#   - The ``While`` context manager to create iterative workflows with configurable maximum iterations to prevent infinite loops
+#   - The ``@task.graph`` decorator, where loops are created through recursion to handle dynamic iterations.
+#
 # - **Context variables** (``wg.ctx``) require explicit dependency management using ``<<`` and ``>>`` operators
 #   since WorkGraph cannot automatically infer dependencies to avoid potential cycles
 # - **Provenance tracking** is maintained throughout all control flow operations during workflow execution
