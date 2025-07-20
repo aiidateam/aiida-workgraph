@@ -517,35 +517,6 @@ def deserialize_input_values_recursively(
             deserialize_input_values_recursively(socket, deserializer)
 
 
-def validate_task_inout(inout_list: list[str | dict], list_type: str) -> list[dict]:
-    """
-    Checks if all the list elements provided as `inputs` or `outputs` of to a task are of type `str` or `dict`, and,
-    if the former convert them to a list of `dict`s with `name` as the key.
-
-    :param inout_list: The input/output list to be validated.
-    :param list_type: "inputs" or "outputs" to indicate what is to be validated for better error message.
-    :raises TypeError: If wrong types are provided to the task
-    :return: Processed `inputs`/`outputs` list.
-    """
-
-    if not all(isinstance(item, (dict, str)) for item in inout_list):
-        raise TypeError(
-            f"Wrong type provided in the `{list_type}` list to the task, must be either `str` or `dict`."
-        )
-
-    processed_inout_list = []
-
-    for item in inout_list:
-        if isinstance(item, str):
-            processed_inout_list.append({"name": item})
-        elif isinstance(item, dict):
-            processed_inout_list.append(item)
-
-    processed_inout_list = processed_inout_list
-
-    return processed_inout_list
-
-
 def wait_to_link(wgdata: Dict[str, Any]) -> None:
     """Convert wait attribute to link."""
     for name, task in wgdata["tasks"].items():

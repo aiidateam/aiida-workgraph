@@ -53,11 +53,11 @@ def test_task_update_ctx(decorated_add: Callable) -> None:
 
 def test_task_update_nested_ctx():
     @task(
-        outputs=[
-            {"name": "results", "identifier": "workgraph.namespace"},
-            {"name": "results.sum"},
-            {"name": "results.product"},
-        ]
+        outputs={
+            "results": {"identifier": "workgraph.namespace"},
+            "results.sum": {},
+            "results.product": {},
+        }
     )
     def add(x, y):
         return {"results": {"sum": x + y, "product": x * y}}

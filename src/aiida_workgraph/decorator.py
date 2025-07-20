@@ -389,21 +389,19 @@ class TaskDecoratorCollection:
                     f"Function '{func.__name__}' defines parameter(s) {sorted(conflicts)}, "
                     "which conflict with default 'monitor' arguments."
                 )
-            task_inputs = inputs if inputs is not None else []
+            task_inputs = inputs if inputs is not None else {}
             # Add default interval and timeout
-            task_inputs.extend(
-                [
-                    {
-                        "name": "interval",
+            task_inputs.update(
+                {
+                    "interval": {
                         "identifier": "workgraph.float",
                         "property": {"default": 5},
                     },
-                    {
-                        "name": "timeout",
+                    "timeout": {
                         "identifier": "workgraph.float",
                         "property": {"default": 3600},
                     },
-                ]
+                }
             )
             TaskCls = MonitorFunctionTaskFactory.from_function(
                 func=func,

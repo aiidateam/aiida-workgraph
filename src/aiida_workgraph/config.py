@@ -15,17 +15,16 @@ task_types = {
     WorkChain: "WORKCHAIN",
 }
 
-builtin_inputs = [
-    {
-        "name": "_wait",
+builtin_inputs = {
+    "_wait": {
         "link_limit": 1e6,
         "metadata": {"arg_type": "none", "builtin_socket": True},
-    },
-]
-builtin_outputs = [
-    {"name": "_wait", "metadata": {"arg_type": "none", "builtin_socket": True}},
-    {"name": "_outputs", "metadata": {"arg_type": "none", "builtin_socket": True}},
-]
+    }
+}
+builtin_outputs = {
+    "_wait": {"metadata": {"arg_type": "none", "builtin_socket": True}},
+    "_outputs": {"metadata": {"arg_type": "none", "builtin_socket": True}},
+}
 
 
 def load_config() -> dict:

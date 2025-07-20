@@ -8,19 +8,19 @@ tasks:
   - identifier: workgraph.aiida_float
     name: float1
     inputs:
-      - name: value
+      value:
         property:
           value: 3.0
   - identifier: workgraph.test_sum_diff
     name: sumdiff1
     inputs:
-      - name: x
+      x:
         property:
           value: 2.0
   - identifier: workgraph.test_sum_diff
     name: sumdiff2
     inputs:
-      - name: x
+      x:
         property:
           value: 4.0
 links:
