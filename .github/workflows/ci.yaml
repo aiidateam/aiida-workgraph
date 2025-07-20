@@ -30,26 +30,7 @@ jobs:
         -   name: Run pre-commit
             run: pre-commit run --all-files || ( git status --short ; git diff ; exit 1 )
 
-    should-run-tests:
-        runs-on: ubuntu-latest
-        outputs:
-            should-run: ${{ steps.check.outputs.should-run }}
-
-        steps:
-            - uses: actions/checkout@v4
-            - name: Check for code changes
-              id: filter
-              uses: dorny/paths-filter@v3
-              with:
-                filters: |
-                    should-run:
-                      - 'src/**'
-                      - 'tests/**'
-                      - 'pyproject.toml'
-
     test:
-        needs: should-run-tests
-        if: needs.should-run-tests.outputs.should-run == 'true'
 
         runs-on: ubuntu-latest
 
