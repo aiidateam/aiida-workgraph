@@ -300,8 +300,8 @@ generate_node_graph(wg.pk)
 # %%
 # Graph Task
 # ----------
-# We can also implement the same while loop logic using a graph task with the @task.graph decorator.
-# Instead of a native while loop, this approach uses recursion: the graph task calls itself repeatedly until a termination condition is met.
+# We can also implement the same while loop logic using a graph task with the ``@task.graph`` decorator.
+# Instead of a native ``while`` loop, this approach uses recursion: the graph task calls itself repeatedly until a termination condition is met.
 # Each recursive call dynamically generates a new sub-workflow, effectively creating one "iteration" of the loop.
 # First, let's define the recursive graph task.
 
@@ -366,5 +366,5 @@ generate_node_graph(wg.pk)
 #   - The ``@task.graph`` decorator, where loops are created through recursion to handle dynamic iterations.
 #
 # - **Context variables** (``wg.ctx``) require explicit dependency management using ``<<`` and ``>>`` operators
-#   since WorkGraph cannot automatically infer dependencies to avoid potential cycles
+#   since ``WorkGraph`` cannot automatically infer dependencies to avoid potential cycles
 # - **Provenance tracking** is maintained throughout all control flow operations during workflow execution
