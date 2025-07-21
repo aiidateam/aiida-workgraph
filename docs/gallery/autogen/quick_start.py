@@ -12,8 +12,10 @@ Quick Start
 #
 # - the basics of ``WorkGraph`` with a simple arithmetic workflow
 # - how to define and use
+#
 #   - tasks to encapsulate a process
 #   - sub-workflows as tasks to encapsulate several sub-processes
+#
 # - an advanced example demonstrating control flow in ``WorkGraph``
 
 # %%
