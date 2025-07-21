@@ -95,7 +95,7 @@ wg.to_html()
 #    The ``task`` decorator accepts the same arguments when used functionally.
 #    However, here are a few things to consider:
 #
-#    - For ``WorkChain`` and ``CalcJob``, the output socket name is hardcoded in the AiiDA process definition and cannot be changed.
+#    - For ``WorkChain`` and ``CalcJob``, inputs and outputs are determined by the AiiDA process definition and cannot be overridden.
 #    - For ``calcfunction`` and ``workfunction``:
 #
 #      - When the AiiDA process provides a single output (e.g., ``return x``), the output socket name is implicitly set to ``result``.
@@ -103,6 +103,9 @@ wg.to_html()
 #        However, the benefits of clear graph visualization labels must be weighed against the loss of provenance consistency (the provenance graph will still show ``result``).
 #      - When the AiiDA process provides multiple outputs (e.g., ``return {"x": x, "y": y}``), it is actually necessary to assign output socket names explicitly.
 #        However, the previous point applies here as well if the user chooses to assign output socket names different from the dictionary keys of the AiiDA process.
+#
+#    For more about sockets, please refer to the :doc:`../../concept/autogen/socket_concept` concept section.
+
 
 # %%
 # Let's run our ``aiida-core``-powered ``WorkGraph`` and examine the provenance graph:
@@ -118,10 +121,10 @@ generate_node_graph(wg.pk)
 # Use ``WorkGraph`` in ``WorkChain``
 # ----------------------------------
 #
-# ``WorkGraph`` components can also be used within ``aiida-core`` components.
+# ``WorkGraph`` can also be used within ``aiida-core`` components.
 # Whether you want to integrate a ``WorkGraph`` into an existing robust ``WorkChain``, or simply prefer to keep certain tasks as ``aiida-core`` components while using ``WorkGraph`` for others, incorporating ``WorkGraph`` into ``aiida-core`` components is a straightforward process.
 #
-# Let's define a ``WorkChain`` that integrates a ``WorkGraph`` as a task:
+# Let's define a ``WorkChain`` that submits a ``WorkGraph``:
 
 from aiida.engine import WorkChain
 
@@ -178,7 +181,7 @@ with WorkGraph("IntegratedAddMultiply") as wg:
     wg.outputs.product = the_product
 
 # %%
-# We can export our workgraph as a dictionary using its ``to_dict()`` method and use it as the input to our ``WorkChain``:
+# We can export our workgraph as a dictionary using the ``prepare_inputs()`` method and use it as the input to our ``WorkChain``:
 
 from aiida.engine import run_get_node
 
