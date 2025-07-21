@@ -11,7 +11,7 @@ def test_tuple_outputs(decorated_add, decorated_multiply):
         product_result = decorated_multiply(sum_result, b).result
         return sum_result, product_result
 
-    wg = add_multiply.get_graph(1, 2)
+    wg = add_multiply.build_graph(1, 2)
     assert "sum" in wg.outputs
     assert "product" in wg.outputs
 

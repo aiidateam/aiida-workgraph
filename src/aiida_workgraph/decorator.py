@@ -109,7 +109,7 @@ def _run_func_with_wg(
     assign its outputs and return the WorkGraph.
     """
     merged = {**kwargs, **(var_kwargs or {})}
-    with WorkGraph() as wg:
+    with WorkGraph(func.__name__) as wg:
         raw = func(*args, **merged)
         _assign_wg_outputs(raw, wg, graph_task_output_names)
         return wg
@@ -291,7 +291,7 @@ class TaskDecoratorCollection:
 
             wrapped_func = _make_wrapper(TaskCls, func)
 
-            def get_graph(*args, **kwargs):
+            def build_graph(*args, **kwargs):
                 """This function is used to get the graph from the wrapped function."""
                 graph_task_output_names = [
                     name
@@ -303,7 +303,7 @@ class TaskDecoratorCollection:
 
                 return _run_func_with_wg(func, graph_task_output_names, args, kwargs)
 
-            wrapped_func.get_graph = get_graph
+            wrapped_func.build_graph = build_graph
 
             return wrapped_func
 
