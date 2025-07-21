@@ -153,7 +153,7 @@ from aiida import load_profile
 load_profile()
 
 # Generate the WorkGraph instance with a specific input.
-wg = sum_even_workgraph.get_graph(N=5)
+wg = sum_even_workgraph.build_graph(N=5)
 
 # The `to_html()` method generates an interactive visualization of the graph.
 # In a Sphinx-Gallery build, this will be embedded directly in the output.
