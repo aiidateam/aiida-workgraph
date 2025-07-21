@@ -34,21 +34,6 @@ Quick Start
 # Setup
 # -----
 #
-# Logging
-# ~~~~~~~
-#
-# For brevity, we disable process reporting throughout the documentation.
-# We temporarily restore it here for demonstration purposes only.
-# **You can safely skip this step.**
-
-from aiida_workgraph.utils.logging import set_aiida_loglevel
-
-set_aiida_loglevel("REPORT")
-
-# %%
-# Profile
-# ~~~~~~~
-#
 # To interact with the AiiDA database, you need to load your AiiDA profile.
 # If you haven't configured one yet, you can do so by running the following command:
 #
@@ -58,44 +43,35 @@ set_aiida_loglevel("REPORT")
 #
 # To load your profile, add the following code to your script or Jupyter notebook:
 
+# sphinx_gallery_start_ignore
+from aiida_workgraph.utils.logging import set_aiida_loglevel
+
+set_aiida_loglevel("REPORT")
+# sphinx_gallery_end_ignore
+
 from aiida import load_profile
 
 load_profile()
 
 # %%
-# .. tip::
+# .. note::
 #
-#    AiiDA provides a pre-configured shell that automatically loads your profile.
-#    If you prefer a shell environment over a script or notebook, you can start it with:
+#    AiiDA also provides a pre-configured (pre-loaded profile) shell.
+#    You can launch it with:
 #
 #    .. code:: console
 #
 #       $ verdi shell
-
-# %%
-# .. tip::
+#
+# .. note::
 #
 #    You can find out more about AiiDA and its architecture in the `AiiDA documentation`_.
-
-# %%
-# AiiDA GUI (Optional)
-# ~~~~~~~~~~~~~~~~~~~~
 #
-# Some features of ``WorkGraph`` are best demonstrated interactively.
-# For this, you can use the AiiDA GUI.
-# First, let's install the necessary packages:
+# .. tip::
 #
-# .. code:: console
-#
-#    $ pip install aiida-gui aiida-gui-workgraph
-#
-# Once installed, run the following to start the GUI:
-#
-# .. code:: console
-#
-#    $ aiida-gui start
-#
-# Go to http://localhost:8000/workgraph in your browser to view a table of executed ``WorkGraph`` processes.
+#    Some features of ``WorkGraph`` are best demonstrated interactively.
+#    We recommend using the AiiDA GUI for this.
+#    You can learn how to run and use the GUI in the :doc:`../gui/web` section.
 
 # %%
 # Simple workflow
@@ -290,9 +266,9 @@ wg.to_html()
 #    If not explicitly overridden, the name of the decorated function will be used as the name of the task when inspecting processes using, for example, ``verdi process list``.
 #
 # Here we see *SumEvenNumbers* as a black-box task.
-# To inspect its internal tasks, we can use the ``get_graph`` method as follows:
+# To inspect its internal tasks, we can use the ``build_graph`` method as follows:
 
-SumEvenNumbers.get_graph(numbers=[*range(42)]).to_html()
+SumEvenNumbers.build_graph(numbers=[*range(42)]).to_html()
 
 # %%
 # .. tip::
@@ -362,16 +338,17 @@ wg.to_html()
 #
 # To see this more clearly, we can inspect the graph of the ``ConditionalSum`` task given inputs on both ends of the condition:
 
-ConditionalSum.get_graph(numbers=[*range(40)]).to_html("html/ConditionalSumTrue.html")
+ConditionalSum.build_graph(numbers=[*range(40)]).to_html("html/ConditionalSumTrue.html")
 
 # %%
-ConditionalSum.get_graph(numbers=[*range(60)]).to_html("html/ConditionalSumFalse.html")
+ConditionalSum.build_graph(numbers=[*range(60)]).to_html(
+    "html/ConditionalSumFalse.html"
+)
 
 # %%
 # You can learn more about ``WorkGraph`` flow control in the :doc:`../howto/autogen/control-flow` how-to section.
 # You can also learn more about the ``@task.graph`` decorator in the :doc:`../concept/autogen/graph_builder_concept` concept section.
 
-set_aiida_loglevel("ERROR")
 
 # %%
 # What’s Next
@@ -397,3 +374,7 @@ set_aiida_loglevel("ERROR")
 # +---------------------------------------------------------+--------------------------------------------------------+
 #
 # .. _AiiDA documentation: https://aiida.readthedocs.io/en/stable/
+
+# sphinx_gallery_start_ignore
+set_aiida_loglevel("ERROR")
+# sphinx_gallery_end_ignore
