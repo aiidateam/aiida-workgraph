@@ -1,96 +1,53 @@
 """
-=================================================
-How to use aiida-core components inside WorkGraph
-=================================================
+Interoperate with ``aiida-core`` components
+===========================================
 """
 
 # %%
 # Introduction
-# ============
-# If you’re already familiar with AiiDA, you may be interested in how to integrate ``aiida-core`` components—such as ``CalcJob``, ``calcfunction``, ``WorkChain``, ``workfunction``, and ``ProcessBuilder`` within a ``WorkGraph``. This integration enables you to seamlessly reuse existing workflows built with these paradigms inside a more flexible graph-based structure.
+# ------------
 #
-# Adding these components as tasks in an aiida-workgraph is straightforward, and their inputs and outputs can be easily connected to form complex workflows.
+# If you’re already familiar with AiiDA, you may be interested in integrating ``aiida-core`` components, such as ``CalcJob``, ``calcfunction``, ``WorkChain``, ``workfunction``, and ``ProcessBuilder`` within a ``WorkGraph``.
+# This integration enables you to seamlessly reuse existing workflows built with these paradigms inside a more flexible graph-based structure.
+# Similarly, if you have existing robust workflows built with ``aiida-core`` components, you can easily incorporate ``WorkGraph`` components into them.
+#
+# This guide will demonstrate the two-way integration of ``WorkGraph`` with ``aiida-core`` components, providing examples for each.
 #
 # .. note::
 #
-#    This guide assumes prior knowledge of ``aiida-core`` components. If you’re unfamiliar with them, refer to the official documentation on `Calculations <https://aiida.readthedocs.io/projects/aiida-core/en/stable/topics/calculations/index.html>`_ and `Workflows <https://aiida.readthedocs.io/projects/aiida-core/en/stable/topics/workflows/index.html>`_.
+#    This guide assumes prior knowledge of ``aiida-core`` components.
+#    If you’re unfamiliar with them, please refer to the official documentation on `Calculations <https://aiida.readthedocs.io/projects/aiida-core/en/stable/topics/calculations/index.html>`_ and `Workflows <https://aiida.readthedocs.io/projects/aiida-core/en/stable/topics/workflows/index.html>`_.
 
 # %%
-# Setting up AiiDA entities
-# =========================
-# We need to initialize the computer and code resources to establish where the workflow is run.
+# Use ``aiida-core`` components in a ``WorkGraph``
+# ------------------------------------------------
+#
+# ``aiida-core`` components are fully compatible with ``WorkGraph``.
+# This means that any ``aiida-core`` component can be cast as a task and used within a ``WorkGraph``.
+#
+# In the following example, we combine all four ``aiida-core`` processes in a single ``WorkGraph``, connecting their inputs and outputs as needed.
 
-from aiida import load_profile
+# %%
+# We start by loading the AiiDA profile and importing the necessary components:
+
+from aiida import load_profile, orm
 
 load_profile()
 
-from aiida import orm
-from aiida.common.exceptions import NotExistent
-
-try:
-    bash_code = orm.load_code(
-        "bash@localhost"
-    )  # The computer label can also be omitted here
-except NotExistent:
-    bash_code = orm.InstalledCode(
-        label="bash",
-        computer=orm.load_computer("localhost"),
-        filepath_executable="/bin/bash",
-        default_calc_job_plugin="core.arithmetic.add",
-    ).store()
-
 # %%
-# Integrating ``aiida-core`` components
-# ==============================
-# We begin by examining how the ``aiida-core`` components are visualized in the task view. The following examples show that key information—such as inputs and outputs—is clearly displayed for each component.
-
-
-from aiida_workgraph import WorkGraph
-
-wg = WorkGraph("aiida_components")
-
-# %%
-# CalcJob
-# -------
-# As ``CalcJob`` we use the ``ArithmeticAddCalculation`` that adds two numbers ``x+y``.
-
 from aiida.calculations.arithmetic.add import ArithmeticAddCalculation
-
-task_calcjob = wg.add_task(ArithmeticAddCalculation)
-task_calcjob.to_html()
-
-# %%
-# WorkChain
-# ---------
-# As ``WorkChain`` we use the ``MultiplyAddWorkChain`` that performs the operation ``x*y+z``.
-
+from aiida.engine import calcfunction, workfunction
 from aiida.workflows.arithmetic.multiply_add import MultiplyAddWorkChain
 
-task_workchain = wg.add_task(MultiplyAddWorkChain)
-task_workchain.to_html()
+from aiida_workgraph import WorkGraph, task
 
 # %%
-# calcfunction
-# ------------
-# We create a ``calcfunction`` that adds two numbers ``x+y``.
-
-from aiida.engine import calcfunction
+# Next, let's define a ``calcfunction`` and ``workfunction``
 
 
 @calcfunction
 def add(x, y):
     return x + y
-
-
-task_workfunction = wg.add_task(add)
-task_workfunction.to_html()
-
-# %%
-# workfunction
-# ------------
-# We create a ``workfunction`` that adds three numbers ``x+y+z``.
-
-from aiida.engine import workfunction
 
 
 @workfunction
@@ -99,66 +56,160 @@ def add_more(x, y, z):
     return add(sum_x_y, z)
 
 
-task_workfunction = wg.add_task(add_more, name="workfunction")
-task_workfunction.to_html()
-
-
 # %%
-# Putting all together
-# --------------------
-# Now we create a workflow using all of these components, linking their inputs and outputs just as in earlier ``WorkGraph`` examples.
+# To use ``aiida-core`` components in a ``WorkGraph``, we can simply cast them as tasks using the ``task`` decorator functionally (``task(<aiida-core-component>)``).
+# Task functional components can then be called functionally with their respective inputs, linking outputs to inputs as needed.
 
-wg = WorkGraph("integrate_aiida_core_components")
+with WorkGraph("AiiDAComponents") as wg:
+    calcjob_sum = task(ArithmeticAddCalculation)(
+        code=orm.load_code("add@localhost"),
+        x=1,
+        y=2,
+    ).sum  # `ArithmeticAddCalculation` explicitly defines a 'sum' output
 
-# We demonstrate how to use the process builder to set inputs for the first task
-builder = ArithmeticAddCalculation.get_builder()
+    calcfunction_sum = task(add)(
+        x=calcjob_sum,
+        y=4,
+    ).result  # `calcfunction` implicitly defines a 'result' output
 
-# Assign code and inputs to the builder
-builder.code = bash_code
-builder.x = orm.Int(1)
-builder.y = orm.Int(2)
+    workchain_result = task(MultiplyAddWorkChain)(
+        code=orm.load_code("add@localhost"),
+        x=calcfunction_sum,
+        y=2,
+        z=3,
+    ).result  # `MultiplyAddWorkChain` explicitly defines a 'result' output
 
-# 1+2 = 3
-add_calcjob_task = wg.add_task(ArithmeticAddCalculation, name="add_calcjob")
-add_calcjob_task.set_from_builder(builder)
+    workfunction_sum = task(add_more)(
+        x=workchain_result,
+        y=2,
+        z=3,
+    ).result  # `workfunction` implicitly defines a 'result' output
 
-# Alternatively, we can initalize the ``add_calcjob`` task without the process builder
-# add_calcjob_task = wg.add_task(
-#     ArithmeticAddCalculation, name="add_calcjob", x=1, y=2, code=bash_code
-# )
+    wg.outputs.result = workfunction_sum
 
-# 3+4 = 7
-wg.add_task(
-    add, name="add_calcfunction", x=wg.tasks.add_calcjob.outputs.sum, y=4
-)  # We can access outputs as other tasks in WorkGraph
-# (7*2)+3 = 17
-wg.add_task(
-    MultiplyAddWorkChain,
-    name="multadd_workchain",
-    x=wg.tasks.add_calcfunction.outputs.result,
-    y=2,
-    z=3,
-    code=bash_code,
-)
-# 17+2+3 = 22
-wg.add_task(
-    add_more,
-    name="add_more_workfunction",
-    x=wg.tasks.multadd_workchain.outputs.result,
-    y=2,
-    z=3,
-)
-wg.run()
-assert wg.tasks.add_more_workfunction.outputs.result.value == 22
-print("Result:", wg.tasks.add_more_workfunction.outputs.result.value)
-
-# %%
 wg.to_html()
+
+# %%
+# .. important::
+#
+#    The ``task`` decorator accepts the same arguments when used functionally.
+#    However, here are a few things to consider:
+#
+#    - For ``WorkChain`` and ``CalcJob``, the output socket name is hardcoded in the AiiDA process definition and cannot be changed.
+#    - For ``calcfunction`` and ``workfunction``:
+#
+#      - When the AiiDA process provides a single output (e.g., ``return x``), the output socket name is implicitly set to ``result``.
+#        The user may override this by assigning a custom output socket name (e.g., ``task(outputs=["my_sum"])(add)(...)``).
+#        However, the benefits of clear graph visualization labels must be weighed against the loss of provenance consistency (the provenance graph will still show ``result``).
+#      - When the AiiDA process provides multiple outputs (e.g., ``return {"x": x, "y": y}``), it is actually necessary to assign output socket names explicitly.
+#        However, the previous point applies here as well if the user chooses to assign output socket names different from the dictionary keys of the AiiDA process.
+
+# %%
+# Let's run our ``aiida-core``-powered ``WorkGraph`` and examine the provenance graph:
+
+wg.run()
 
 # %%
 from aiida_workgraph.utils import generate_node_graph
 
 generate_node_graph(wg.pk)
+
+# %%
+# Use ``WorkGraph`` in ``WorkChain``
+# ----------------------------------
+#
+# ``WorkGraph`` components can also be used within ``aiida-core`` components.
+# Whether you want to integrate a ``WorkGraph`` into an existing robust ``WorkChain``, or simply prefer to keep certain tasks as ``aiida-core`` components while using ``WorkGraph`` for others, incorporating ``WorkGraph`` into ``aiida-core`` components is a straightforward process.
+#
+# Let's define a ``WorkChain`` that integrates a ``WorkGraph`` as a task:
+
+from aiida.engine import WorkChain
+
+
+class TestWorkChain(WorkChain):
+    @classmethod
+    def define(cls, spec):
+        super().define(spec)
+        spec.input_namespace("workgraph", dynamic=True)
+        spec.outline(
+            cls.run_workgraph,
+            cls.results,
+        )
+        spec.output("sum")
+        spec.output("product")
+
+    def run_workgraph(self):
+        from aiida_workgraph.engine.workgraph import WorkGraphEngine
+
+        process = self.submit(WorkGraphEngine, **self.inputs.workgraph)
+        self.to_context(workgraph_process=process)
+
+    def results(self):
+        self.out("sum", self.ctx.workgraph_process.outputs.sum)
+        self.out("product", self.ctx.workgraph_process.outputs.product)
+
+
+# %%
+# A few things to note about the above ``WorkChain``:
+#
+# - ``WorkGraphEngine`` is the AiiDA process associated with workgraphs.
+#   Its ``workgraph_data`` expects a ``WorkGraph`` in dictionary format.
+# - When gathering results, we expect to find workgraph outputs named ``sum`` and ``product``.
+#
+# Let's define a simple *AddMultiply* workgraph to provide as input to our ``WorkChain``:
+
+
+@task
+def add(x, y):
+    return x + y
+
+
+@task
+def multiply(x, y):
+    return x * y
+
+
+with WorkGraph("IntegratedAddMultiply") as wg:
+    the_sum = add(x=1, y=2).result
+    the_product = multiply(x=the_sum, y=3).result
+
+    # Expected outputs
+    wg.outputs.sum = the_sum
+    wg.outputs.product = the_product
+
+# %%
+# We can export our workgraph as a dictionary using its ``to_dict()`` method and use it as the input to our ``WorkChain``:
+
+from aiida.engine import run_get_node
+
+inputs = {"workgraph": wg.prepare_inputs(metadata={"call_link_label": "workgraph"})}
+result, node = run_get_node(TestWorkChain, **inputs)
+
+# %%
+#
+# .. tip::
+#
+#    All AiiDA processes classes, including ``WorkGraphEngine``, offer a ``get_builder()`` method.
+#    You can use this method to extract the associated ``ProcessBuilder`` and use it to set inputs directly.
+#
+#    .. code:: python
+#
+#       builder = WorkGraphEngine.get_builder()
+#       builder.workgraph_data = wg.prepare_inputs(metadata={"call_link_label": "workgraph"})
+#
+# Let's check the outputs of our ``WorkChain``:
+
+
+print("Results:")
+print("  Sum:    ", result["sum"])
+print("  Product:", result["product"])
+
+# %%
+# And finally, we can have a look at the provenance graph:
+
+from aiida_workgraph.utils import generate_node_graph
+
+generate_node_graph(node.pk)
 
 # %%
 # Further reading
