@@ -71,7 +71,9 @@ def build_task_from_callable(
     raise ValueError(f"The executor {executor} is not supported.")
 
 
-def _assign_wg_outputs(outputs: Any, wg: WorkGraph):
+def _assign_wg_outputs(
+    outputs: Any, wg: WorkGraph, graph_task_output_names: List[str]
+) -> None:
     """
     Inspect the raw outputs from the function and attach them to the WorkGraph.
     """
@@ -81,12 +83,23 @@ def _assign_wg_outputs(outputs: Any, wg: WorkGraph):
         wg.outputs.result = outputs
     elif isinstance(outputs, dict):
         wg.outputs = outputs
+    elif isinstance(outputs, tuple):
+        if len(outputs) != len(graph_task_output_names):
+            raise ValueError(
+                f"The length of the outputs {len(outputs)} does not match the length of the \
+                    Graph task outputs {len(graph_task_output_names)}."
+            )
+        outputs_dict = {}
+        for i, output in enumerate(outputs):
+            outputs_dict[graph_task_output_names[i]] = output
+        wg.outputs = outputs_dict
     else:
         wg.outputs.result = outputs
 
 
 def _run_func_with_wg(
     func: Callable,
+    graph_task_output_names: List[str],
     args: tuple,
     kwargs: dict,
     var_kwargs: Optional[dict] = None,
@@ -98,7 +111,7 @@ def _run_func_with_wg(
     merged = {**kwargs, **(var_kwargs or {})}
     with WorkGraph() as wg:
         raw = func(*args, **merged)
-        _assign_wg_outputs(raw, wg)
+        _assign_wg_outputs(raw, wg, graph_task_output_names)
         return wg
 
 
@@ -280,8 +293,15 @@ class TaskDecoratorCollection:
 
             def get_graph(*args, **kwargs):
                 """This function is used to get the graph from the wrapped function."""
+                graph_task_output_names = [
+                    name
+                    for name, socket in TaskCls._ndata.get("outputs", {})
+                    .get("sockets", {})
+                    .items()
+                    if not socket.get("metadata", {}).get("builtin_socket", False)
+                ]
 
-                return _run_func_with_wg(func, args, kwargs)
+                return _run_func_with_wg(func, graph_task_output_names, args, kwargs)
 
             wrapped_func.get_graph = get_graph
 
