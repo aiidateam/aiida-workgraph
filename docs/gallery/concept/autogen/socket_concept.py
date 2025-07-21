@@ -58,6 +58,27 @@ task2 = wg.add_task(add_and_subtract, x=3, y=4)
 print("Input sockets: ", task2.get_input_names())
 print("Output sockets: ", task2.get_output_names())
 
+
+# %%
+# One can also add an ``identifier`` to indicates the data type. The data
+# type tell the code how to display the port in the GUI, validate the data,
+# and serialize data into database.
+# We use ``workgraph.Any`` for any data type. For the moment, the data validation is
+# experimentally supported, and the GUI display is not implemented. Thus,
+# I suggest you to always ``workgraph.Any`` for the port.
+#
+
+# define the outputs with identifier
+@task(
+    outputs={
+        "sum": {"identifier": "workgraph.Any"},
+        "difference": {"identifier": "workgraph.Any"},
+    }
+)
+def add_and_subtract(x, y):
+    return {"sum": x + y, "difference": x - y}
+
+
 # %%
 # Socket Types from Python Type Hints
 # =========================================
@@ -138,24 +159,22 @@ with WorkGraph("simple_namespace_example") as wg:
 
 
 @task(
-    outputs=[
-        {
-            "name": "normal",
+    outputs={
+        "normal": {
             "identifier": "workgraph.namespace",
             "sockets": {
                 "sum": {"identifier": "workgraph.any"},
                 "product": {"identifier": "workgraph.any"},
             },
         },
-        {
-            "name": "squared",
+        "squared": {
             "identifier": "workgraph.namespace",
             "sockets": {
                 "sum": {"identifier": "workgraph.any"},
                 "product": {"identifier": "workgraph.any"},
             },
         },
-    ]
+    }
 )
 def advanced_math(x, y):
     """A task with a nested output structure."""
@@ -171,6 +190,8 @@ with WorkGraph("nested_namespace_example") as wg:
     print("\nAccessing outputs from a nested namespace:")
     print(f"  Normal sum: {outputs.normal.sum.value}")
     print(f"  Squared product: {outputs.squared.product.value}")
+    assert outputs.normal.sum.value == 5
+    assert outputs.squared.product.value == 36
 
 
 # %%
@@ -182,13 +203,12 @@ with WorkGraph("nested_namespace_example") as wg:
 
 
 @task(
-    outputs=[
-        {
-            "name": "squares",
+    outputs={
+        "squares": {
             "identifier": "workgraph.namespace",
             "metadata": {"dynamic": True},
         }
-    ]
+    }
 )
 def generate_squares(n: int):
     """Generates a dynamic number of square values."""
@@ -216,3 +236,4 @@ with WorkGraph("dynamic_namespace_example") as wg:
         print(f"  n_{i}: {dynamic_outputs.squares[f'n_{i}'].value}")
 
     print(f"Sum of all dynamic outputs: {total.result.value}")
+    assert total.result.value == 14

@@ -51,36 +51,8 @@ print("Outputs:", add1.get_output_names())
 
 ######################################################################
 # If you want to change the name of the output ports, or if there are more
-# than one output. You can define the outputs explicitly. For example:
-
-
-# define the outputs explicitly
-@task(outputs=["sum", "diff"])
-def add_minus(x, y):
-    return {"sum": x + y, "difference": x - y}
-
-
-print("Inputs:", add_minus._TaskCls().get_input_names())
-print("Outputs:", add_minus._TaskCls().get_output_names())
-
-######################################################################
-# One can also add an ``identifier`` to indicates the data type. The data
-# type tell the code how to display the port in the GUI, validate the data,
-# and serialize data into database.
-# We use ``workgraph.Any`` for any data type. For the moment, the data validation is
-# experimentally supported, and the GUI display is not implemented. Thus,
-# I suggest you to always ``workgraph.Any`` for the port.
-#
-
-# define the outputs with identifier
-@task(
-    outputs=[
-        {"name": "sum", "identifier": "workgraph.Any"},
-        {"name": "diff", "identifier": "workgraph.Any"},
-    ]
-)
-def add_minus(x, y):
-    return {"sum": x + y, "difference": x - y}
+# than one output. You can define the outputs explicitly.
+# Please refer to the `Socket <./socket_concept.rst>`__ for more details.
 
 
 ######################################################################
@@ -90,9 +62,9 @@ def add_minus(x, y):
 from aiida_workgraph import WorkGraph
 
 wg = WorkGraph()
-add_minus1 = wg.add_task(add_minus, name="add_minus1")
+add1 = wg.add_task(add, name="add1")
 multiply1 = wg.add_task(multiply, name="multiply1")
-wg.add_link(add_minus1.outputs.sum, multiply1.inputs.x)
+wg.add_link(add1.outputs.result, multiply1.inputs.x)
 
 
 ######################################################################
@@ -102,11 +74,11 @@ wg.add_link(add_minus1.outputs.sum, multiply1.inputs.x)
 # One can build a task from an already existing Python function.
 #
 
-from aiida_workgraph import WorkGraph, build_task
+from aiida_workgraph import WorkGraph, task
 
 from scipy.linalg import norm
 
-NormTask = build_task(norm)
+NormTask = task()(norm)
 
 wg = WorkGraph()
 norm_task = wg.add_task(NormTask, name="norm1")
@@ -114,43 +86,31 @@ norm_task.to_html()
 
 
 ######################################################################
-# The inputs and outputs of the task are automatically generated. One can
-# also define the outputs explicitly.
+# The inputs of the task are automatically generated. However, one need to define the outputs explicitly if there are more than one output.
 #
 
-NormTask = build_task(norm, outputs=[{"name": "norm", "identifier": "workgraph.Any"}])
+# Define a function with multiple outputs
+def calculate_stats(data):
+    """
+    Calculates the mean and standard deviation of an array.
+    """
+    import numpy as np
+
+    mean_val = np.mean(data)
+    std_val = np.std(data)
+    return mean_val, std_val
+
+
+NormTask = task(outputs=["mean", "std"])(calculate_stats)
 wg = WorkGraph()
-norm_task = wg.add_task(NormTask, name="norm1")
+norm_task = wg.add_task(NormTask, name="calculate_stats")
 
 print("Inputs: ", norm_task.inputs)
 print("Outputs: ", norm_task.outputs)
 
-######################################################################
-# For specifying the outputs, the most explicit way is to provide a list of dictionaries, as shown above. In addition,
-# as a shortcut, it is also possible to pass a list of strings. In that case, WorkGraph will internally convert the list
-# of strings into a list of dictionaries in which case, each ``name`` key will be assigned each passed string value.
-# Furthermore, also a mixed list of string and dict elements can be passed, which can be useful in cases where multiple
-# outputs should be specified, but more detailed properties are only required for some of the outputs. The above also
-# applies for the ``outputs`` argument of the ``@task`` decorator introduced earlier, as well as the ``inputs``, given
-# that they are explicitly specified rather than derived from the signature of the ``Callable``.  Finally, all lines
-# below are valid specifiers for the ``outputs`` of the ``build_task`:
-#
-
-NormTask = build_task(norm, outputs=["norm"])
-NormTask = build_task(norm, outputs=["norm", "norm2"])
-NormTask = build_task(
-    norm, outputs=["norm", {"name": "norm2", "identifier": "workgraph.Any"}]
-)
-NormTask = build_task(
-    norm,
-    outputs=[
-        {"name": "norm", "identifier": "workgraph.Any"},
-        {"name": "norm2", "identifier": "workgraph.Any"},
-    ],
-)
 
 ######################################################################
-# One can use these AiiDA component directly in the WorkGraph. The inputs
+# One can use AiiDA components directly in the WorkGraph. The inputs
 # and outputs of the task is automatically generated based on the input
 # and output port of the AiiDA component. In case of ``calcfunction``, the
 # default output is ``result``. If there are more than one output task,
