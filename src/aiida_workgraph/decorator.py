@@ -109,7 +109,7 @@ def _run_func_with_wg(
     assign its outputs and return the WorkGraph.
     """
     merged = {**kwargs, **(var_kwargs or {})}
-    with WorkGraph() as wg:
+    with WorkGraph(func.__name__) as wg:
         raw = func(*args, **merged)
         _assign_wg_outputs(raw, wg, graph_task_output_names)
         return wg
