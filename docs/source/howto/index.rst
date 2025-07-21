@@ -19,9 +19,8 @@ This section contains a collection of HowTos for various topics.
    autogen/continue_workgraph
    autogen/async
    autogen/monitor
-   waiting_on
+   autogen/control_task_execution_order
    autogen/error_resistant
-   autogen/zone
    cli
    control
    workchain_call_workgraph
