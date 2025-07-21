@@ -42,15 +42,47 @@ print("Output sockets: ", task1.get_output_names())
 # %%
 # Customizing Output Sockets
 # ==============================
-# Often, a task needs to return multiple, named values. You can explicitly define the output sockets using the ``outputs`` argument in the ``@task`` decorator.
+# When a function needs to return multiple outputs, you can define custom output sockets with the outputs argument in the ``@task.decorator``. The task will map returned values to the named sockets in two ways:
 #
-# When you define custom outputs, your function must return a dictionary where the keys match the specified output socket names.
+# - The function returns a dictionary: The keys of the returned dictionary must match the socket names.
 
 
-@task(outputs=["sum", "difference"])
+@task(
+    outputs={
+        "sum": {"identifier": "workgraph.Any"},
+        "difference": {"identifier": "workgraph.Any"},
+    }
+)
 def add_and_subtract(x, y):
-    """This task returns both the sum and difference of two numbers."""
-    return {"sum": x + y, "difference": x - y}
+    """Return the sum and difference of two numbers in a dict."""
+    return {
+        "sum": x + y,
+        "difference": x - y,
+    }
+
+
+# Inspect the new input and output sockets
+task2 = wg.add_task(add_and_subtract, x=3, y=4)
+print("Input sockets: ", task2.get_input_names())
+print("Output sockets: ", task2.get_output_names())
+
+# %%
+# - The function returns a tuple: The elements of the tuple are mapped to the sockets in the order they are declared in the outputs definition.
+#
+# .. note::
+#
+#    Be sure that the number of elements in the returned tuple matches the number of defined output sockets.
+
+
+@task(
+    outputs={
+        "sum": {"identifier": "workgraph.Any"},
+        "difference": {"identifier": "workgraph.Any"},
+    }
+)
+def add_and_subtract(x, y):
+    """Return the sum and difference of two numbers as a tuple."""
+    return x + y, x - y
 
 
 # Inspect the new input and output sockets
@@ -60,22 +92,19 @@ print("Output sockets: ", task2.get_output_names())
 
 
 # %%
-# One can also add an ``identifier`` to indicates the data type. The data
+# The ``identifier`` is used to indicates the data type. The data
 # type tell the code how to display the port in the GUI, validate the data,
 # and serialize data into database.
 # We use ``workgraph.Any`` for any data type. For the moment, the data validation is
 # experimentally supported, and the GUI display is not implemented. Thus,
 # I suggest you to always ``workgraph.Any`` for the port.
 #
+# For convenience, we also support using a list of strings as the output definition, which is equivalent to using ``workgraph.Any`` for each output socket.
 
-# define the outputs with identifier
-@task(
-    outputs={
-        "sum": {"identifier": "workgraph.Any"},
-        "difference": {"identifier": "workgraph.Any"},
-    }
-)
+
+@task(outputs=["sum", "difference"])
 def add_and_subtract(x, y):
+    """This task returns both the sum and difference of two numbers."""
     return {"sum": x + y, "difference": x - y}
 
 
