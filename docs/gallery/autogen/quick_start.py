@@ -171,7 +171,7 @@ print("Result of multiplication:", wg.tasks.op_mul.outputs.result.value)
 # .. tip::
 #
 #    If you're running the AiiDA GUI, you can visualize the executed workflow interactively.
-#    Click on the ``PK`` field of the submitted workflow (look for ``WorkGraph<AddMultiply>``) to view its details.
+#    Click on the ``PK`` field of the submitted workflow (look for *WorkGraph<AddMultiply>*) to view its details.
 #
 # So far so good! We have a simple workflow, can visualize it, run/submit it with inputs, and inspect its outputs.
 # However, in practice, tasks will require operations more complex than simple arithmetics.
@@ -209,10 +209,12 @@ with WorkGraph("AddMultiplyWithDefinedTasks") as wg:
 wg.to_html()
 
 # %%
-# We use ``add`` and ``multiply`` here quite similarly to how functions are used in Python.
-# The main difference is that we do not pass inputs by value, but rather by reference to the workgraph inputs, or sockets.
-# This creates a link, or dependency, between input/output sockets.
+# Compare the graph above with the one we defined earlier.
+# Other than the task names, they are identical, as to be expected.
 #
+# Functional tasks are used just as they do in Python.
+# The main difference is that instead of values, we pass inputs by reference.
+# This creates a link, or dependency, between input/output sockets.
 # Moreover, unlike the case of ``wg.inputs.x + wg.inputs.y``, calling a ``Task`` returns an outputs (sockets) namespace.
 # This is because in general, a task can have multiple outputs.
 # For example, let's compare calling ``add``:
@@ -232,45 +234,22 @@ def count_even_numbers(numbers):
 count_even_numbers(numbers=[1, 2, 3, 4, 5, 6, 7, 8, 9, 10])
 
 # %%
-# We can see that without explicitly specifying the expected outputs of a task, we get a default ``result`` socket.
-# When we do specify our outputs, they become available at ``<task_name>.outputs.<output_name>`` post-execution.
+# We can see that without explicitly specifying the expected outputs of a task, we get the default ``result`` socket.
 #
-# Let's use this task in a workgraph to count the even numbers in a list.
-
-with WorkGraph("CountEvenNumbers") as wg:
-    wg.inputs = dict.fromkeys(["numbers"])
-    outputs = count_even_numbers(numbers=wg.inputs.numbers)
-    wg.outputs = {
-        "count": outputs.count,
-        "even_numbers": outputs.even_numbers,
-    }
-
-wg.to_html()
-
-# %%
-# Finally, let's submit the workflow and inspect its results:
-
-wg.submit(
-    inputs={
-        "numbers": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
-    },
-    wait=True,
-)
-
-print("\nResult:")
-print("  Count:", wg.outputs.count.value)
-print("  Even numbers:", wg.outputs.even_numbers.value)
-
-# %%
+# .. note::
+#
+#    When we do specify our outputs, they become available at ``<task_name>.outputs.<output_name>`` post-execution.
+#
 # Great! We can now define functional tasks to cover any Python logic we can think of.
-# Let's now think of higher-order workflows, i.e. ones that reuse other workflows as tasks.
+# Let's now consider higher-order workflows, i.e. ones that reuse other workflows as tasks.
 
 # %%
 # ``WorkGraph`` as a ``Task``
 # ---------------------------
 #
 # We can expose a ``WorkGraph`` as a ``Task`` by using the ``@task.graph`` decorator.
-# This is a great way to encapsulate a workflow and reuse it as a sub-workflow (task) in other workflows.
+# This is useful for task encapsulation and reusability, as well as for defining dynamic (runtime-input-dependent) workflows.
+# Let's see how this works in practice.
 
 
 @task
@@ -310,7 +289,7 @@ wg.to_html()
 #    Though not strictly required, we name our graph tasks using camel case to distinguish them from regular tasks.
 #    If not explicitly overridden, the name of the decorated function will be used as the name of the task when inspecting processes using, for example, ``verdi process list``.
 #
-# Here we see ``SumEvenNumbers`` as a black-box task.
+# Here we see *SumEvenNumbers* as a black-box task.
 # To inspect its internal tasks, we can use the ``get_graph`` method as follows:
 
 SumEvenNumbers.get_graph(numbers=[*range(42)]).to_html()
@@ -326,7 +305,7 @@ SumEvenNumbers.get_graph(numbers=[*range(42)]).to_html()
 #    To learn more about workflow composition, see the :doc:`../howto/autogen/combine_workgraphs` how-to section.
 
 # %%
-# Complex workflow
+# Dynamic workflow
 # ----------------
 #
 # So far, our workflows have been simple and linear.
