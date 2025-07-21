@@ -61,10 +61,7 @@ def test_decorator(fixture_localhost, python_executable_path):
     """Test decorator."""
 
     @task.pythonjob(
-        outputs=[
-            {"identifier": "workgraph.any", "name": "sum"},
-            {"identifier": "workgraph.any", "name": "diff"},
-        ]
+        outputs=["sum", "diff"],
     )
     def add(x, y):
         return {"sum": x + y, "diff": x - y}
@@ -151,16 +148,15 @@ def test_PythonJob_namespace_output_input(fixture_localhost, python_executable_p
 
     # output namespace
     @task(
-        outputs=[
-            {"name": "add_multiply", "identifier": "workgraph.namespace"},
-            {
-                "name": "add_multiply.add",
+        outputs={
+            "add_multiply": {"identifier": "workgraph.namespace"},
+            "add_multiply.add": {
                 "identifier": "workgraph.namespace",
                 "metadata": {"dynamic": True},
             },
-            {"name": "add_multiply.multiply"},
-            {"name": "minus"},
-        ]
+            "add_multiply.multiply": {},
+            "minus": {},
+        }
     )
     def myfunc(x, y):
         return {
@@ -328,7 +324,7 @@ def test_exit_code(fixture_localhost, python_executable_path):
         return "Run error handler: handle_negative_sum."
 
     @task.pythonjob(
-        outputs=[{"name": "sum"}],
+        outputs=["sum"],
         error_handlers=[
             {"handler": handle_negative_sum, "exit_codes": [410], "max_retries": 5}
         ],

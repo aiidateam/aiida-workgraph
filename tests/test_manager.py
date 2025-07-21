@@ -34,13 +34,12 @@ def test_map(decorated_add):
     """"""
 
     @task(
-        outputs=[
-            {
-                "name": "result",
+        outputs={
+            "result": {
                 "identifier": "workgraph.namespace",
                 "metadata": {"dynamic": True},
             }
-        ]
+        }
     )
     def generate_list(N):
         return {"result": {f"item_{i}": i for i in range(1, N + 1)}}

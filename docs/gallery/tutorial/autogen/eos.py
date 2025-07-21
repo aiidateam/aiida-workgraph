@@ -18,7 +18,7 @@ from aiida_workgraph import task
 
 #
 # explicitly define the output socket name to match the return value of the function
-@task.calcfunction(outputs=[{"name": "structures"}])
+@task.calcfunction(outputs=["structures"])
 def scale_structure(structure, scales):
     """Scale the structure by the given scales."""
     atoms = structure.get_ase()

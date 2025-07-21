@@ -148,14 +148,14 @@ with WorkGraph(name="shell_add_mutiply_workflow") as wg:
         arguments=["{x}", "+", "{y}"],
         nodes={"x": Int(2), "y": Int(3)},
         parser=PickledData(parser),
-        parser_outputs=[{"name": "result"}],
+        parser_outputs=["result"],
     )
     outputs2 = shelljob(
         command="expr",
         arguments=["{result}", "*", "{z}"],
         nodes={"z": Int(4), "result": outputs1.result},
         parser=PickledData(parser),
-        parser_outputs=[{"name": "result"}],
+        parser_outputs=["result"],
     )
 wg.to_html()
 
@@ -167,6 +167,7 @@ wg.to_html()
 wg.run()
 print("State of WorkGraph    : {}".format(wg.state))
 print("Result               : {}".format(outputs2.result.value))
+assert outputs2.result.value == 20
 
 
 # %%

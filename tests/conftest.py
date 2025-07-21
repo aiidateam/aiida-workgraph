@@ -221,18 +221,18 @@ def decorated_namespace_sum_diff() -> Callable:
     """Generate a decorated node for test."""
 
     @task(
-        inputs=[
-            {"name": "nested", "identifier": "namespace"},
-            {"name": "nested.x"},
-            {"name": "nested.y"},
-        ],
-        outputs=[
-            "sum",
-            "diff",
-            {"name": "nested", "identifier": "namespace"},
-            {"name": "nested.sum"},
-            {"name": "nested.diff"},
-        ],
+        inputs={
+            "nested": {"identifier": "namespace"},
+            "nested.x": {},
+            "nested.y": {},
+        },
+        outputs={
+            "sum": {},
+            "diff": {},
+            "nested": {"identifier": "namespace"},
+            "nested.sum": {},
+            "nested.diff": {},
+        },
     )
     def sum_diff(x, y, nested):
         """Add two numbers and return the result."""

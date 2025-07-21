@@ -2,9 +2,8 @@ from aiida_workgraph.orm.mapping import type_mapping
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 from aiida_workgraph.config import builtin_inputs, builtin_outputs
 from node_graph.executor import NodeExecutor
-from aiida_workgraph.utils import validate_task_inout
 from .base import BaseTaskFactory
-from node_graph.utils import list_to_dict
+from node_graph.utils import validate_socket_data
 
 
 class DecoratedFunctionTaskFactory(BaseTaskFactory):
@@ -36,13 +35,13 @@ class DecoratedFunctionTaskFactory(BaseTaskFactory):
 
         task_type = task_type or cls.default_task_type
         identifier = identifier or func.__name__
-        inputs = inputs or []
-        properties = properties or []
+        inputs = validate_socket_data(inputs) or {}
+        properties = properties or {}
         # at least one output is required
-        task_outputs = outputs or [{"identifier": "workgraph.any", "name": "result"}]
+        task_outputs = validate_socket_data(outputs) or {
+            "result": {"identifier": "workgraph.any"}
+        }
         error_handlers = error_handlers or []
-        inputs = validate_task_inout(inputs, "inputs")
-        task_outputs = validate_task_inout(task_outputs, "outputs")
         task_inputs = generate_input_sockets(
             func, inputs, properties, type_mapping=type_mapping
         )
@@ -50,16 +49,14 @@ class DecoratedFunctionTaskFactory(BaseTaskFactory):
         task_outputs = {
             "name": "outputs",
             "identifier": node_class.SocketPool.any,
-            "sockets": list_to_dict(task_outputs),
+            "sockets": task_outputs,
         }
         for out in task_outputs["sockets"].values():
             out.setdefault("metadata", {})
             out["metadata"]["function_socket"] = True
         # add built-in sockets
-        for input_data in builtin_inputs:
-            task_inputs["sockets"][input_data["name"]] = input_data.copy()
-        for output in builtin_outputs:
-            task_outputs["sockets"][output["name"]] = output.copy()
+        task_inputs["sockets"].update(builtin_inputs.copy())
+        task_outputs["sockets"].update(builtin_outputs.copy())
 
         tdata = {
             "identifier": identifier,

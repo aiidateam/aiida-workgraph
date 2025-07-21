@@ -135,8 +135,6 @@ class TaskStateManager:
         """
         from aiida_workgraph.config import builtin_outputs
 
-        builtin_output_names = [output["name"] for output in builtin_outputs]
-
         if success:
             task = self.process.wg.tasks[name]
             if isinstance(results, tuple):
@@ -147,7 +145,7 @@ class TaskStateManager:
                 output_names = [
                     output._name
                     for output in task.outputs
-                    if output._name not in builtin_output_names
+                    if output._name not in builtin_outputs
                 ]
                 for i, output_name in enumerate(output_names):
                     self.ctx._task_results[name][output_name] = results[i]
