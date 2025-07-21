@@ -164,7 +164,7 @@ def test_extend_workgraph(decorated_add_multiply_group):
 
     wg = WorkGraph("test_graph_build")
     add1 = wg.add_task("workgraph.test_add", "add1", x=2, y=3)
-    add_multiply_wg = decorated_add_multiply_group.get_graph(x=0, y=4, z=5)
+    add_multiply_wg = decorated_add_multiply_group.build_graph(x=0, y=4, z=5)
     # test wait
     add_multiply_wg.tasks.multiply.waiting_on.add("add")
     # extend workgraph
