@@ -17,24 +17,27 @@ Quick Start
 #   - sub-workflows as tasks to encapsulate several sub-processes
 #
 # - an advanced example demonstrating control flow in ``WorkGraph``
+#
+# .. note::
+#
+#    This quick start tutorial assumes basic AiiDA knowledge.
+#    To learn more about AiiDA, please visit the `AiiDA documentation`_.
 
 # %%
 # Installation
 # ------------
 #
-# Let's first install ``aiida-workgraph``
+# Let's first install ``aiida-workgraph`` (and ``aiida-core`` by extension):
 #
 # .. code:: console
 #
 #    $ pip install aiida-workgraph
-#
-# This will also install ``aiida-core`` and its dependencies.
 
 # %%
 # Setup
 # -----
 #
-# To interact with the AiiDA database, you need to load your AiiDA profile.
+# To interact with the AiiDA database, we need to load an AiiDA profile.
 # If you haven't configured one yet, you can do so by running the following command:
 #
 # .. code:: console
@@ -63,10 +66,6 @@ load_profile()
 #
 #       $ verdi shell
 #
-# .. note::
-#
-#    You can find out more about AiiDA and its architecture in the `AiiDA documentation`_.
-#
 # .. tip::
 #
 #    Some features of ``WorkGraph`` are best demonstrated interactively.
@@ -83,23 +82,21 @@ load_profile()
 from aiida_workgraph import WorkGraph
 
 with WorkGraph("AddMultiply") as wg:
-    wg.inputs = ("x", "y", "z")
+    wg.inputs = dict.fromkeys(("x", "y", "z"))
     wg.outputs.result = (wg.inputs.x + wg.inputs.y) * wg.inputs.z
 
 # %%
 # We've defined our first workflow using ``WorkGraph`` 🎉
 #
-# The workflow expects three arguments, ``x``, ``y``, and ``z``.
-# It sets up as tasks the addition of the ``x`` and ``y`` (in parentheses), and the multiplication of the result by ``z``.
-# Finally, it assigns the final result as an output.
+# The workflow sets up three input parameters, ``x``, ``y``, and ``z``.
+# It then sets up tasks for adding ``x`` and ``y`` (in parentheses), and multiplying the result by ``z``.
+# Finally, it assigns the result to the ``result`` output socket.
 #
-# .. tip::
+# .. note::
 #
-#    ``result`` is a special output port given by default.
-#    However, you can also define your own output ports with ``wg.outputs.my_output = ...``.
-#    You can learn more about graph-level inputs and output in the :doc:`../howto/autogen/graph_level` how-to section.
+#    To learn more about graph-level inputs and output, visit the :doc:`../howto/autogen/graph_level` how-to section.
 #
-# We can visualize the workgraph to inspect the tasks and their connections.
+# We can visualize the workgraph to inspect its tasks and their connections.
 
 wg.to_html()
 
@@ -119,7 +116,6 @@ wg.run(inputs={"x": 2, "y": 3, "z": 4})
 #       wg.submit(inputs=..., wait=True)
 #
 #    You can use ``wait=True`` to block the terminal or notebook until the workflow finishes.
-#    You can learn more about this in the `AiiDA documentation`_.
 
 
 # %%
@@ -145,15 +141,14 @@ print("Result of multiplication:", wg.tasks.op_mul.outputs.result.value)
 #    Click on the ``PK`` field of the submitted workflow (look for *WorkGraph<AddMultiply>*) to view its details.
 #
 # So far so good! We have a simple workflow, can visualize it, run/submit it with inputs, and inspect its outputs.
-# However, in practice, tasks will require operations more complex than simple arithmetics.
-# How can we handle these?
+# However, in practice, tasks may require more advanced logic.
+# How do we handle these?
 
 # %%
-# Defining a ``Task``
-# -------------------
+# The ``@task`` decorator
+# -----------------------
 #
-# A ``Task`` is the basic building block of the ``WorkGraph``. It has inputs,
-# outputs, and an executor. Let's define the above operations as tasks.
+# We can decorate any Python function with the ``@task`` decorator to turn it into a task.
 
 from aiida_workgraph import task
 
@@ -169,13 +164,13 @@ def multiply(x, y):
 
 
 # %%
-# We can use these functional tasks directly in a workgraph as follows:
+# We can then call these functional tasks directly in a workgraph as follows:
 
 with WorkGraph("AddMultiplyWithDefinedTasks") as wg:
-    wg.inputs = dict.fromkeys(["x", "y", "z"])
-    add_outputs = add(x=wg.inputs.x, y=wg.inputs.y)
-    mul_outputs = multiply(x=add_outputs.result, y=wg.inputs.z)
-    wg.outputs.result = mul_outputs.result
+    wg.inputs = dict.fromkeys(("x", "y", "z"))
+    the_sum = add(x=wg.inputs.x, y=wg.inputs.y).result
+    the_product = multiply(x=the_sum, y=wg.inputs.z).result
+    wg.outputs.result = the_product
 
 wg.to_html()
 
@@ -184,9 +179,9 @@ wg.to_html()
 # Other than the task names, they are identical, as to be expected.
 #
 # Functional tasks are used just as they do in Python.
-# The main difference is that instead of values, we pass inputs by reference.
+# The main difference is that instead of values, we pass inputs by reference (sockets).
 # This creates a link, or dependency, between input/output sockets.
-# Moreover, unlike the case of ``wg.inputs.x + wg.inputs.y``, calling a ``Task`` returns an outputs (sockets) namespace.
+# Moreover, unlike the case of ``wg.inputs.x + wg.inputs.y``, calling a ``Task`` returns a socket namespace.
 # This is because in general, a task can have multiple outputs.
 # For example, let's compare calling ``add``:
 
@@ -209,18 +204,22 @@ count_even_numbers(numbers=[1, 2, 3, 4, 5, 6, 7, 8, 9, 10])
 #
 # .. note::
 #
-#    When we do specify our outputs, they become available at ``<task_name>.outputs.<output_name>`` post-execution.
+#    When we do specify our output sockets explicitly, they become available at ``<task_name>.outputs.<output_name>`` post-execution.
+#
+# .. note::
+#
+#    To learn more about sockets, see the :doc:`../concept/autogen/socket_concept` concept section.
 #
 # Great! We can now define functional tasks to cover any Python logic we can think of.
-# Let's now consider higher-order workflows, i.e. ones that reuse other workflows as tasks.
+# Let's now consider higher-order workflows.
 
 # %%
-# ``WorkGraph`` as a ``Task``
-# ---------------------------
+# The ``@task.graph`` decorator
+# -----------------------------
 #
-# We can expose a ``WorkGraph`` as a ``Task`` by using the ``@task.graph`` decorator.
+# We can expose a ``WorkGraph`` as a task by using the ``@task.graph`` decorator.
 # This is useful for task encapsulation and reusability, as well as for defining dynamic (runtime-input-dependent) workflows.
-# Let's see how this works in practice.
+# Let's see how this works in practice by defining a workflow to sum the even numbers of a number list of random size.
 
 
 @task
@@ -242,26 +241,21 @@ def sum_numbers(numbers):
 
 @task.graph
 def SumEvenNumbers(numbers):
-    even_numbers_output = count_even_numbers(numbers=numbers)
-    return sum_numbers(numbers=even_numbers_output.even_numbers).result
+    even_numbers = count_even_numbers(numbers=numbers).even_numbers
+    return sum_numbers(numbers=even_numbers).result
 
 
-with WorkGraph("SumEvenRandomNumbers") as wg:
-    wg.inputs = dict.fromkeys(["minimum", "maximum"])
+with WorkGraph("SumRandomEvenNumbers") as wg:
+    wg.inputs = dict.fromkeys(("minimum", "maximum"))
     n = random_number_generator(wg.inputs.minimum, wg.inputs.maximum).result
     numbers = generate_numbers(n=n).result
-    wg.outputs = SumEvenNumbers(numbers=numbers).result
+    wg.outputs.sum = SumEvenNumbers(numbers=numbers).result
 
 wg.to_html()
 
 # %%
-# .. note::
-#
-#    Though not strictly required, we name our graph tasks using camel case to distinguish them from regular tasks.
-#    If not explicitly overridden, the name of the decorated function will be used as the name of the task when inspecting processes using, for example, ``verdi process list``.
-#
-# Here we see *SumEvenNumbers* as a black-box task.
-# To inspect its internal tasks, we can use the ``build_graph`` method as follows:
+# Here we see the *SumEvenNumbers* task as a black-box.
+# To inspect its internal tasks, we can use the ``build_graph`` method with any input:
 
 SumEvenNumbers.build_graph(numbers=[*range(42)]).to_html()
 
@@ -269,28 +263,30 @@ SumEvenNumbers.build_graph(numbers=[*range(42)]).to_html()
 # .. tip::
 #
 #    When using the AiiDA GUI to inspect executed workflows, sub-workflows can be expanded interactively to inspect their internal tasks and connections.
-
-# %%
-# .. tip::
+#
+# .. note::
+#
+#    Though not strictly required, we name our graph tasks using camel case to distinguish them from regular tasks.
+#    If not explicitly overridden, the name of the decorated function will be used as the name of the task when inspecting processes using, for example, ``verdi process list``.
+#
+# .. note::
 #
 #    To learn more about workflow composition, see the :doc:`../howto/autogen/combine_workgraphs` how-to section.
+#
+# Nice! We can now define reusable workflows, encapsulating any number of tasks in linear fashion.
+# But what if our logic isn't linear? What if its iterative, or conditional?
 
 # %%
-# Dynamic workflow
-# ----------------
+# Control flow
+# ------------
 #
-# So far, our workflows have been simple and linear.
-# However, often we need to create more complex workflows that involve branching, loops, and other control structures.
-# Let's explore such a scenario.
-# Suppose we want to conditionally sum a set of numbers based on some random input.
-# If the input is greather than 50, we filter out the even numbers and sum them.
-# Otherwise, we just sum all the numbers.
-# Let's try to define this workflow using what we've learned so far:
+# Suppose we want to sum a set of numbers conditionally, depending on how many numbers we have.
+# Let's try to define an example workflow using what we've learned so far:
 #
 # .. code:: python
 #
 #    with WorkGraph("ComplexWorkflow") as wg:
-#        wg.inputs = dict.fromkeys(["minimum", "maximum"])
+#        wg.inputs = dict.fromkeys(("minimum", "maximum"))
 #        n = random_number_generator(wg.inputs.minimum, wg.inputs.maximum).result
 #        numbers = generate_numbers(n=n).result
 #        if n < 50:
@@ -302,11 +298,16 @@ SumEvenNumbers.build_graph(numbers=[*range(42)]).to_html()
 # %%
 # This seems straightforward.
 # However, **it won't work as expected**.
-# The reason is that the ``if`` statement requires the value of ``n``, which is not available at the time of the workflow definition.
+# The reason is that the ``if`` statement requires the value of ``n``, which is not yet available at the time of the workflow definition.
 #
-# To handle this conditional logic, and any other flow control for that matter, we must queue it as a graph task.
-# Another way to think of it is that any Pythonic control flow statement must be deferred to runtime.
+# How do we do this then? Simple - we think in tasks!
+#
+# To handle such conditional logic, or any other flow control for that matter, we must queue it as a dynamic graph task.
 # For this, **we need task encapsulation**.
+#
+# .. important::
+#
+#    Control flow statements must be deferred to runtime.
 #
 # Let's do this now for the above example:
 
@@ -319,7 +320,7 @@ def ConditionalSum(numbers):
 
 
 with WorkGraph("ComplexWorkflow") as wg:
-    wg.inputs = dict.fromkeys(["minimum", "maximum"])
+    wg.inputs = dict.fromkeys(("minimum", "maximum"))
     n = random_number_generator(wg.inputs.minimum, wg.inputs.maximum).result
     numbers = generate_numbers(n=n).result
     wg.outputs.sum = ConditionalSum(numbers=numbers).result
@@ -341,8 +342,10 @@ ConditionalSum.build_graph(numbers=[*range(60)]).to_html(
 )
 
 # %%
-# You can learn more about ``WorkGraph`` flow control in the :doc:`../howto/autogen/control-flow` how-to section.
-# You can also learn more about the ``@task.graph`` decorator in the :doc:`../concept/autogen/graph_builder_concept` concept section.
+# .. note::
+#
+#    To learn more about ``WorkGraph`` flow control, visit the :doc:`../howto/autogen/control-flow` how-to section.
+#    To learn more about the ``@task.graph`` decorator, visit the :doc:`../concept/autogen/graph_builder_concept` concept section.
 
 
 # %%
