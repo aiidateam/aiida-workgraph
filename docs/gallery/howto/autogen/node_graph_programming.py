@@ -201,13 +201,12 @@ wg.to_html()
 
 
 @task(
-    outputs=[
-        {
-            "name": "result",
+    outputs={
+        "result": {
             "identifier": "workgraph.namespace",
             "metadata": {"dynamic": True},
         }
-    ]
+    }
 )
 def generate_data(N):
     """Generates a dictionary with N items."""
