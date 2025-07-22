@@ -181,7 +181,7 @@ print("B: {B}\nv0: {v0}\ne0: {e0}\nv0: {v0}".format(**data))
 # We can use the `graph` decorator. The Graph Builder allow user to create a dynamic workflow based on the input value, as well as nested workflows.
 #
 
-from aiida_workgraph import WorkGraph, task, Map, active_graph
+from aiida_workgraph import WorkGraph, task, Map
 
 
 @task.graph()
