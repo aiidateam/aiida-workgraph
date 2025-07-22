@@ -16,12 +16,16 @@ Quick Start
 #   - tasks to encapsulate a process
 #   - sub-workflows as tasks to encapsulate several sub-processes
 #
-# - an advanced example demonstrating control flow in ``WorkGraph``
+# - an example demonstrating control flow in ``WorkGraph``
 #
 # .. note::
 #
 #    This quick start tutorial assumes basic AiiDA knowledge.
 #    To learn more about AiiDA, please visit the `AiiDA documentation`_.
+#
+# .. tip::
+#
+#    It is best to follow the quick start tutorial using a Jupyter notebook.
 
 # %%
 # Installation
@@ -57,15 +61,6 @@ from aiida import load_profile
 load_profile()
 
 # %%
-# .. note::
-#
-#    AiiDA also provides a pre-configured (pre-loaded profile) shell.
-#    You can launch it with:
-#
-#    .. code:: console
-#
-#       $ verdi shell
-#
 # .. tip::
 #
 #    Some features of ``WorkGraph`` are best demonstrated interactively.
@@ -76,12 +71,12 @@ load_profile()
 # Simple workflow
 # ---------------
 #
-# Suppose you want to compute ``(x + y) * z`` and record both operations.
+# Suppose you want to compute ``(x + y) * z`` as a workflow of two distinct tasks (addition and multiplication).
 # The simplest way to do this in ``WorkGraph`` is as follows:
 
 from aiida_workgraph import WorkGraph
 
-with WorkGraph("AddMultiply") as wg:
+with WorkGraph(name="AddMultiply") as wg:
     wg.inputs = dict.fromkeys(("x", "y", "z"))
     wg.outputs.result = (wg.inputs.x + wg.inputs.y) * wg.inputs.z
 
@@ -89,18 +84,24 @@ with WorkGraph("AddMultiply") as wg:
 # We've defined our first workflow using ``WorkGraph`` 🎉
 #
 # The workflow sets up three input parameters, ``x``, ``y``, and ``z``.
-# It then sets up tasks for adding ``x`` and ``y`` (in parentheses), and multiplying the result by ``z``.
+# It defines tasks for adding ``x`` and ``y``, and multiplying the result by ``z``.
 # Finally, it assigns the result to the ``result`` output socket.
 #
-# .. note::
-#
-#    To learn more about graph-level inputs and output, visit the :doc:`../howto/autogen/graph_level` how-to section.
-#
 # We can visualize the workgraph to inspect its tasks and their connections.
+#
+# .. important::
+#
+#    If you are following along in a Jupyter notebook, replace ``wg.to_html()`` below with ``wg``.
 
 wg.to_html()
 
 # %%
+# .. note::
+#
+#    The `graph_inputs` and `graph_outputs` shown above aren't tasks but rather socket namespaces holding the inputs and outputs of the entire graph (as compared to those of an individual task, e.g., `add.x`, and `add.y`).
+#    To learn more about graph-level inputs and outputs, visit the :doc:`../howto/autogen/graph_level` how-to section.
+#
+#
 # Let's run it with some inputs:
 
 wg.run(inputs={"x": 2, "y": 3, "z": 4})
@@ -142,7 +143,7 @@ print("Result of multiplication:", wg.tasks.op_mul.outputs.result.value)
 #
 # So far so good! We have a simple workflow, can visualize it, run/submit it with inputs, and inspect its outputs.
 # However, in practice, tasks may require more advanced logic.
-# How do we handle these?
+# How do we handle these in ``WorkGraph``?
 
 # %%
 # The ``@task`` decorator
@@ -178,11 +179,15 @@ wg.to_html()
 # Compare the graph above with the one we defined earlier.
 # Other than the task names, they are identical, as to be expected.
 #
-# Functional tasks are used just as they do in Python.
-# The main difference is that instead of values, we pass inputs by reference (sockets).
+# When calling functional tasks in a workgraph, we pass inputs by reference (sockets), not by value.
 # This creates a link, or dependency, between input/output sockets.
 # Moreover, unlike the case of ``wg.inputs.x + wg.inputs.y``, calling a ``Task`` returns a socket namespace.
 # This is because in general, a task can have multiple outputs.
+#
+# .. note::
+#
+#    To learn more about sockets, see the :doc:`../concept/autogen/socket_concept` concept section.
+#
 # For example, let's compare calling ``add``:
 
 add(x=2, y=3)
@@ -201,25 +206,22 @@ count_even_numbers(numbers=[1, 2, 3, 4, 5, 6, 7, 8, 9, 10])
 
 # %%
 # We can see that without explicitly specifying the expected outputs of a task, we get the default ``result`` socket.
+# When we do specify our output sockets explicitly, they become available at ``<task_name>.outputs.<output_name>`` post-execution.
 #
-# .. note::
-#
-#    When we do specify our output sockets explicitly, they become available at ``<task_name>.outputs.<output_name>`` post-execution.
-#
-# .. note::
-#
-#    To learn more about sockets, see the :doc:`../concept/autogen/socket_concept` concept section.
-#
-# Great! We can now define functional tasks to cover any Python logic we can think of.
-# Let's now consider higher-order workflows.
+# Great! We can define functional tasks to cover any Python logic we can think of.
+# Let's now consider higher-order workflows composed of other workflows.
 
 # %%
 # The ``@task.graph`` decorator
 # -----------------------------
 #
-# We can expose a ``WorkGraph`` as a task by using the ``@task.graph`` decorator.
+# We can expose a workgraph as a task by using the ``@task.graph`` decorator.
 # This is useful for task encapsulation and reusability, as well as for defining dynamic (runtime-input-dependent) workflows.
 # Let's see how this works in practice by defining a workflow to sum the even numbers of a number list of random size.
+#
+# .. note::
+#
+#    We'll reuse the ``count_even_numbers`` task defined above
 
 
 @task
@@ -274,7 +276,8 @@ SumEvenNumbers.build_graph(numbers=[*range(42)]).to_html()
 #    To learn more about workflow composition, see the :doc:`../howto/autogen/combine_workgraphs` how-to section.
 #
 # Nice! We can now define reusable workflows, encapsulating any number of tasks in linear fashion.
-# But what if our logic isn't linear? What if its iterative, or conditional?
+# But what if our logic isn't linear? What if its iterative (``for``, ``while``), or conditional (``if/else``)?
+# How do we control the flow of tasks in ``WorkGraph``?
 
 # %%
 # Control flow
@@ -298,16 +301,12 @@ SumEvenNumbers.build_graph(numbers=[*range(42)]).to_html()
 # %%
 # This seems straightforward.
 # However, **it won't work as expected**.
-# The reason is that the ``if`` statement requires the value of ``n``, which is not yet available at the time of the workflow definition.
+# The reason is that the ``if`` statement requires ``n``, which is not yet available at the time of the workflow definition.
 #
-# How do we do this then? Simple - we think in tasks!
+# How do we do this then? Simple - **we need to think in tasks!**
 #
-# To handle such conditional logic, or any other flow control for that matter, we must queue it as a dynamic graph task.
-# For this, **we need task encapsulation**.
-#
-# .. important::
-#
-#    Control flow statements must be deferred to runtime.
+# To handle control flow logic (e.g., conditionals), we must **queue it as a dynamic task**.
+# For this, we need to encapsulate the control flow logic using ``@task.graph``.
 #
 # Let's do this now for the above example:
 
@@ -329,17 +328,22 @@ wg.to_html()
 
 # %%
 #
-# By treating the conditional logic as a task, there is no need to know the value of ``n`` at workflow definition time, as the conditional statement will only evaluate when the workflow is executed.
-# This allows us to define dynamic workflows that **decide their flow at runtime**.
+# By treating the conditional logic as a task, there is no need to know the value of ``n`` at workflow definition time, as we only evaluate the conditional statement when the workflow is executed.
+# This allows us to define **dynamic workflows** that **decide their flow at runtime**.
 #
-# To see this more clearly, we can inspect the graph of the ``ConditionalSum`` task given inputs on both ends of the condition:
-
-ConditionalSum.build_graph(numbers=[*range(40)]).to_html("html/ConditionalSumTrue.html")
-
-# %%
-ConditionalSum.build_graph(numbers=[*range(60)]).to_html(
-    "html/ConditionalSumFalse.html"
-)
+# We show below the two possible branches of the ``ConditionalSum`` task.
+# You can generate these yourself by running the following code in your notebook:
+#
+# .. code:: python
+#
+#    ConditionalSum.build_graph(numbers=[*range(...)])
+#
+# where ``...`` is a number on either side of 50.
+#
+# .. figure:: ../../source/_static/images/conditional_sum.svg
+#    :alt: the two branches of the ConditionalSum task
+#
+#    The two possible branches of the ``ConditionalSum`` task
 
 # %%
 # .. note::
