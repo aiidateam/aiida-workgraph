@@ -340,7 +340,7 @@ wg.to_html()
 #
 # where ``...`` is a number on either side of 50.
 #
-# .. figure:: ../../source/_static/images/conditional_sum.svg
+# .. figure:: ../../source/_static/images/conditional_sum.png
 #    :alt: the two branches of the ConditionalSum task
 #
 #    The two possible branches of the ``ConditionalSum`` task
