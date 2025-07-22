@@ -4,18 +4,18 @@ from typing import List, Optional, Union, Dict, Any
 from .base import BaseTaskFactory
 from aiida_shell import ShellJob
 from .aiida_task import AiiDAComponentTaskFactory
-from aiida_workgraph.utils import validate_task_inout
 from aiida_workgraph import Task
 from node_graph.executor import NodeExecutor
+from node_graph.utils import validate_socket_data
 
-additional_inputs = [
-    {"identifier": "workgraph.any", "name": "command"},
-    {"identifier": "workgraph.any", "name": "resolve_command"},
-]
-additional_outputs = [
-    {"identifier": "workgraph.any", "name": "stdout"},
-    {"identifier": "workgraph.any", "name": "stderr"},
-]
+additional_inputs = {
+    "command": {"identifier": "workgraph.any"},
+    "resolve_command": {"identifier": "workgraph.any"},
+}
+additional_outputs = {
+    "stdout": {"identifier": "workgraph.any"},
+    "stderr": {"identifier": "workgraph.any"},
+}
 
 
 def prepare_for_shell_task(inputs: dict) -> dict:
@@ -112,29 +112,23 @@ class ShellJobTaskFactory(BaseTaskFactory):
     ):
         from aiida_shell.parsers.shell import ShellParser
 
-        outputs = outputs or []
-        parser_outputs = parser_outputs or []
-        parser_outputs = validate_task_inout(parser_outputs, "parser_outputs")
+        outputs = validate_socket_data(outputs) or {}
+        parser_outputs = validate_socket_data(parser_outputs) or {}
         TaskCls = AiiDAComponentTaskFactory.from_aiida_component(ShellJob)
         tdata = TaskCls._ndata
-        for output in additional_outputs:
-            tdata["outputs"]["sockets"][output["name"]] = output.copy()
+        tdata["outputs"]["sockets"].update(additional_outputs.copy())
 
-        outputs = [
-            {
-                "identifier": "workgraph.any",
-                "name": ShellParser.format_link_label(output),
-            }
+        outputs = {
+            ShellParser.format_link_label(output): {"identifier": "workgraph.any"}
             for output in outputs
-        ]
-        outputs.extend(parser_outputs)
-        for output in outputs:
-            if output["name"] not in tdata["outputs"]["sockets"]:
-                tdata["outputs"]["sockets"][output["name"]] = output.copy()
+        }
+        outputs.update(parser_outputs)
+        for name, output in outputs.items():
+            if name not in tdata["outputs"]["sockets"]:
+                tdata["outputs"]["sockets"][name] = output.copy()
         #
         tdata["identifier"] = "ShellJob"
-        for input_data in additional_inputs:
-            tdata["inputs"]["sockets"][input_data["name"]] = input_data.copy()
+        tdata["inputs"]["sockets"].update(additional_inputs.copy())
         tdata["metadata"]["node_type"] = "SHELLJOB"
         tdata["metadata"]["node_class"] = ShellJobTask
 

@@ -11,7 +11,7 @@ Run calculations remotely
 # ============
 # There are three ways to run calculations remotely using AiiDA:
 #
-# - `CalcJob`: run a shell command (via dedicated AiiDA plugins to manage inputs, outputs) on a remote computer, please refer to `How to use aiida-core components inside WorkGraph <../../howto/autogen/use_calcjob_workchain.html>`_.
+# - `CalcJob`: run a shell command (via dedicated AiiDA plugins to manage inputs, outputs) on a remote computer, please refer to `How to use aiida-core components inside WorkGraph <../../howto/autogen/interoperate_with_aiida_core.html>`_.
 # - `ShellJob`: run any shell command on a remote computer, please refer to the `Run shell commands as a task <../../howto/autogen/shelljob.html>`_.
 # - `PythonJob`: run any Python function on a remote computer.
 #
@@ -29,6 +29,7 @@ load_profile()
 # This allows you to define a Python function that can be executed as a job on a remote computer.
 
 from aiida_workgraph import WorkGraph, task
+
 
 # Decorator to define a pythonjob
 @task.pythonjob()
@@ -74,6 +75,7 @@ metadata = {
         "custom_scheduler_commands": "",  # Keeping it empty for this example
     }
 }
+
 
 # This is a normal task. It will be executed locally within the WorkGraph.
 @task()

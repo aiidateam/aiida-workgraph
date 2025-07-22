@@ -78,12 +78,12 @@ def test_dynamic_port():
 
 
 @pytest.mark.usefixtures("started_daemon_client")
-def test_shell_graph_builder():
-    """Test the ShellJob inside a graph builder.
-    And the parser is also defined in the graph builder."""
+def test_shell_graph_task():
+    """Test the ShellJob inside a graph task.
+    And the parser is also defined in the graph task."""
     from aiida.orm import Int
 
-    @task.graph(outputs=[{"name": "result"}])
+    @task.graph(outputs=["result"])
     def add_multiply(x, y):
         """Add two numbers and multiply the result by 2."""
         from aiida_workgraph.manager import get_current_graph
@@ -114,13 +114,12 @@ def test_shell_graph_builder():
             arguments=["{expression}"],
             nodes={"expression": job1.outputs.stdout},
             parser=parser,
-            parser_outputs=[
-                {"identifier": "workgraph.any", "name": "result"}
-            ],  # add a "result" output socket from the parser
+            parser_outputs=["result"],  # add a "result" output socket from the parser
         )
         return wg.tasks.job2.outputs.result
 
     with WorkGraph() as wg:
         outputs = add_multiply(x=Int(2), y=Int(3))
-        wg.submit(wait=True, timeout=60)
+        # wg.submit(wait=True, timeout=60)
+        wg.run()
         assert outputs.result.value.value == 5

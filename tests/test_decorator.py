@@ -8,7 +8,7 @@ from aiida_workgraph.manager import get_current_graph, set_current_graph
 def test_custom_outputs():
     """Test custom outputs."""
 
-    @task(outputs=["sum", {"name": "product", "identifier": "workgraph.any"}])
+    @task(outputs={"sum": {}, "product": {"identifier": "workgraph.any"}})
     def add_multiply(x, y):
         return {"sum": x + y, "product": x * y}
 
@@ -152,14 +152,13 @@ def test_decorators_parameters() -> None:
     """Test passing parameters to decorators."""
 
     @task.calcfunction(
-        inputs=[{"name": "c", "link_limit": 1000}],
-        outputs=[{"name": "sum"}, {"name": "product"}],
+        outputs=["sum", "product"],
     )
     def test(a, b=1, **c):
         return {"sum": a + b, "product": a * b}
 
     test1 = test._TaskCls()
-    assert test1.inputs["c"]._link_limit == 1000
+    assert test1.inputs["c"]._link_limit == 1000000
     assert "sum" in test1.get_output_names()
     assert "product" in test1.get_output_names()
 
@@ -228,16 +227,13 @@ def test_decorator_graph_namespace_outputs(decorated_add: Callable) -> None:
     from aiida_workgraph.socket import TaskSocketNamespace, TaskSocket
 
     @task.graph(
-        outputs=[
-            {
-                "name": "add1",
+        outputs={
+            "add1": {
                 "identifier": "workgraph.namespace",
                 "metadata": {"dynamic": True},
             },
-            {
-                "name": "sum",
-            },
-        ]
+            "sum": {},
+        }
     )
     def add_group(x, y, z):
         outputs1 = decorated_add(x=x, y=y)

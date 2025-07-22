@@ -56,7 +56,7 @@ def my_workflow(x, y):
 
 
 # A user can now easily create and run the workflow:
-wg = my_workflow.get_graph(x=1, y=2)
+wg = my_workflow.build_graph(x=1, y=2)
 wg.run()
 print("Workflow outputs:", wg.outputs.result)
 
@@ -222,7 +222,7 @@ with WorkGraph("ContextManagerExample") as wg:
 # Inputs (1, 2) are known upfront
 
 with WorkGraph():
-    sub_wg = my_workflow.get_graph(1, 2)
+    sub_wg = my_workflow.build_graph(1, 2)
     # Add the generated WorkGraph as a task
     sub_wg()
 

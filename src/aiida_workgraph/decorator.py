@@ -71,7 +71,9 @@ def build_task_from_callable(
     raise ValueError(f"The executor {executor} is not supported.")
 
 
-def _assign_wg_outputs(outputs: Any, wg: WorkGraph):
+def _assign_wg_outputs(
+    outputs: Any, wg: WorkGraph, graph_task_output_names: List[str]
+) -> None:
     """
     Inspect the raw outputs from the function and attach them to the WorkGraph.
     """
@@ -81,14 +83,23 @@ def _assign_wg_outputs(outputs: Any, wg: WorkGraph):
         wg.outputs.result = outputs
     elif isinstance(outputs, dict):
         wg.outputs = outputs
-    elif outputs is None:
-        wg.outputs.result = None
+    elif isinstance(outputs, tuple):
+        if len(outputs) != len(graph_task_output_names):
+            raise ValueError(
+                f"The length of the outputs {len(outputs)} does not match the length of the \
+                    Graph task outputs {len(graph_task_output_names)}."
+            )
+        outputs_dict = {}
+        for i, output in enumerate(outputs):
+            outputs_dict[graph_task_output_names[i]] = output
+        wg.outputs = outputs_dict
     else:
-        raise TypeError(f"Function returned {type(outputs)}, expected socket or dict.")
+        wg.outputs.result = outputs
 
 
 def _run_func_with_wg(
     func: Callable,
+    graph_task_output_names: List[str],
     args: tuple,
     kwargs: dict,
     var_kwargs: Optional[dict] = None,
@@ -98,9 +109,9 @@ def _run_func_with_wg(
     assign its outputs and return the WorkGraph.
     """
     merged = {**kwargs, **(var_kwargs or {})}
-    with WorkGraph() as wg:
+    with WorkGraph(func.__name__) as wg:
         raw = func(*args, **merged)
-        _assign_wg_outputs(raw, wg)
+        _assign_wg_outputs(raw, wg, graph_task_output_names)
         return wg
 
 
@@ -145,6 +156,7 @@ def _make_wrapper(TaskCls, func=None):
     # Expose the TaskCls on the wrapper if you want
     wrapper._TaskCls = wrapper._NodeCls = TaskCls
     wrapper._func = func
+    wrapper.is_decoratored = True
     return wrapper
 
 
@@ -279,12 +291,19 @@ class TaskDecoratorCollection:
 
             wrapped_func = _make_wrapper(TaskCls, func)
 
-            def get_graph(*args, **kwargs):
+            def build_graph(*args, **kwargs):
                 """This function is used to get the graph from the wrapped function."""
+                graph_task_output_names = [
+                    name
+                    for name, socket in TaskCls._ndata.get("outputs", {})
+                    .get("sockets", {})
+                    .items()
+                    if not socket.get("metadata", {}).get("builtin_socket", False)
+                ]
 
-                return _run_func_with_wg(func, args, kwargs)
+                return _run_func_with_wg(func, graph_task_output_names, args, kwargs)
 
-            wrapped_func.get_graph = get_graph
+            wrapped_func.build_graph = build_graph
 
             return wrapped_func
 
@@ -390,21 +409,19 @@ class TaskDecoratorCollection:
                     f"Function '{func.__name__}' defines parameter(s) {sorted(conflicts)}, "
                     "which conflict with default 'monitor' arguments."
                 )
-            task_inputs = inputs if inputs is not None else []
+            task_inputs = inputs if inputs is not None else {}
             # Add default interval and timeout
-            task_inputs.extend(
-                [
-                    {
-                        "name": "interval",
+            task_inputs.update(
+                {
+                    "interval": {
                         "identifier": "workgraph.float",
                         "property": {"default": 5},
                     },
-                    {
-                        "name": "timeout",
+                    "timeout": {
                         "identifier": "workgraph.float",
                         "property": {"default": 3600},
                     },
-                ]
+                }
             )
             TaskCls = MonitorFunctionTaskFactory.from_function(
                 func=func,

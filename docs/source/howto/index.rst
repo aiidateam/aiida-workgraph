@@ -8,7 +8,6 @@ This section contains a collection of HowTos for various topics.
    :maxdepth: 1
    :caption: Contents:
 
-   autogen/use_calcjob_workchain
    autogen/graph_level
    autogen/parallel
    autogen/control-flow
@@ -25,4 +24,4 @@ This section contains a collection of HowTos for various topics.
    autogen/node_graph_programming
    cli
    control
-   workchain_call_workgraph
+   autogen/interoperate_with_aiida_core
