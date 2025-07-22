@@ -17,12 +17,12 @@ This tutorial demonstrates two powerful features for managing these dependencies
 .. note::
 
    For dependencies between different WorkGraphs, use the ``monitor`` task.
-   Please refer to the :doc:`monitor <./monitor>` tutorial for more details.
+   Please refer to the :doc:`monitor <./monitor>` HowTo for more details.
 
 """
 # %%
 # Initial setup
-# -------------
+# =====================
 # First, let's set up the environment and adjust the AiiDA log level to ``REPORT`` so we can observe the execution order of the tasks.
 
 from aiida_workgraph.utils.logging import set_aiida_loglevel
@@ -43,7 +43,23 @@ load_profile()
 # even if there's no data link between them.
 #
 # * ``task_A >> task_B`` means **"task B waits for task A"**.
-# * ``task_B << task_A`` means the exact same thing.
+# * ``task_B << task_A`` equivalent to ``task_A >> task_B``.
+#
+# .. note::
+#
+#    These operators can be used to create a chain of dependencies, where each task
+#
+#    .. code-block:: python
+#
+#       # task_B waits for task_A; task_C waits for task_B
+#       task_A >> task_B >> task_C
+#
+#    For many dependencies, the ``group`` utility can be used:
+#
+#    .. code-block:: python
+#
+#       from aiida_workgraph.collection import group
+#       group(task_B, task_A) >> task_C
 #
 # Example
 # -------
@@ -74,16 +90,6 @@ def wait_graph(x, y):
     return add1_outputs.result
 
 
-# %%
-# .. note::
-#
-#    For many dependencies, the ``group`` utility can be used:
-#
-#    .. code-block:: python
-#
-#       from aiida_workgraph.collection import group
-#       group(multiply1_outputs, multiply2_outputs) >> add1_outputs
-
 # Build and run the WorkGraph
 wg = wait_graph.build_graph(x=1, y=2)
 wg.run()
@@ -94,7 +100,7 @@ wg.run()
 
 
 # %%
-# Grouping Dependencies with ``Zone``
+# Grouping dependencies with ``Zone``
 # ===================================
 #
 # For more complex scenarios, you can group a set of tasks into a **Zone**.
