@@ -1,5 +1,5 @@
 import pytest
-from aiida_workgraph import WorkGraph
+from aiida_workgraph import WorkGraph, task
 from aiida import orm
 from aiida.calculations.arithmetic.add import ArithmeticAddCalculation
 
@@ -164,15 +164,15 @@ def test_extend_workgraph(decorated_add_multiply_group):
 
     wg = WorkGraph("test_graph_build")
     add1 = wg.add_task("workgraph.test_add", "add1", x=2, y=3)
-    add_multiply_wg = decorated_add_multiply_group(x=0, y=4, z=5)
+    add_multiply_wg = decorated_add_multiply_group.build_graph(x=0, y=4, z=5)
     # test wait
-    add_multiply_wg.tasks.multiply1.waiting_on.add("add1")
+    add_multiply_wg.tasks.multiply.waiting_on.add("add")
     # extend workgraph
     wg.extend(add_multiply_wg, prefix="group_")
-    assert "group_add1" in [task.name for task in wg.tasks.group_multiply1.waiting_on]
-    wg.add_link(add1.outputs[0], wg.tasks.group_add1.inputs.x)
+    assert "group_add" in [task.name for task in wg.tasks.group_multiply.waiting_on]
+    wg.add_link(add1.outputs[0], wg.tasks.group_add.inputs.x)
     wg.run()
-    assert wg.tasks.group_multiply1.outputs.result == 45
+    assert wg.tasks.group_multiply.outputs.result == 45
 
 
 def test_workgraph_outputs(decorated_add):
@@ -218,3 +218,66 @@ def test_inputs_outputs(decorated_namespace_sum_diff):
     wg.run()
     assert wg.outputs.sum.value == 4
     assert wg.outputs.nested.sum.value == 5
+
+
+def test_inputs_run_submit_api():
+    """Test running a WorkGraph with inputs provided in the `run` and `submit` APIs."""
+
+    def generate_workgraph():
+        with WorkGraph() as wg:
+            wg.inputs = dict.fromkeys(["x", "y"])
+            wg.outputs.sum = wg.inputs.x + wg.inputs.y
+        return wg
+
+    wg = generate_workgraph()
+    wg.run(inputs={"x": 1, "y": 2})
+
+    assert wg.outputs.sum.value == 3
+
+    wg = generate_workgraph()
+    wg.submit(inputs={"x": 3, "y": 4}, wait=True)
+
+    assert wg.outputs.sum.value == 7
+
+
+def test_run_workgraph_builder():
+    """Test running a WorkGraph using the WorkGraphEngine builder."""
+    from aiida_workgraph.engine.workgraph import WorkGraphEngine
+    from aiida.engine import run_get_node
+
+    @task
+    def add(x, y):
+        """A simple task that adds two numbers."""
+        return x + y
+
+    wg = WorkGraph()
+    wg.add_task(add, x=1, y=2)
+    wgdata = wg.prepare_inputs()
+    builder = WorkGraphEngine.get_builder()
+    builder._update(wgdata)
+    _, node = run_get_node(builder)
+    wg.process = node
+    wg.update()
+    assert wg.tasks.add.outputs.result.value == 3
+
+
+def test_calling_workgraph_in_context_manager():
+    """Test calling a `WorkGraph` in a context manager."""
+
+    @task
+    def add(x, y):
+        return x + y
+
+    with WorkGraph() as wg1:
+        add_outputs = add(x=2, y=1)  # add
+        add1_outputs = add(x=add_outputs.result)
+        wg1.outputs.sum = add1_outputs.result
+
+    with WorkGraph() as wg2:
+        sub_outputs = wg1({"add1": {"y": 4}})
+        add_outputs = add(x=sub_outputs.sum, y=5)
+        wg2.outputs.sum = add_outputs.result
+
+    wg2.run()
+
+    assert wg2.outputs.sum == 12

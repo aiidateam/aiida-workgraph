@@ -27,10 +27,8 @@ def generate_tdata(
         input_data["metadata"]["function_socket"] = True
     task_outputs = outputs
     # add built-in sockets
-    for output in builtin_outputs:
-        task_outputs.append(output.copy())
-    for input_data in builtin_inputs:
-        task_inputs.append(input_data.copy())
+    task_inputs["sockets"].update(builtin_inputs.copy())
+    task_outputs["sockets"].update(builtin_outputs.copy())
     tdata = {
         "identifier": identifier,
         "metadata": {

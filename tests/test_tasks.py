@@ -8,7 +8,7 @@ from aiida import orm
 def test_normal_task(decorated_add) -> None:
     """Test a normal task."""
 
-    @task(outputs=[{"name": "sum"}, {"name": "diff"}])
+    @task(outputs=["sum", "diff"])
     def sum_diff(x, y):
         return x + y, x - y
 
@@ -195,12 +195,12 @@ def test_set_inputs_from_builder(add_code) -> None:
 
 def test_namespace_outputs():
     @task.calcfunction(
-        outputs=[
-            {"identifier": "workgraph.namespace", "name": "add_multiply"},
-            {"name": "add_multiply.add"},
-            {"name": "add_multiply.multiply"},
-            {"name": "minus"},
-        ]
+        outputs={
+            "add_multiply": {"identifier": "workgraph.namespace"},
+            "add_multiply.add": {},
+            "add_multiply.multiply": {},
+            "minus": {},
+        }
     )
     def myfunc(x, y):
         return {
@@ -277,7 +277,7 @@ def test_task_from_builder_multiply_add(add_code, decorated_add) -> None:
 
     assert len(wg.tasks) == 2
     assert len(wg.links) == 1
-    assert wg.links_to_dict()[0] == [
+    assert wg.links_to_dict() == [
         {
             "from_node": multiply_add_task_name,
             "from_socket": "result",

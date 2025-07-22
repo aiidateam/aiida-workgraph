@@ -11,6 +11,7 @@ from aiida_pythonjob import PythonJob
 from aiida_pythonjob.calculations.pyfunction import PyFunction
 from aiida_shell.calculations.shell import ShellJob
 import inspect
+from yaml.constructor import ConstructorError
 
 
 def inspect_aiida_component_type(executor: Callable) -> str:
@@ -187,22 +188,30 @@ def get_dict_from_builder(builder: Any) -> Dict:
         return builder
 
 
-def get_workgraph_data(process: Union[int, orm.Node]) -> Optional[Dict[str, Any]]:
-    """Get the workgraph data from the process node."""
+def get_workgraph_data(
+    process: Union[int, orm.Node], safe_load: bool = True
+) -> Optional[Dict[str, Any]]:
+    """
+    Get the workgraph data from the given process node.
+    """
     from aiida_workgraph.orm.utils import deserialize_safe
+    from aiida.orm.utils.serialize import deserialize_unsafe
     from aiida.orm import load_node
+
+    if safe_load:
+        deserializer = deserialize_safe
+    else:
+        deserializer = deserialize_unsafe
 
     if isinstance(process, int):
         process = load_node(process)
     wgdata = process.workgraph_data
     task_executors = process.task_executors
-    if wgdata is None:
-        return
     for name, task in wgdata["tasks"].items():
-        wgdata["tasks"][name] = deserialize_safe(task)
-        wgdata["tasks"][name]["executor"] = task_executors.get(name)
+        deserialize_input_values_recursively(task["inputs"], deserializer)
+        task["executor"] = task_executors.get(name)
     wgdata["error_handlers"] = process.workgraph_error_handlers
-    wgdata["meta_sockets"] = deserialize_safe(wgdata["meta_sockets"])
+    wgdata["meta_sockets"] = deserializer(wgdata["meta_sockets"])
     return wgdata
 
 
@@ -342,7 +351,7 @@ def get_raw_value(identifier, value: Any) -> Any:
 def process_properties(task: Dict) -> Dict:
     """Extract raw values."""
     result = {}
-    for name, prop in task["properties"].items():
+    for name, prop in task.get("properties", {}).items():
         identifier = prop["identifier"]
         value = prop.get("value")
         result[name] = {
@@ -374,7 +383,7 @@ def workgraph_to_short_json(
         "uuid": wgdata.get("uuid", ""),
         "state": wgdata.get("state", ""),
         "nodes": {},
-        "links": deepcopy(wgdata.get("links", []) + wgdata.get("meta_links", [])),
+        "links": deepcopy(wgdata.get("links", [])),
     }
     #
     for name, task in wgdata["tasks"].items():
@@ -389,6 +398,7 @@ def workgraph_to_short_json(
 
         properties = process_properties(task)
         wgdata_short["nodes"][name] = {
+            "identifier": task["identifier"],
             "label": task["name"],
             "node_type": task["metadata"]["node_type"].upper(),
             "inputs": inputs,
@@ -397,9 +407,9 @@ def workgraph_to_short_json(
             "position": task["position"],
             "children": task["children"],
         }
-    for name, socket in wgdata["meta_sockets"].items():
+    for name, socket in wgdata.get("meta_sockets", {}).items():
         inputs = []
-        for input in socket["sockets"].values():
+        for input in socket.get("sockets", {}).values():
             metadata = input.get("metadata", {}) or {}
             if metadata.get("required", False):
                 inputs.append(
@@ -415,7 +425,7 @@ def workgraph_to_short_json(
             "children": [],
         }
     # Add links to nodes
-    for link in wgdata_short["links"]:
+    for link in wgdata_short.get("links", []):
         wgdata_short["nodes"][link["to_node"]]["inputs"].append(
             {
                 "name": link["to_socket"],
@@ -427,100 +437,84 @@ def workgraph_to_short_json(
             }
         )
     # hide meta nodes if there is no link to them
-    for name, socket in wgdata["meta_sockets"].items():
+    for name, socket in wgdata.get("meta_sockets", {}).items():
         node = wgdata_short["nodes"][name]
         if len(node["inputs"]) == 0 and len(node["outputs"]) == 0:
             del wgdata_short["nodes"][name]
-    # split ctx node into two nodes, one with only inputs and one with only outputs
-    ctx_node = wgdata_short["nodes"].get("graph_ctx")
-    if ctx_node:
-        ctx_inputs = []
-        ctx_outputs = []
-        for input in ctx_node["inputs"]:
-            if input.get("identifier") == "_wait":
-                continue
-            ctx_inputs.append(input)
-        for output in ctx_node["outputs"]:
-            if output.get("identifier") == "_wait":
-                continue
-            ctx_outputs.append(output)
-        wgdata_short["nodes"]["ctx_inputs"] = {
-            "label": "ctx_inputs",
-            "node_type": "graph_ctx",
-            "inputs": ctx_inputs,
-            "properties": {},
-            "outputs": [],
-            "position": [0, 0],
-            "children": [],
-        }
-        wgdata_short["nodes"]["ctx_outputs"] = {
-            "label": "ctx_outputs",
-            "node_type": "graph_ctx",
-            "inputs": [],
-            "properties": {},
-            "outputs": ctx_outputs,
-            "position": [0, 0],
-            "children": [],
-        }
-        del wgdata_short["nodes"]["graph_ctx"]
-        # update the links
-        for link in wgdata_short["links"]:
-            if link["from_node"] == "graph_ctx":
-                link["from_node"] = "ctx_inputs"
-            if link["to_node"] == "graph_ctx":
-                link["to_node"] = "ctx_outputs"
+
     return wgdata_short
 
 
-def validate_task_inout(inout_list: list[str | dict], list_type: str) -> list[dict]:
+def remove_output_values(outputs: Dict[str, Any]) -> None:
     """
-    Checks if all the list elements provided as `inputs` or `outputs` of to a task are of type `str` or `dict`, and,
-    if the former convert them to a list of `dict`s with `name` as the key.
+    Remove output values from the outputs dictionary.
 
-    :param inout_list: The input/output list to be validated.
-    :param list_type: "inputs" or "outputs" to indicate what is to be validated for better error message.
-    :raises TypeError: If wrong types are provided to the task
-    :return: Processed `inputs`/`outputs` list.
+    This function iterates through the outputs and removes the 'value' key from each output.
+    It is useful for cleaning up outputs before serialization or storage.
+
+    :param outputs: A dictionary of outputs to be cleaned.
+    :return: None
     """
-
-    if not all(isinstance(item, (dict, str)) for item in inout_list):
-        raise TypeError(
-            f"Wrong type provided in the `{list_type}` list to the task, must be either `str` or `dict`."
-        )
-
-    processed_inout_list = []
-
-    for item in inout_list:
-        if isinstance(item, str):
-            processed_inout_list.append({"name": item})
-        elif isinstance(item, dict):
-            processed_inout_list.append(item)
-
-    processed_inout_list = processed_inout_list
-
-    return processed_inout_list
+    if "property" in outputs:
+        outputs["property"].pop("value", None)
+    if "sockets" in outputs:
+        for socket in outputs["sockets"].values():
+            remove_output_values(socket)
 
 
-def filter_keys_namespace_depth(
-    dict_: dict[Any, Any], max_depth: int = 0
-) -> dict[Any, Any]:
+def serialize_input_values_recursively(
+    inputs: Dict[str, Any], serializer: callable = None
+) -> None:
     """
-    Filter top-level keys of a dictionary based on the namespace nesting level (number of periods) in the key.
+    Serialize input values to a format suitable for storage or transmission.
 
-    :param dict dict_: The dictionary to filter.
-    :param int max_depth: Maximum depth of namespaces to retain (number of periods).
-    :return: The filtered dictionary with only keys satisfying the depth condition.
-    :rtype: dict
+    This function converts all input values to their raw representations, ensuring
+    that complex objects are converted to simple types (e.g., strings, integers).
+
+    :param inputs: A dictionary of inputs to be serialized.
+    :return: A dictionary with serialized input values.
     """
-    result: dict[Any, Any] = {}
+    if serializer is None:
+        from aiida.orm.utils.serialize import serialize
 
-    for key, value in dict_.items():
-        depth = key.count(".")
+        serializer = serialize
+    if "property" in inputs:
+        inputs["property"]["value"] = serializer(inputs["property"]["value"])
+    if "sockets" in inputs:
+        for socket in inputs["sockets"].values():
+            serialize_input_values_recursively(socket)
 
-        if depth <= max_depth:
-            result[key] = value
 
-    return result
+def deserialize_input_values_recursively(
+    inputs: Dict[str, Any], deserializer: callable = None
+) -> None:
+    """
+    Deserialize input values from a format suitable for storage or transmission.
+
+    This function converts all input values back to their original representations,
+    ensuring that complex objects are restored from their serialized forms.
+
+    :param inputs: A dictionary of inputs to be deserialized.
+    :return: A dictionary with deserialized input values.
+    """
+    if deserializer is None:
+        from aiida_workgraph.orm.utils import deserialize_safe
+
+        deserializer = deserialize_safe
+
+    if "property" in inputs:
+        try:
+            inputs["property"]["value"] = deserializer(inputs["property"]["value"])
+        except ConstructorError:
+            name = inputs["name"]
+            print(
+                f"Info: could not deserialize input '{name}'. The raw input value is left in place."
+                "The workgraph is still loaded and you can inspect tasks, inputs and outputs. "
+                "If you trust the data, reload with safe_load=False."
+            )
+    if "sockets" in inputs:
+        for socket in inputs["sockets"].values():
+            deserialize_input_values_recursively(socket, deserializer)
 
 
 def wait_to_link(wgdata: Dict[str, Any]) -> None:
@@ -563,34 +557,17 @@ def make_json_serializable(data):
         return data
 
 
-def query_existing_processes(pks: list[int]) -> list[int]:
-    """Query all existing processes from the database."""
-    from aiida import orm
+def serialize_socket_data(input_socket: Dict[str, Any]) -> None:
+    """Recursively walk over the sockets and convert raw Python
+    values to AiiDA Data nodes, if needed.
+    """
+    from aiida_pythonjob.data.serializer import general_serializer
 
-    qb = orm.QueryBuilder()
-    qb.append(
-        orm.ProcessNode,
-        filters={"id": {"in": pks}},
-        project=["id"],
-    )
-    results = qb.all()
-    existing_pks = [res[0] for res in results]
-    return existing_pks
-
-
-def query_terminated_processes(pks: list[int]) -> list[int]:
-    """Query all terminated processes from the database."""
-    from aiida import orm
-
-    qb = orm.QueryBuilder()
-    qb.append(
-        orm.ProcessNode,
-        filters={
-            "id": {"in": pks},
-            "attributes.process_state": {"in": ["killed", "finished", "excepted"]},
-        },
-        project=["id"],
-    )
-    results = qb.all()
-    terminated_pks = [res[0] for res in results]
-    return terminated_pks
+    if input_socket["identifier"] == "workgraph.namespace":
+        for socket in input_socket["sockets"].values():
+            serialize_socket_data(socket)
+    else:
+        value = input_socket.get("property", {}).get("value")
+        if value is None or isinstance(value, orm.Data):
+            return
+        input_socket["property"]["value"] = general_serializer(value)

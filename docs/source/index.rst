@@ -46,14 +46,13 @@ Sections
 
       .. container:: descr
 
-         :doc:`/built-in/index`
-            Run a Python function, Shell command on a remote computer
-
-      .. container:: descr
-
          :doc:`/howto/index`
             How-to guides for AiiDA WorkGraph.
 
+      .. container:: descr
+
+         :doc:`/migration_from_aiida_core/index`
+            Transition your existing workflows from AiiDA Core to the AiiDA Workgraph
 
       .. container:: descr
 
@@ -98,6 +97,7 @@ Sections
    tutorial/index
    built-in/index
    howto/index
+   migration_from_aiida_core/index
    concept/index
    gui/index
    development/index

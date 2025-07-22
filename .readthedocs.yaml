@@ -16,8 +16,9 @@ build:
       - verdi daemon start
       - verdi status
       - aiida-pseudo install sssp -x PBEsol
-      - verdi group list
+      - verdi config set logging.aiida_loglevel ERROR
       - cat /proc/cpuinfo | grep processor | wc -l
+      - verdi code create core.code.installed --label add --computer=localhost --default-calc-job-plugin core.arithmetic.add --filepath-executable=/bin/bash -n
 
 conda:
   environment: docs/environment.yml

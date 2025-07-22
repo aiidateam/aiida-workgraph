@@ -1,5 +1,52 @@
 from typing import Any, Dict
 from aiida_workgraph.task import Task, ChildTaskSet
+from aiida_workgraph.tasks.factory.base import BaseTaskFactory
+
+
+class GraphLevelTask(Task):
+    """Base class for graph level tasks"""
+
+    catalog = "Builtins"
+    is_dynamic: bool = True
+    node_class = Task
+    factory_class = BaseTaskFactory
+
+    @property
+    def outputs(self):
+        return self.inputs
+
+    @outputs.setter
+    def outputs(self, _value):
+        """Outputs are the same as inputs for ctx node."""
+        pass
+
+    def get_metadata(self):
+
+        metadata = super().get_metadata()
+        metadata["node_class"] = {
+            "module_path": self.node_class.__module__,
+            "callable_name": self.node_class.__name__,
+        }
+        metadata["factory_class"] = {
+            "module_path": self.factory_class.__module__,
+            "callable_name": self.factory_class.__name__,
+        }
+        return metadata
+
+
+class GraphInputs(GraphLevelTask):
+    identifier = "workgraph.graph_inputs"
+    name = "Graph_Inputs"
+
+
+class GraphOutputs(GraphLevelTask):
+    identifier = "workgraph.graph_outputs"
+    name = "Graph_Outputs"
+
+
+class GraphContext(GraphLevelTask):
+    identifier = "workgraph.graph_ctx"
+    name = "Graph_Ctx"
 
 
 class Zone(Task):
@@ -20,7 +67,7 @@ class Zone(Task):
         """Syntactic sugar to add a task to the zone."""
         task = self.graph.add_task(*args, **kwargs)
         self.children.add(task)
-        task.parent_task = self
+        task.parent = self
         return task
 
     def create_sockets(self) -> None:
@@ -87,23 +134,46 @@ class Map(Zone):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        if self.graph is not None:
-            # init a ctx variable to placeholder the item
-            key = f"map_zone_{self.name}_item"
-            self.graph.update_ctx({key: None})
-            self.item = self.graph.ctx[key]
-        else:
-            raise ValueError("Map zone must be added to a graph.")
+
+    @property
+    def item(self):
+        for child in self.children:
+            if child.identifier == "workgraph.map_item":
+                return child.outputs.item
+        raise ValueError("Map zone must contain a 'map_item' task to access the item.")
 
     def create_sockets(self) -> None:
         self.inputs._clear()
         self.outputs._clear()
+        self.add_input("workgraph.any", "source", link_limit=100000)
         self.add_input(
             "workgraph.any", "_wait", link_limit=100000, metadata={"arg_type": "none"}
         )
-        self.add_input("workgraph.any", "source", link_limit=100000)
-        self.add_input("workgraph.any", "placeholder")
         self.add_output("workgraph.any", "_wait")
+
+
+class MapItem(Task):
+    """MapItem"""
+
+    identifier = "workgraph.map_item"
+    name = "MapItem"
+    node_type = "Normal"
+    catalog = "Control"
+
+    def create_sockets(self) -> None:
+        self.inputs._clear()
+        self.outputs._clear()
+        self.add_input("workgraph.any", "source", link_limit=100000)
+        self.add_input("workgraph.any", "key")
+        self.add_output("workgraph.any", "item")
+        self.add_output("workgraph.any", "_wait")
+
+    def get_executor(self):
+        executor = {
+            "module_path": "aiida_workgraph.executors.builtins",
+            "callable_name": "get_item",
+        }
+        return executor
 
 
 class SetContext(Task):
@@ -367,25 +437,42 @@ class Select(Task):
         return executor
 
 
-class GraphBuilderTask(Task):
+class GraphTask(Task):
     """Graph builder task"""
 
-    identifier = "workgraph.graph_builder"
-    name = "graph_builder"
-    node_type = "graph_builder"
+    identifier = "workgraph.graph_task"
+    name = "graph_task"
+    node_type = "graph_task"
     catalog = "builtins"
 
     def execute(self, engine_process, args=None, kwargs=None, var_kwargs=None):
         from aiida_workgraph.utils import create_and_pause_process
         from aiida_workgraph.engine.workgraph import WorkGraphEngine
+        from aiida_workgraph.decorator import _run_func_with_wg
         from node_graph.executor import NodeExecutor
+        from aiida_workgraph import task
 
         executor = NodeExecutor(**self.get_executor()).executor
-
-        if var_kwargs is None:
-            wg = executor(*args, **kwargs)
-        else:
-            wg = executor(*args, **kwargs, **var_kwargs)
+        # Cloudpickle doesn’t restore the function’s own name in its globals after unpickling,
+        # so any recursive calls would raise NameError. As a temporary workaround, we re-insert
+        # the decorated function into its globals under its original name.
+        # Downside: this mutates the module globals at runtime, if another symbol with the same name exists,
+        # we may introduce hard-to-trace bugs or collisions.
+        if executor.__name__ not in executor.__globals__:
+            if getattr(executor, "is_decoratored", False):
+                executor.__globals__[executor.__name__] = executor
+            else:
+                executor.__globals__[executor.__name__] = task.graph()(executor)
+        if getattr(executor, "is_decoratored", False):
+            executor = executor._func
+        graph_task_output_names = [
+            output._name
+            for output in self.outputs
+            if not output._metadata.builtin_socket
+        ]
+        wg = _run_func_with_wg(
+            executor, graph_task_output_names, args, kwargs, var_kwargs
+        )
         wg.name = self.name
 
         wg.parent_uuid = engine_process.node.uuid

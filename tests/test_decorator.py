@@ -8,7 +8,7 @@ from aiida_workgraph.manager import get_current_graph, set_current_graph
 def test_custom_outputs():
     """Test custom outputs."""
 
-    @task(outputs=["sum", {"name": "product", "identifier": "workgraph.any"}])
+    @task(outputs={"sum": {}, "product": {"identifier": "workgraph.any"}})
     def add_multiply(x, y):
         return {"sum": x + y, "product": x * y}
 
@@ -152,35 +152,30 @@ def test_decorators_parameters() -> None:
     """Test passing parameters to decorators."""
 
     @task.calcfunction(
-        inputs=[{"name": "c", "link_limit": 1000}],
-        outputs=[{"name": "sum"}, {"name": "product"}],
+        outputs=["sum", "product"],
     )
     def test(a, b=1, **c):
         return {"sum": a + b, "product": a * b}
 
     test1 = test._TaskCls()
-    assert test1.inputs["c"]._link_limit == 1000
+    assert test1.inputs["c"]._link_limit == 1000000
     assert "sum" in test1.get_output_names()
     assert "product" in test1.get_output_names()
 
 
 @pytest.fixture(params=["decorator_factory", "decorator"])
-def task_graph_builder(request):
+def task_graph_task(request):
     if request.param == "decorator_factory":
 
-        @task.graph_builder()
+        @task.graph()
         def add_multiply_group(a, b=1, **c):
-            wg = WorkGraph("add_multiply_group")
-            print(a, b, c)
-            return wg
+            pass
 
     elif request.param == "decorator":
 
-        @task.graph_builder
+        @task.graph
         def add_multiply_group(a, b=1, **c):
-            wg = WorkGraph("add_multiply_group")
-            print(a, b, c)
-            return wg
+            pass
 
     else:
         raise ValueError(f"{request.param} not supported.")
@@ -188,9 +183,9 @@ def task_graph_builder(request):
     return add_multiply_group
 
 
-def test_decorators_graph_builder_args(task_graph_builder) -> None:
-    # assert task_graph_builder.identifier == "add_multiply_group"
-    n = task_graph_builder._TaskCls()
+def test_decorators_graph_args(task_graph_task) -> None:
+    # assert task_graph_task.identifier == "add_multiply_group"
+    n = task_graph_task._TaskCls()
     assert n.args_data["args"] == []
     assert n.args_data["kwargs"] == ["a", "b"]
     assert n.args_data["var_args"] is None
@@ -227,10 +222,33 @@ def test_decorator_workfunction(decorated_add_multiply: Callable) -> None:
     assert wg.tasks["add_multiply1"].outputs.result.value == 20
 
 
+def test_decorator_graph_namespace_outputs(decorated_add: Callable) -> None:
+    """=Test namespace outputs in graph builder."""
+    from aiida_workgraph.socket import TaskSocketNamespace, TaskSocket
+
+    @task.graph(
+        outputs={
+            "add1": {
+                "identifier": "workgraph.namespace",
+                "metadata": {"dynamic": True},
+            },
+            "sum": {},
+        }
+    )
+    def add_group(x, y, z):
+        outputs1 = decorated_add(x=x, y=y)
+        return {"add1": outputs1, "sum": outputs1.result}
+
+    wg = WorkGraph()
+    wg.add_task(add_group, x=2, y=3, z=4)
+    assert isinstance(wg.tasks.add_group.outputs.add1, TaskSocketNamespace)
+    assert isinstance(wg.tasks.add_group.outputs.sum, TaskSocket)
+
+
 @pytest.mark.usefixtures("started_daemon_client")
-def test_decorator_graph_builder(decorated_add_multiply_group: Callable) -> None:
+def test_decorator_graph(decorated_add_multiply_group: Callable) -> None:
     """Test graph build."""
-    wg = WorkGraph("test_graph_builder")
+    wg = WorkGraph("test_graph")
     add1 = wg.add_task("workgraph.test_add", "add1", x=2, y=3)
     add_multiply1 = wg.add_task(decorated_add_multiply_group, "add_multiply1", y=3, z=4)
     sum_diff1 = wg.add_task("workgraph.test_sum_diff", "sum_diff1")

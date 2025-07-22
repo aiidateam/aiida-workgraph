@@ -18,7 +18,7 @@ from aiida_workgraph import task
 
 #
 # explicitly define the output socket name to match the return value of the function
-@task.calcfunction(outputs=[{"name": "structures"}])
+@task.calcfunction(outputs=["structures"])
 def scale_structure(structure, scales):
     """Scale the structure by the given scales."""
     atoms = structure.get_ase()
@@ -62,7 +62,7 @@ def eos(**datas):
 #
 #
 
-from aiida_workgraph import WorkGraph, active_map_zone
+from aiida_workgraph import WorkGraph, Map
 from aiida_quantumespresso.calculations.pw import PwCalculation
 
 
@@ -71,7 +71,7 @@ def eos_workgraph(
 ):
     with WorkGraph("eos_tutorial") as wg:
         wg.add_task(scale_structure, name="scale", structure=structure, scales=scales)
-        with active_map_zone(wg.tasks.scale.outputs.structures) as map_zone:
+        with Map(wg.tasks.scale.outputs.structures) as map_zone:
             scf_task = map_zone.add_task(
                 PwCalculation, name=f"scf", structure=map_zone.item
             )
@@ -178,26 +178,24 @@ print("B: {B}\nv0: {v0}\ne0: {e0}\nv0: {v0}".format(**data))
 #
 # For example, we want to combine relax with eos.
 #
-# We can use the `graph_builder` decorator. The Graph Builder allow user to create a dynamic workflow based on the input value, as well as nested workflows.
+# We can use the `graph` decorator. The Graph Builder allow user to create a dynamic workflow based on the input value, as well as nested workflows.
 #
 
-from aiida_workgraph import WorkGraph, task, active_map_zone, active_graph
+from aiida_workgraph import WorkGraph, task, Map
 
 
-@task.graph_builder(outputs=[{"name": "result"}])
+@task.graph()
 def eos_workgraph(
     structure: orm.StructureData = None, scales: list = None, scf_inputs: dict = None
 ):
-    with WorkGraph("eos") as wg:
-        wg.add_task(scale_structure, name="scale", structure=structure, scales=scales)
-        with active_map_zone(wg.tasks.scale.outputs.structures) as map_zone:
-            scf_task = map_zone.add_task(
-                PwCalculation, name=f"scf", structure=map_zone.item
-            )
-            scf_task.set(scf_inputs)
-        wg.add_task(eos, name="eos", datas=scf_task.outputs.output_parameters)
-        wg.outputs.result = wg.tasks.eos.outputs.result
-        return wg
+    outputs = scale_structure(structure=structure, scales=scales)
+    with Map(outputs.structures) as map_zone:
+        scf_task = map_zone.add_task(
+            PwCalculation, name=f"scf", structure=map_zone.item
+        )
+        scf_task.set(scf_inputs)
+    outputs = eos(datas=scf_task.outputs.output_parameters)
+    return outputs.result
 
 
 # %%

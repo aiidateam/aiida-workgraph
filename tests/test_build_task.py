@@ -51,10 +51,7 @@ def test_calcfunction():
     # define outputs explicitly
     AddTask = build_task(
         add_minus,
-        outputs=[
-            {"identifier": "workgraph.any", "name": "sum"},
-            {"identifier": "workgraph.any", "name": "difference"},
-        ],
+        outputs=["sum", "difference"],
     )
     assert issubclass(AddTask, Task)
     assert "sum" in AddTask().get_output_names()

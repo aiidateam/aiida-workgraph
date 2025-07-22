@@ -1,4 +1,27 @@
-from aiida_workgraph import WorkGraph, TaskPool
+from aiida_workgraph import WorkGraph, TaskPool, task
+
+
+@task()
+def add(x, y):
+    return x + y
+
+
+@task.graph()
+def sum_to_n(n, total, N):
+    if n >= N:
+        return total
+    total = add(n, total).result
+    return sum_to_n(n + 1, total, N).result
+
+
+def test_graph_task():
+    """Test while logic using a graph task."""
+
+    with WorkGraph("test_graph_task") as wg:
+        outputs = sum_to_n(1, 0, 5)
+        wg.outputs.result = outputs.result
+        wg.run()
+        assert wg.outputs.result.value == 10
 
 
 def test_while_instruction(decorated_add, decorated_multiply, decorated_smaller_than):
@@ -23,7 +46,7 @@ def test_while_instruction(decorated_add, decorated_multiply, decorated_smaller_
     wg.update_ctx({"n": wg.tasks.multiply1.outputs.result})
     add3 = wg.add_task(decorated_add, name="add3", x=1, y=1)
     wg.add_link(wg.tasks.multiply1.outputs["result"], add3.inputs["x"])
-    assert len(wg.tasks) == 6
+    assert len(wg.tasks) == 7
     assert "while_1" in wg.tasks
     assert len(wg.tasks.while_1.children) == 2
     wg.run()

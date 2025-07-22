@@ -14,5 +14,4 @@ This section contains information for developers.
    test
    python_task
    engine
-   scheduler
    map_task

@@ -28,9 +28,9 @@ dependencies = [
     "numpy~=1.21",
     "scipy",
     "ase",
-    "node-graph==0.2.5",
+    "node-graph==0.2.16",
     "node-graph-widget>=0.0.5",
-    "aiida-core>=2.3",
+    "aiida-core>=2.3,<=2.6.3",
     "cloudpickle",
     "aiida-shell~=0.8",
     "aiida-pythonjob>=0.2.3",
@@ -84,18 +84,21 @@ workgraph = "aiida_workgraph.cli.cmd_workgraph:workgraph"
 
 [project.entry-points."aiida.data"]
 "workgraph.pickled_data" = "aiida_workgraph.orm.pickled_data:PickledData"
-"workgraph.scheduler" = "aiida_workgraph.orm.scheduler:SchedulerNode"
 
 [project.entry-points."aiida.node"]
 "process.workflow.workgraph" = "aiida_workgraph.orm.workgraph:WorkGraphNode"
 
 [project.entry-points."aiida_workgraph.task"]
 "workgraph.task" = "aiida_workgraph.task:Task"
+"workgraph.graph_inputs" = "aiida_workgraph.tasks.builtins:GraphInputs"
+"workgraph.graph_outputs" = "aiida_workgraph.tasks.builtins:GraphOutputs"
+"workgraph.graph_ctx" = "aiida_workgraph.tasks.builtins:GraphContext"
 "workgraph.workgraph_task" = "aiida_workgraph.tasks.factory.workgraph_task:WorkGraphTask"
 "workgraph.zone" = "aiida_workgraph.tasks.builtins:Zone"
 "workgraph.while_zone" = "aiida_workgraph.tasks.builtins:While"
 "workgraph.if_zone" = "aiida_workgraph.tasks.builtins:If"
 "workgraph.map_zone" = "aiida_workgraph.tasks.builtins:Map"
+"workgraph.map_item" = "aiida_workgraph.tasks.builtins:MapItem"
 "workgraph.select" = "aiida_workgraph.tasks.builtins:Select"
 "workgraph.set_context" = "aiida_workgraph.tasks.builtins:SetContext"
 "workgraph.get_context" = "aiida_workgraph.tasks.builtins:GetContext"

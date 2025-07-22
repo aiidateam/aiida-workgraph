@@ -1,8 +1,8 @@
 from aiida_workgraph import (
     WorkGraph,
     task,
-    active_map_zone,
-    active_if_zone,
+    Map,
+    If,
 )
 from aiida.calculations.arithmetic.add import ArithmeticAddCalculation
 from aiida import orm
@@ -27,7 +27,7 @@ def test_map_instruction(add_code):
     n = 3
     with WorkGraph("add_graph") as wg:
         wg.add_task(generate_data, name="generate_data", n=n)
-        with active_map_zone(wg.tasks.generate_data.outputs.result) as map_zone:
+        with Map(wg.tasks.generate_data.outputs.result) as map_zone:
             map_zone.add_task(
                 ArithmeticAddCalculation,
                 name="add1",
@@ -35,7 +35,7 @@ def test_map_instruction(add_code):
                 y=y,
                 code=add_code,
             )
-            with active_if_zone(wg.tasks.add1.outputs.sum < 4) as if_zone1:
+            with If(wg.tasks.add1.outputs.sum < 4) as if_zone1:
                 if_zone1.add_task(
                     ArithmeticAddCalculation,
                     name="add2",
@@ -44,7 +44,7 @@ def test_map_instruction(add_code):
                     code=add_code,
                 )
                 wg.update_ctx({"sum": wg.tasks.add2.outputs.sum})
-            with active_if_zone(wg.tasks.add1.outputs.sum >= 4) as if_zone2:
+            with If(wg.tasks.add1.outputs.sum >= 4) as if_zone2:
                 if_zone2.add_task(
                     ArithmeticAddCalculation,
                     name="add3",

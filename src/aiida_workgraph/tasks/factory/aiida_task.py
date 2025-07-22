@@ -7,14 +7,13 @@ import inspect
 from aiida.engine.processes.ports import PortNamespace
 from aiida_workgraph.config import builtin_inputs, builtin_outputs
 from .base import BaseTaskFactory
-from aiida_workgraph.utils import validate_task_inout
 from aiida_workgraph.tasks.aiida import (
     CalcFunctionTask,
     WorkFunctionTask,
     CalcJobTask,
     WorkChainTask,
 )
-from node_graph.utils import list_to_dict
+from node_graph.utils import validate_socket_data
 
 
 task_class_mapping = {
@@ -37,7 +36,7 @@ def add_input_recursive(
     else:
         port_name = f"{prefix}.{port.name}"
     required = port.required and required
-    input_names = [input["name"] for input in inputs]
+    input_names = list(inputs.keys()) if isinstance(inputs, dict) else inputs
     if isinstance(port, PortNamespace):
         # TODO the default value is {} could cause problem, because the address of the dict is the same,
         # so if you change the value of one port, the value of all the ports of other tasks will be changed
@@ -47,18 +46,15 @@ def add_input_recursive(
         else:
             link_limit = 1
         if port_name not in input_names:
-            inputs.append(
-                {
-                    "identifier": "workgraph.namespace",
-                    "name": port_name,
-                    "link_limit": link_limit,
-                    "metadata": {
-                        "arg_type": "kwargs",
-                        "required": required,
-                        "dynamic": port.dynamic,
-                    },
-                }
-            )
+            inputs[port_name] = {
+                "identifier": "workgraph.namespace",
+                "link_limit": link_limit,
+                "metadata": {
+                    "arg_type": "kwargs",
+                    "required": required,
+                    "dynamic": port.dynamic,
+                },
+            }
         for value in port.values():
             add_input_recursive(inputs, value, prefix=port_name, required=required)
     else:
@@ -71,13 +67,10 @@ def add_input_recursive(
                 socket_type = type_mapping.get(port.valid_type[0], "workgraph.any")
             else:
                 socket_type = type_mapping.get(port.valid_type, "workgraph.any")
-            inputs.append(
-                {
-                    "identifier": socket_type,
-                    "name": port_name,
-                    "metadata": {"arg_type": "kwargs", "required": required},
-                }
-            )
+            inputs[port_name] = {
+                "identifier": socket_type,
+                "metadata": {"arg_type": "kwargs", "required": required},
+            }
     return inputs
 
 
@@ -93,30 +86,23 @@ def add_output_recursive(
     else:
         port_name = f"{prefix}.{port.name}"
     required = port.required and required
-    output_names = [output["name"] for output in outputs]
     if isinstance(port, PortNamespace):
         # TODO the default value is {} could cause problem, because the address of the dict is the same,
         # so if you change the value of one port, the value of all the ports of other tasks will be changed
         # consider to use None as default value
-        if port_name not in output_names:
-            outputs.append(
-                {
-                    "identifier": "workgraph.namespace",
-                    "name": port_name,
-                    "metadata": {"required": required, "dynamic": port.dynamic},
-                }
-            )
+        if port_name not in outputs:
+            outputs[port_name] = {
+                "identifier": "workgraph.namespace",
+                "metadata": {"required": required, "dynamic": port.dynamic},
+            }
         for value in port.values():
             add_output_recursive(outputs, value, prefix=port_name, required=required)
     else:
-        if port_name not in output_names:
-            outputs.append(
-                {
-                    "identifier": "workgraph.any",
-                    "name": port_name,
-                    "metadata": {"required": required},
-                }
-            )
+        if port_name not in outputs:
+            outputs[port_name] = {
+                "identifier": "workgraph.any",
+                "metadata": {"required": required},
+            }
     return outputs
 
 
@@ -130,8 +116,8 @@ def get_task_data_from_aiida_component(
     from aiida_workgraph.utils import inspect_aiida_component_type
 
     tdata = {"metadata": {}}
-    inputs = [] if inputs is None else inputs
-    outputs = [] if outputs is None else outputs
+    inputs = {} if inputs is None else inputs
+    outputs = {} if outputs is None else outputs
     task_type = inspect_aiida_component_type(callable)
     if not task_type:
         raise ValueError(f"The callable {callable} is not a valid AiiDA component.")
@@ -150,40 +136,37 @@ def get_task_data_from_aiida_component(
                 or callable.process_class._var_positional
             )
         # if user already defined the var_args in the inputs, skip it
-        if name not in [input["name"] for input in inputs]:
-            inputs.append(
-                {
-                    "identifier": "workgraph.namespace",
-                    "name": name,
-                    "link_limit": 1e6,
-                    "metadata": {"arg_type": "var_kwargs", "dynamic": True},
-                }
-            )
+        if name not in inputs:
+            inputs[name] = {
+                "identifier": "workgraph.namespace",
+                "link_limit": 1e6,
+                "metadata": {"arg_type": "var_kwargs", "dynamic": True},
+            }
 
     tdata["identifier"] = tdata.pop("identifier", callable.__name__)
     tdata["executor"] = NodeExecutor.from_callable(callable).to_dict()
-    if task_type.upper() in ["CALCFUNCTION", "AUTO_CALCFUNCTION", "WORKFUNCTION"]:
+    # Add default output result for function tasks
+    if task_type.upper() in ["CALCFUNCTION", "WORKFUNCTION"]:
         outputs = (
-            [{"identifier": "workgraph.any", "name": "result"}]
+            {"result": {"identifier": "workgraph.any", "name": "result"}}
             if not outputs
             else outputs
         )
-        tdata["default_name"] = callable.__name__
+    # Add default name for the task
+    tdata["default_name"] = callable.__name__
     # add built-in sockets
-    for output in builtin_outputs:
-        outputs.append(output.copy())
-    for input_data in builtin_inputs:
-        inputs.append(input_data.copy())
+    inputs.update(builtin_inputs.copy())
+    outputs.update(builtin_outputs.copy())
     final_inputs = {
         "name": "inputs",
         "identifier": "workgraph.namespace",
-        "sockets": list_to_dict(inputs),
+        "sockets": inputs,
         "metadata": {"dynamic": spec.inputs.dynamic},
     }
     final_outputs = {
         "name": "outputs",
         "identifier": "workgraph.namespace",
-        "sockets": list_to_dict(outputs),
+        "sockets": outputs,
         "metadata": {"dynamic": spec.outputs.dynamic},
     }
     tdata["metadata"]["node_type"] = task_type
@@ -214,8 +197,8 @@ class AiiDAComponentTaskFactory(BaseTaskFactory):
 
         identifier = identifier or callable.__name__
         error_handlers = error_handlers or []
-        inputs = validate_task_inout(inputs or [], "inputs")
-        outputs = validate_task_inout(outputs or [], "outputs")
+        inputs = validate_socket_data(inputs) or {}
+        outputs = validate_socket_data(outputs) or {}
 
         tdata = get_task_data_from_aiida_component(
             callable, inputs=inputs, outputs=outputs

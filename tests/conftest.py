@@ -9,7 +9,6 @@ import os
 
 pytest_plugins = [
     "aiida.tools.pytest_fixtures",
-    "aiida_workgraph.tools.pytest_fixtures.scheduler",
 ]
 
 
@@ -208,15 +207,11 @@ def decorated_add_multiply(decorated_add, decorated_multiply) -> Callable:
 def decorated_add_multiply_group(decorated_add, decorated_multiply) -> Callable:
     """Generate a decorated node for test."""
 
-    @task.graph_builder(outputs=[{"name": "result"}])
+    @task.graph()
     def add_multiply_group(x, y, z):
-        wg = WorkGraph("add_multiply_group")
-        add1 = wg.add_task(decorated_add, name="add1", x=x, y=y)
-        multiply = wg.add_task(decorated_multiply, name="multiply1", x=z)
-        # link the output of a task to the input of another task
-        wg.add_link(add1.outputs[0], multiply.inputs["y"])
-        wg.outputs.result = multiply.outputs.result
-        return wg
+        outputs1 = decorated_add(x=x, y=y)
+        outputs2 = decorated_multiply(x=z, y=outputs1.result)
+        return outputs2.result
 
     return add_multiply_group
 
@@ -226,18 +221,18 @@ def decorated_namespace_sum_diff() -> Callable:
     """Generate a decorated node for test."""
 
     @task(
-        inputs=[
-            {"name": "nested", "identifier": "namespace"},
-            {"name": "nested.x"},
-            {"name": "nested.y"},
-        ],
-        outputs=[
-            "sum",
-            "diff",
-            {"name": "nested", "identifier": "namespace"},
-            {"name": "nested.sum"},
-            {"name": "nested.diff"},
-        ],
+        inputs={
+            "nested": {"identifier": "namespace"},
+            "nested.x": {},
+            "nested.y": {},
+        },
+        outputs={
+            "sum": {},
+            "diff": {},
+            "nested": {"identifier": "namespace"},
+            "nested.sum": {},
+            "nested.diff": {},
+        },
     )
     def sum_diff(x, y, nested):
         """Add two numbers and return the result."""

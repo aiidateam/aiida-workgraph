@@ -25,6 +25,7 @@ from .awaitable_manager import AwaitableManager
 from .task_manager import TaskManager
 from .error_handler_manager import ErrorHandlerManager
 from aiida.engine.processes.workchains.awaitable import Awaitable
+from node_graph.node_graph import BUILTIN_NODES
 
 if t.TYPE_CHECKING:
     from aiida.engine.runners import Runner  # pylint: disable=unused-import
@@ -284,21 +285,21 @@ class WorkGraphEngine(Process, metaclass=Protect):
         self.ctx._new_data = {}
         self.ctx._executed_tasks = []
         # read the latest workgraph data
-        self.wg = WorkGraph.load(self.node)
+        self.wg = WorkGraph.load(self.node, safe_load=False)
+        # init task results
+        self.ctx._task_results = {}
+        self.task_manager.set_task_results()
         # create a builtin `_context` task with its results as the context variables
         self.ctx._task_results = {
             "graph_ctx": self.wg.ctx._value,
             "graph_inputs": self.wg.inputs._value,
             "graph_outputs": self.wg.outputs._value,
         }
-        # init task results
-        self.task_manager.set_task_results()
-        # while workgraph
-        if self.wg.graph_type.upper() == "WHILE":
-            self.ctx._max_iteration = self.wg.max_iteration
-            should_run = self.task_manager.check_while_conditions()
-            if not should_run:
-                self.task_manager.set_tasks_state(self.ctx._tasks.keys(), "SKIPPED")
+        # set meta-tasks state
+        for task_name in BUILTIN_NODES:
+            self.task_manager.state_manager.set_task_runtime_info(
+                task_name, "state", "FINISHED"
+            )
 
     def apply_action(self, msg: dict) -> None:
 
@@ -345,22 +346,6 @@ class WorkGraphEngine(Process, metaclass=Protect):
 
         # Didn't match any known intents
         raise RuntimeError("Unknown intent")
-
-    def submit(
-        self,
-        process: t.Type["Process"],
-        inputs: dict[str, t.Any] | None = None,
-        **kwargs,
-    ) -> orm.ProcessNode:
-        """Submit process for execution.
-
-        :param process: The process class.
-        :param inputs: The dictionary of process inputs.
-        :return: The process node.
-        """
-        from aiida_workgraph.utils.control import submit_to_scheduler_inside_workchain
-
-        return submit_to_scheduler_inside_workchain(self, process, inputs, **kwargs)
 
     def finalize(self) -> t.Optional[ExitCode]:
         """Finalize the workgraph.

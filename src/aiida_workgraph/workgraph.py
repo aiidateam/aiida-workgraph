@@ -65,16 +65,18 @@ class WorkGraph(node_graph.NodeGraph):
         """Add alias to `nodes` for WorkGraph"""
         return self.nodes
 
-    @property
-    def meta_tasks(self) -> dict:
-        """Meta tasks are the context and group inputs/outputs"""
-        return self.meta_nodes
-
     def prepare_inputs(
         self, metadata: Optional[Dict[str, Any]] = None
     ) -> Dict[str, Any]:
+        from aiida_workgraph.utils import remove_output_values, serialize_socket_data
 
         wgdata = self.to_dict(should_serialize=True)
+        for task in wgdata["tasks"].values():
+            remove_output_values(task["outputs"])
+        # serialize the meta tasks
+        for task_name in ["graph_ctx", "graph_inputs"]:
+            if task_name in wgdata["tasks"]:
+                serialize_socket_data(wgdata["tasks"][task_name]["inputs"])
         metadata = metadata or {}
         inputs = {"workgraph_data": wgdata, "metadata": metadata}
         return inputs
@@ -98,10 +100,8 @@ class WorkGraph(node_graph.NodeGraph):
 
         # set task inputs
         if inputs is not None:
-            for name, input in inputs.items():
-                if name not in self.tasks:
-                    raise KeyError(f"Task {name} not found in WorkGraph.")  # noqa: E713
-                self.tasks[name].set(input)
+            self.set_inputs(inputs)
+
         # One can not run again if the process is alreay created. otherwise, a new process node will
         # be created again.
         if self.process is not None:
@@ -120,7 +120,6 @@ class WorkGraph(node_graph.NodeGraph):
         timeout: int = 600,
         interval: int = 5,
         metadata: Optional[Dict[str, Any]] = None,
-        scheduler: str | None = None,
     ) -> aiida.orm.ProcessNode:
         """Submit the AiiDA workgraph process and optionally wait for it to finish.
         Args:
@@ -129,28 +128,30 @@ class WorkGraph(node_graph.NodeGraph):
             restart (bool): Restart the process, and reset the modified tasks, then only re-run the modified tasks.
             new (bool): Submit a new process.
         """
-        from aiida_workgraph.utils.control import continue_process_in_scheduler
 
         # set task inputs
         if inputs is not None:
-            for name, input in inputs.items():
-                if name not in self.tasks:
-                    raise KeyError(f"Task {name} not found in WorkGraph.")  # noqa: E713
-                self.tasks[name].set(input)
+            self.set_inputs(inputs)
 
         # save the workgraph to the process node
         self.save(metadata=metadata)
         if self.process.process_state.value.upper() not in ["CREATED"]:
             raise ValueError(f"Process {self.process.pk} has already been submitted.")
-        if scheduler:
-            continue_process_in_scheduler(self.pk, scheduler)
-        else:
-            self.continue_process()
+        self.continue_process()
         # as long as we submit the process, it is a new submission, we should set restart_process to None
         self.restart_process = None
         if wait:
             self.wait(timeout=timeout, interval=interval)
         return self.process
+
+    def set_inputs(self, inputs: Dict[str, Any]):
+        for name, input in inputs.items():
+            if name in self.inputs:
+                setattr(self.inputs, name, input)
+            elif name in self.tasks:
+                self.tasks[name].set(input)
+            else:
+                raise KeyError(f"{name} not found in WorkGraph inputs or tasks.")
 
     def save(self, metadata: Optional[Dict[str, Any]] = None) -> None:
         """Save the udpated workgraph to the process
@@ -198,7 +199,6 @@ class WorkGraph(node_graph.NodeGraph):
     def build_connectivity(self) -> None:
         """Analyze the connectivity of workgraph and save it into dict."""
         connectivity = self.analyzer.build_connectivity()
-        connectivity["zone"] = {}
         return connectivity
 
     def to_dict(self, should_serialize: bool = False) -> Dict[str, Any]:
@@ -385,7 +385,9 @@ class WorkGraph(node_graph.NodeGraph):
         return nt
 
     @classmethod
-    def load(cls, pk: int | aiida.orm.ProcessNode) -> Optional["WorkGraph"]:
+    def load(
+        cls, pk: int | aiida.orm.ProcessNode, safe_load: bool = True
+    ) -> Optional["WorkGraph"]:
         """
         Load WorkGraph from the process node with the given primary key.
 
@@ -405,7 +407,7 @@ class WorkGraph(node_graph.NodeGraph):
             )
         if not isinstance(process, WorkGraphNode):
             raise ValueError(f"Process {pk} is not a WorkGraph")
-        wgdata = get_workgraph_data(process)
+        wgdata = get_workgraph_data(process, safe_load=safe_load)
         wg = cls.from_dict(wgdata)
         wg.process = process
         wg.update()
@@ -512,6 +514,7 @@ class WorkGraph(node_graph.NodeGraph):
         # so that the WorkGraphSaver can compare the difference, and reset the modified tasks
         self.restart_process = self.process
         self.process = None
+        self.state = "PLANNED"
 
     def reset(self) -> None:
         """Reset the workgraph to create a new submission."""
@@ -549,15 +552,24 @@ class WorkGraph(node_graph.NodeGraph):
         }
 
     def add_task(
-        self, identifier: Union[str, callable], name: str = None, **kwargs
+        self,
+        identifier: Union[str, callable],
+        name: str = None,
+        include_builtins: bool = False,
+        **kwargs,
     ) -> Task:
         """Add a task to the workgraph."""
         from aiida_workgraph.decorator import build_task_from_callable
         from aiida_workgraph.tasks.factory.workgraph_task import WorkGraphTaskFactory
         from aiida.engine import ProcessBuilder
         from aiida_workgraph.utils import get_dict_from_builder
+        from aiida_workgraph.tasks.factory.shelljob_task import (
+            ShellJobTaskFactory,
+            shelljob,
+        )
+        from node_graph.node_graph import BUILTIN_NODES
 
-        if name in ["graph_ctx", "graph_inputs", "graph_inputs"]:
+        if name in BUILTIN_NODES and not include_builtins:
             raise ValueError(f"Task name {name} can not be used, it is reserved.")
 
         if isinstance(identifier, WorkGraph):
@@ -567,7 +579,9 @@ class WorkGraph(node_graph.NodeGraph):
             identifier = build_task_from_callable(identifier.process_class)
         # build the task on the fly if the identifier is a callable
         elif callable(identifier):
-            if hasattr(identifier, "_TaskCls"):
+            if identifier is shelljob:
+                identifier = ShellJobTaskFactory.create_class(kwargs)
+            elif hasattr(identifier, "_TaskCls"):
                 identifier = identifier._TaskCls
             else:
                 identifier = build_task_from_callable(identifier)
@@ -629,3 +643,20 @@ class WorkGraph(node_graph.NodeGraph):
         set_current_graph(self._previous_graph)
         self._previous_graph = None
         return None
+
+    def __call__(self, inputs: Dict[str, Any] = None) -> Any:
+        """Call the graph with inputs and return as a task.
+
+        Used in context managers as a simple assignment.
+
+        >>> wg1 = WorkGraph()
+        >>> with WorkGraph() as wg2:
+        >>>     task_outputs = wg1({'input1': 42, 'input2': 'hello'})
+        """
+        from aiida_workgraph.manager import get_current_graph
+
+        graph = get_current_graph()
+        task = graph.add_task(self)
+        inputs = inputs or {}
+        task.set(inputs)
+        return task.outputs

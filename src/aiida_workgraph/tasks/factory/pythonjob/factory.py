@@ -15,8 +15,8 @@ class BasePythonTaskFactory(BaseTaskFactory):
     task_class = None
     task_type = None
     identifier = None
-    additional_inputs = []
-    additional_outputs = []
+    additional_inputs = {}
+    additional_outputs = {}
 
     @classmethod
     def create_class(cls, inputs: dict) -> Union[Task, None]:
@@ -39,7 +39,9 @@ class BasePythonTaskFactory(BaseTaskFactory):
         """The task is a combination of function task and AiiDA component task."""
 
         if not hasattr(func, "_TaskCls"):
-            outputs = outputs or [{"identifier": "workgraph.any", "name": "result"}]
+            outputs = outputs or {
+                "result": {"identifier": "workgraph.any", "name": "result"}
+            }
             TaskCls0 = DecoratedFunctionTaskFactory.from_function(
                 func,
                 identifier=identifier,
@@ -50,28 +52,28 @@ class BasePythonTaskFactory(BaseTaskFactory):
             )
         else:
             TaskCls0 = func._TaskCls
-        if TaskCls0.node_type.upper() == "GRAPH_BUILDER":
+        if TaskCls0.node_type.upper() == "GRAPH_TASK":
             raise ValueError(
-                "GraphBuilder task cannot be run remotely. Please remove 'PythonJob'."
+                "Graph task cannot be run remotely. Please remove 'PythonJob'."
             )
         TaskCls = AiiDAComponentTaskFactory.from_aiida_component(cls.process_class)
         tdata = TaskCls0._ndata
         # merge the inputs and outputs from the process_class task to the function task
         # skip the already existed inputs and outputs
-        for input_data in cls.additional_inputs:
-            tdata["inputs"]["sockets"][input_data["name"]] = input_data.copy()
-        for input_data in TaskCls._ndata["inputs"]["sockets"].values():
-            if input_data["name"] not in tdata["inputs"]["sockets"]:
+        for name, input_data in cls.additional_inputs.items():
+            tdata["inputs"]["sockets"][name] = input_data.copy()
+        for name, input_data in TaskCls._ndata["inputs"]["sockets"].items():
+            if name not in tdata["inputs"]["sockets"]:
                 input_data["metadata"].setdefault("extras", {})
                 input_data["metadata"]["extras"]["is_pythonjob"] = True
-                tdata["inputs"]["sockets"][input_data["name"]] = input_data
-        for output in TaskCls._ndata["outputs"]["sockets"].values():
-            if output["name"] not in tdata["outputs"]["sockets"]:
+                tdata["inputs"]["sockets"][name] = input_data
+        for name, output in TaskCls._ndata["outputs"]["sockets"].items():
+            if name not in tdata["outputs"]["sockets"]:
                 output["metadata"].setdefault("extras", {})
                 output["metadata"]["extras"]["is_pythonjob"] = True
-                tdata["outputs"]["sockets"][output["name"]] = output
-        for output in cls.additional_outputs:
-            tdata["outputs"]["sockets"][output["name"]] = output.copy()
+                tdata["outputs"]["sockets"][name] = output
+        for name, output in cls.additional_outputs.items():
+            tdata["outputs"]["sockets"][name] = output.copy()
         tdata["metadata"]["node_type"] = cls.task_type
         tdata["metadata"]["catalog"] = catalog
         tdata["default_name"] = func.__name__
@@ -93,30 +95,26 @@ class PythonJobTaskFactory(BasePythonTaskFactory):
     task_type = "PythonJob"
     identifier = "workgraph.pythonjob"
 
-    additional_inputs = [
-        {
+    additional_inputs = {
+        "computer": {
             "identifier": "workgraph.string",
-            "name": "computer",
             "metadata": {"extras": {"is_pythonjob": True}},
         },
-        {
+        "command_info": {
             "identifier": "workgraph.any",
-            "name": "command_info",
             "metadata": {"extras": {"is_pythonjob": True}},
         },
-        {
+        "register_pickle_by_value": {
             "identifier": "workgraph.any",
-            "name": "register_pickle_by_value",
             "metadata": {"extras": {"is_pythonjob": True}},
         },
-    ]
-    additional_outputs = [
-        {
+    }
+    additional_outputs = {
+        "exit_code": {
             "identifier": "workgraph.any",
-            "name": "exit_code",
             "metadata": {"extras": {"is_pythonjob": True}},
         }
-    ]
+    }
 
 
 class PyFunctionTaskFactory(BasePythonTaskFactory):
@@ -126,11 +124,10 @@ class PyFunctionTaskFactory(BasePythonTaskFactory):
     task_type = "PyFunction"
     identifier = "workgraph.pyfunction"
 
-    additional_inputs = []
-    additional_outputs = [
-        {
+    additional_inputs = {}
+    additional_outputs = {
+        "exit_code": {
             "identifier": "workgraph.any",
-            "name": "exit_code",
             "metadata": {"is_pythonjob": True},
         }
-    ]
+    }

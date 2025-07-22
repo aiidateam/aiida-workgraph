@@ -8,25 +8,18 @@ This section contains a collection of HowTos for various topics.
    :maxdepth: 1
    :caption: Contents:
 
-   use_calcjob_workchain
-   graph_inputs_outputs
-   autogen/graph_builder
+   autogen/graph_level
    autogen/parallel
-   autogen/aggregate
-   if
-   while
-   map
-   context
-   waiting_on
-   combine_workgraph
-   restart
-   error_resistant
-   continue_finished_workgraph
-   zone
-   monitor
-   protocol
-   scheduler
+   autogen/control-flow
+   autogen/context
+   autogen/shelljob
+   autogen/remote_job
+   autogen/combine_workgraphs
+   autogen/continue_workgraph
+   autogen/async
+   autogen/monitor
+   autogen/control_task_execution_order
+   autogen/error_resistant
    cli
    control
-   transfer_workchain
-   workchain_call_workgraph
+   autogen/interoperate_with_aiida_core

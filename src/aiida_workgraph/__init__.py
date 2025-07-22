@@ -2,10 +2,11 @@ from .workgraph import WorkGraph
 from .task import Task
 from .decorator import task, build_task
 from .tasks import TaskPool
+from .tasks.factory.shelljob_task import shelljob
 from .utils.flow_control import if_, while_, map_
-from .manager import active_graph, active_if_zone, active_map_zone, active_while_zone
+from .manager import get_current_graph, If, Map, While, Zone
 
-__version__ = "0.5.2"
+__version__ = "0.5.3"
 
 __all__ = [
     "WorkGraph",
@@ -15,9 +16,11 @@ __all__ = [
     "if_",
     "while_",
     "map_",
-    "active_graph",
-    "active_if_zone",
-    "active_map_zone",
-    "active_while_zone",
+    "get_current_graph",
+    "Zone",
+    "If",
+    "Map",
+    "While",
     "TaskPool",
+    "shelljob",
 ]

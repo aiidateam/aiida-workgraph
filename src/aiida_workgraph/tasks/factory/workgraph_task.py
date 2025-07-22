@@ -96,10 +96,8 @@ class WorkGraphTaskFactory(BaseTaskFactory):
         inputs = workgraph.inputs._to_dict()
         outputs = workgraph.outputs._to_dict()
         # add built-in sockets
-        for input_data in builtin_inputs:
-            inputs["sockets"][input_data["name"]] = input_data.copy()
-        for output in builtin_outputs:
-            outputs["sockets"][output["name"]] = output.copy()
+        inputs["sockets"].update(builtin_inputs.copy())
+        outputs["sockets"].update(builtin_outputs.copy())
         tdata["inputs"] = inputs
         tdata["outputs"] = outputs
         tdata["identifier"] = workgraph.name
