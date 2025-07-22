@@ -87,6 +87,29 @@ def active_graph(graph):
 
 
 @contextmanager
+def Zone():
+    """
+    Context manager to create a "zone" in the current graph.
+    """
+
+    wg = get_current_graph()
+
+    zone_task = wg.add_task(
+        TaskPool.workgraph.zone,
+    )
+
+    old_zone = getattr(wg, "_active_zone", None)
+    if old_zone:
+        old_zone.children.add(zone_task)
+    wg._active_zone = zone_task
+
+    try:
+        yield zone_task
+    finally:
+        wg._active_zone = old_zone
+
+
+@contextmanager
 def If(condition_socket: TaskSocket, invert_condition: bool = False):
     """
     Context manager to create a "conditional zone" in the current graph.

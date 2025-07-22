@@ -4,7 +4,7 @@ from .decorator import task, build_task
 from .tasks import TaskPool
 from .tasks.factory.shelljob_task import shelljob
 from .utils.flow_control import if_, while_, map_
-from .manager import active_graph, If, Map, While
+from .manager import get_current_graph, If, Map, While, Zone
 
 __version__ = "0.5.3"
 
@@ -16,7 +16,8 @@ __all__ = [
     "if_",
     "while_",
     "map_",
-    "active_graph",
+    "get_current_graph",
+    "Zone",
     "If",
     "Map",
     "While",
