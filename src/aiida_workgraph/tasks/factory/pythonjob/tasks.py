@@ -84,7 +84,11 @@ class BaseSerializablePythonTask(Task):
 
     def build_function_ports(self, socket):
         # Build an explicit list of function outputs
-        port = {"name": socket._name, "identifier": socket._identifier}
+        port = {
+            "name": socket._name,
+            "identifier": socket._identifier,
+            "required": socket._metadata.required,
+        }
         if hasattr(socket, "_sockets"):
             port["ports"] = []
             for name, sub_socket in socket._sockets.items():
@@ -96,7 +100,11 @@ class BaseSerializablePythonTask(Task):
                         port["ports"].append(self.build_function_ports(sub_socket))
                     else:
                         port["ports"].append(
-                            {"name": name, "identifier": sub_socket._identifier}
+                            {
+                                "name": name,
+                                "identifier": sub_socket._identifier,
+                                "required": sub_socket._metadata.required,
+                            }
                         )
         return port
 
