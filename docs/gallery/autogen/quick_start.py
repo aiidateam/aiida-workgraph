@@ -77,18 +77,13 @@ load_profile()
 # Simple workflow
 # ---------------
 #
-# Suppose you want to compute ``(x + y) * z``.
-# This requires two steps:
-#
-# #. Adding ``x`` and ``y``, then
-# #. Multiplying the result with ``z``
-#
+# Suppose you want to compute ``(x + y) * z`` and record both operations.
 # The simplest way to do this in ``WorkGraph`` is as follows:
 
 from aiida_workgraph import WorkGraph
 
 with WorkGraph("AddMultiply") as wg:
-    wg.inputs = dict.fromkeys(["x", "y", "z"])
+    wg.inputs = ("x", "y", "z")
     wg.outputs.result = (wg.inputs.x + wg.inputs.y) * wg.inputs.z
 
 # %%
