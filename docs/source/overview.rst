@@ -3,14 +3,14 @@ Overview
 ========
 
 AiiDA-WorkGraph is a powerful Python library built on the AiiDA framework to streamline the creation, management, and execution of scientific workflows.
-It combines a clean Pythonic interface with robust data provenance, high-throughput capabilities, and remote execution—supporting scalable and reproducible research.
+It combines a clean Pythonic interface with robust data provenance, high-throughput capabilities, and remote execution, thus supporting scalable and reproducible research.
 
 Key Features
 ============
 
 Pythonic workflows
 ------------------
-Define workflows using standard Python functions enhanced with decorators. It's simple and intuitive for new users.
+Define workflows using standard Python functions enhanced with decorators.
 
 .. code-block:: python
 
@@ -37,9 +37,7 @@ Define workflows using standard Python functions enhanced with decorators. It's 
 Remote execution
 ----------------
 Run Python functions or shell commands on remote machines.
-
-See: `Run calculations remotely <../howto/autogen/remote_job>`_
-
+See: `Run calculations remotely <./howto/autogen/remote_job.rst>`_
 
 Shell command example:
 
@@ -59,8 +57,7 @@ Shell command example:
 Parallel tasks
 --------------
 Launch multiple tasks in parallel without writing concurrent code.
-
-See: `Run tasks in parallel <../howto/autogen/parallel>`_
+See: `Run tasks in parallel <./howto/autogen/parallel.rst>`_
 
 
 
@@ -80,17 +77,22 @@ Provenance tracking
 -------------------
 Automatically records data and process provenance for full reproducibility and traceability.
 
+
+.. image:: ./_static/images/data_provenance_example.png
+
+
 Checkpointing
 -------------
 Save and resume workflow execution from the last checkpoint.
+This is particularly useful for long-running tasks.
+
 
 Dynamic execution
 -----------------
 Adapt workflows at runtime using ``if``, ``while``, and other control structures.
+See: `Control flow in WorkGraph <./howto/autogen/control-flow.rst>`_
 
-See: `Control flow in WorkGraph <../howto/autogen/control-flow>`_
-
-`if` condition example:
+``if`` condition example:
 
 .. code-block:: python
 
@@ -102,7 +104,7 @@ See: `Control flow in WorkGraph <../howto/autogen/control-flow>`_
             return multiply(x, 10).result
 
 
-`while` loop example using recursion:
+Implementing ``while`` loops with recursion:
 
 .. code-block:: python
 
@@ -120,15 +122,22 @@ Efficiently manage thousands of tasks for large-scale computations.
 
 Error handling
 --------------
-Recover from failures with built-in retries and error-catching mechanisms.
+Implement custom error handler functions that respond to exit codes, allowing you to automatically recover from errors, or to gracefully exit.
+See: `Write error-resistant workflows <./howto/autogen/error_resistant.rst>`_
 
-See: `Write error-resistant workflows <../howto/autogen/error_resistant>`_
+Here is an example of a workflow that handle exit codes ``410`` and recover and finally finished successfully with exit code ``0``:
+
+.. code-block:: console
+
+    WorkGraph<handling_error_negative_number><968> Finished [0]
+        ├── ArithmeticAddCalculation<971> Finished [410]
+        └── ArithmeticAddCalculation<977> Finished [0]
+
 
 Reusable workflows
 ------------------
 Encapsulate and reuse tasks and sub-workflows in larger pipelines.
-
-See: `Combine workgraphs <../howto/autogen/combine_workgraphs>`_
+See: `Combine workgraphs <./howto/autogen/combine_workgraphs.rst>`_
 
 .. code-block:: python
 
@@ -143,13 +152,12 @@ See: `Combine workgraphs <../howto/autogen/combine_workgraphs>`_
 Interactive GUI
 ---------------
 Visualize and monitor workflows via a user-friendly web interface.
-
-See: `WorkGraph GUI <../gui/autogen/web>`_
+See: `WorkGraph GUI <./gui/web.rst>`_
 
 .. image:: ./_static/images/web-detail.png
 
-Event-driven logic
-------------------
+Event-driven execution
+-----------------------
 Trigger task execution based on external events for adaptive workflows.
 Some possible use cases include:
 
@@ -169,30 +177,29 @@ Here is an example of defining a monitor task that checks if a certain time has 
 
 Zone-based control
 ------------------
-Use ``If``, ``While``, and ``For`` zones to explicitly define logic blocks in the workflow graph.
+Use ``If``, ``While``, and ``Map`` zones to explicitly define logic blocks in the workflow graph.
 
-
+.. image:: ./_static/images/if_zone_example.png
 
 
 Node-graph editing
 ------------------
 Design workflows by connecting task inputs and outputs like a flowchart.
-
-See: `Node-graph programming <../howto/autogen/node_graph_programming>`_
+See: `Node-graph programming <./howto/autogen/node_graph_programming.rst>`_
 
 What's Next?
 ============
 
 Explore the following resources to get started or dive deeper into AiiDA-WorkGraph:
 
-+-----------------------------------------+------------------------------------------------------+
-| `Quick Start <./quick_start.rst>`__     | Get up and running with a simple workflow example.   |
-+-----------------------------------------+------------------------------------------------------+
-| `Concepts <../concept/index.rst>`__     | Learn the core concepts behind AiiDA-WorkGraph.      |
-+-----------------------------------------+------------------------------------------------------+
-| `Tutorials <../tutorial/index.rst>`__   | Discover real-world examples in computational        |
-|                                         | materials science and other domains.                 |
-+-----------------------------------------+------------------------------------------------------+
-| `How-To Guides <../howto/index.rst>`__  | Master advanced topics like control flow with        |
-|                                         | ``if``, ``for``, ``while``, and ``context``.         |
-+-----------------------------------------+------------------------------------------------------+
++---------------------------------------------+------------------------------------------------------+
+| `Quick Start <./autogen/quick_start.rst>`__ | Get up and running with a simple workflow example.   |
++---------------------------------------------+------------------------------------------------------+
+| `Concepts <./concept/index.rst>`__          | Learn the core concepts behind AiiDA-WorkGraph.      |
++---------------------------------------------+------------------------------------------------------+
+| `Tutorials <./tutorial/index.rst>`__        | Discover real-world examples in computational        |
+|                                             | materials science and other domains.                 |
++---------------------------------------------+------------------------------------------------------+
+| `How-To Guides <./howto/index.rst>`__       | Master advanced topics like control flow with        |
+|                                             | ``if``, ``for``, ``while``, and ``context``.         |
++---------------------------------------------+------------------------------------------------------+
