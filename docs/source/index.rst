@@ -95,7 +95,6 @@ Sections
    autogen/quick_start
    installation
    tutorial/index
-   built-in/index
    howto/index
    migration_from_aiida_core/index
    concept/index
