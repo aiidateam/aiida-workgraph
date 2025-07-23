@@ -216,5 +216,5 @@ generate_node_graph(node.pk)
 
 # %%
 # Further reading
-# ===============
+# ---------------
 # One can also use ``WorkGraph`` inside a ``WorkChain``, please refer to the `Calling WorkGraph within a WorkChain <workchain_call_workgraph.ipynb>`_ for more details.
