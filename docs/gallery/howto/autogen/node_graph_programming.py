@@ -5,13 +5,15 @@ Write workflow using node-graph programming paradigm
 """
 
 # %%
-# This guide introduces **node-graph programming** in `aiida-workgraph`, to construct scientific workflows.
-# Unlike Python-based context manager approach, node-graph programming allows for workflow definition for special use case, such as constructing workflow from YAML files or graphical user interfaces.
+# This guide introduces the **node-graph programming** in `aiida-workgraph`, which provides an alternative approach for constructing workflows.
+# Unlike Pythonic approach used elsewhere in the documentation, node-graph programming is the low-level, foundational approach where you build the graph piece by piece.
+# You manually add each `task` and connect them with `links`.
+# This method offers maximum control but is more verbose and is generally reserved for advanced use cases, like programmatically generating a graph's structure.
 #
 # We'll explore how to build workflows by adding individual tasks and linking their inputs and outputs.
 # This includes simple sequential workflows, as well as more complex structures involving control flow like `if` conditions and `while` loops.
 #
-# First, setting up the AiiDA environment
+# First, we set up our AiiDA environment:
 
 from aiida_workgraph import WorkGraph, task
 from aiida import load_profile
@@ -20,7 +22,7 @@ load_profile()
 
 # %%
 # Creating a Simple Workflow
-# ==================================
+# ==========================
 #
 # Let's define a few simple Python functions that will serve as our tasks.
 
@@ -41,9 +43,7 @@ def multiply(x, y):
 
 
 # %%
-# Build a WorkGraph
-# --------------------------
-# Building a workflow with node-graph programming involves three core steps:
+# Now, building a workflow via the node-graph programming approach involves three core steps:
 #
 # 1.  **Instantiate an empty WorkGraph**: This is the container for your workflow.
 # 2.  **Add tasks**: Incorporate the defined Python tasks into the ``WorkGraph``.
@@ -70,7 +70,6 @@ wg.run(
     inputs={"add1": {"x": 2, "y": 3}, "multiply1": {"y": 4}},
 )
 
-
 print(f"State of WorkGraph: {wg.state}")
 print(f"Result: {wg.outputs.result.value}")
 
@@ -78,9 +77,9 @@ print(f"Result: {wg.outputs.result.value}")
 wg.to_html()
 
 # %%
-# Conditional logic with `If Zone` task
-# ========================================
-# The `If` logic in `aiida-workgraph` is represented by an **If Zone**, visually encapsulating child tasks that execute based on specific conditions.
+# Conditional logic with the `If Zone` task
+# ==========================================
+# `If` logic in `aiida-workgraph` is represented by an **If Zone**, which visually encapsulates child tasks that execute based on specific conditions.
 #
 # Key features of the If Zone:
 #
@@ -88,45 +87,42 @@ wg.to_html()
 # * **invert_condition**: If ``True``, reverses the outcome of the ``conditions``.
 # * **Task Linking**: Tasks outside the If Zone can directly link to tasks inside, allowing dynamic workflow adjustments based on conditional outcomes.
 #
-# The `aiida-workgraph` library provides a built-in `workgraph.if_zone` task to create an `If Zone` and a `workgraph.select` task to choose between different data sources based on a condition.
+# The `aiida-workgraph` library provides the built-in `workgraph.if_zone` task to create an `If Zone` and the `workgraph.select` task to choose between different data sources based on a condition.
 #
-# Let's build a workflow where an initial `add` operation's result dictates whether a subsequent `add` or `multiply` operation is performed.
+# Let's build a workflow where the result of an initial `add` operation dictates whether a subsequent `add` or `multiply` operation is performed.
 
-with WorkGraph("if_task_example") as wg:
-    add_task = wg.add_task(add, x=1, y=1)
+wg = WorkGraph("if_task_example")
+add_task = wg.add_task(add, x=1, y=1)
+# If the condition is true
+if_true_zone = wg.add_task(
+    "workgraph.if_zone", name="if_true", conditions=add_task.outputs.result
+)
+add2 = if_true_zone.add_task(
+    add, name="add2", x=add_task.outputs.result, y=2
+)  # 2 + 2 = 4
+# If the condition is false
+if_false_zone = wg.add_task(
+    "workgraph.if_zone",
+    name="if_false",
+    conditions=add_task.outputs.result,
+    invert_condition=True,
+)
+multiply1 = if_false_zone.add_task(
+    multiply, name="multiply1", x=add_task.outputs.result, y=2
+)  # 2 * 2 = 4
+# Select the result based on the initial condition
+select1 = wg.add_task(
+    "workgraph.select",
+    name="select1",
+    true=add2.outputs["result"],
+    false=multiply1.outputs["result"],
+    condition=add_task.outputs.result,
+)
+# Add 1 to the selected result
+add3 = wg.add_task(add, name="add3", x=select1.outputs["result"], y=1)  # 4 + 1 = 5
+# Graph-level output
+wg.outputs.result = add3.outputs.result
 
-    # If the condition is true
-    if_true_zone = wg.add_task(
-        "workgraph.if_zone", name="if_true", conditions=add_task.outputs.result
-    )
-    add2 = if_true_zone.add_task(
-        add, name="add2", x=add_task.outputs.result, y=2
-    )  # 2 + 2 = 4
-
-    # If the condition is false
-    if_false_zone = wg.add_task(
-        "workgraph.if_zone",
-        name="if_false",
-        conditions=add_task.outputs.result,
-        invert_condition=True,
-    )
-    multiply1 = if_false_zone.add_task(
-        multiply, name="multiply1", x=add_task.outputs.result, y=2
-    )  # 2 * 2 = 4
-
-    # Select the result based on the initial condition
-    select1 = wg.add_task(
-        "workgraph.select",
-        name="select1",
-        true=add2.outputs["result"],
-        false=multiply1.outputs["result"],
-        condition=add_task.outputs.result,
-    )
-    # Add 1 to the selected result
-    add3 = wg.add_task(add, name="add3", x=select1.outputs["result"], y=1)  # 4 + 1 = 5
-
-    # Graph-level output
-    wg.outputs.result = add3.outputs.result
 # Run the workflow
 wg.run()
 
@@ -151,6 +147,7 @@ initial_add_task = wg.add_task(add, x=1, y=1)  # n = 2
 wg.ctx.n = initial_add_task.outputs.result
 
 # Define the condition for the while loop: n < 8
+# Here, we use the `compare` task as defined above
 condition_task = wg.add_task(compare, x=wg.ctx.n, y=8)
 # Ensure the condition task waits for the initial_add_task to complete
 condition_task.waiting_on.add(initial_add_task)
@@ -192,10 +189,6 @@ wg.to_html()
 # similar to Python's built-in `map()` function.
 # This is particularly useful for parallelizing operations over a dataset.
 #
-# To use the `Map` task, you define a `source` which is a dictionary.
-# The tasks inside the `map_zone` will be executed for each `item` in the source,
-# where `item` represents the value of each key-value pair.
-#
 # First, let's define a task that generates a dictionary of data. Notice the `outputs` decorator,
 # which indicates that `result` is a dynamic output and will be a namespace.
 
@@ -219,6 +212,12 @@ def calc_sum(**kwargs):
     """Calculates the sum of all keyword arguments' values."""
     return sum(kwargs.values())
 
+
+# %%
+# To use the ``Map`` task, you define a ``source`` which is a dictionary.
+# The tasks inside the `map_zone` will be executed for each `item` in the source,
+# where `item` represents the value of each key-value pair.
+#
 
 wg = WorkGraph("map_task_example")
 
@@ -251,4 +250,7 @@ wg.to_html()
 # %%
 # Conclusion
 # ==========
-# This tutorial has demonstrated how to construct complex workflows using the **node-graph programming paradigm** in `aiida-workgraph`.
+# This tutorial has demonstrated how to construct workflows using the **node-graph programming paradigm** in `aiida-workgraph`.
+# It presents an alternative approach to the Pythonic approach used in the rest of the documentation.
+# The Pythonic approach serves as syntactic sugar that simplifies workflow construction, while node-graph programming  is the low-level approach where you build the graph piece by piece.
+# This method offers maximum control but is more verbose and is generally reserved for advanced use cases, like programmatically generating a graph's structure.
