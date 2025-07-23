@@ -20,6 +20,7 @@ This section contains a collection of HowTos for various topics.
    autogen/monitor
    autogen/control_task_execution_order
    autogen/error_resistant
+   autogen/node_graph_programming
    cli
    control
    autogen/interoperate_with_aiida_core

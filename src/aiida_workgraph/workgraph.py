@@ -146,7 +146,7 @@ class WorkGraph(node_graph.NodeGraph):
 
     def set_inputs(self, inputs: Dict[str, Any]):
         for name, input in inputs.items():
-            if name in self.inputs:
+            if "graph_inputs" in self.tasks and name in self.inputs:
                 setattr(self.inputs, name, input)
             elif name in self.tasks:
                 self.tasks[name].set(input)
