@@ -2,20 +2,19 @@
 Overview
 ========
 
-AiiDA-WorkGraph is a powerful Python library built on the AiiDA framework to streamline the creation, management, and execution of scientific workflows.
-It combines a clean Pythonic interface with robust data provenance, high-throughput capabilities, and remote execution, thus supporting scalable and reproducible research.
+Flexible workflow construction
+==============================
+AiiDA-WorkGraph supports three complementary approaches to building workflows, whether you prefer writing clean Python code, visualizing complex logic, or exercising low-level control. This flexibility lets you choose the method that best fits your project and working style.
 
-Key Features
-============
-
-Pythonic workflows
-------------------
-Define workflows using standard Python functions enhanced with decorators.
+1. Pythonic workflows
+-------------------
+Define entire workflows using standard Python functions and intuitive decorators. This approach is ideal for developers who prefer expressing logic directly in code, enabling rapid prototyping, automation, and easy integration into larger Python applications.
 
 .. code-block:: python
 
     from aiida_workgraph import task
 
+    # Define individual tasks with the @task decorator
     @task
     def add(x, y):
         return x + y
@@ -24,173 +23,151 @@ Define workflows using standard Python functions enhanced with decorators.
     def multiply(x, y):
         return x * y
 
+    # Compose tasks into a workflow using the @task.graph decorator
     @task.graph()
     def add_multiply(x, y, z):
-        sum = add(x, y).result
-        product = multiply(sum, z).result
-        return product
+        if x > 0:
+            return add(x, y).result
+        else:
+            return multiply(x, y).result
 
+    # Run the workflow
     add_multiply.run(x=2, y=3, z=4)
 
 
-
-Remote execution
-----------------
-Run Python functions or shell commands on remote machines.
-See: `Run calculations remotely <./howto/autogen/remote_job.rst>`_
-
-Shell command example:
+2. Visual graph with explicit logic
+---------------------------------
+For those who prefer to visualize control flow, AiiDA-WorkGraph offers zone-based construction. Use explicit zones like ``If``, ``While``, and ``Map`` to build a graph that clearly shows the workflow's structure and dependencies. This avoids hiding logic inside "black-box" Python functions and makes complex workflows easier to understand.
 
 .. code-block:: python
 
-    from aiida_workgraph import shelljob
+    from aiida_workgraph import If
 
-    remote_computer = orm.load_computer("remote_computer_label")
-
-    outputs = shelljob(
-        command="date", # the command to run
-        metadata={"computer": remote_computer},
-    )
-
-
-
-Parallel tasks
---------------
-Launch multiple tasks in parallel without writing concurrent code.
-See: `Run tasks in parallel <./howto/autogen/parallel.rst>`_
-
-
-
-.. code-block:: python
-
-    @task.graph()
-    def parallel_add(x, N):
-        results = {}
-        # Launch N parallel tasks to add x with each index
-        for i in range(N):
-            results[f"add_{i}"] = add(x, i).result
-        return results
-
-
-
-Provenance tracking
--------------------
-Automatically records data and process provenance for full reproducibility and traceability.
-
-
-.. image:: ./_static/images/data_provenance_example.png
-
-
-Checkpointing
--------------
-Save and resume workflow execution from the last checkpoint.
-This is particularly useful for long-running tasks.
-
-
-Dynamic execution
------------------
-Adapt workflows at runtime using ``if``, ``while``, and other control structures.
-See: `Control flow in WorkGraph <./howto/autogen/control-flow.rst>`_
-
-``if`` condition example:
-
-.. code-block:: python
-
-    @task.graph()
-    def conditional_workflow(x):
-        if x > 0:
-            return add(x, 10).result
-        else:
-            return multiply(x, 10).result
-
-
-Implementing ``while`` loops with recursion:
-
-.. code-block:: python
-
-    @task.graph()
-    def recursive_workflow(x):
-        if x <= 0:
-            return x
-        else:
-            return recursive_workflow(x - 1).result
-
-
-High-throughput
----------------
-Efficiently manage thousands of tasks for large-scale computations.
-
-Error handling
---------------
-Implement custom error handler functions that respond to exit codes, allowing you to automatically recover from errors, or to gracefully exit.
-See: `Write error-resistant workflows <./howto/autogen/error_resistant.rst>`_
-
-Here is an example of a workflow that handle exit codes ``410`` and recover and finally finished successfully with exit code ``0``:
-
-.. code-block:: console
-
-    WorkGraph<handling_error_negative_number><968> Finished [0]
-        ├── ArithmeticAddCalculation<971> Finished [410]
-        └── ArithmeticAddCalculation<977> Finished [0]
-
-
-Reusable workflows
-------------------
-Encapsulate and reuse tasks and sub-workflows in larger pipelines.
-See: `Combine workgraphs <./howto/autogen/combine_workgraphs.rst>`_
-
-.. code-block:: python
-
-    @task.graph()
-    def main_workflow(x, y):
-        sum1 = add(x, y).result
-        # call the reusable add_multiply workflow
-        result1 = add_multiply(sum1, 2, 3).result
-        return result1
-
-
-Interactive GUI
----------------
-Visualize and monitor workflows via a user-friendly web interface.
-See: `WorkGraph GUI <./gui/web.rst>`_
-
-.. image:: ./_static/images/web-detail.png
-
-Event-driven execution
------------------------
-Trigger task execution based on external events for adaptive workflows.
-Some possible use cases include:
-
-- **Time-based events**: Start a task at a specified time
-- **File-based events**: Execute a task when a particular file exists
-
-Here is an example of defining a monitor task that checks if a certain time has passed:
-
-.. code-block:: python
-
-    @task.monitor
-    def time_monitor(time):
-        """Monitor a time condition."""
-        import datetime
-        return datetime.datetime.now() > datetime.datetime.fromisoformat(time.value)
-
-
-Zone-based control
-------------------
-Use ``If``, ``While``, and ``Map`` zones to explicitly define logic blocks in the workflow graph.
+    with If(x > 0) as if_zone:
+        add1 = add(x=x, y=y).result
+        add2 = add(x=add1, y=z).result
 
 .. image:: ./_static/images/if_zone_example.png
 
 
-Node-graph editing
-------------------
-Design workflows by connecting task inputs and outputs like a flowchart.
+3. Low-Level node-graph programming
+---------------------------------
+For maximum control, you can construct a workflow by programmatically defining each task and connecting their inputs and outputs (links). While more verbose, this method is invaluable for advanced use cases, such as programmatically generating a graph's structure.
 See: `Node-graph programming <./howto/autogen/node_graph_programming.rst>`_
+
+.. code-block:: python
+
+    from aiida_workgraph import WorkGraph
+
+    wg = WorkGraph("test_add_multiply")
+    wg.add_task(add, name="add1")
+    wg.add_task(multiply, name="multiply1")
+    wg.add_link(wg.tasks.add1.outputs.result, wg.tasks.multiply1.inputs.x)
+
+
+
+Key features
+==============
+
+Powerful execution capabilities
+-------------------------------
+
+* **Remote execution**: Seamlessly offload tasks to remote supercomputers. AiiDA-WorkGraph handles the details of connecting and running shell commands or Python functions on any configured machine.
+
+    .. code-block:: python
+
+        from aiida_workgraph import shelljob
+
+        remote_computer = orm.load_computer("remote_computer_label")
+
+        outputs = shelljob(
+            command="date", # The command to execute
+            metadata={"computer": remote_computer},
+        )
+
+* **Parallel tasks**: Effortlessly launch and manage multiple tasks in parallel without writing complex concurrency code. AiiDA-WorkGraph handles the scheduling and data collection.
+
+    .. code-block:: python
+
+        @task.graph()
+        def parallel_add(x, N):
+            results = {}
+            # Launch N parallel tasks to add x with each index
+            for i in range(N):
+                results[f"add_{i}"] = add(x, i).result
+            return results
+
+* **High-throughput computing**: Built to scale, AiiDA-WorkGraph can efficiently manage thousands of concurrent workflows, making it ideal for large-scale screening studies and data-intensive computations.
+
+Robustness and reproducibility
+-------------------------------
+
+* **Automatic provenance**: Guarantee scientific reproducibility with zero effort. AiiDA-WorkGraph automatically tracks the complete history of all data and calculations, creating a detailed provenance graph that ensures full traceability.
+
+    .. image:: ./_static/images/data_provenance_example.png
+
+* **Checkpointing**: Protect long-running workflows from interruptions. AiiDA-WorkGraph can save a workflow's state at any point and resume execution from the last checkpoint, saving valuable time and computational resources.
+
+* **Advanced error handling**: Build resilient workflows that can recover from failures. Define custom handlers to respond to specific exit codes, allowing your workflow to retry a failed task, branch to a cleanup routine, or exit gracefully.
+
+    The example below shows a workflow recovering from an initial task failure (exit code `410`) and completing successfully.
+
+    .. code-block:: console
+
+        WorkGraph<handling_error_negative_number><968> Finished [0]
+            ├── ArithmeticAddCalculation<971> Finished [410]
+            └── ArithmeticAddCalculation<977> Finished [0]
+
+
+Advanced control and modularity
+-------------------------------
+
+* **Dynamic workflow**: Build adaptive workflows that respond to data at runtime. Use standard Python ``if/else`` statements, ``while`` loops (via recursion), and other control structures to dynamically alter the execution path.
+
+    .. code-block:: python
+
+        # 'if' condition example
+        @task.graph()
+        def conditional_workflow(x):
+            if x > 0:
+                return add(x, 10).result
+            else:
+                return multiply(x, 10).result
+
+* **Reusable workflows**: Don't reinvent the wheel. Encapsulate common routines as sub-workflows and easily reuse them in larger, more complex pipelines to build modular and maintainable solutions.
+
+    .. code-block:: python
+
+        @task.graph()
+        def main_workflow(x, y):
+            sum1 = add(x, y).result
+            # Call the reusable add_multiply workflow
+            result1 = add_multiply(sum1, 2, 3).result
+            return result1
+
+* **Event-driven execution**: Trigger tasks based on external events for truly adaptive workflows. Monitor for conditions like the arrival of a file or a specific time, enabling integration with real-time data streams or experimental facilities.
+
+    .. code-block:: python
+
+        @task.monitor
+        def time_monitor(time):
+            """This task waits until a specified time has passed."""
+            import datetime
+            return datetime.datetime.now() > datetime.datetime.fromisoformat(time.value)
+
+Intuitive user experience
+-------------------------
+
+* **Interactive GUI**: Visualize, monitor, and debug your workflows in real-time with a user-friendly web interface. Inspect the graph, check task statuses, and dive into the details of any calculation.
+
+    .. image:: ./_static/images/web-detail.png
+
+
 
 What's Next?
 ============
 
-Explore the following resources to get started or dive deeper into AiiDA-WorkGraph:
+Explore the following resources to begin your journey with AiiDA-WorkGraph:
 
 +---------------------------------------------+------------------------------------------------------+
 | `Quick Start <./autogen/quick_start.rst>`__ | Get up and running with a simple workflow example.   |
@@ -202,4 +179,6 @@ Explore the following resources to get started or dive deeper into AiiDA-WorkGra
 +---------------------------------------------+------------------------------------------------------+
 | `How-To Guides <./howto/index.rst>`__       | Master advanced topics like control flow with        |
 |                                             | ``if``, ``for``, ``while``, and ``context``.         |
++---------------------------------------------+------------------------------------------------------+
+| `GUI <./gui/index.rst>`__                   | Use the web UI to explore WorkGraphs                 |
 +---------------------------------------------+------------------------------------------------------+
