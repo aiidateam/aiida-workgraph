@@ -134,8 +134,8 @@ assert wg.outputs.result.value == 5
 wg.to_html()
 
 # %%
-# Implementing loops with `While Zone` task
-# ==============================================
+# Loops with `While Zone` task
+# =============================
 # The `While` loop in `aiida-workgraph` functions similarly to programming `while` loops,
 # repeatedly executing a set of tasks as long as a specified condition remains `True`.
 # This is handled by the `workgraph.while_zone` task.
