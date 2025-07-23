@@ -9,8 +9,6 @@ def create_task_action(
     pk: int,
     tasks: list,
     action: str = "pause",
-    timeout: int = 5,
-    wait: bool = False,
 ):
     """Send task action to Process."""
 
@@ -32,7 +30,7 @@ def get_task_runtime_info(node, name: str, key: str) -> str:
     return value
 
 
-def pause_tasks(pk: int, tasks: list[str], timeout: int = 5, wait: bool = False):
+def pause_tasks(pk: int, tasks: list[str], timeout: int = 5):
     """Pause task."""
     node = orm.load_node(pk)
     if node.is_finished:
@@ -53,15 +51,14 @@ def pause_tasks(pk: int, tasks: list[str], timeout: int = 5, wait: bool = False)
                     control.pause_processes(
                         [get_task_runtime_info(node, name, "process")],
                         all_entries=None,
-                        timeout=5,
-                        wait=False,
+                        timeout=timeout,
                     )
                 except Exception as e:
                     print(f"Pause task {name} failed: {e}")
     return True, ""
 
 
-def play_tasks(pk: int, tasks: list, timeout: int = 5, wait: bool = False):
+def play_tasks(pk: int, tasks: list, timeout: int = 5):
     node = orm.load_node(pk)
     if node.is_finished:
         message = "WorkGraph is finished. Cannot kill tasks."
@@ -81,8 +78,7 @@ def play_tasks(pk: int, tasks: list, timeout: int = 5, wait: bool = False):
                     control.play_processes(
                         [get_task_runtime_info(node, name, "process")],
                         all_entries=None,
-                        timeout=5,
-                        wait=False,
+                        timeout=timeout,
                     )
                 except Exception as e:
                     print(f"Play task {name} failed: {e}")
@@ -91,7 +87,7 @@ def play_tasks(pk: int, tasks: list, timeout: int = 5, wait: bool = False):
     return True, ""
 
 
-def kill_tasks(pk: int, tasks: list, timeout: int = 5, wait: bool = False):
+def kill_tasks(pk: int, tasks: list, timeout: int = 5):
     node = orm.load_node(pk)
     if node.is_finished:
         message = "WorkGraph is finished. Cannot kill tasks."
@@ -125,8 +121,7 @@ def kill_tasks(pk: int, tasks: list, timeout: int = 5, wait: bool = False):
                         control.kill_processes(
                             [get_task_runtime_info(node, name, "process")],
                             all_entries=None,
-                            timeout=5,
-                            wait=False,
+                            timeout=timeout,
                         )
                     except Exception as e:
                         print(f"Kill task {name} failed: {e}")
