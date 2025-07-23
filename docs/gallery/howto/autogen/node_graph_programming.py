@@ -6,7 +6,7 @@ Write workflow using node-graph programming paradigm
 
 # %%
 # This guide introduces the **node-graph programming** in `aiida-workgraph`, which provides an alternative approach for constructing workflows.
-# Unlike Pythonic approach used elsewhere in the documentation, node-graph programming is the low-level, foundational approach where you build the graph piece by piece.
+# Unlike Pythonic approach used elsewhere in the documentation, node-graph programming is the low-level approach where you build the graph piece by piece.
 # You manually add each `task` and connect them with `links`.
 # This method offers maximum control but is more verbose and is generally reserved for advanced use cases, like programmatically generating a graph's structure.
 #
@@ -87,7 +87,7 @@ wg.to_html()
 # * **invert_condition**: If ``True``, reverses the outcome of the ``conditions``.
 # * **Task Linking**: Tasks outside the If Zone can directly link to tasks inside, allowing dynamic workflow adjustments based on conditional outcomes.
 #
-# The `aiida-workgraph` library provides the built-in `workgraph.if_zone` task to create an `If Zone` and the `workgraph.select` task to choose between different data sources based on a condition.
+# `aiida-workgraph` provides the built-in `workgraph.if_zone` task to create an `If Zone` and the `workgraph.select` task to choose between different data sources based on a condition.
 #
 # Let's build a workflow where the result of an initial `add` operation dictates whether a subsequent `add` or `multiply` operation is performed.
 
