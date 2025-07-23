@@ -259,9 +259,8 @@ def process_status(call_link_label, max_depth, processes):
 @arguments.PROCESSES()
 @options.ALL(help="Kill all processes if no specific processes are specified.")
 @options.TIMEOUT()
-@options.WAIT()
 @decorators.with_dbenv()
-def process_kill(processes, all_entries, timeout, wait):
+def process_kill(processes, all_entries, timeout):
     """Kill running processes."""
     from aiida.engine.processes import control
 
@@ -280,7 +279,6 @@ def process_kill(processes, all_entries, timeout, wait):
             processes,
             all_entries=all_entries,
             timeout=timeout,
-            wait=wait,
             message=message,
         )
     except control.ProcessTimeoutException as exception:
@@ -291,9 +289,8 @@ def process_kill(processes, all_entries, timeout, wait):
 @arguments.PROCESSES()
 @options.ALL(help="Pause all active processes if no specific processes are specified.")
 @options.TIMEOUT()
-@options.WAIT()
 @decorators.with_dbenv()
-def process_pause(processes, all_entries, timeout, wait):
+def process_pause(processes, all_entries, timeout):
     """Pause running processes."""
     from aiida.engine.processes import control
 
@@ -309,7 +306,6 @@ def process_pause(processes, all_entries, timeout, wait):
             processes,
             all_entries=all_entries,
             timeout=timeout,
-            wait=wait,
             message=message,
         )
     except control.ProcessTimeoutException as exception:
@@ -320,9 +316,8 @@ def process_pause(processes, all_entries, timeout, wait):
 @arguments.PROCESSES()
 @options.ALL(help="Play all paused processes if no specific processes are specified.")
 @options.TIMEOUT()
-@options.WAIT()
 @decorators.with_dbenv()
-def process_play(processes, all_entries, timeout, wait):
+def process_play(processes, all_entries, timeout):
     """Play (unpause) paused processes."""
     from aiida.engine.processes import control
 
@@ -333,9 +328,7 @@ def process_play(processes, all_entries, timeout, wait):
         )
 
     try:
-        control.play_processes(
-            processes, all_entries=all_entries, timeout=timeout, wait=wait
-        )
+        control.play_processes(processes, all_entries=all_entries, timeout=timeout)
     except control.ProcessTimeoutException as exception:
         echo.echo_critical(f"{exception}\n{REPAIR_INSTRUCTIONS}")
 

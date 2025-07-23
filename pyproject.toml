@@ -30,7 +30,7 @@ dependencies = [
     "ase",
     "node-graph==0.2.16",
     "node-graph-widget>=0.0.5",
-    "aiida-core>=2.3,<=2.6.3",
+    "aiida-core>=2.3,~=2.6",
     "cloudpickle",
     "aiida-shell~=0.8",
     "aiida-pythonjob>=0.2.3",
