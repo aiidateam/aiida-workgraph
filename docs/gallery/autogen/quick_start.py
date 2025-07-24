@@ -57,9 +57,11 @@ load_profile()
 
 from aiida_workgraph import task
 
+
 @task
 def add(x, y):
     return x + y
+
 
 @task
 def multiply(x, y):
@@ -169,25 +171,19 @@ generate_node_graph(wg.pk)
 # -----------
 #
 # +---------------------------------------------------------+--------------------------------------------------------+
-# | `Concepts <../concept/index.rst>`__                     | A brief introduction of ``WorkGraph``’s main concepts. |
+# | `Concepts <../concept/index.rst>`__                     | Learn the core concepts behind AiiDA-WorkGraph.        |
 # |                                                         |                                                        |
 # |                                                         |                                                        |
 # +---------------------------------------------------------+--------------------------------------------------------+
-# | `HowTo <../howto/index.rst>`__                          | Advanced topics and tips, e.g., flow control using     |
-# |                                                         |                                                        |
-# |                                                         |                                                        |
-# +---------------------------------------------------------+--------------------------------------------------------+
-# | `Tutorials <../tutorial/index.rst>`__                   | Real-world examples in computational materials         |
-# |                                                         | science and more.                                      |
+# | `Tutorials <../tutorial/index.rst>`__                   | Discover real-world examples in computational          |
+# |                                                         | materials science and other domains.                   |
 # |                                                         |                                                        |
 # +---------------------------------------------------------+--------------------------------------------------------+
-# | `GUI <gui/index.rst>`__                                 | A guide to using the graphical user interface (GUI)    |
-# |                                                         | for interacting with executed workgraphs.              |
+# | `How-To Guides <../howto/index.rst>`__                  | Master advanced topics like control flow with ``if``,  |
+# |                                                         | ``for``, ``while``, and ``context``.                   |
 # |                                                         |                                                        |
 # +---------------------------------------------------------+--------------------------------------------------------+
-# | `Migration <migration_from_aiida_core/index.rst>`__     | Migration guide for users interested in transferring   |
-# |                                                         | aiida-core processes (e.g. ``WorkChain``, ``CalcJob``) |
-# |                                                         | to ``WorkGraph``.                                      |
+# | `GUI <gui/index.rst>`__                                 | Use the web UI to explore WorkGraphs.                  |
 # |                                                         |                                                        |
 # +---------------------------------------------------------+--------------------------------------------------------+
 #
