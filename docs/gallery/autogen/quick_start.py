@@ -4,271 +4,187 @@ Quick Start
 
 """
 
-
-######################################################################
+# %%
 # Introduction
 # ------------
 #
-# To run this tutorial, you need to install ``aiida-workgraph``. Open a
-# terminal and run:
+# This quick-start tutorial is intended to demonstrate the very basics of ``WorkGraph``.
+# We do so through a simple arithmetic workflow.
+# At the end of the tutorial, we will suggest some next steps to help you apply ``WorkGraph`` principles to your real-world workflows.
+
+# %%
+# Setup
+# -----
+#
+# Let's first install ``aiida-workgraph`` (this will also install ``aiida-core`` automatically):
 #
 # .. code:: console
 #
-#    pip install aiida-workgraph
+#    $ pip install aiida-workgraph
 #
-# If you haven't configured an AiiDA profile, you can run the following
+# To interact with the AiiDA database, we need to load an AiiDA profile.
+# If you haven't configured one yet, you can do so by running the following command:
 #
 # .. code:: console
 #
-#    verdi presto
+#    $ verdi presto
 #
-# Load the AiiDA profile.
+# .. note::
 #
+#    The rest of the quick start tutorial is best followed using a Jupyter notebook.
+#
+# To load your profile, run the following code:
 
 from aiida import load_profile
 
 load_profile()
 
+# %%
+# .. tip::
+#
+#    Some features of ``WorkGraph`` are best demonstrated interactively.
+#    We recommend using the AiiDA GUI for this.
+#    You can learn how to run and use the GUI in the :doc:`../gui/web` section.
 
-######################################################################
-# First workflow
-# --------------
+# %%
+# Simple workflow
+# ---------------
 #
-# Suppose we want to calculate ``(x + y) * z`` in two steps:
+# Suppose you want to compute ``(x + y) * z`` as a workflow of two distinct tasks: (i) addition, and (ii) multiplication.
+# Let's see how we can do this using ``WorkGraph``:
 #
-# -  add ``x`` and ``y``
-# -  then multiply the result with ``z``.
-#
-
-
-######################################################################
-# Create task
-# ~~~~~~~~~~~
-#
-# Task is the basic building block of the WorkGraph. A task has inputs,
-# outputs and an executor.
-#
+# First, let's define our tasks using the ``@task`` decorator:
 
 from aiida_workgraph import task
 
-# define add task
-@task()
+
+@task
 def add(x, y):
     return x + y
 
 
-# define multiply task
-@task()
+@task
 def multiply(x, y):
     return x * y
 
 
-######################################################################
-# Create the workflow
-# ~~~~~~~~~~~~~~~~~~~
+# %%
+# .. note::
 #
-# Three steps:
+#    To learn more about the ``@task`` decorator, visit the :doc:`../concept/autogen/task_concept` concept section.
 #
-# -  create an empty ``WorkGraph``
-# -  add tasks: ``add`` and ``multiply``.
-# -  link the output of the ``add`` task to the ``x`` input of the
-#    ``multiply`` task.
+# Next, we use our tasks to define a workflow using the ``@task.graph`` decorator:
+
+
+@task.graph
+def AddMultiply(x, y, z):
+    the_sum = add(x=x, y=y).result
+    return multiply(x=the_sum, y=z).result
+
+
+# %%
+#  .. note::
 #
-
-from aiida_workgraph import WorkGraph
-
-wg = WorkGraph("add_multiply_workflow")
-add_task = wg.add_task(add, name="add1")
-# link the output of the `add` task to one of the `x` input of the `multiply` task.
-wg.add_task(multiply, name="multiply1", x=add_task.outputs.result)
-
-# export the workgraph to html file so that it can be visualized in a browser
-wg.to_html()
-# comment out the following line to visualize the workgraph in jupyter-notebook
-# wg
-
-
-######################################################################
-# Run and view results
-# ~~~~~~~~~~~~~~~~~~~~~~~
+#     To learn more about the ``@task.graph`` decorator, visit the :doc:`../concept/autogen/graph_task_concept` concept section.
 #
-
-from aiida.orm import Int
-
-# ------------------------- Run the calculation -------------------
-wg.run(
-    inputs={"add1": {"x": Int(2), "y": Int(3)}, "multiply1": {"y": Int(4)}},
-)
-
-print("State of WorkGraph:   {}".format(wg.state))
-print("Result of add      : {}".format(wg.tasks.add1.outputs.result.value))
-print("Result of multiply : {}".format(wg.tasks.multiply1.outputs.result.value))
-
-
-######################################################################
-# CalcJob and WorkChain
-# ---------------------
+# The workflow accepts three input parameters, ``x``, ``y``, and ``z``.
+# It passes ``x`` and ``y`` to the ``add`` task, which computes their sum.
+# The sum is then passed to the ``multiply`` task along with ``z``.
+# The result of the multiplication task is returned as the output of the workflow.
 #
-# One can use AiiDA components (``CalcJob`` and ``WorkChain``)
-# direclty in the WorkGraph. The inputs and outputs of the task is
-# automatically generated based on the input and output port of the AiiDA
-# components.
+# .. note::
 #
-# Here is an example of using the ``ArithmeticAddCalculation`` Calcjob
-# inside the workgraph.
+#    Calling a ``@task``-decorated Python function returns a socket namespace - a collection of output sockets.
+#    We do this to allow tasks to have multiple outputs.
+#    We access a given socket with ``.<socket_name>``.
+#    In the absence of explicit definition of output sockets, the default socket is named ``result``.
 #
+#    You can visit the following sections for more information about these features:
+#
+#    - :doc:`../concept/autogen/socket_concept` concept section
+#    - :doc:`../howto/autogen/graph_level` how-to section
+#
+# Let's build the workflow with some input and visualize it:
+#
+# .. important::
+#
+#    If you are following along in a Jupyter notebook, replace ``wg.to_html()`` with ``wg``.
 
-from aiida_workgraph import WorkGraph
-from aiida.calculations.arithmetic.add import ArithmeticAddCalculation
-from aiida.orm import Int, InstalledCode, load_computer, load_code
-from aiida.common.exceptions import NotExistent
-
-
-try:
-    code = load_code("add@localhost")  # The computer label can also be omitted here
-except NotExistent:
-    code = InstalledCode(
-        computer=load_computer("localhost"),
-        filepath_executable="/bin/bash",
-        label="add",
-        default_calc_job_plugin="core.arithmetic.add",
-    ).store()
-
-wg = WorkGraph("test_add_multiply")
-add1 = wg.add_task(ArithmeticAddCalculation, name="add1", x=Int(2), y=Int(3), code=code)
-add2 = wg.add_task(ArithmeticAddCalculation, name="add2", y=Int(3), code=code)
-wg.add_link(wg.tasks.add1.outputs.sum, wg.tasks.add2.inputs.x)
+wg = AddMultiply.build_graph(x=2, y=3, z=4)
 wg.to_html()
 
-
-######################################################################
-# Run the workgraph and wait for the result.
+# %%
+# We can see our two tasks, the assignment of the sum to the multiplication task, and the subsequent assignment of the product to the workflow (graph) result.
 #
+# Let's run the workflow and inspect the result:
 
 wg.run()
-print("\nResult of task add1: {}".format(wg.tasks.add2.outputs.sum.value))
 
+print("Result:", wg.outputs.result.value)
 
-######################################################################
-# One can also create task from an AiiDA process builder directly.
+# %%
+# We can also access the results of the individual tasks:
+
+print("Result of addition:", wg.tasks.add.outputs.result.value)
+print("Result of multiplication:", wg.tasks.multiply.outputs.result.value)
+
+# %%
+# .. note::
 #
+#    Functional tasks (i.e., Python functions decorated with ``@task``) are automatically named by their function name.
+#    If you call the same task multiple times, subsequent calls will be suffixed with a number, e.g., ``add1``, ``add2``, etc.
 
-from aiida.calculations.arithmetic.add import ArithmeticAddCalculation
-
-builder = ArithmeticAddCalculation.get_builder()
-builder.code = code
-builder.x = Int(2)
-builder.y = Int(3)
-
-wg = WorkGraph("test_set_inputs_from_builder")
-add1 = wg.add_task(builder, name="add1")
-
-
-######################################################################
-# Graph builder
-# -------------
+# %%
+# .. tip::
 #
-# A ``WorkGraph`` is a group of tasks. One can treat a ``WorkGraph`` as a
-# single task, and expose the inputs and outputs of the ``WorkGraph``.
-# This allow you to write:
+#    If you're running the AiiDA GUI, you can visualize the executed workflow interactively.
+#    Click on the ``PK`` field of the submitted workflow (look for *WorkGraph<AddMultiply>*) to view its details.
+
+# %%
+# Data provenance
+# ---------------
 #
-# -  nested workflows
-# -  dynamic workflow based on the input values. For example, if you want
-#    to use ``if`` and ``for`` to create the tasks, or repeat a
-#    calculation until it converges.
+# Maintaining a consistent data provenance is crucial for reproducibility and understanding a workflow's behavior.
+# Much like AiiDA's core components, ``WorkGraph`` ensures full data provenance, tracking inputs, processes, and outputs.
 #
-# The ``Graph Builder`` allow user to create a dynamic workflow based on
-# the input value, as well as nested workflows. Here is an example of
-# nested workflow:
+# Let's have a look at the full data provenance of our executed workflow:
+
+from aiida_workgraph.utils import generate_node_graph
+
+generate_node_graph(wg.pk)
+
+# %%
+# Summary
+# -------
 #
-
-from aiida_workgraph import WorkGraph, task
-
-# define add task
-@task()
-def add(x, y):
-    return x + y
-
-
-# define multiply task
-@task()
-def multiply(x, y):
-    return x * y
-
-
-# use task.graph decorator, expose the "result" output of "multiply" task
-# as the "multiply" output of the `WorkGraph`.
-@task.graph()
-def add_multiply(x, y, z):
-    outputs1 = add(x=x, y=y)
-    outputs2 = multiply(x=z, y=outputs1.result)
-    return outputs2.result
-
-
-######################################################################
-# Use this graph builder inside a ``WorkGraph``:
+# This wraps up our quick start tutorial.
+# You have learned how to:
 #
+# - Define tasks using the ``@task`` decorator
+# - Define a workflow using the ``@task.graph`` decorator
+# - Visualize the workflow (tasks and their connections)
+# - Build and run a workflow with input parameters
+# - Inspect results and data provenance
 
-
-from aiida_workgraph import WorkGraph
-from aiida.orm import Int
-
-with WorkGraph("test_graph_build") as wg:
-    # create a task using the graph builder
-    outputs1 = add_multiply(x=Int(2), y=Int(3), z=Int(4))
-    # link the output of a task to the input of another task
-    outputs2 = add_multiply(x=Int(2), y=Int(3), z=outputs1.result)
-    wg.run()
-
-
-######################################################################
-# Get the result of the tasks:
-#
-
-print("WorkGraph state: ", wg.state)
-print("Result of task add_multiply1: {}".format(outputs2.result.value))
-
-
-######################################################################
-# Start the web server
-# ~~~~~~~~~~~~~~~~~~~~
-#
-# WorkGraph also provides a web GUI, where you can view and manage the
-# workgraph. To use the web ui, first install the web ui package:
-#
-# ::
-#
-#    pip install aiida-workgraph-web-ui
-#
-# Open a terminal, and run:
-#
-# ::
-#
-#    workgraph web start
-#
-# Then visit the page http://127.0.0.1:8000/workgraph, you can view the
-# workgraph later from here. You should find all the submited workgraph,
-# e.g., the ``first_workflow`` WorkGraph. Please click the pk and view the
-# workgraph.
-#
-
-
-######################################################################
+# %%
 # What’s Next
 # -----------
 #
-# +-----------------------------------------+------------------------------------------------------+
-# | `Concepts <../concept/index.rst>`__     | A brief introduction of WorkGraph’s main concepts.   |
-# |                                         |                                                      |
-# |                                         |                                                      |
-# +-----------------------------------------+------------------------------------------------------+
-# | `Tutorials <../tutorial/index.rst>`__   | Real-world examples in computational materials       |
-# |                                         | science and more.                                    |
-# |                                         |                                                      |
-# +-----------------------------------------+------------------------------------------------------+
-# | `HowTo <../howto/index.rst>`__          | Advanced topics and tips, e.g flow control using     |
-# |                                         | ``if``, ``for``, ``while`` and ``context``.          |
-# |                                         |                                                      |
-# +-----------------------------------------+------------------------------------------------------+
+# +---------------------------------------------------------+--------------------------------------------------------+
+# | `Concepts <../concept/index.rst>`__                     | Learn the core concepts behind AiiDA-WorkGraph.        |
+# |                                                         |                                                        |
+# |                                                         |                                                        |
+# +---------------------------------------------------------+--------------------------------------------------------+
+# | `Tutorials <../tutorial/index.rst>`__                   | Discover real-world examples in computational          |
+# |                                                         | materials science and other domains.                   |
+# |                                                         |                                                        |
+# +---------------------------------------------------------+--------------------------------------------------------+
+# | `How-To Guides <../howto/index.rst>`__                  | Master advanced topics like control flow with ``if``,  |
+# |                                                         | ``for``, ``while``, and ``context``.                   |
+# |                                                         |                                                        |
+# +---------------------------------------------------------+--------------------------------------------------------+
+# | `GUI <gui/index.rst>`__                                 | Use the web UI to explore WorkGraphs.                  |
+# |                                                         |                                                        |
+# +---------------------------------------------------------+--------------------------------------------------------+
 #
-#
+# .. _AiiDA documentation: https://aiida.readthedocs.io/en/stable/
