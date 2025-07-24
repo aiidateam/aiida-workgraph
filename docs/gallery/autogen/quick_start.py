@@ -85,7 +85,7 @@ def AddMultiply(x, y, z):
 # %%
 #  .. note::
 #
-#     To learn more about the ``@task.graph`` decorator, visit the :doc:`../concept/autogen/graph_builder_concept` concept section.
+#     To learn more about the ``@task.graph`` decorator, visit the :doc:`../concept/autogen/graph_task_concept` concept section.
 #
 # The workflow accepts three input parameters, ``x``, ``y``, and ``z``.
 # It passes ``x`` and ``y`` to the ``add`` task, which computes their sum.
@@ -139,7 +139,7 @@ print("Result of multiplication:", wg.tasks.multiply.outputs.result.value)
 #
 #    If you're running the AiiDA GUI, you can visualize the executed workflow interactively.
 #    Click on the ``PK`` field of the submitted workflow (look for *WorkGraph<AddMultiply>*) to view its details.
-#
+
 # %%
 # Data provenance
 # ---------------
@@ -164,7 +164,7 @@ generate_node_graph(wg.pk)
 # - Define a workflow using the ``@task.graph`` decorator
 # - Visualize the workflow (tasks and their connections)
 # - Build and run a workflow with input parameters
-# - Inspect results and the full provenance
+# - Inspect results and data provenance
 
 # %%
 # What’s Next
