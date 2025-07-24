@@ -57,11 +57,9 @@ load_profile()
 
 from aiida_workgraph import task
 
-
 @task
 def add(x, y):
     return x + y
-
 
 @task
 def multiply(x, y):
@@ -108,7 +106,7 @@ def AddMultiply(x, y, z):
 #
 # .. important::
 #
-#    If you are following along in a Jupyter notebook, omit the ``to_html()`` method call.
+#    If you are following along in a Jupyter notebook, replace ``wg.to_html()`` with ``wg``.
 
 wg = AddMultiply.build_graph(x=2, y=3, z=4)
 wg.to_html()
@@ -116,7 +114,7 @@ wg.to_html()
 # %%
 # We can see our two tasks, the assignment of the sum to the multiplication task, and the subsequent assignment of the product to the workflow (graph) result.
 #
-# Let's run the workflow with some inputs and inspect the result:
+# Let's run the workflow and inspect the result:
 
 wg.run()
 
@@ -140,7 +138,14 @@ print("Result of multiplication:", wg.tasks.multiply.outputs.result.value)
 #    If you're running the AiiDA GUI, you can visualize the executed workflow interactively.
 #    Click on the ``PK`` field of the submitted workflow (look for *WorkGraph<AddMultiply>*) to view its details.
 #
-# Let's have a look at the full provenance of our executed workflow:
+# %%
+# Data provenance
+# ---------------
+#
+# Maintaining a consistent data provenance is crucial for reproducibility and understanding a workflow's behavior.
+# Much like AiiDA's core components, ``WorkGraph`` ensures full data provenance, tracking inputs, processes, and outputs.
+#
+# Let's have a look at the full data provenance of our executed workflow:
 
 from aiida_workgraph.utils import generate_node_graph
 
@@ -169,11 +174,15 @@ generate_node_graph(wg.pk)
 # |                                                         |                                                        |
 # +---------------------------------------------------------+--------------------------------------------------------+
 # | `HowTo <../howto/index.rst>`__                          | Advanced topics and tips, e.g., flow control using     |
-# |                                                         | ``if``, ``for``, ``while``, and ``context``.           |
+# |                                                         |                                                        |
 # |                                                         |                                                        |
 # +---------------------------------------------------------+--------------------------------------------------------+
 # | `Tutorials <../tutorial/index.rst>`__                   | Real-world examples in computational materials         |
 # |                                                         | science and more.                                      |
+# |                                                         |                                                        |
+# +---------------------------------------------------------+--------------------------------------------------------+
+# | `GUI <gui/index.rst>`__                                 | A guide to using the graphical user interface (GUI)    |
+# |                                                         | for interacting with executed workgraphs.              |
 # |                                                         |                                                        |
 # +---------------------------------------------------------+--------------------------------------------------------+
 # | `Migration <migration_from_aiida_core/index.rst>`__     | Migration guide for users interested in transferring   |
