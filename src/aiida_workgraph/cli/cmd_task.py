@@ -32,15 +32,14 @@ def workgraph_task():
 @arguments.PROCESS()
 @click.argument("tasks", nargs=-1)
 @options.TIMEOUT()
-@options.WAIT()
 @decorators.with_dbenv()
-def task_pause(process, tasks, timeout, wait):
+def task_pause(process, tasks, timeout):
     """Pause task."""
     from aiida.engine.processes import control
     from aiida_workgraph.utils.control import pause_tasks
 
     try:
-        _, msg = pause_tasks(process.pk, tasks, timeout, wait)
+        _, msg = pause_tasks(process.pk, tasks, timeout)
     except control.ProcessTimeoutException as exception:
         echo.echo_critical(f"{exception}\n{REPAIR_INSTRUCTIONS}")
 
@@ -49,15 +48,14 @@ def task_pause(process, tasks, timeout, wait):
 @arguments.PROCESS()
 @click.argument("tasks", nargs=-1)
 @options.TIMEOUT()
-@options.WAIT()
 @decorators.with_dbenv()
-def task_play(process, tasks, timeout, wait):
+def task_play(process, tasks, timeout):
     """Play task."""
     from aiida.engine.processes import control
     from aiida_workgraph.utils.control import play_tasks
 
     try:
-        _, msg = play_tasks(process.pk, tasks, timeout, wait)
+        _, msg = play_tasks(process.pk, tasks, timeout)
     except control.ProcessTimeoutException as exception:
         echo.echo_critical(f"{exception}\n{REPAIR_INSTRUCTIONS}")
 
@@ -66,16 +64,15 @@ def task_play(process, tasks, timeout, wait):
 @arguments.PROCESS()
 @click.argument("tasks", nargs=-1)
 @options.TIMEOUT()
-@options.WAIT()
 @decorators.with_dbenv()
-def task_skip(process, tasks, timeout, wait):
+def task_skip(process, tasks, timeout):
     """Skip task."""
     from aiida.engine.processes import control
     from aiida_workgraph.utils.control import skip_tasks
 
     for task in tasks:
         try:
-            skip_tasks(process.pk, task, timeout, wait)
+            skip_tasks(process.pk, task, timeout)
 
         except control.ProcessTimeoutException as exception:
             echo.echo_critical(f"{exception}\n{REPAIR_INSTRUCTIONS}")
@@ -85,15 +82,14 @@ def task_skip(process, tasks, timeout, wait):
 @arguments.PROCESS()
 @click.argument("tasks", nargs=-1)
 @options.TIMEOUT()
-@options.WAIT()
 @decorators.with_dbenv()
-def task_kill(process, tasks, timeout, wait):
+def task_kill(process, tasks, timeout):
     """Kill task."""
     from aiida.engine.processes import control
     from aiida_workgraph.utils.control import kill_tasks
 
     print("tasks", tasks)
     try:
-        kill_tasks(process.pk, tasks, timeout, wait)
+        kill_tasks(process.pk, tasks, timeout)
     except control.ProcessTimeoutException as exception:
         echo.echo_critical(f"{exception}\n{REPAIR_INSTRUCTIONS}")
