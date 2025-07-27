@@ -53,7 +53,7 @@ For those who prefer to visualize control flow, AiiDA-WorkGraph offers zone-base
 3. Low-Level node-graph programming
 ---------------------------------
 For maximum control, you can construct a workflow by programmatically defining each task and connecting their inputs and outputs (links). While more verbose, this method is invaluable for advanced use cases, such as programmatically generating a graph's structure.
-See: `Node-graph programming <./howto/autogen/node_graph_programming.rst>`_
+See: `Node-graph programming <./advanced/autogen/node_graph_programming.rst>`_
 
 .. code-block:: python
 
