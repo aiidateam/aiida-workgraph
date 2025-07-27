@@ -17,7 +17,7 @@ def time_monitor(time: str):
     return datetime.datetime.now() > time
 
 
-def test_monitor_decorator():
+def test_monitor_decorator(capsys):
 
     wg = WorkGraph(name="test_monitor_decorator")
     wg.add_task(
@@ -26,12 +26,13 @@ def test_monitor_decorator():
         time=str(datetime.datetime.now() + datetime.timedelta(seconds=5)),
     )
     wg.run()
-    report = get_workchain_report(wg.process, "REPORT")
+    captured = capsys.readouterr()
+    report = captured.out
     assert "Waiting for child processes: time_monitor1" in report
     assert wg.process.is_finished_ok is True
 
 
-def test_monitor_timeout_and_interval():
+def test_monitor_timeout_and_interval(capsys):
 
     with WorkGraph() as wg:
         time_monitor(
@@ -40,12 +41,13 @@ def test_monitor_timeout_and_interval():
             timeout=5,
         )
         wg.run()
-        report = get_workchain_report(wg.process, "REPORT")
+        captured = capsys.readouterr()
+        report = captured.out
         assert "Timeout reached for monitor" in report
         assert wg.process.is_finished_ok is False
 
 
-def test_builtin_time_monitor(decorated_add):
+def test_builtin_time_monitor(decorated_add, capsys):
     """Test the time monitor task."""
     wg = WorkGraph(name="test_time_monitor")
     monitor1 = wg.add_task(
@@ -56,12 +58,13 @@ def test_builtin_time_monitor(decorated_add):
     add1 = wg.add_task(decorated_add, "add1", x=1, y=2)
     add1.waiting_on.add(monitor1)
     wg.run()
-    report = get_workchain_report(wg.process, "REPORT")
+    captured = capsys.readouterr()
+    report = captured.out
     assert "Waiting for child processes: monitor1" in report
     assert add1.outputs.result.value == 3
 
 
-def test_builtin_file_monitor(decorated_add, tmp_path):
+def test_builtin_file_monitor(decorated_add, tmp_path, capsys):
     """Test the file monitor task."""
 
     @task.awaitable()
@@ -80,7 +83,8 @@ def test_builtin_file_monitor(decorated_add, tmp_path):
     add1 = wg.add_task(decorated_add, "add1", x=1, y=2)
     add1.waiting_on.add(monitor1)
     wg.run()
-    report = get_workchain_report(wg.process, "REPORT")
+    captured = capsys.readouterr()
+    report = captured.out
     assert "Waiting for child processes: monitor1" in report
     assert add1.outputs.result.value == 3
 
@@ -107,7 +111,7 @@ def test_builtin_task_monitor(decorated_add):
 
 
 @pytest.mark.usefixtures("started_daemon_client")
-def test_builtin_task_monitor_timeout(decorated_add):
+def test_builtin_task_monitor_timeout(decorated_add, capsys):
     """Test the monitor task with a timeout."""
     wg = WorkGraph(name="test_monitor_timeout")
     monitor1 = wg.add_task(
@@ -119,14 +123,15 @@ def test_builtin_task_monitor_timeout(decorated_add):
     add1 = wg.add_task(decorated_add, "add1", x=1, y=2)
     add1.waiting_on.add(monitor1)
     wg.run()
-    report = get_workchain_report(wg.process, "REPORT")
+    captured = capsys.readouterr()
+    report = captured.out
     assert "Timeout reached for monitor function" in report
     assert monitor1.state == "FAILED"
     assert add1.state == "SKIPPED"
 
 
 @pytest.mark.usefixtures("started_daemon_client")
-def test_task_monitor_kill(decorated_add):
+def test_task_monitor_kill(decorated_add, capsys):
     """Test killing a monitor task."""
     wg = WorkGraph(name="test_monitor_kill")
     monitor1 = wg.add_task(
