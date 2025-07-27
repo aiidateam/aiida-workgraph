@@ -37,7 +37,7 @@ jobs:
         strategy:
             matrix:
                 python-version: ['3.9', '3.11', '3.12']
-                aiida-core-version: ['2.6.1', '2.7']
+                aiida-core-version: ['2.6', '2.7']
 
         services:
             postgres:
@@ -89,7 +89,6 @@ jobs:
             env:
                 AIIDA_WARN_v3: 1
             run: |
-                verdi config set logging.aiida_loglevel REPORT
                 pytest -v --cov --durations=0
 
         -   name: Upload coverage reports to Codecov
