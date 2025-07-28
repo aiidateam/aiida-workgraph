@@ -11,8 +11,8 @@ You'll learn how to construct complex pipelines where every calculation and data
 
 We'll explore two key examples that highlight the flexibility of AiiDA-WorkGraph:
 
-1.  **Atomization Energy**: A simple, linear workflow to calculate the atomization energy of a diatomic molecule.
-2.  **Equation of State (EOS)**: A more advanced workflow for bulk structure that showcases how to handle loops and dynamic inputs/outputs, a common pattern in dynamic workflows.
+1.  **Atomization energy**: A simple, linear workflow to calculate the atomization energy of a diatomic molecule.
+2.  **Equation of state (EOS)**: A more advanced workflow for bulk structure that showcases how to handle loops and dynamic inputs/outputs, a common pattern in dynamic workflows.
 
 """
 
@@ -121,7 +121,7 @@ generate_node_graph(wg.pk)
 
 
 # %%
-# Equation of State
+# Equation of state
 # ==================
 # Now for a more complex and practical example: calculating the Equation of State (EOS) for a bulk material.
 # The process involves several steps:
@@ -251,19 +251,22 @@ def eos_workflow(atoms: Atoms, scales: list) -> dict:
 #
 # .. important::
 #
-#    When linking task outputs to a keyword argument of the task, you must pass the
-#    *output sockets* explicitly by name, e.g.:
+#    When linking task outputs to a keyword argument of the task, you must pass the **output sockets** explicitly by name, e.g.:
 #
-#      scaled_structures=strained.scaled_structures
+#    .. code-block:: python
 #
-#      data=emt_outputs.results
+#        calc_all_structures(scaled_structures=strained.scaled_structures)
+#        fit_eos_model(data=emt_outputs.results).result
 #
-#    rather than using argument unpacking like ``**strained.scaled_structures``
-#    or ``**emt_outputs.results``. This is because
-#    ``strained.scaled_structures`` and ``emt_outputs.results`` are *references*
-#    to the future output dictionaries (i.e. output sockets), not the actual
-#    values. Naming the arguments ensures AiiDA-WorkGraph knows exactly which
-#    output port to connect to which input port.
+#    rather than using argument unpacking like:
+#
+#    .. code-block:: python
+#
+#        calc_all_structures(**strained.scaled_structures)
+#        fit_eos_model(**emt_outputs.results)
+#
+#    Because ``strained.scaled_structures`` and ``emt_outputs.results`` are *references* to the future output dictionaries (i.e. output sockets), not the actual values.
+#    Naming the arguments ensures AiiDA-WorkGraph knows exactly which output port to connect to which input port.
 #
 
 # %%
