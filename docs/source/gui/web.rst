@@ -86,10 +86,12 @@ Clicking a task in the graph opens a detail panel on the right. This panel shows
 
 .. image:: ../_static/images/web-task-detail.png
 
+.. _web-ui:nested-workgraphs:
+
 Nested WorkGraphs
 =================
 
-If the task is itself a WorkGraph (e.g., a ``Graph`` or ``WorkGraph`` task), a **Goto workflow** button appears in the task detail panel.
+If the task is itself a WorkGraph (e.g., a ``Graph`` or ``WorkGraph`` task), a **Go to WorkGraph** button appears in the task detail panel.
 Clicking this navigates to the sub-WorkGraph.
 
 A breadcrumbs navigation bar appears at the top, showing the current and parent WorkGraphs.
