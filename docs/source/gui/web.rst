@@ -96,6 +96,8 @@ A breadcrumbs navigation bar appears at the top, showing the current and parent 
 
 .. image:: ../_static/images/web-breadcrumbs.png
 
+.. _web-ui:detailed-socket-view:
+
 Detailed socket view
 ====================
 

@@ -8,7 +8,6 @@ This section contains a collection of HowTos for various topics.
    :maxdepth: 1
    :caption: Contents:
 
-   autogen/graph_level
    autogen/parallel
    autogen/control-flow
    autogen/context

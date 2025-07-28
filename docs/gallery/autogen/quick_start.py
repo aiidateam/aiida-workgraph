@@ -99,10 +99,7 @@ def AddMultiply(x, y, z):
 #    We access a given socket with ``.<socket_name>``.
 #    In the absence of explicit definition of output sockets, the default socket is named ``result``.
 #
-#    You can visit the following sections for more information about these features:
-#
-#    - :doc:`../concept/autogen/socket_concept` concept section
-#    - :doc:`../howto/autogen/graph_level` how-to section
+#    You can learn more about these features in the :doc:`../concept/autogen/socket_concept` concept section.
 #
 # Let's build the workflow with some input and visualize it:
 #
