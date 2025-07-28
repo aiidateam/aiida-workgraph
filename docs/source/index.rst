@@ -59,6 +59,11 @@ Sections
 
       .. container:: descr
 
+         :doc:`/advanced/index`
+            Advanced usage of AiiDA WorkGraph.
+
+      .. container:: descr
+
          :doc:`/migration_from_aiida_core/index`
             Transition your existing workflows from AiiDA Core to the AiiDA Workgraph
 
@@ -104,6 +109,7 @@ Sections
    autogen/quick_start
    installation
    tutorial/index
+   advanced/index
    howto/index
    migration_from_aiida_core/index
    concept/index
