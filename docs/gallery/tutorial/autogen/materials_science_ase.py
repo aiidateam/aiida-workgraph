@@ -1,68 +1,62 @@
 """
-================================
-Computational materials science
-================================
+=====================================================
+Computational materials science with ASE
+=====================================================
+
+Introduction
+============
+Unlock the power of automated and reproducible computational science!
+This tutorial will guide you through building, running, and visualizing computational workflows using `AiiDA-WorkGraph` and the `Atomistic Simulation Environment (ASE) <https://wiki.fysik.dtu.dk/ase/>`_.
+You'll learn how to construct complex pipelines where every calculation and data point is automatically tracked, ensuring your research is completely reproducible.
+
+We'll explore two key examples that highlight the flexibility of AiiDA-WorkGraph:
+
+1.  **Atomization Energy**: A simple, linear workflow to calculate the atomization energy of a diatomic molecule.
+2.  **Equation of State (EOS)**: A more advanced workflow for bulk structure that showcases how to handle loops and dynamic inputs/outputs, a common pattern in dynamic workflows.
 
 """
 
 # %%
-# Introduction
-# ============
-# In this tutorial, you will use `AiiDA-WorkGraph` to carry out a material science calculation with using ASE package.
-#
-# Requirements
-# ------------
-# To run this tutorial, you need to install `aiida-workgraph` and `ase`. Open a terminal and run:
+# First, ensure you have `aiida-workgraph`, `ase`, and a configured AiiDA environment.
+# If not, you can install the necessary packages:
 #
 # .. code-block:: console
 #
 #    pip install aiida-workgraph ase
 #
-#
-# Load the AiiDA profile.
-#
-
+# Then, load your AiiDA profile.
 
 from aiida import load_profile
 
 load_profile()
-#
-# %%
-# Atomization energy
-# ===================================================
-# Define a workgraph
-# -------------------
-# we use ASE emt calculator, but in practice you can use any calculator that is compatible with ASE.
-
 
 # %%
-# Second workflow: atomization energy molecule
-# ==================================================
-#
-# The atomization energy, $\Delta E$, of a molecule can be expressed as:
+# Atomization energy of a diatomic molecule
+# ==========================================
+# The atomization energy (ΔE) is the energy required to break a molecule down into its individual, separate atoms.
+# For a diatomic molecule, the formula is straightforward:
 #
 # .. math::
 #
-#    \Delta E = n_{\text{atom}} \times E_{\text{atom}} - E_{\text{molecule}}
+#    \Delta E = 2 \times E_{\text{atom}} - E_{\text{molecule}}
 #
-# Where:
+# Where :math:`E_{\text{atom}}` is the total energy of a single atom and :math:`E_{\text{molecule}}` is the total energy of the molecule.
 #
-# - :math:`\Delta E` is the atomization energy of the molecule.
-# - :math:`n_{\text{atom}}` is the number of atoms.
-# - :math:`E_{\text{atom}}` is the energy of an isolated atom.
-# - :math:`E_{\text{molecule}}` is the energy of the molecule.
+# To build our workflow, we'll start with standard Python functions and convert them into AiiDA-trackable components using the ``@task`` decorator.
 #
-# Define a calcfunction to calculate the atomization energy
-# ---------------------------------------------------------
+# .. note::
 #
-
+#    We're using the ASE EMT (Effective Medium Theory) calculator because it's exceptionally fast and perfect for demonstrations.
+#    You can easily swap it with any other ASE-compatible calculator, like Quantum ESPRESSO, VASP, or GPAW, for your research.
+#
 from aiida_workgraph import task
 from ase import Atoms
 from ase.build import molecule
 
 
 @task()
-def calc_energy(atoms: Atoms) -> float:
+def calculate_energy(atoms: Atoms) -> float:
+    """Calculate the total energy of an atomic structure using ASE."""
     from ase.calculators.emt import EMT
 
     atoms.calc = EMT()
@@ -70,32 +64,56 @@ def calc_energy(atoms: Atoms) -> float:
     return atoms.calc.results["energy"]
 
 
-#
-@task.graph()
-def atomization_energy(molecule: Atoms, atoms: Atoms) -> float:
-    """
-    Calculate the atomization energy of a molecule.
-    """
-    e_atom = calc_energy(atoms).result
-    e_molecule = calc_energy(molecule).result
-    return len(molecule) * e_atom - e_molecule
+@task()
+def compute_atomization_energy(energy_atom: float, energy_molecule: float) -> float:
+    """Calculate the atomization energy from atomic and molecular energies."""
+    result = 2 * energy_atom - energy_molecule
+    return result
 
 
 # %%
-# Submit the workgraph and print the atomization energy.
+# .. note::
 #
-atoms = Atoms("N")
+#    When you call a task function like ``calculate_energy(...)`` inside a workgraph, it **doesn't run immediately**.
+#    Instead, it creates a task node in the workflow and returns a *reference* of its future result.
+#    You can then wire this reference as an input to the next task, defining the dependencies between tasks.
+
+
+@task.graph()
+def atomization_energy_workflow(molecule_obj: Atoms, atom_obj: Atoms) -> float:
+    """Define the workflow graph to compute atomization energy."""
+
+    e_atom = calculate_energy(atoms=atom_obj).result
+    e_molecule = calculate_energy(atoms=molecule_obj).result
+    result = compute_atomization_energy(e_atom, e_molecule).result
+    return result
+
+
+# %%
+# Build and Run the Workflow
+# --------------------------
+# First, we create the input structures for a nitrogen atom and molecule using ASE.
+atom = Atoms("N")
 mol = molecule("N2")
 
-wg = atomization_energy.build_graph(molecule=mol, atoms=atoms)
+# Next, build the workgraph, but doesn't run it.
+wg = atomization_energy_workflow.build_graph(molecule_obj=mol, atom_obj=atom)
+
+# You can generate an HTML file to visualize the planned workflow.
 wg.to_html()
+# If you're in a Jupyter notebook, you can often display the graph directly.
+# wg
 
 # %%
+# Now, execute the workgraph, which runs the tasks in the correct sequence.
 wg.run()
-print(f"Atomization energy: {wg.outputs.result.value} eV")
+print(f"Atomization energy for N2: {wg.outputs.result.value.value:.4f} eV")
 
 # %%
-# Let's have a look at the provenance graph.
+# Visualize the Provenance Graph
+# ------------------------------
+# After the run, we can visualize the *provenance* graph. This graph is the key to reproducibility,
+# showing not just the tasks but also the actual data nodes that were created and stored in the AiiDA database.
 
 from aiida_workgraph.utils import generate_node_graph
 
@@ -103,67 +121,193 @@ generate_node_graph(wg.pk)
 
 
 # %%
-# Equations of state
-# ==========================
-# In this section, we will calculate the equation of state for a material using the `ase` package.
+# Equation of State
+# ==================
+# Now for a more complex and practical example: calculating the Equation of State (EOS) for a bulk material.
+# The process involves several steps:
 #
+# 1.  **Relax** the initial atomic structure to its lowest-energy state.
+# 2.  **Strain** the relaxed structure by applying a series of scaling factors.
+# 3.  **Calculate** the total energy and volume for each strained structure.
+# 4.  **Fit** the resulting energy-volume data to an EOS model to find properties like the equilibrium volume and bulk modulus.
+#
+# This workflow perfectly demonstrates how to handle loops and a dynamic number of calculations.
 
-
-@task.graph(outputs=["energies", "volumes"])
-def calc_all_energies(atoms: Atoms, strains: list) -> dict:
-    """
-    Calculate the equation of state for a material.
-    """
-    energies = {}
-    volumes = {}
-
-    for i, strain in enumerate(strains):
-        strained_atoms = atoms.copy()
-        strained_atoms.set_cell(strained_atoms.get_cell() * strain, scale_atoms=True)
-        energies[f"strain_{i}"] = calc_energy(strained_atoms).result
-        volumes[f"strain_{i}"] = strained_atoms.get_volume()
-
-    return energies, volumes
+from ase.calculators.emt import EMT
+from ase.optimize import BFGS
 
 
 @task()
-def fit_eos(energies: dict, volumes: dict) -> dict:
-    """Fit the EOS of the data."""
+def relax_structure(atoms: Atoms) -> Atoms:
+    """Relax the atomic structure to its minimum energy configuration using ASE."""
+    atoms.calc = EMT()
+    optimizer = BFGS(atoms)
+    optimizer.run(fmax=0.01)
+    return atoms
+
+
+@task(
+    outputs={
+        "scaled_structures": {
+            "identifier": "workgraph.namespace",
+            "metadata": {"dynamic": True},
+        }
+    }
+)
+def create_strained_structures(atoms: Atoms, scales: list) -> dict:
+    """Generate a series of strained structures from a list of scaling factors."""
+    scaled_structures = {}
+    for i, scale in enumerate(scales):
+        strained_atoms = atoms.copy()
+        strained_atoms.set_cell(atoms.get_cell() * scale, scale_atoms=True)
+        # Each structure gets a unique key, like "strain_0", "strain_1", etc.
+        scaled_structures[f"strain_{i}"] = strained_atoms
+    return {"scaled_structures": scaled_structures}
+
+
+# %%
+# .. important::
+#    **Handling dynamic outputs with namespaces** ✨
+#
+#    In our EOS workflow, the ``create_strained_structures`` task generates a *variable* number of outputs. How do we track each one?
+#
+#    The solution is a **dynamic output namespace**. By adding the ``outputs={...}`` argument to the ``@task`` decorator, we tell AiiDA-WorkGraph:
+#    "The ``scaled_structures`` output is a dictionary, but I want you to treat *each key-value pair* as a separate, named output port (e.g., ``scaled_structures.strain_0``, ``scaled_structures.strain_1``)."
+#
+#    This is crucial for two reasons:
+#
+#    1.  **Full Provenance**: Every strained structure becomes an individual, tracked AiiDA node.
+#        This gives you a crystal-clear history of your entire calculation, with no "black boxes".
+#    2.  **Database Integrity**: It avoids saving a list of ``Atoms`` objects as a single, opaque file (e.g., using pickle, disabled by default).
+#        Instead, each structure is a queryable, first-class citizen in the AiiDA database.
+
+
+@task()
+def calculate_energy_and_volume(atoms: Atoms) -> dict:
+    """Calculate the energy and volume for a single atomic structure."""
+    atoms.calc = EMT()
+    atoms.get_potential_energy()
+    results = {
+        "energy": atoms.calc.results["energy"],
+        "volume": atoms.get_volume(),
+    }
+    return results
+
+
+@task.graph(
+    outputs={
+        "results": {"identifier": "workgraph.namespace", "metadata": {"dynamic": True}}
+    }
+)
+def calc_all_structures(**scaled_structures) -> dict:
+    """Sub-workflow to calculate energy and volume for all strained structures in parallel."""
+    results = {}
+    for key, atoms in scaled_structures.items():
+        # The key for each result (e.g., "strain_0") becomes an output link
+        # under the "results" namespace.
+        results[key] = calculate_energy_and_volume(atoms).result
+
+    # The returned dictionary's key "results" must match the name in the `outputs` decorator.
+    return {"results": results}
+
+
+# %%
+# .. note::
+#
+#    The ``**scaled_structures`` syntax in the ``calc_all_structures`` function signature is Python's way of accepting an arbitrary number of keyword arguments.
+#    This makes it the perfect receiver for the dynamic outputs from ``create_strained_structures``, elegantly handling the ``strain_0=...``, ``strain_1=...``, etc., inputs.
+
+
+@task()
+def fit_eos_model(**data) -> dict:
+    """Fit Energy-Volume data to a Birch-Murnaghan Equation of State."""
     from ase.eos import EquationOfState
     from ase.units import kJ
 
-    volumes_list = list(volumes.values())
-    energies_list = list(energies.values())
+    # Unpack the energies and volumes from the input data dictionary
+    volumes_list = [value["volume"] for value in data.values()]
+    energies_list = [value["energy"] for value in data.values()]
+
     eos = EquationOfState(volumes_list, energies_list)
     v0, e0, B = eos.fit()
-    # convert B to GPa
-    B = B / kJ * 1.0e24
-    eos = {"energy unit": "eV", "v0": v0, "e0": e0, "B": B}
-    return eos
+
+    # The bulk modulus B is converted from eV/Å³ to GPa.
+    B_GPa = B / kJ * 1.0e24
+    result = {"v0_A^3": v0, "e0_eV": e0, "B_GPa": B_GPa}
+    return result
 
 
 @task.graph()
-def eos_workflow(atoms: Atoms, strains: list) -> dict:
-    """
-    Calculate the equation of state for a material.
-    """
-    outputs = calc_all_energies(atoms, strains)
-    eos = fit_eos(outputs.energies, outputs.volumes).result
-    return eos
+def eos_workflow(atoms: Atoms, scales: list) -> dict:
+    """The complete EOS workflow graph."""
+    relaxed_atoms = relax_structure(atoms=atoms).result
+    strained = create_strained_structures(atoms=relaxed_atoms, scales=scales)
+    emt_outputs = calc_all_structures(scaled_structures=strained.scaled_structures)
+    result = fit_eos_model(data=emt_outputs.results).result
+    return result
 
 
 # %%
-# Define the atoms and strains
+#
+# .. important::
+#
+#    When linking task outputs to a keyword argument of the task, you must pass the
+#    *output sockets* explicitly by name, e.g.:
+#
+#      scaled_structures=strained.scaled_structures
+#
+#      data=emt_outputs.results
+#
+#    rather than using argument unpacking like ``**strained.scaled_structures``
+#    or ``**emt_outputs.results``. This is because
+#    ``strained.scaled_structures`` and ``emt_outputs.results`` are *references*
+#    to the future output dictionaries (i.e. output sockets), not the actual
+#    values. Naming the arguments ensures AiiDA-WorkGraph knows exactly which
+#    output port to connect to which input port.
+#
+
+# %%
+# Build and Run the EOS Workflow
+# ------------------------------
+# Define the input crystal structure (fcc Copper) and the list of strains.
 from ase.build import bulk
 
 cu = bulk("Cu", "fcc", a=3.6)
-strains = [0.95, 0.98, 1.0, 1.02, 1.05]
+scales = [0.95, 0.98, 1.0, 1.02, 1.05]
 
 # %%
-# Build the workgraph and run it
-wg_eos = eos_workflow.build_graph(atoms=cu, strains=strains)
-wg_eos.to_html()
+# Build the workgraph and visualize the plan.
+wg = eos_workflow.build_graph(atoms=cu, scales=scales)
+wg.to_html()
 
 # %%
-wg_eos.run()
-print("Equation of state results: ", wg_eos.outputs.result.value)
+# Run the workflow.
+wg.run()
+
+# The result is an AiiDA Dict node. We access its content via the `.value` attribute.
+eos_result = wg.outputs.result.value
+print("Equation of state results for Cu: ", eos_result.value)
+
+# %%
+# Visualize the EOS Provenance Graph
+# ----------------------------------
+# This provenance graph is more complex, clearly showing the "fan-out" from
+# `create_strained_structures` and the "fan-in" to `fit_eos_model`, illustrating
+# the power of AiiDA-WorkGraph to manage complex data flows automatically.
+
+from aiida_workgraph.utils import generate_node_graph
+
+generate_node_graph(wg.pk)
+
+# %%
+# Conclusion
+# ==========
+# Congratulations! You've now seen the core principles of `AiiDA-WorkGraph` in action.
+# You have learned how to:
+#
+# -   Transform any Python function into a robust, provenance-tracked task with the ``@task`` decorator.
+# -   Compose tasks into complete workflows using ``@task.graph``, from simple linear chains to complex graphs.
+# -   Manage advanced patterns like loops and parallel execution using **dynamic namespaces**.
+# -   Build, execute, and visualize both the workflow plan and its final, rich **provenance graph**.
+#
+# These powerful concepts are the foundation for building sophisticated, automated, and fully reproducible simulation pipelines for your own research projects. Happy computing! 🚀
