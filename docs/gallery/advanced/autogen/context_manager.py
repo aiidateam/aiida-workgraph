@@ -350,7 +350,7 @@ print(f"  Product: {wg2.outputs.product.value}")
 
 with WorkGraph.load(wg2.pk) as wg3:
     wg3.name = "AddMultiplyContinued"
-    wg3.inputs = dict.fromkeys(["z"])
+    wg3.inputs.z = None  # introduce a new input socket
     wg3.restart()
     new_sum = add(
         x=wg3.tasks.multiply.outputs.result,
