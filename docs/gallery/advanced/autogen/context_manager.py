@@ -20,8 +20,8 @@ Write workflows using the context manager paradigm
 # Creating a simple workflow
 # ==========================
 #
-# We'll start by creating a simple arithmetic workflow using the context manager paradigm.
-# We first recall how this is done using the ``@task`` decorator:
+# We'll start by defining an add-multiply workflow.
+# First, we define the necessary tasks:
 
 from aiida_workgraph import task
 
@@ -36,6 +36,10 @@ def multiply(x, y):
     return x * y
 
 
+# %%
+# Then the workflow itself. We first recall how this is done using the ``@task`` decorator:
+
+
 @task.graph
 def AddMultiply(x, y, z):
     the_sum = add(x, y).result
@@ -46,7 +50,6 @@ def AddMultiply(x, y, z):
 # Now, let's see how we can achieve the same result using the context manager paradigm.
 
 from aiida_workgraph import WorkGraph
-
 
 with WorkGraph("AddMultiplyContextManager") as wg:
     wg.inputs = dict.fromkeys(["x", "y", "z"])
