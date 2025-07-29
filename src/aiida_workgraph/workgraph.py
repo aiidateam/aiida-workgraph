@@ -593,6 +593,10 @@ class WorkGraph(node_graph.NodeGraph):
         """Add a link between two tasks."""
         if isinstance(source, Task):
             source = source.outputs["_outputs"]
+        elif source._parent is None:
+            # if the source is the top-level outputs,
+            # we use the built-in "_outputs" socket to represent it
+            source = source._outputs
         key = f"{source._node.name}.{source._scoped_name} -> {target._node.name}.{target._scoped_name}"
         if key in self.links:
             return self.links[key]
