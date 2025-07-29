@@ -136,6 +136,8 @@ def test_restart_and_reset(wg_calcfunction):
     Load the workgraph, modify the task, and restart the workgraph.
     Only the modified node and its child tasks will be rerun."""
     wg = wg_calcfunction
+    wg.outputs.diff = wg.tasks.sumdiff1.outputs.diff
+    wg.outputs.sum = wg.tasks.sumdiff2.outputs.sum
     wg.add_task(
         "workgraph.test_sum_diff",
         "sumdiff3",

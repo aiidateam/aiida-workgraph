@@ -24,3 +24,20 @@ def test_group_inputs_outputs(decorated_add):
         wg.process.inputs.workgraph_data.tasks.graph_inputs.inputs.sockets.add.sockets.x.property.value
         == 1
     )
+
+
+def test_load_from_db():
+    """Test loading a WorkGraph from the database."""
+    from aiida_workgraph.tasks.builtins import GraphInputs
+
+    wg = WorkGraph("test_load_from_db")
+    wg.inputs = {"x": 1, "y": 2}
+    wg.save()
+    wg2 = WorkGraph.load(wg.pk)
+    wg2.restart()
+    assert isinstance(wg2.tasks.graph_inputs, GraphInputs)
+    wg2.inputs.z = 3
+    wg2.save()
+    wg3 = WorkGraph.load(wg2.pk)
+    assert wg3.inputs.x == 1
+    assert wg3.inputs.z == 3
