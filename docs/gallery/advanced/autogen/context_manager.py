@@ -652,7 +652,7 @@ generate_node_graph(wg3.pk)
 # Conclusion
 # ==========
 #
-# In this section, you learned how to:
+# In this section, using the context manager paradigm, you learned how to:
 #
 # - Use ``wg.inputs = {...}`` to define many inputs at once, or to define nested (namespaced) inputs to group related parameters
 # - Use ``wg.add_input(...)`` to define a graph-level input and provide additional metadata (e.g., type validation)
