@@ -279,6 +279,164 @@ wg.to_html()
 # Note the presence of the workflow inputs and their connections to the various tasks (as discussed earlier).
 
 # %%
+# Control flow
+# ============
+#
+# In the decorator paradigm, we defer conditional and iterative logic to the ``@task.graph`` decorator to determine the flow at runtime.
+# In the context manager paradigm, we instead define control flow logic explicitly with dedicated context managers.
+# We explore this in the following sections.
+
+# %%
+# Workflow context
+# ----------------
+#
+# Before we describe the control flow constructs, we need to understand the use of the workflow context.
+# ``WorkGraph`` doesn't track context variables (``wg.ctx``) for automatic dependency resolution because they could introduce cyclical dependencies between tasks.
+# As such, when defining dynamic branching in a workflow (as is done in the following sections), we must explicitly do the following:
+#
+# 1. Store dynamically-generated results in the context variable
+# 2. Define task dependencies using the ``<<`` or ``>>`` operators
+#
+# For further details, please refer to the :doc:`/howto/autogen/control_task_execution_order` how-to section.
+
+# %%
+# ``If`` zone
+# -----------
+#
+# To define the conditional logic of the workflow, ``WorkGraph`` provides an ``If`` context manager.
+# Using the ``with If`` block, all child tasks are automatically encapsulated and executed only if the condition is met.
+
+from aiida_workgraph import If
+from aiida_workgraph.collection import group
+
+
+with WorkGraph("AddMultiplyIf") as wg:
+    first_sum = add(x=1, y=1).result
+
+    with If(first_sum < 0):
+        second_sum = add(x=first_sum, y=2).result
+        wg.ctx.result = second_sum
+
+    with If(first_sum >= 0):
+        the_product = multiply(x=first_sum, y=3).result
+        wg.ctx.result = the_product
+
+    (final_sum := add(x=wg.ctx.result, y=1).result) << group(second_sum, the_product)
+
+    wg.outputs.result = final_sum
+
+wg.run()
+
+print(f"Result: {wg.outputs.result.value}")
+assert wg.outputs.result.value == 7
+
+# %%
+# Let's break it down:
+#
+# - We start by queuing an addition task
+# - We then define the conditional branches using the ``If`` context manager
+#
+#   - We define the conditional logic w.r.t the ``result`` socket of the first task
+#
+#   .. note::
+#
+#      When sockets are involved in Pythonic expressions, they yield a task.
+#      For example, ``first_sum < 0`` yields a built-in ``op_lt`` task.
+#
+#   - We define a task in each branch as we would do normally
+#   - We assign the task result to the workflow context variable ``wg.ctx.result`` (see below for more details)
+# - We define the dependency of ``final_sum`` on the result of the grouped,conditionally-determined tasks with the ``<<`` operator (``A << B`` means "A after B").
+
+# %%
+# .. note::
+#
+#    In the example above, as we are dealing with Python functions that are run in a blocking manner, the example would also work without explicit task dependency setting via ``<<`` or ``>>``, as further execution would anyway wait until both tasks have finished.
+#    However, if the tasks would be submitted to the daemon in a non-blocking fashion (common use case in scientific scenarios with long-running jobs), the explicit waiting enforced by ``<<`` or ``>>`` is strictly required, so we also apply it here for consistency and correctness.
+#
+# Visualizing the graph, one can see two operator zones, ``op_lt`` and ``op_ge``, for our two comparisons ("less than" and "greater equal"), as well as one ``if_zone`` for each branch as defined by the two ``If`` context managers.
+# Here, each ``if_zone`` has a ``conditions`` input socket, with both ``result`` sockets being fed into the ``graph_ctx``.
+# From there, only one result is then fed as the input to the last add task (``add2``), and finally, the global workflow outputs.
+# Lastly, we can see connections from each ``if_zone``'s special ``_wait`` output socket to the ``_wait`` input socket of the ``add2`` task, which represent the explicit waiting between the tasks as defined by the ``>>`` syntax.
+
+wg.to_html()
+
+# %%
+# .. admonition:: Take home message
+#
+#    When using the ``If`` construct of the context manager paradigm, all branches are visible prior to execution.
+
+# %%
+# Finally, after the workflow has finished, we generate the provenance graph from the AiiDA process, where we can see that the result of the ``op_lt`` (less than) comparison is ``False`` and the branch ends there, while for the ``op_ge`` (greater or equal) comparison it is ``True``, meaning that the branch with the intermediate multiplication was executed.
+
+from aiida_workgraph.utils import generate_node_graph
+
+generate_node_graph(wg.pk)
+
+# %%
+# ``While`` zone
+# --------------
+#
+# We can handle dynamically iterative tasks with the ``While`` context manager.
+# Unlike regular tasks, the ``While`` zone lacks data input and output sockets.
+# However, tasks outside the zone can directly link to those inside, facilitating workflow integration.
+# We also have the option to specify the maximum number of iterations to prevent an infinite loop.
+
+from aiida_workgraph import While
+
+
+with WorkGraph("while_context_manager") as wg:
+    n = add(x=1, y=1).result
+    wg.ctx.n = n
+
+    (condition := wg.ctx.n < 8) << n
+
+    with While(condition, max_iterations=10):
+        n = add(x=wg.ctx.n, y=1).result
+        n = multiply(x=n, y=2).result
+        wg.ctx.n = n
+
+    wg.outputs.result = add(x=n, y=1).result
+
+wg.run()
+
+print(f"Result: {wg.outputs.result.value}")
+# 2 -> While(3, 6 -> 7, 14) -> 15
+assert wg.outputs.result.value == 15
+
+# %%
+# Once again, let's break it down:
+#
+# - We start by queuing an addition task to set the initial value of ``n``
+# - We assign this initial value to the workflow context
+# - We then define our condition, as well as the execution order (``condition`` waits for ``n``)
+# - Next, we define the ``While`` context manager
+#
+#   - The block executes its inner tasks as long as the condition is met
+#   - We define the inner tasks that will be executed iteratively (note the use of ``wg.ctx.n`` to access the value of ``n`` at the beginning of each iteration)
+#   - We update the value of ``n`` in the workflow context at each iteration
+# - Finally, we define the output of the workflow as the result of the last addition task
+#
+#   .. important::
+#
+#      Unlike the case of ``If``, the final addition task does not need to wait explicitly on the ``While`` zone, as the zone is guaranteed to be executed (unlike the two ``If`` branches).
+#      Hence, the execution order is implicitly defined by the natural order of task definition.
+#
+# Visually, the ``While`` context manager is depicted as a `while zone`, containing all its child tasks.
+# The zone simplifies the visualization of the loop structure, as it separates the logic executed within the loop from the one outside.
+
+wg.to_html()
+
+# %%
+# .. note::
+#
+#    The cyclic links around the context variable ``n`` are due to its reuse in each iteration.
+#
+# In the provenance graph, we can see the looping and execution of multiple tasks in the loop reflected in the deep tree structure:
+
+generate_node_graph(wg.pk)
+
+
+# %%
 # .. _advanced:context-manager:continue-workflow:
 #
 # Continuing a workflow
@@ -402,5 +560,7 @@ generate_node_graph(wg3.pk)
 # - Use ``wg.add_input(...)`` to define a graph-level input and provide additional metadata (e.g., type validation)
 # - Use graph-level inputs in tasks (``wg.inputs.<name>``)
 # - Use ``wg.outputs.<name>`` to expose graph-level outputs from internal tasks
+# - Use the ``If`` context manager to define conditional branches in a workflow
+# - Use the ``While`` context manager to define iterative tasks in a workflow
 # - Load an existing workgraph using ``WorkGraph.load(pk)``
 # - Continue a workgraph by modifying inputs or adding new tasks
