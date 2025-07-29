@@ -387,7 +387,7 @@ generate_node_graph(wg.pk)
 from aiida_workgraph import While
 
 
-with WorkGraph("while_context_manager") as wg:
+with WorkGraph("AddMultiplyWhile") as wg:
     n = add(x=1, y=1).result
     wg.ctx.n = n
 
@@ -438,6 +438,101 @@ wg.to_html()
 
 generate_node_graph(wg.pk)
 
+# %%
+# ``Map`` zone
+# ============
+#
+# The ``Map`` context manager works similarly to Python's built-in ``map`` function.
+# By accessing the ``item`` member of the ``Map`` context, we can pass each individual element (e.g. a dictionary entry) to tasks.
+# This creates a new task behind the scenes for each element.
+
+# %%
+# Running tasks in parallel
+# -------------------------
+#
+# One use case of ``Map`` is to run tasks in parallel.
+# Let's see how this is done.
+# We first define our data and a data extraction task:
+
+
+len_list = 4
+data = {f"data_{i}": {"x": i, "y": i} for i in range(len_list)}
+
+
+@task
+def get_value(data, key):
+    return data[key]
+
+
+# %%
+# .. note::
+#
+#    To perform an addition operation, we must extract the ``x`` and ``y`` values in separate tasks.
+#    This is because tasks cannot be nested within other tasks - one of AiiDA's core tenets ensuring strict tracking of created data.
+#
+# Now we put it all together in a workflow that sums pairs of numbers in parallel:
+
+from aiida_workgraph import Map
+
+
+with WorkGraph("AddMap") as wg:
+    with Map(data) as map_zone:
+        wg.outputs.result = add(
+            x=get_value(map_zone.item, "x").result,
+            y=get_value(map_zone.item, "y").result,
+        ).result
+
+wg.run()
+
+print("\nResults:")
+for i, item in enumerate(wg.outputs.result.value.values()):
+    print(f"  Item {i}: {item}")
+# (1+1) + (2+2) + (3+3) = 12
+assert sum(wg.outputs.result.value.values()) == 12
+
+# %%
+# Let's inspect the task graph:
+
+wg.to_html()
+
+# %%
+# We can see with the ``Map`` zone the tasks onto which the input data would be mapped.
+#
+# .. tip::
+#
+#    If you are using the AiiDA GUI, you can visualize each instance of the mapped tasks by inspecting the ``Map`` zone.
+
+# %%
+# Finally, let's have a look at the provenance graph:
+
+generate_node_graph(wg.pk)
+
+# %%
+# Data aggregation
+# ----------------
+#
+# Another use case of ``Map`` is to aggregate results.
+# Commonly known as a gather, aggregate, or reduce operation, it is often used to automatically analyze or summarize the output of parallel computations.
+
+
+@task
+def aggregate_sum(data):
+    return sum(data.values())
+
+
+with WorkGraph("AddAggregate") as wg:
+    with Map(data) as map_zone:
+        added_numbers = add(
+            x=get_value(map_zone.item, "x").result,
+            y=get_value(map_zone.item, "y").result,
+        ).result
+    wg.outputs.result = aggregate_sum(added_numbers).result
+
+wg.run()
+
+print("\nResult:", wg.outputs.result.value)
+assert wg.outputs.result == 12
+
 
 # %%
 # .. _advanced:context-manager:continue-workflow:
@@ -450,8 +545,8 @@ generate_node_graph(wg.pk)
 # This allows you to rebuild the workgraph from the process and add new tasks to continue the workflow.
 
 # %%
-# Continue with modified inputs
-# -----------------------------
+# Modifying inputs
+# ----------------
 #
 # Let's run an add-multiply workflow with a hardcoded multiplication factor:
 
@@ -504,8 +599,8 @@ print(f"  Product: {wg2.outputs.product.value}")
 # The product, however, is the result of the calculation repeating with the new input, hence a brand new node.
 
 # %%
-# Continue with new tasks
-# -----------------------
+# Adding new tasks
+# ----------------
 #
 # Let's now pick up the previous workgraph and extend it by a second addition, leveraging the results of the previous work.
 
@@ -565,5 +660,6 @@ generate_node_graph(wg3.pk)
 # - Use ``wg.outputs.<name>`` to expose graph-level outputs from internal tasks
 # - Use the ``If`` context manager to define conditional branches in a workflow
 # - Use the ``While`` context manager to define iterative tasks in a workflow
+# - Use the ``Map`` context manager to distribute data across instances of a set of tasks in parallel
 # - Load an existing workgraph using ``WorkGraph.load(pk)``
 # - Continue a workgraph by modifying inputs or adding new tasks
