@@ -81,6 +81,8 @@ def wg_calcfunction() -> WorkGraph:
     sumdiff1 = wg.add_task("workgraph.test_sum_diff", "sumdiff1", x=2, y=3)
     sumdiff2 = wg.add_task("workgraph.test_sum_diff", "sumdiff2", x=4)
     wg.add_link(sumdiff1.outputs[0], sumdiff2.inputs[1])
+    wg.outputs.sum = sumdiff1.outputs.sum
+    wg.outputs.diff = sumdiff2.outputs.sum
     return wg
 
 
