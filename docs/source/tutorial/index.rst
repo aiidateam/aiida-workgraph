@@ -8,5 +8,4 @@ In this tutorials, you will see severl examples in real applications.
    :maxdepth: 2
    :caption: Contents:
 
-   autogen/qe
-   autogen/eos
+   autogen/materials_science_ase
