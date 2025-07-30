@@ -39,7 +39,7 @@ from aiida.calculations.arithmetic.add import ArithmeticAddCalculation
 from aiida.engine import calcfunction, workfunction
 from aiida.workflows.arithmetic.multiply_add import MultiplyAddWorkChain
 
-from aiida_workgraph import WorkGraph, task
+from aiida_workgraph import task
 
 # %%
 # Next, let's define a ``calcfunction`` and ``workfunction``
@@ -60,7 +60,9 @@ def add_more(x, y, z):
 # To use ``aiida-core`` components in a ``WorkGraph``, we can simply cast them as tasks using the ``task`` decorator functionally (``task(<aiida-core-component>)``).
 # Task functional components can then be called functionally with their respective inputs, linking outputs to inputs as needed.
 
-with WorkGraph("AiiDAComponents") as wg:
+
+@task.graph
+def AiiDAComponentsWorkflow():
     calcjob_sum = task(ArithmeticAddCalculation)(
         code=orm.load_code("add@localhost"),
         x=1,
@@ -85,8 +87,10 @@ with WorkGraph("AiiDAComponents") as wg:
         z=3,
     ).result  # `workfunction` implicitly defines a 'result' output
 
-    wg.outputs.result = workfunction_sum
+    return workfunction_sum
 
+
+wg = AiiDAComponentsWorkflow.build_graph()
 wg.to_html()
 
 # %%
@@ -172,13 +176,14 @@ def multiply(x, y):
     return x * y
 
 
-with WorkGraph("IntegratedAddMultiply") as wg:
-    the_sum = add(x=1, y=2).result
-    the_product = multiply(x=the_sum, y=3).result
+@task.graph
+def IntegratedAddMultiply():
+    the_sum = add(1, 2).result
+    the_product = multiply(the_sum, 3).result
+    return {"sum": the_sum, "product": the_product}
 
-    # Expected outputs
-    wg.outputs.sum = the_sum
-    wg.outputs.product = the_product
+
+wg = IntegratedAddMultiply.build_graph()
 
 # %%
 # We can export our workgraph as a dictionary using the ``prepare_inputs()`` method and use it as the input to our ``WorkChain``:

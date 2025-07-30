@@ -218,7 +218,6 @@ class TaskDecoratorCollection:
         """
 
         def decorator(callable):
-
             # function or builtin function
             if inspect.isfunction(callable) or callable.__module__ == "builtins":
                 # calcfunction and workfunction

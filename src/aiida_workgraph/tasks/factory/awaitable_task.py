@@ -38,7 +38,7 @@ class MonitorFunctionTask(Task):
 
     def execute(self, engine_process, args=None, kwargs=None, var_kwargs=None):
         from node_graph.executor import NodeExecutor
-        from aiida_workgraph.executors.monitors import monitor
+        from aiida_workgraph.tasks.monitors import monitor
 
         executor = NodeExecutor(**self.get_executor()).executor
         # get the raw function without the decorator
