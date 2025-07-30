@@ -2,7 +2,7 @@
 Tutorials
 ===========================================
 
-In this tutorials, you will see severl examples in real applications.
+In this tutorials, you will see several examples in real applications.
 
 .. toctree::
    :maxdepth: 2

@@ -5,7 +5,6 @@ Computational materials science with ASE
 
 Introduction
 ============
-Unlock the power of automated and reproducible computational science!
 This tutorial will guide you through building, running, and visualizing computational workflows using `AiiDA-WorkGraph` and the `Atomistic Simulation Environment (ASE) <https://wiki.fysik.dtu.dk/ase/>`_.
 You'll learn how to construct complex pipelines where every calculation and data point is automatically tracked, ensuring your research is completely reproducible.
 
@@ -17,7 +16,7 @@ We'll explore two key examples that highlight the flexibility of AiiDA-WorkGraph
 """
 
 # %%
-# First, ensure you have `aiida-workgraph`, `ase`, and a configured AiiDA environment.
+# First, ensure you have `aiida-workgraph` and `ase` installed, and have configured an AiiDA environment.
 # If not, you can install the necessary packages:
 #
 # .. code-block:: console
@@ -33,7 +32,7 @@ load_profile()
 # %%
 # Atomization energy of a diatomic molecule
 # ==========================================
-# The atomization energy (ΔE) is the energy required to break a molecule down into its individual, separate atoms.
+# The atomization energy (:math:`\Delta E`) is the energy required to break a molecule down into its individual, separate atoms.
 # For a diatomic molecule, the formula is straightforward:
 #
 # .. math::
@@ -54,7 +53,7 @@ from ase import Atoms
 from ase.build import molecule
 
 
-@task()
+@task
 def calculate_energy(atoms: Atoms) -> float:
     """Calculate the total energy of an atomic structure using ASE."""
     from ase.calculators.emt import EMT
@@ -64,19 +63,11 @@ def calculate_energy(atoms: Atoms) -> float:
     return atoms.calc.results["energy"]
 
 
-@task()
+@task
 def compute_atomization_energy(energy_atom: float, energy_molecule: float) -> float:
     """Calculate the atomization energy from atomic and molecular energies."""
     result = 2 * energy_atom - energy_molecule
     return result
-
-
-# %%
-# .. note::
-#
-#    When you call a task function like ``calculate_energy(...)`` inside a workgraph, it **doesn't run immediately**.
-#    Instead, it creates a task node in the workflow and returns a *reference* of its future result.
-#    You can then wire this reference as an input to the next task, defining the dependencies between tasks.
 
 
 @task.graph()
@@ -90,8 +81,10 @@ def atomization_energy_workflow(molecule_obj: Atoms, atom_obj: Atoms) -> float:
 
 
 # %%
-# Build and Run the Workflow
+# Build and run the workflow
 # --------------------------
+
+
 # First, we create the input structures for a nitrogen atom and molecule using ASE.
 atom = Atoms("N")
 mol = molecule("N2")
@@ -137,7 +130,7 @@ from ase.calculators.emt import EMT
 from ase.optimize import BFGS
 
 
-@task()
+@task
 def relax_structure(atoms: Atoms) -> Atoms:
     """Relax the atomic structure to its minimum energy configuration using ASE."""
     atoms.calc = EMT()
@@ -182,7 +175,7 @@ def create_strained_structures(atoms: Atoms, scales: list) -> dict:
 #        Instead, each structure is a queryable, first-class citizen in the AiiDA database.
 
 
-@task()
+@task
 def calculate_energy_and_volume(atoms: Atoms) -> dict:
     """Calculate the energy and volume for a single atomic structure."""
     atoms.calc = EMT()
@@ -218,7 +211,7 @@ def calc_all_structures(**scaled_structures) -> dict:
 #    This makes it the perfect receiver for the dynamic outputs from ``create_strained_structures``, elegantly handling the ``strain_0=...``, ``strain_1=...``, etc., inputs.
 
 
-@task()
+@task
 def fit_eos_model(**data) -> dict:
     """Fit Energy-Volume data to a Birch-Murnaghan Equation of State."""
     from ase.eos import EquationOfState
