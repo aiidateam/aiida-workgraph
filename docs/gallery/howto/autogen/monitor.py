@@ -28,12 +28,13 @@ Monitor external events as a task
 # %%
 # We'll temporarily set the AiiDA log level to ``REPORT``, so that we can inspect the execution order of the workgraph.
 
+# sphinx_gallery_start_ignore
 from aiida_workgraph.utils.logging import set_aiida_loglevel
 
 set_aiida_loglevel("REPORT")
+# sphinx_gallery_end_ignore
 
-# %%
-from aiida_workgraph import WorkGraph, task
+from aiida_workgraph import task
 from aiida import load_profile
 
 load_profile()
@@ -48,33 +49,30 @@ import datetime
 
 
 @task.monitor
-def time_monitor(time):
-    return datetime.datetime.now() > datetime.datetime.fromisoformat(time.value)
+def monitor_time(time):
+    return datetime.datetime.now() > time
 
 
-with WorkGraph("TimeMonitor") as wg:
-    wg.inputs = {
-        "monitor": {"time": None},
-        "add": dict.fromkeys(["x", "y"]),
-    }
-    time_monitor(time=wg.inputs.monitor.time) >> wg.inputs.add.x + wg.inputs.add.y
+@task
+def add(x, y):
+    return x + y
 
+
+@task.graph
+def TimeMonitor(time, x, y):
+    monitor_time(time) >> (the_sum := add(x, y).result)  # wait THEN (>>) add
+    return the_sum
+
+
+wg = TimeMonitor.build_graph(
+    time=datetime.datetime.now() + datetime.timedelta(seconds=5),
+    x=1,
+    y=2,
+)
 wg.to_html()
 
 # %%
-wg.run(
-    inputs={
-        "monitor": {
-            "time": (
-                datetime.datetime.now() + datetime.timedelta(seconds=5)
-            ).isoformat(),
-        },
-        "add": {
-            "x": 1,
-            "y": 2,
-        },
-    }
-)
+wg.run()
 
 # %%
 # Note the time difference between the monitor task and the next (~5 seconds)
@@ -98,7 +96,7 @@ async def sleep_create_file(filepath, content):
 
 
 @task.monitor
-def file_monitor(filepath):
+def monitor_file(filepath):
     return os.path.exists(filepath)
 
 
@@ -110,12 +108,13 @@ def discard_file(filepath):
         raise FileNotFoundError(f"File {filepath} does not exist.")
 
 
-with WorkGraph("FileMonitor") as wg:
-    wg.inputs = {
-        "add": dict.fromkeys(["x", "y"]),
-        "multiply": dict.fromkeys(["factor"]),
-    }
+@task
+def multiply(x, y):
+    return x * y
 
+
+@task.graph
+def FileMonitor(x, y, z):
     # Asynchronously create a file after 5 seconds
     sleep_create_file(
         filepath="/tmp/monitor_test.txt",
@@ -123,35 +122,29 @@ with WorkGraph("FileMonitor") as wg:
     )
 
     # While above is running, monitor for the file
-    # Once done (`>>` means wait), add two numbers and discard the file
+    # Once done (`>>` means wait on left operant), add two numbers and discard the file
     # Finally, multiply the sum by a factor
     (
-        file_monitor(
-            filepath="/tmp/monitor_test.txt",
+        monitor_file(
+            "/tmp/monitor_test.txt",
             interval=1,
             timeout=10,
         )
         >> group(
-            discard_file(filepath="/tmp/monitor_test.txt"),
-            the_sum := wg.inputs.add.x + wg.inputs.add.y,
+            discard_file("/tmp/monitor_test.txt"),
+            the_sum := add(x, y).result,
         )
-        >> the_sum * wg.inputs.multiply.factor
+        >> (the_product := multiply(the_sum, z).result)
     )
 
+    return the_product
+
+
+wg = FileMonitor.build_graph(x=1, y=2, z=3)
 wg.to_html()
 
 # %%
-wg.run(
-    inputs={
-        "add": {
-            "x": 1,
-            "y": 2,
-        },
-        "multiply": {
-            "factor": 3,
-        },
-    }
-)
+wg.run()
 
 # %%
 # You can inspect the process reports above to verify the order of events.
@@ -192,4 +185,6 @@ wg.run(
 #
 # You have learned how to use the ``monitor`` decorator to create tasks that poll for specific conditions, such as time-based events, file-based events, and task monitoring. You also learned how to kill a monitor task and about the built-in monitor tasks provided by `WorkGraph`.
 
+# sphinx_gallery_start_ignore
 set_aiida_loglevel("ERROR")
+# sphinx_gallery_end_ignore
