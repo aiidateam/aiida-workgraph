@@ -467,14 +467,7 @@ class GraphTask(Task):
                 executor.__globals__[executor.__name__] = task.graph()(executor)
         if getattr(executor, "is_decoratored", False):
             executor = executor._func
-        graph_task_output_names = [
-            output._name
-            for output in self.outputs
-            if not output._metadata.builtin_socket
-        ]
-        wg = _run_func_with_wg(
-            executor, graph_task_output_names, args, kwargs, var_kwargs
-        )
+        wg = _run_func_with_wg(executor, self.__class__, args, kwargs, var_kwargs)
         wg.name = self.name
 
         wg.parent_uuid = engine_process.node.uuid

@@ -12,6 +12,7 @@ from aiida_workgraph.tasks.factory import (
     WorkGraphTaskFactory,
     PyFunctionTaskFactory,
 )
+from node_graph.utils import socket_value_id_mapping
 
 
 def build_task(
@@ -97,6 +98,18 @@ def _assign_wg_outputs(
         wg.outputs.result = outputs
 
 
+def resolve_graph_inputs_links(wg: WorkGraph, graph_inputs_mapping: dict) -> None:
+    """Resolve the links from the graph inputs to the inputs of the tasks in the WorkGraph."""
+    for task in wg.tasks:
+        if task.name == "graph_inputs":
+            continue
+        task_mapping = socket_value_id_mapping(task.inputs)
+        for value_id, socket_list in task_mapping.items():
+            if value_id in graph_inputs_mapping:
+                for socket in socket_list:
+                    wg.add_link(graph_inputs_mapping[value_id][0], socket)
+
+
 def _run_func_with_wg(
     func: Callable,
     TaskCls: callable,
@@ -123,9 +136,19 @@ def _run_func_with_wg(
             .items()
             if not socket.get("metadata", {}).get("builtin_socket", False)
         ]
-        wg.inputs = prepare_function_inputs(func, *args, **merged)
+        graph_inputs_mapping_old = socket_value_id_mapping(wg.inputs)
+        wg.graph_inputs.set(prepare_function_inputs(func, *args, **merged))
+        graph_inputs_mapping = socket_value_id_mapping(wg.inputs)
+        # the differences between the two mappings are the new inputs that were added
+        graph_inputs_mapping_diff = {
+            key: value
+            for key, value in graph_inputs_mapping.items()
+            if key not in graph_inputs_mapping_old
+        }
         raw = func(*args, **merged)
         _assign_wg_outputs(raw, wg, graph_task_output_names)
+        # resolve the links from the graph inputs to the inputs of the tasks
+        resolve_graph_inputs_links(wg, graph_inputs_mapping_diff)
         return wg
 
 
