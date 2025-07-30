@@ -201,14 +201,15 @@ wg.to_html()
 #
 # Workflow inputs can also be defined using ``wg.add_input(...)``.
 # The method allows you to provide an identifier (e.g. ``workgraph.int``) to the input, which is used for validation.
-
-with WorkGraph() as wg:
-    wg.add_input("workgraph.int", "x")  # validated as an integer
-    wg.add_input("workgraph.int", "y")
-    wg.add_input("workgraph.int", "z")
-    ...
-
-# %%
+#
+# .. code:: python
+#
+#    with WorkGraph() as wg:
+#        wg.add_input("workgraph.int", "x")  # validated as an integer
+#        wg.add_input("workgraph.int", "y")
+#        wg.add_input("workgraph.int", "z")
+#        ...
+#
 # .. tip::
 #
 #    When using the AiiDA GUI, providing an ``identifier`` to input sockets will associate the input with a GUI component, allowing users to interact with the input in a more user-friendly type-specific way (see this :ref:`GUI section <web-ui:detailed-socket-view>`).
@@ -588,7 +589,7 @@ with WorkGraph.load(wg1.pk) as wg2:
     wg2.restart()
     wg2.tasks.multiply.inputs.y = 4
 
-wg2.submit(wait=True)
+wg2.run()
 
 print("\nResults:")
 print(f"  Sum: {wg2.outputs.sum.value}")
@@ -626,11 +627,10 @@ print(f"State of new add   : {wg3.tasks.add1.state}")
 # Note the ``PLANNED`` new addition task. Let's run it.
 # Let's run it with the new input:
 
-wg3.submit(
+wg3.run(
     inputs={
         "z": 5,
     },
-    wait=True,
 )
 
 print("\nResults:")
