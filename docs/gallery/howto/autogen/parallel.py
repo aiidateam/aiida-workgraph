@@ -20,7 +20,7 @@ from aiida import load_profile
 load_profile()
 
 from aiida_workgraph.utils import generate_node_graph
-from aiida_workgraph import WorkGraph, task, Map
+from aiida_workgraph import WorkGraph, task
 
 # %%
 # Perfectly parallelizable problem
@@ -115,51 +115,6 @@ wg.to_html()
 # ~~~~~~~~~~~~~~~~
 generate_node_graph(wg.pk)
 
-# %%
-# Map context manager
-# -----------
-# The ``Map`` works similar as python's inbuilt map.
-# By accessing the member ``item`` of the map context we can directly pass the socket item to tasks passing creating for each element a new task behind the curtain.
-# There is a caveat, to apply the add operation we need to access the ``x`` and ``y`` elements in a separate task since we cannot run a task within a task.
-# The ``Map`` context works similarly to Python's built-in ``map``.
-# By accessing the ``item`` member of the ``Map`` context, we can pass each individual element (e.g. a dictionary entry) to tasks.
-# This creates a new task behind the scenes for each element.
-#
-# .. note::
-#
-#   To perform an addition operation, we must extract the `x` and `y` values in separate tasks.
-#   This is because tasks cannot be nested within other tasks, one of ``aiida-core`` concepts to be able to strictly track created data.
-
-
-@task
-def get_value(data, key):
-    return data[key]
-
-
-len_list = 4
-data = {f"data_{i}": {"x": i, "y": i} for i in range(len_list)}
-
-with WorkGraph("parallel_map") as wg:
-    with Map(data) as map_:
-        wg.outputs.result = add(
-            x=get_value(map_.item, "x").result, y=get_value(map_.item, "y").result
-        ).result
-
-wg.run()
-print("Result:", wg.outputs.result.value)
-# (1+1) + (2+2) + (3+3) = 12
-assert sum(wg.outputs.result.value.values()) == 12
-
-# %%
-# Workflow view
-# ~~~~~~~~~~~~~
-wg.to_html()
-
-# %%
-# Provenance graph
-# ~~~~~~~~~~~~~~~~
-generate_node_graph(wg.pk)
-
 
 # %%
 # Gather results
@@ -167,6 +122,7 @@ generate_node_graph(wg.pk)
 # We now extend the workflow by adding a task that sums the intermediate results.
 # This step is commonly known as a gather, aggregate, or reduce operation.
 # It is often used to automatically analyze or summarize the output of the parallel computations.
+
 
 # %%
 # Graph builder
@@ -193,36 +149,6 @@ wg = WorkGraph("parallel_graph_task")
 wg.add_task(parallel_add_workflow, data=data)
 wg.add_task(aggregate_sum, data=wg.tasks.parallel_add_workflow.outputs.result)
 wg.outputs.result = wg.tasks.aggregate_sum.outputs.result
-wg.run()
-print("Result:", wg.outputs.result.value)
-assert wg.outputs.result == 12
-
-# %%
-# Map context
-# -----------
-# Similarly for the map context approach we only need do extend it by the ``aggregate_sum`` task
-
-
-@task
-def aggregate_sum(data):
-    return sum(data.values())
-
-
-@task
-def get_value(data, key):
-    return data[key]
-
-
-len_list = 4
-data = {f"data_{i}": {"x": i, "y": i} for i in range(len_list)}
-
-with WorkGraph("parallel_map") as wg:
-    with Map(data) as map_:
-        added_numbers = add(
-            x=get_value(map_.item, "x").result, y=get_value(map_.item, "y").result
-        ).result
-    wg.outputs.result = aggregate_sum(added_numbers).result
-
 wg.run()
 print("Result:", wg.outputs.result.value)
 assert wg.outputs.result == 12
