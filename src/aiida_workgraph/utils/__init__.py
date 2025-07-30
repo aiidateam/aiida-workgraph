@@ -442,6 +442,10 @@ def workgraph_to_short_json(
         if len(node["inputs"]) == 0 and len(node["outputs"]) == 0:
             del wgdata_short["nodes"][name]
 
+    # remove the inputs socket of "graph_inputs"
+    if "graph_inputs" in wgdata_short["nodes"]:
+        wgdata_short["nodes"]["graph_inputs"]["inputs"] = []
+
     return wgdata_short
 
 
