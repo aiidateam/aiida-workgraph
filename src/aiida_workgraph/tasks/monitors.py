@@ -103,8 +103,8 @@ class TimeMonitor(MonitorFunctionTask):
 
     def get_executor(self):
         executor = {
-            "module_path": "aiida_workgraph.executors.monitors",
-            "callable_name": "time_monitor",
+            "module_path": "aiida_workgraph.tasks.monitors",
+            "callable_name": "monitor_time",
         }
         return executor
 
@@ -133,8 +133,8 @@ class FileMonitor(MonitorFunctionTask):
 
     def get_executor(self):
         executor = {
-            "module_path": "aiida_workgraph.executors.monitors",
-            "callable_name": "file_monitor",
+            "module_path": "aiida_workgraph.tasks.monitors",
+            "callable_name": "monitor_file",
         }
         return executor
 
@@ -165,7 +165,7 @@ class TaskMonitor(MonitorFunctionTask):
 
     def get_executor(self):
         executor = {
-            "module_path": "aiida_workgraph.executors.monitors",
-            "callable_name": "task_monitor",
+            "module_path": "aiida_workgraph.tasks.monitors",
+            "callable_name": "monitor_task",
         }
         return executor

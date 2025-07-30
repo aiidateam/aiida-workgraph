@@ -1,29 +1,20 @@
-from aiida_workgraph import WorkGraph, task
 import asyncio
-from aiida.cmdline.utils.common import get_workchain_report
 import datetime
-import pytest
 import time
 
+import pytest
+from aiida.cmdline.utils.common import get_workchain_report
 
-@task.monitor()
-def time_monitor(time: str):
-    """Return True if the current time is greater than the given time."""
-    import datetime
-
-    # load the time string
-    time = datetime.datetime.strptime(time, "%Y-%m-%d %H:%M:%S.%f")
-    print(f"Monitoring time: {time}")
-    return datetime.datetime.now() > time
+from aiida_workgraph import WorkGraph, task
+from aiida_workgraph.tasks.monitors import monitor_time
 
 
 def test_monitor_decorator(capsys):
-
     wg = WorkGraph(name="test_monitor_decorator")
     wg.add_task(
-        time_monitor,
+        monitor_time,
         "time_monitor1",
-        time=str(datetime.datetime.now() + datetime.timedelta(seconds=5)),
+        time=datetime.datetime.now() + datetime.timedelta(seconds=5),
     )
     wg.run()
     captured = capsys.readouterr()
@@ -33,10 +24,9 @@ def test_monitor_decorator(capsys):
 
 
 def test_monitor_timeout_and_interval(capsys):
-
     with WorkGraph() as wg:
-        time_monitor(
-            time=str(datetime.datetime.now() + datetime.timedelta(seconds=20)),
+        monitor_time(
+            time=datetime.datetime.now() + datetime.timedelta(seconds=20),
             interval=2,
             timeout=5,
         )
@@ -47,13 +37,13 @@ def test_monitor_timeout_and_interval(capsys):
         assert wg.process.is_finished_ok is False
 
 
-def test_builtin_time_monitor(decorated_add, capsys):
+def test_builtin_time_monitor_entrypoint(decorated_add, capsys):
     """Test the time monitor task."""
     wg = WorkGraph(name="test_time_monitor")
     monitor1 = wg.add_task(
         "workgraph.time_monitor",
         "monitor1",
-        time=str(datetime.datetime.now() + datetime.timedelta(seconds=5)),
+        time=datetime.datetime.now() + datetime.timedelta(seconds=5),
     )
     add1 = wg.add_task(decorated_add, "add1", x=1, y=2)
     add1.waiting_on.add(monitor1)
@@ -64,7 +54,7 @@ def test_builtin_time_monitor(decorated_add, capsys):
     assert add1.outputs.result.value == 3
 
 
-def test_builtin_file_monitor(decorated_add, tmp_path, capsys):
+def test_builtin_file_monitor_entrypoint(decorated_add, tmp_path, capsys):
     """Test the file monitor task."""
 
     @task.awaitable()
@@ -90,7 +80,7 @@ def test_builtin_file_monitor(decorated_add, tmp_path, capsys):
 
 
 @pytest.mark.usefixtures("started_daemon_client")
-def test_builtin_task_monitor(decorated_add):
+def test_builtin_task_monitor_entrypoint(decorated_add):
     """Test the file monitor task."""
     wg2 = WorkGraph(name="wg2")
     monitor1 = wg2.add_task(
@@ -111,7 +101,7 @@ def test_builtin_task_monitor(decorated_add):
 
 
 @pytest.mark.usefixtures("started_daemon_client")
-def test_builtin_task_monitor_timeout(decorated_add, capsys):
+def test_builtin_task_monitor_entrypoint_timeout(decorated_add, capsys):
     """Test the monitor task with a timeout."""
     wg = WorkGraph(name="test_monitor_timeout")
     monitor1 = wg.add_task(
