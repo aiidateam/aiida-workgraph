@@ -176,8 +176,7 @@ wg.run()
 #
 # .. code:: python
 #
-#    monitor1 = wg.add_task("workgraph.time_monitor", datetime=datetime.datetime.now() + datetime.timedelta(seconds=10))
-#    monitor2 = wg.add_task("workgraph.file_monitor", filepath="/tmp/test.txt")
+#    from aiida_workgraph.tasks.monitors import monitor_time, monitor_file
 
 # %%
 # Summary
