@@ -41,7 +41,7 @@ def test_builtin_time_monitor_entrypoint(decorated_add, capsys):
     """Test the time monitor task."""
     wg = WorkGraph(name="test_time_monitor")
     monitor1 = wg.add_task(
-        "workgraph.time_monitor",
+        "workgraph.monitor_time",
         "monitor1",
         time=datetime.datetime.now() + datetime.timedelta(seconds=5),
     )
@@ -67,7 +67,7 @@ def test_builtin_file_monitor_entrypoint(decorated_add, tmp_path, capsys):
 
     wg = WorkGraph(name="test_file_monitor")
     monitor1 = wg.add_task(
-        "workgraph.file_monitor", name="monitor1", filepath=monitor_file_path
+        "workgraph.monitor_file", name="monitor1", filepath=monitor_file_path
     )
     wg.add_task(create_test_file, "create_test_file1", filepath=monitor_file_path)
     add1 = wg.add_task(decorated_add, "add1", x=1, y=2)
@@ -84,7 +84,7 @@ def test_builtin_task_monitor_entrypoint(decorated_add):
     """Test the file monitor task."""
     wg2 = WorkGraph(name="wg2")
     monitor1 = wg2.add_task(
-        "workgraph.task_monitor",
+        "workgraph.monitor_task",
         name="monitor1",
         workgraph_name="wg1",
         task_name="add1",
@@ -105,7 +105,7 @@ def test_builtin_task_monitor_entrypoint_timeout(decorated_add, capsys):
     """Test the monitor task with a timeout."""
     wg = WorkGraph(name="test_monitor_timeout")
     monitor1 = wg.add_task(
-        "workgraph.file_monitor",
+        "workgraph.monitor_file",
         name="monitor1",
         timeout=2,
         filepath="/tmp/test_file_monitor.txt",
@@ -125,7 +125,7 @@ def test_task_monitor_kill(decorated_add, capsys):
     """Test killing a monitor task."""
     wg = WorkGraph(name="test_monitor_kill")
     monitor1 = wg.add_task(
-        "workgraph.file_monitor",
+        "workgraph.monitor_file",
         name="monitor1",
         timeout=30,
         filepath="/tmp/test_file_monitor.txt",
