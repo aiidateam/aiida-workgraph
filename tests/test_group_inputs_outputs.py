@@ -1,4 +1,5 @@
 from aiida_workgraph import WorkGraph, task
+import pytest
 
 
 def test_group_inputs_outputs(decorated_add):
@@ -61,7 +62,12 @@ def test_detect_graph_inputs(decorated_add):
         z = y
         decorated_add(x=x, y=z)
 
-    wg = graph1.build_graph(x=1, y=1)
+    # here will raise an warning, check the warning message
+    with pytest.warns(
+        UserWarning,
+        match="Could not automatically resolve link for input 'y' of task 'add'",
+    ):
+        wg = graph1.build_graph(x=1, y=1)
     assert "graph_inputs.x -> add.x" in wg.links
     # in this case, `x` and `y` share the same value, we can not distinguish them
     # so use the first one, which is `x`

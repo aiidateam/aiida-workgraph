@@ -155,7 +155,7 @@ scf_inputs = {
 # set the input parameters for each task
 wg = eos_workgraph(si, [0.95, 1.0, 1.05], scf_inputs)
 print("Waiting for the workgraph to finish...")
-wg.submit(wait=True, timeout=300)
+wg.run()
 # one can also run the workgraph directly
 # wg.run()
 wg.to_html()
@@ -184,7 +184,14 @@ print("B: {B}\nv0: {v0}\ne0: {e0}\nv0: {v0}".format(**data))
 from aiida_workgraph import WorkGraph, task, Map
 
 
-@task.graph()
+@task.graph(
+    inputs={
+        "scf_inputs": {
+            "identifier": "workgraph.namespace",
+            "metadata": {"dynamic": True},
+        }
+    }
+)
 def eos_workgraph(
     structure: orm.StructureData = None, scales: list = None, scf_inputs: dict = None
 ):
@@ -199,6 +206,11 @@ def eos_workgraph(
 
 
 # %%
+# .. note::
+#
+#    The input `scf_inputs` is a dictionary which includes many AiiDA nodes (e.g., Code, Dict), which means it's a **namespace** socket.
+#    For a full explanation of how to use namespaces, please refer to the section on :ref:`Dynamic Namespaces <dynamic_namespaces>`.
+#
 # Use it inside another workgraph
 # -------------------------------
 # For example, we want to combine relax with eos.
