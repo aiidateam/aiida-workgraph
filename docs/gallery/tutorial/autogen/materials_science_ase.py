@@ -66,8 +66,7 @@ def calculate_energy(atoms: Atoms) -> float:
 @task
 def compute_atomization_energy(energy_atom: float, energy_molecule: float) -> float:
     """Calculate the atomization energy from atomic and molecular energies."""
-    result = 2 * energy_atom - energy_molecule
-    return result
+    return 2 * energy_atom - energy_molecule
 
 
 @task.graph()
@@ -76,8 +75,7 @@ def atomization_energy_workflow(molecule_obj: Atoms, atom_obj: Atoms) -> float:
 
     e_atom = calculate_energy(atoms=atom_obj).result
     e_molecule = calculate_energy(atoms=molecule_obj).result
-    result = compute_atomization_energy(e_atom, e_molecule).result
-    return result
+    return compute_atomization_energy(e_atom, e_molecule).result
 
 
 # %%
@@ -105,7 +103,7 @@ print(f"Atomization energy for N2: {wg.outputs.result.value.value:.4f} eV")
 # %%
 # Visualize the Provenance Graph
 # ------------------------------
-# After the run, we can visualize the *provenance* graph. This graph is the key to reproducibility,
+# We can visualize the *provenance* graph of a completed workflow. This graph is the key to reproducibility,
 # showing not just the tasks but also the actual data nodes that were created and stored in the AiiDA database.
 
 from aiida_workgraph.utils import generate_node_graph
@@ -159,20 +157,10 @@ def create_strained_structures(atoms: Atoms, scales: list) -> dict:
 
 
 # %%
-# .. important::
-#    **Handling dynamic outputs with namespaces** ✨
+# .. note::
 #
-#    In our EOS workflow, the ``create_strained_structures`` task generates a *variable* number of outputs. How do we track each one?
-#
-#    The solution is a **dynamic output namespace**. By adding the ``outputs={...}`` argument to the ``@task`` decorator, we tell AiiDA-WorkGraph:
-#    "The ``scaled_structures`` output is a dictionary, but I want you to treat *each key-value pair* as a separate, named output port (e.g., ``scaled_structures.strain_0``, ``scaled_structures.strain_1``)."
-#
-#    This is crucial for two reasons:
-#
-#    1.  **Full Provenance**: Every strained structure becomes an individual, tracked AiiDA node.
-#        This gives you a crystal-clear history of your entire calculation, with no "black boxes".
-#    2.  **Database Integrity**: It avoids saving a list of ``Atoms`` objects as a single, opaque file (e.g., using pickle, disabled by default).
-#        Instead, each structure is a queryable, first-class citizen in the AiiDA database.
+#    We emit each key in `scaled_structures` as a separate AiiDA output port by using a **dynamic namespace**.
+#    For a full explanation of dynamic outputs and how to use namespaces, please refer to the section on :ref:`Dynamic Namespaces <dynamic_namespaces>`.
 
 
 @task
@@ -180,11 +168,10 @@ def calculate_energy_and_volume(atoms: Atoms) -> dict:
     """Calculate the energy and volume for a single atomic structure."""
     atoms.calc = EMT()
     atoms.get_potential_energy()
-    results = {
+    return {
         "energy": atoms.calc.results["energy"],
         "volume": atoms.get_volume(),
     }
-    return results
 
 
 @task.graph(
@@ -204,13 +191,6 @@ def calc_all_structures(**scaled_structures) -> dict:
     return {"results": results}
 
 
-# %%
-# .. note::
-#
-#    The ``**scaled_structures`` syntax in the ``calc_all_structures`` function signature is Python's way of accepting an arbitrary number of keyword arguments.
-#    This makes it the perfect receiver for the dynamic outputs from ``create_strained_structures``, elegantly handling the ``strain_0=...``, ``strain_1=...``, etc., inputs.
-
-
 @task
 def fit_eos_model(**data) -> dict:
     """Fit Energy-Volume data to a Birch-Murnaghan Equation of State."""
@@ -226,8 +206,7 @@ def fit_eos_model(**data) -> dict:
 
     # The bulk modulus B is converted from eV/Å³ to GPa.
     B_GPa = B / kJ * 1.0e24
-    result = {"v0_A^3": v0, "e0_eV": e0, "B_GPa": B_GPa}
-    return result
+    return {"v0_A^3": v0, "e0_eV": e0, "B_GPa": B_GPa}
 
 
 @task.graph()
@@ -236,50 +215,48 @@ def eos_workflow(atoms: Atoms, scales: list) -> dict:
     relaxed_atoms = relax_structure(atoms=atoms).result
     strained = create_strained_structures(atoms=relaxed_atoms, scales=scales)
     emt_outputs = calc_all_structures(scaled_structures=strained.scaled_structures)
-    result = fit_eos_model(data=emt_outputs.results).result
-    return result
+    return fit_eos_model(data=emt_outputs.results).result
 
 
 # %%
 #
 # .. important::
 #
-#    When linking task outputs to a keyword argument of the task, you must pass the **output sockets** explicitly by name, e.g.:
+#    When linking task outputs to a keyword argument of the task, you **must** explicitly name the input argument, e.g.:
 #
 #    .. code-block:: python
 #
 #        calc_all_structures(scaled_structures=strained.scaled_structures)
-#        fit_eos_model(data=emt_outputs.results).result
 #
 #    rather than using argument unpacking like:
 #
 #    .. code-block:: python
 #
 #        calc_all_structures(**strained.scaled_structures)
-#        fit_eos_model(**emt_outputs.results)
 #
-#    Because ``strained.scaled_structures`` and ``emt_outputs.results`` are *references* to the future output dictionaries (i.e. output sockets), not the actual values.
-#    Naming the arguments ensures AiiDA-WorkGraph knows exactly which output port to connect to which input port.
+#    For further details, please refer to the section on :ref:`Dynamic Namespaces <dynamic_namespaces>`.
 #
 
 # %%
 # Build and Run the EOS Workflow
 # ------------------------------
-# Define the input crystal structure (fcc Copper) and the list of strains.
+# We first define the input crystal structure (fcc Copper) and the list of strains.
 from ase.build import bulk
 
 cu = bulk("Cu", "fcc", a=3.6)
 scales = [0.95, 0.98, 1.0, 1.02, 1.05]
 
 # %%
-# Build the workgraph and visualize the plan.
+# Next, we build the workgraph with the inputs and visualize it:
 wg = eos_workflow.build_graph(atoms=cu, scales=scales)
 wg.to_html()
 
 # %%
-# Run the workflow.
+# Finally, we run the workflow:
+
 wg.run()
 
+# %%
 # The result is an AiiDA Dict node. We access its content via the `.value` attribute.
 eos_result = wg.outputs.result.value
 print("Equation of state results for Cu: ", eos_result.value)
@@ -288,7 +265,7 @@ print("Equation of state results for Cu: ", eos_result.value)
 # Visualize the EOS Provenance Graph
 # ----------------------------------
 # This provenance graph is more complex, clearly showing the "fan-out" from
-# `create_strained_structures` and the "fan-in" to `fit_eos_model`, illustrating
+# ``create_strained_structures`` and the "fan-in" to ``fit_eos_model``, illustrating
 # the power of AiiDA-WorkGraph to manage complex data flows automatically.
 
 from aiida_workgraph.utils import generate_node_graph

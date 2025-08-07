@@ -224,11 +224,15 @@ with WorkGraph("nested_namespace_example") as wg:
 
 
 # %%
-# Dynamic Namespaces
-# ------------------
-# Sometimes, you don't know the number of outputs a task will generate beforehand. A **dynamic namespace** can accept a variable number of sockets at runtime.
+# .. _dynamic_namespaces:
+# Dynamic namespaces
+# -----------------------------------------------------------
+# In many workflows, you might not know the exact number of outputs a task
+# will generate until it runs. A **dynamic namespace** is a powerful feature
+# in AiiDA-WorkGraph that allows a task to emit an arbitrary number of named
+# output ports at runtime.
 #
-# To create one, set `"metadata": {"dynamic": True}` on a namespace socket.
+# To create one, define a namespace socket and set its metadata to `{"dynamic": True}`.
 
 
 @task(
@@ -241,28 +245,80 @@ with WorkGraph("nested_namespace_example") as wg:
 )
 def generate_squares(n: int):
     """Generates a dynamic number of square values."""
+    # The return dictionary must match the output socket names.
+    # The value for the "squares" dynamic namespace is another dictionary,
+    # where each key-value pair will become a separate AiiDA node.
     return {"squares": {f"n_{i}": i**2 for i in range(n)}}
 
 
+# %%
+# This approach offers two significant advantages:
+#
+# 1.  **Fine-grained provenance**: Each key-value pair (`"n_0": 0`, `"n_1": 1`, etc.)
+#     is stored as an individual AiiDA node. This gives you a complete and transparent
+#     graph, allowing you to trace the history and reuse of every single result.
+#
+# 2.  **Database integrity**: It avoids serializing large, complex Python objects
+#     into a single, opaque file (like a pickle file, which is disabled by default in AiiDA).
+#     Instead, each result is a native, queryable entry in the AiiDA database.
+#
+# To consume these dynamic outputs, we can create a task that accepts an arbitrary
+# number of keyword arguments.
+
+
 @task
-def sum_all(**inputs):
-    """A task to sum all values from a dictionary."""
-    return sum(inputs.values())
+def sum_all(**data):
+    """A task to sum all values from a dictionary of inputs."""
+    # The **data syntax gathers all keyword arguments into a dictionary named 'data'.
+    return sum(data.values())
 
 
+# %%
+# Now, let's build the WorkGraph.
 with WorkGraph("dynamic_namespace_example") as wg:
     # The first task generates a dynamic set of outputs under the "squares" namespace.
     dynamic_outputs = generate_squares(n=4)
 
-    # The entire dynamic namespace `dynamic_outputs.squares` is linked as a
-    # single dictionary input to the next task.
-    total = sum_all(inputs=dynamic_outputs.squares)
+    # The entire "squares" namespace is then linked to the next task.
+    total = sum_all(data=dynamic_outputs.squares)
+
     wg.run()
 
     # You can access the individual dynamic outputs
-    print(f"\nIndividual dynamic outputs:")
+    print("\nIndividual dynamic outputs:")
     for i in range(4):
         print(f"  n_{i}: {dynamic_outputs.squares[f'n_{i}'].value}")
 
-    print(f"Sum of all dynamic outputs: {total.result.value}")
+    print(f"\nSum of all dynamic outputs: {total.result.value}")
     assert total.result.value == 14
+
+# %%
+# .. important::
+#
+#    **Connecting sockets: yhy `data=...` is essential**
+#
+#    When linking a dynamic namespace to a task that accepts keyword arguments (`**kwargs`),
+#    you **must** explicitly name the input argument. In our example:
+#
+#    .. code-block:: python
+#
+#        # CORRECT: Connect the 'squares' output socket to the 'data' input socket.
+#        sum_all(data=dynamic_outputs.squares)
+#
+#    This is because you are not passing values directly, but rather connecting the *sockets*
+#    of the graph. `dynamic_outputs.squares` is a reference to the *output socket* that will
+#    hold all the dynamic results. The task `sum_all` has a corresponding *input socket*
+#    named `data` (derived from the `**data` signature). The line above tells WorkGraph to
+#    wire the entire dynamic namespace from the output socket to this specific input socket.
+#
+#    Using Python's argument unpacking syntax will **fail**:
+#
+#    .. code-block:: python
+#
+#        # INCORRECT: This will raise an error.
+#        sum_all(**dynamic_outputs.squares)
+#
+#    At the time the graph is built, `dynamic_outputs.squares` is a socket object, not a
+#    Python dictionary with concrete values. The `**` operator attempts to unpack a dictionary
+#    immediately, which cannot be done on a socket reference that represents future results.
+#    You must name the argument to establish the connection for the engine to resolve later.
