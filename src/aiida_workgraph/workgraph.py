@@ -18,6 +18,7 @@ from aiida_workgraph.utils.graph import (
 from typing import Any, Dict, List, Optional, Union
 
 from node_graph.analysis import NodeGraphAnalysis
+from node_graph.node_graph import BUILTIN_NODES
 from aiida_workgraph.sockets import SocketPool
 
 
@@ -529,12 +530,23 @@ class WorkGraph(node_graph.NodeGraph):
         prefix is used to add a prefix to the task names.
         """
         for task in wg.tasks:
+            # skip the built-in tasks
+            # need to fix this in the future
+            if task.name in BUILTIN_NODES:
+                continue
             task.name = prefix + task.name
             task.graph = self
             self.tasks._append(task)
         self.update_ctx(wg.ctx._value)
         # links
         for link in wg.links:
+            # skip the links that are from or to built-in tasks
+            if (
+                link.from_node.name in BUILTIN_NODES
+                or link.to_node.name in BUILTIN_NODES
+            ):
+                link.unmount()
+                continue
             self.links._append(link)
 
     @property
@@ -567,7 +579,6 @@ class WorkGraph(node_graph.NodeGraph):
             ShellJobTaskFactory,
             shelljob,
         )
-        from node_graph.node_graph import BUILTIN_NODES
 
         if name in BUILTIN_NODES and not include_builtins:
             raise ValueError(f"Task name {name} can not be used, it is reserved.")

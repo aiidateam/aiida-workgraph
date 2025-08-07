@@ -13,6 +13,7 @@ from aiida_workgraph.tasks.factory import (
     PyFunctionTaskFactory,
 )
 from node_graph.utils import socket_value_id_mapping
+from node_graph.socket import NodeSocket
 
 
 def build_task(
@@ -98,16 +99,82 @@ def _assign_wg_outputs(
         wg.outputs.result = outputs
 
 
-def resolve_graph_inputs_links(wg: WorkGraph, graph_inputs_mapping: dict) -> None:
-    """Resolve the links from the graph inputs to the inputs of the tasks in the WorkGraph."""
+def _find_matching_graph_input_socket(
+    value_id: str,
+    task_socket: NodeSocket,
+    task_name: str,
+    graph_inputs_mapping: dict,
+    task_arguments_mapping: dict,
+) -> Optional[NodeSocket]:
+    """
+    Finds the corresponding graph input socket for a given task socket.
+
+    This function handles two cases:
+    1. The value is unambiguous (only one graph input has this value).
+    2. The value is ambiguous (multiple graph inputs have the same value). In this case,
+       it uses the source-code variable name to find the correct socket.
+
+    Returns:
+        The matching graph input socket, or the first one if no unambiguous match is found.
+    """
+    import warnings
+
+    potential_sources = graph_inputs_mapping[value_id]
+
+    # Case 1: Easy case, the value is unique among all graph inputs.
+    if len(potential_sources) == 1:
+        return potential_sources[0]
+
+    # Case 2: Ambiguous case, multiple graph inputs share the same initial value.
+    # We must use the variable name parsed from the source code to disambiguate.
+    elif len(potential_sources) > 1:
+        # Get the name of the variable passed to the task's input socket.
+        source_variable_name = task_arguments_mapping[task_name][task_socket._name]
+        # Find the graph input socket that has the same name.
+        for s in potential_sources:
+            if s._name == source_variable_name:
+                return s
+        # If we couldn't find a match, it's likely due to variable aliasing
+        # (e.g., `graph_input(x=1); y=x; task(a=y)`). The link from `x` to `a`
+        # cannot be inferred automatically.
+        warnings.warn(
+            f"Could not automatically resolve link for input '{task_socket._name}' of task '{task_name}'. "
+            f"This can happen if the input variable was renamed (e.g., 'y=x; task(a=y)'). "
+            f"The calculation will proceed correctly, but the graph visualization may be incomplete."
+        )
+        return potential_sources[0]
+
+
+def resolve_graph_inputs_links(wg: "WorkGraph", graph_inputs_mapping: dict) -> None:
+    """
+    Resolve and create links from the graph's inputs to the inputs of tasks.
+
+    This function attempts to automatically draw connections between graph inputs
+    and task inputs. If a connection cannot be determined unambiguously (e.g.,
+    due to variable renaming), it will issue a warning instead of an error.
+    """
+
+    task_arguments_mapping = getattr(wg, "_task_arguments_mapping", {})
+
     for task in wg.tasks:
         if task.name == "graph_inputs":
             continue
-        task_mapping = socket_value_id_mapping(task.inputs)
-        for value_id, socket_list in task_mapping.items():
+
+        # Map the task's input sockets by their current value_id
+        task_inputs_by_value = socket_value_id_mapping(task.inputs)
+
+        for value_id, task_sockets in task_inputs_by_value.items():
+            # For each socket holding a value that comes from a graph input
             if value_id in graph_inputs_mapping:
-                for socket in socket_list:
-                    wg.add_link(graph_inputs_mapping[value_id][0], socket)
+                for socket in task_sockets:
+                    graph_input_socket = _find_matching_graph_input_socket(
+                        value_id,
+                        socket,
+                        task.name,
+                        graph_inputs_mapping,
+                        task_arguments_mapping,
+                    )
+                    wg.add_link(graph_input_socket, socket)
 
 
 def _run_func_with_wg(
@@ -175,6 +242,55 @@ def prepare_function_inputs(func, *call_args, **call_kwargs):
     return inputs
 
 
+def _inspect_call_arguments(func: callable) -> dict:
+    """
+    Inspect the call site of the decorated function to map parameter names to their
+    source code representation (e.g., {'x': 'var1', 'y': 'var2'}).
+
+    This is a "best-effort" operation; it fails gracefully by returning an empty dict
+    if the source code cannot be parsed.
+    """
+    import inspect
+    import ast
+    from executing import Source
+
+    arg_map = {}
+    if func is None:
+        return arg_map
+    try:
+        # Need to go 2 frames back: 1 for this function, 1 for the wrapper
+        frame = inspect.currentframe().f_back.f_back
+        ex = Source.executing(frame)
+
+        # The node might be a Call or an expression containing a Call
+        node = ex.node
+        # Walk up the tree to find the parent Call node if necessary
+        while node is not None and not isinstance(node, ast.Call):
+            node = getattr(node, "parent", None)  # 'parent' is added by executing
+
+        if not isinstance(node, ast.Call):
+            raise RuntimeError(
+                "Could not find the `ast.Call` node in the execution frame."
+            )
+
+        call_node = node
+        sig = inspect.signature(func)
+        params = list(sig.parameters.keys())
+
+        # Map positional arguments to their source code
+        for i, arg_node in enumerate(call_node.args):
+            arg_map[params[i]] = ast.unparse(arg_node).strip()
+
+        # Map keyword arguments to their source code
+        for kw in call_node.keywords:
+            arg_map[kw.arg] = ast.unparse(kw.value).strip()
+
+    except Exception as e:
+        # If any part of the inspection fails, warn the user and continue.
+        print(f"Warning: Could not inspect function inputs for {func.__name__}: {e}")
+    return arg_map
+
+
 def _make_wrapper(TaskCls, func=None):
     """
     Common wrapper that, when called, adds a node to the current graph
@@ -195,6 +311,12 @@ def _make_wrapper(TaskCls, func=None):
 
         inputs = prepare_function_inputs(func, *call_args, **call_kwargs)
         task.set(inputs)
+        # Inspect the call site to get source-code string representation of inputs.
+        # This is used later to link graph inputs.
+        arg_map = _inspect_call_arguments(func)
+        if not hasattr(graph, "_task_arguments_mapping"):
+            setattr(graph, "_task_arguments_mapping", {})
+        getattr(graph, "_task_arguments_mapping")[task.name] = arg_map
         return task.outputs
 
     # Expose the TaskCls on the wrapper if you want

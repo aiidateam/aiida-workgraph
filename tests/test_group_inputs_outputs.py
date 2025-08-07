@@ -1,4 +1,4 @@
-from aiida_workgraph import WorkGraph
+from aiida_workgraph import WorkGraph, task
 
 
 def test_group_inputs_outputs(decorated_add):
@@ -41,3 +41,28 @@ def test_load_from_db():
     wg3 = WorkGraph.load(wg2.pk)
     assert wg3.inputs.x == 1
     assert wg3.inputs.z == 3
+
+
+def test_detect_graph_inputs(decorated_add):
+    """Test that graph inputs are detected correctly."""
+
+    # case 1: multiple graph inputs share the same value
+    @task.graph
+    def graph1(x, y):
+        decorated_add(x=x, y=y)
+
+    wg = graph1.build_graph(x=1, y=1)
+    assert "graph_inputs.x -> add.x" in wg.links
+    assert "graph_inputs.y -> add.y" in wg.links
+
+    # case 2: input variable was renamed
+    @task.graph
+    def graph1(x, y):
+        z = y
+        decorated_add(x=x, y=z)
+
+    wg = graph1.build_graph(x=1, y=1)
+    assert "graph_inputs.x -> add.x" in wg.links
+    # in this case, `x` and `y` share the same value, we can not distinguish them
+    # so use the first one, which is `x`
+    assert "graph_inputs.x -> add.y" in wg.links
