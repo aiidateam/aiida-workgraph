@@ -1,11 +1,11 @@
 import pytest
+from aiida_workgraph import task, WorkGraph
 
 
 @pytest.mark.usefixtures("started_daemon_client")
 def test_multiply_link() -> None:
     """Test multiply link."""
 
-    from aiida_workgraph import task, WorkGraph
     from aiida.orm import Float
 
     @task.calcfunction()
@@ -27,3 +27,14 @@ def test_multiply_link() -> None:
     # wg.submit(wait=True)
     wg.run()
     assert sum1.outputs.result.value == 6
+
+
+def test_top_level_outputs_link(decorated_add) -> None:
+    """Test link to top-level outputs."""
+
+    wg = WorkGraph(name="test_top_level_outputs_link")
+    add1 = wg.add_task(decorated_add, "add1")
+    add2 = wg.add_task(decorated_add, "add2")
+    wg.add_link(add1.outputs, add2.inputs.x)
+    # built-in "_outputs" socket is used to represent top-level outputs
+    assert "add1._outputs -> add2.x" in wg.links

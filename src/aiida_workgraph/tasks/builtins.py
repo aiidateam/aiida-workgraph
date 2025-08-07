@@ -24,8 +24,8 @@ class GraphLevelTask(Task):
 
         metadata = super().get_metadata()
         metadata["node_class"] = {
-            "module_path": self.node_class.__module__,
-            "callable_name": self.node_class.__name__,
+            "module_path": self.__class__.__module__,
+            "callable_name": self.__class__.__name__,
         }
         metadata["factory_class"] = {
             "module_path": self.factory_class.__module__,

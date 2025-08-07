@@ -13,29 +13,37 @@ Combine workgraphs
 #
 # To start, let's define a workgraph to add two numbers and multiply the sum by a third.
 
-from aiida_workgraph import WorkGraph, task
-from aiida import load_profile
+from aiida_workgraph import task
 
-load_profile()
+
+@task
+def add(x, y):
+    return x + y
+
+
+@task
+def multiply(x, y):
+    return x * y
+
+
+@task.graph
+def AddMultiply(x, y, z):
+    the_sum = add(x=x, y=y).result
+    return multiply(x=the_sum, y=z).result
+
 
 # %%
-with WorkGraph("AddMultiply") as wg1:
-    wg1.inputs = dict.fromkeys(["x", "y", "z"])
-    wg1.outputs.result = (wg1.inputs.x + wg1.inputs.y) * wg1.inputs.z
-
-wg1.to_html()
+# We're now ready to integrate our new `AddMultiply` workgraph into other workgraphs.
 
 # %%
-# We can see our two tasks, the linking of the sum to the first multiplication factor, and the assignment of the product as the final workgraph result.
-# We're now ready to integrate our new **AddMultiply** workgraph into other workgraphs.
-
-# %%
+# .. _howto:combine-workgraphs:add-workgraph:
+#
 # Add a workgraph as a task
 # -------------------------
 #
-# Adding a workgraph as a task of another is straightforward. We define a new workgraph, **AddMultiplyWorkGraph**, with a new task to generate a random number.
-# We then call the **AddMultiply** workgraph as a task within this new workgraph, assigning the random number to the ``z`` input (the multiplication factor).
-# Finally, we set the output of the **AddMultiply** workgraph as the output of the **AddMultiplyWorkGraph**.
+# Adding a workgraph as a task of another is straightforward. We define a new workgraph, `AddMultiplyComposed`, with a new task to generate a random number.
+# We then call the `AddMultiply` workgraph as a task within this new workgraph, assigning the random number to the ``z`` input (the multiplication factor).
+# We return the output of the `AddMultiply` workgraph, effectively assigning it as the output of the `AddMultiplyComposed`.
 
 
 @task
@@ -45,68 +53,46 @@ def generate_random_number(minimum, maximum):
     return random.randint(minimum, maximum)
 
 
-with WorkGraph("AddMultiplyComposed") as wg2:
-    wg2.inputs = dict.fromkeys(["min", "max", "x", "y"])
+@task.graph
+def AddMultiplyComposed(minimum, maximum, x, y):
+    random_number = generate_random_number(minimum=minimum, maximum=maximum).result
+    return AddMultiply(x=x, y=y, z=random_number).result
 
-    wg2.outputs.result = wg1(
-        inputs={
-            "x": wg2.inputs.x,
-            "y": wg2.inputs.y,
-            "z": generate_random_number(
-                minimum=wg2.inputs.min,
-                maximum=wg2.inputs.max,
-            ).result,
-        }
-    ).result
 
-wg2.to_html()
+wg = AddMultiplyComposed.build_graph(minimum=1, maximum=10, x=1, y=2)
 
 # %%
-# See how we're using **AddMultiply** as a regular task? It's as simple as that!
-# Let's run our new workgraph and have a look at its result.
+# See how we're using `AddMultiply` as a regular task? It's as simple as that!
+# This is also clear in when we visualize the workgraph:
 
-wg2.submit(
-    inputs={
-        "min": 1,
-        "max": 10,
-        "x": 1,
-        "y": 2,
-    },
-    wait=True,
-)
+wg.to_html()
 
 # %%
-random_number_data_node = wg2.tasks.generate_random_number.outputs.result.value
-final_result_data_node = wg2.outputs.result.value
+# .. tip::
+#
+#    When using the AiiDA GUI, you can inspect a nested workgraph by clicking on the task node, then on **Go to WorkGraph**.
+#    To learn more about this, see this :ref:`GUI section<web-ui:nested-workgraphs>`.
+#
+# Let's run our composed workgraph and have a look at its result:
 
-print(f"Randomly generated number: {random_number_data_node.value}")
-print(
-    f"Final result: {final_result_data_node.value} = (1 + 2) * {random_number_data_node.value}"
-)
+from aiida import load_profile
+
+load_profile()
+
+wg.run()
+
+random_number = wg.tasks.generate_random_number.outputs.result.value.value
+
+print("\nResults:")
+print("  Random number:", random_number)
+print("  Final result:", f"{wg.outputs.result.value.value} = (1 + 2) * {random_number}")
 
 # %%
-# Let's have a look at the provenance graph.
+# Let's have a look at the provenance graph:
 
 from aiida_workgraph.utils import generate_node_graph
 
-generate_node_graph(wg2.pk)
-
-# %%
-# Making it reusable
-# -------------------
-#
-# Now, how do we make this reusable? Simple! We just wrap **AddMultiply** in a generating function.
-
-
-def generate_add_multiply_workgraph():
-    with WorkGraph("AddMultiply") as wg:
-        wg.inputs = dict.fromkeys(["x", "y", "z"])
-        wg.outputs.result = (wg.inputs.x + wg.inputs.y) * wg.inputs.z
-    return wg
-
-
-# %%
-# Now we can generate an **AddMultiply** workgraph anytime we need one in our workflows.
+generate_node_graph(wg.pk)
 
 # %%
 # Summary

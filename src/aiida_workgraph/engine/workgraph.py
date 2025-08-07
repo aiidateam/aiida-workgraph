@@ -288,13 +288,13 @@ class WorkGraphEngine(Process, metaclass=Protect):
         self.wg = WorkGraph.load(self.node, safe_load=False)
         # init task results
         self.ctx._task_results = {}
-        self.task_manager.set_task_results()
         # create a builtin `_context` task with its results as the context variables
         self.ctx._task_results = {
             "graph_ctx": self.wg.ctx._value,
             "graph_inputs": self.wg.inputs._value,
             "graph_outputs": self.wg.outputs._value,
         }
+        self.task_manager.set_task_results()
         # set meta-tasks state
         for task_name in BUILTIN_NODES:
             self.task_manager.state_manager.set_task_runtime_info(
