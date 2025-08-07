@@ -43,17 +43,29 @@ from aiida import orm, load_profile
 load_profile()
 
 
-@task()
+@task
 def add(x, y):
     return x + y
 
 
-@task.graph()
+@task
+def multiply(x, y):
+    return x * y
+
+
+@task.graph
 def my_workflow(x, y):
     """A simple workflow to add two numbers."""
     outputs = add(x=x, y=y)
     return outputs.result
 
+
+# %%
+# .. note::
+#
+#    When you call a task function like ``add(...)`` inside a graph task, it **doesn't run immediately**.
+#    Instead, it creates a task node in the workflow and returns a *reference* of its future result.
+#    You can then wire this reference as an input to the next task, defining the dependencies between tasks.
 
 # A user can now easily create and run the workflow:
 wg = my_workflow.build_graph(x=1, y=2)
@@ -102,17 +114,17 @@ print("Workflow outputs:", wg.outputs.result)
 # (`add` or `multiply`) is ever added to the `WorkGraph`.
 
 
-@task()
+@task
 def multiply(x, y):
     return x * y
 
 
-@task()
+@task
 def sum_diff(x, y):
     return {"sum": x + y, "diff": x - y}
 
 
-@task.graph()
+@task.graph
 def add_multiply_if(data_node, y):
     """
     Builds a workflow that either adds or multiplies based on a
@@ -162,7 +174,7 @@ with WorkGraph("GraphBuilderExample") as wg:
 # graph is flatter but more verbose.
 
 
-@task()
+@task
 def extract_value(data, key):
     return data[key]
 

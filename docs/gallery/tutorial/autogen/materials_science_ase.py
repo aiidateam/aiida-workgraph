@@ -5,9 +5,6 @@ Computational materials science with ASE
 
 Introduction
 ============
-This tutorial will guide you through building, running, and visualizing computational workflows using `AiiDA-WorkGraph` and the `Atomistic Simulation Environment (ASE) <https://wiki.fysik.dtu.dk/ase/>`_.
-You'll learn how to construct complex pipelines where every calculation and data point is automatically tracked, ensuring your research is completely reproducible.
-
 We'll explore two key examples that highlight the flexibility of AiiDA-WorkGraph:
 
 1.  **Atomization energy**: A simple, linear workflow to calculate the atomization energy of a diatomic molecule.
@@ -30,6 +27,7 @@ from aiida import load_profile
 load_profile()
 
 # %%
+# .. _ase_atomization_energy:
 # Atomization energy of a diatomic molecule
 # ==========================================
 # The atomization energy (:math:`\Delta E`) is the energy required to break a molecule down into its individual, separate atoms.
@@ -112,6 +110,7 @@ generate_node_graph(wg.pk)
 
 
 # %%
+# .. _ase_eos:
 # Equation of state
 # ==================
 # Now for a more complex and practical example: calculating the Equation of State (EOS) for a bulk material.

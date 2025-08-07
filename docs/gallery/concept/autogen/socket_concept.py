@@ -295,7 +295,7 @@ with WorkGraph("dynamic_namespace_example") as wg:
 # %%
 # .. important::
 #
-#    **Connecting sockets: yhy `data=...` is essential**
+#    **Connecting sockets: why `data=...` is essential**
 #
 #    When linking a dynamic namespace to a task that accepts keyword arguments (`**kwargs`),
 #    you **must** explicitly name the input argument. In our example:
