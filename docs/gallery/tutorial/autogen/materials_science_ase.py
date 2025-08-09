@@ -81,17 +81,24 @@ def atomization_energy_workflow(molecule_obj: Atoms, atom_obj: Atoms) -> float:
 # --------------------------
 
 
+# %%
 # First, we create the input structures for a nitrogen atom and molecule using ASE.
 atom = Atoms("N")
 mol = molecule("N2")
 
+# %%
 # Next, build the workgraph, but doesn't run it.
 wg = atomization_energy_workflow.build_graph(molecule_obj=mol, atom_obj=atom)
 
-# You can generate an HTML file to visualize the planned workflow.
+# %%
+# You can visualize the planned workflow.
+#
+# .. note::
+#
+#    If you run in a Jupyter notebook, replace ``wg.to_html()`` with ``wg``.
+
 wg.to_html()
-# If you're in a Jupyter notebook, you can often display the graph directly.
-# wg
+
 
 # %%
 # Now, execute the workgraph, which runs the tasks in the correct sequence.
