@@ -4,11 +4,11 @@ build-backend = "flit_core.buildapi"
 
 [project]
 name = "aiida-workgraph"
-dynamic = ["version"] # read from aiida_workgraph/__init__.py
+dynamic = ["version"]  # read from aiida_workgraph/__init__.py
 description = "Design flexible node-based workflow for AiiDA calculation."
-authors = [{ name = "Xing Wang", email = "xingwang1991@gmail.com" }]
+authors = [{name = "Xing Wang", email = "xingwang1991@gmail.com"}]
 readme = "README.md"
-license = { file = "LICENSE" }
+license = {file = "LICENSE"}
 classifiers = [
     "Development Status :: 1 - Planning",
     "Framework :: AiiDA",
@@ -28,7 +28,7 @@ dependencies = [
     "numpy~=1.21",
     "scipy",
     "ase",
-    "node-graph==0.2.19",
+    "node-graph @ git+https://github.com/scinode/node-graph.git",
     "node-graph-widget>=0.0.5",
     "aiida-core~=2.6",
     "cloudpickle",
@@ -61,7 +61,10 @@ docs = [
     "sphinx-autobuild",
     "click~=8.1.0",
 ]
-pre-commit = ["pre-commit~=2.2", "pylint~=2.17.4"]
+pre-commit = [
+    "pre-commit~=2.2",
+    "pylint~=2.17.4",
+]
 tests = [
     'pgtest~=1.3',
     "pytest~=7.0",
@@ -99,9 +102,9 @@ workgraph = "aiida_workgraph.cli.cmd_workgraph:workgraph"
 "workgraph.select" = "aiida_workgraph.tasks.builtins:Select"
 "workgraph.set_context" = "aiida_workgraph.tasks.builtins:SetContext"
 "workgraph.get_context" = "aiida_workgraph.tasks.builtins:GetContext"
-"workgraph.monitor_time" = "aiida_workgraph.tasks.monitors:monitor_time"
-"workgraph.monitor_file" = "aiida_workgraph.tasks.monitors:monitor_file"
-"workgraph.monitor_task" = "aiida_workgraph.tasks.monitors:monitor_task"
+"workgraph.time_monitor" = "aiida_workgraph.tasks.monitors:TimeMonitor"
+"workgraph.file_monitor" = "aiida_workgraph.tasks.monitors:FileMonitor"
+"workgraph.task_monitor" = "aiida_workgraph.tasks.monitors:TaskMonitor"
 "workgraph.aiida_int" = "aiida_workgraph.tasks.builtins:AiiDAInt"
 "workgraph.aiida_float" = "aiida_workgraph.tasks.builtins:AiiDAFloat"
 "workgraph.aiida_string" = "aiida_workgraph.tasks.builtins:AiiDAString"
@@ -145,8 +148,13 @@ workgraph = "aiida_workgraph.cli.cmd_workgraph:workgraph"
 [project.entry-points."aiida_workgraph.type_mapping"]
 "workgraph.builtins_mapping" = "aiida_workgraph.orm.mapping:builtins_type_mapping"
 
+
 [tool.flit.sdist]
-exclude = ["docs/", "tests/"]
+exclude = [
+    "docs/",
+    "tests/",
+]
+
 
 [tool.pylint.format]
 max-line-length = 120

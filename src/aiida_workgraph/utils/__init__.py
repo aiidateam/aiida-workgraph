@@ -442,6 +442,10 @@ def workgraph_to_short_json(
         if len(node["inputs"]) == 0 and len(node["outputs"]) == 0:
             del wgdata_short["nodes"][name]
 
+    # remove the inputs socket of "graph_inputs"
+    if "graph_inputs" in wgdata_short["nodes"]:
+        wgdata_short["nodes"]["graph_inputs"]["inputs"] = []
+
     return wgdata_short
 
 
@@ -562,6 +566,7 @@ def serialize_socket_data(input_socket: Dict[str, Any]) -> None:
     values to AiiDA Data nodes, if needed.
     """
     from aiida_pythonjob.data.serializer import general_serializer
+    from node_graph.socket import TaggedValue
 
     if input_socket["identifier"] == "workgraph.namespace":
         for socket in input_socket["sockets"].values():
@@ -570,4 +575,6 @@ def serialize_socket_data(input_socket: Dict[str, Any]) -> None:
         value = input_socket.get("property", {}).get("value")
         if value is None or isinstance(value, orm.Data):
             return
+        if isinstance(value, TaggedValue):
+            value = value.__wrapped__
         input_socket["property"]["value"] = general_serializer(value)
