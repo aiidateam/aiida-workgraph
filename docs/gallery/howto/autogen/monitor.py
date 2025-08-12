@@ -49,7 +49,8 @@ import datetime
 
 
 @task.monitor
-def monitor_time(time):
+def monitor_time(time: str):
+    time = datetime.datetime.fromisoformat(time)
     return datetime.datetime.now() > time
 
 
@@ -65,7 +66,7 @@ def TimeMonitor(time, x, y):
 
 
 wg = TimeMonitor.build_graph(
-    time=datetime.datetime.now() + datetime.timedelta(seconds=5),
+    time=(datetime.datetime.now() + datetime.timedelta(seconds=5)).isoformat(),
     x=1,
     y=2,
 )
