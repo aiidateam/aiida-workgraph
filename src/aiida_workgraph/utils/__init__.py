@@ -12,6 +12,7 @@ from aiida_pythonjob.calculations.pyfunction import PyFunction
 from aiida_shell.calculations.shell import ShellJob
 import inspect
 from yaml.constructor import ConstructorError
+from node_graph.socket import TaggedValue
 
 
 def inspect_aiida_component_type(executor: Callable) -> str:
@@ -330,6 +331,8 @@ def get_raw_value(identifier, value: Any) -> Any:
         "workgraph.aiida_string",
         "workgraph.aiida_bool",
     ]:
+        if isinstance(value, TaggedValue):
+            value = value.__wrapped__
         if value is not None and isinstance(value, orm.Data):
             return value.value
         else:
@@ -566,7 +569,6 @@ def serialize_socket_data(input_socket: Dict[str, Any]) -> None:
     values to AiiDA Data nodes, if needed.
     """
     from aiida_pythonjob.data.serializer import general_serializer
-    from node_graph.socket import TaggedValue
 
     if input_socket["identifier"] == "workgraph.namespace":
         for socket in input_socket["sockets"].values():
