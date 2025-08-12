@@ -12,6 +12,7 @@ from aiida_pythonjob.calculations.pyfunction import PyFunction
 from aiida_shell.calculations.shell import ShellJob
 import inspect
 from yaml.constructor import ConstructorError
+from node_graph.socket import TaggedValue
 
 
 def inspect_aiida_component_type(executor: Callable) -> str:
@@ -330,6 +331,8 @@ def get_raw_value(identifier, value: Any) -> Any:
         "workgraph.aiida_string",
         "workgraph.aiida_bool",
     ]:
+        if isinstance(value, TaggedValue):
+            value = value.__wrapped__
         if value is not None and isinstance(value, orm.Data):
             return value.value
         else:
@@ -441,6 +444,10 @@ def workgraph_to_short_json(
         node = wgdata_short["nodes"][name]
         if len(node["inputs"]) == 0 and len(node["outputs"]) == 0:
             del wgdata_short["nodes"][name]
+
+    # remove the inputs socket of "graph_inputs"
+    if "graph_inputs" in wgdata_short["nodes"]:
+        wgdata_short["nodes"]["graph_inputs"]["inputs"] = []
 
     return wgdata_short
 
@@ -570,4 +577,6 @@ def serialize_socket_data(input_socket: Dict[str, Any]) -> None:
         value = input_socket.get("property", {}).get("value")
         if value is None or isinstance(value, orm.Data):
             return
+        if isinstance(value, TaggedValue):
+            value = value.__wrapped__
         input_socket["property"]["value"] = general_serializer(value)

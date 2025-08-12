@@ -99,7 +99,7 @@ def _assign_wg_outputs(
 
 def _run_func_with_wg(
     func: Callable,
-    graph_task_output_names: List[str],
+    TaskCls: callable,
     args: tuple,
     kwargs: dict,
     var_kwargs: Optional[dict] = None,
@@ -108,11 +108,53 @@ def _run_func_with_wg(
     Run func(*args, **kwargs, **(var_kwargs or {})) inside a WorkGraph,
     assign its outputs and return the WorkGraph.
     """
+    from node_graph.utils import tag_socket_value
+
     merged = {**kwargs, **(var_kwargs or {})}
     with WorkGraph(func.__name__) as wg:
-        raw = func(*args, **merged)
+        wg.graph_inputs.inputs = TaskCls.InputCollectionClass._from_dict(
+            TaskCls._ndata.get("inputs", {}),
+            node=wg.graph_inputs,
+            pool=TaskCls.SocketPool,
+            graph=wg,
+        )
+        graph_task_output_names = [
+            name
+            for name, socket in TaskCls._ndata.get("outputs", {})
+            .get("sockets", {})
+            .items()
+            if not socket.get("metadata", {}).get("builtin_socket", False)
+        ]
+        inputs = prepare_function_inputs(func, *args, **merged)
+        wg.graph_inputs.set(inputs)
+        tag_socket_value(wg.inputs)
+        inputs = wg.inputs._value
+        raw = func(**wg.inputs._value)
         _assign_wg_outputs(raw, wg, graph_task_output_names)
         return wg
+
+
+def prepare_function_inputs(func, *call_args, **call_kwargs):
+    """Prepare the inputs for the function call.
+    This function extracts the arguments from the function signature and
+    assigns them to the inputs dictionary."""
+    inputs = dict(call_kwargs or {})
+    if func is not None:
+        arguments = list(call_args)
+        orginal_func = func._func if hasattr(func, "_func") else func
+        for name, parameter in inspect.signature(orginal_func).parameters.items():
+            if parameter.kind in [
+                parameter.POSITIONAL_ONLY,
+                parameter.POSITIONAL_OR_KEYWORD,
+            ]:
+                try:
+                    inputs[name] = arguments.pop(0)
+                except IndexError:
+                    pass
+            elif parameter.kind is parameter.VAR_POSITIONAL:
+                # not supported
+                raise ValueError("VAR_POSITIONAL is not supported.")
+    return inputs
 
 
 def _make_wrapper(TaskCls, func=None):
@@ -133,23 +175,7 @@ def _make_wrapper(TaskCls, func=None):
         if active_zone:
             active_zone.children.add(task)
 
-        inputs = dict(call_kwargs or {})
-        if func is not None:
-            arguments = list(call_args)
-            orginal_func = func._func if hasattr(func, "_func") else func
-
-            for name, parameter in inspect.signature(orginal_func).parameters.items():
-                if parameter.kind in [
-                    parameter.POSITIONAL_ONLY,
-                    parameter.POSITIONAL_OR_KEYWORD,
-                ]:
-                    try:
-                        inputs[name] = arguments.pop(0)
-                    except IndexError:
-                        pass
-                elif parameter.kind is parameter.VAR_POSITIONAL:
-                    # not supported
-                    raise ValueError("VAR_POSITIONAL is not supported.")
+        inputs = prepare_function_inputs(func, *call_args, **call_kwargs)
         task.set(inputs)
         return task.outputs
 
@@ -218,6 +244,7 @@ class TaskDecoratorCollection:
         """
 
         def decorator(callable):
+
             # function or builtin function
             if inspect.isfunction(callable) or callable.__module__ == "builtins":
                 # calcfunction and workfunction
@@ -292,15 +319,8 @@ class TaskDecoratorCollection:
 
             def build_graph(*args, **kwargs):
                 """This function is used to get the graph from the wrapped function."""
-                graph_task_output_names = [
-                    name
-                    for name, socket in TaskCls._ndata.get("outputs", {})
-                    .get("sockets", {})
-                    .items()
-                    if not socket.get("metadata", {}).get("builtin_socket", False)
-                ]
 
-                return _run_func_with_wg(func, graph_task_output_names, args, kwargs)
+                return _run_func_with_wg(func, TaskCls, args, kwargs)
 
             wrapped_func.build_graph = build_graph
 

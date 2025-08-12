@@ -351,8 +351,9 @@ class WorkGraphEngine(Process, metaclass=Protect):
         """Finalize the workgraph.
         Output the results of the workgraph and the new data.
         """
-        # expose outputs of the workgraph
+        # in case we expose the ctx and inputs as outputs directly
         self.task_manager.state_manager.update_meta_tasks("graph_ctx")
+        self.task_manager.state_manager.update_meta_tasks("graph_inputs")
         self.out_many(self.ctx._task_results["graph_outputs"])
         # output the new data
         if self.ctx._new_data:
