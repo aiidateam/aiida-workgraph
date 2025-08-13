@@ -10,6 +10,8 @@ class DecoratedFunctionTaskFactory(BaseTaskFactory):
     """A factory to create specialized subclasses of Task from functions."""
 
     default_task_type = "Normal"
+    additional_inputs = {}
+    additional_outputs = {}
 
     @classmethod
     def from_function(
@@ -49,6 +51,10 @@ class DecoratedFunctionTaskFactory(BaseTaskFactory):
         # add built-in sockets
         task_inputs["sockets"].update(builtin_inputs.copy())
         task_outputs["sockets"].update(builtin_outputs.copy())
+        for name, input_data in cls.additional_inputs.items():
+            task_inputs["sockets"][name] = input_data.copy()
+        for name, output in cls.additional_outputs.items():
+            task_outputs["sockets"][name] = output.copy()
 
         tdata = {
             "identifier": identifier,

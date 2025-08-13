@@ -77,3 +77,14 @@ class MonitorFunctionTaskFactory(DecoratedFunctionTaskFactory):
 
     default_task_type = "monitor"
     default_base_class = MonitorFunctionTask
+
+    additional_inputs = {
+        "interval": {
+            "identifier": "workgraph.float",
+            "property": {"default": 5},
+        },
+        "timeout": {
+            "identifier": "workgraph.float",
+            "property": {"default": 3600},
+        },
+    }
