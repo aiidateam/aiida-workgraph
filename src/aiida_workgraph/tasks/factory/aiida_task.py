@@ -3,7 +3,6 @@ from aiida_workgraph.task import Task
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 from aiida_workgraph.orm.mapping import type_mapping
 from node_graph.executor import NodeExecutor
-import inspect
 from aiida.engine.processes.ports import PortNamespace
 from aiida_workgraph.config import builtin_inputs, builtin_outputs
 from .base import BaseTaskFactory
@@ -13,8 +12,8 @@ from aiida_workgraph.tasks.aiida import (
     CalcJobTask,
     WorkChainTask,
 )
-from node_graph.utils import validate_socket_data
-
+from aiida_workgraph.tasks.factory.function_task import DecoratedFunctionTaskFactory
+from aiida_workgraph.utils import inspect_aiida_component_type
 
 task_class_mapping = {
     "CALCFUNCTION": CalcFunctionTask,
@@ -106,18 +105,15 @@ def add_output_recursive(
     return outputs
 
 
-def get_task_data_from_aiida_component(
+def get_task_data_from_process_class(
     callable: Callable,
-    inputs: Optional[List[str]] = None,
-    outputs: Optional[List[str]] = None,
 ) -> Tuple["Task", Dict[str, Any]]:
     """Register a task from a AiiDA component.
     For example: CalcJob, WorkChain, CalcFunction, WorkFunction."""
-    from aiida_workgraph.utils import inspect_aiida_component_type
 
     tdata = {"metadata": {}}
-    inputs = {} if inputs is None else inputs
-    outputs = {} if outputs is None else outputs
+    inputs = {}
+    outputs = {}
     task_type = inspect_aiida_component_type(callable)
     if not task_type:
         raise ValueError(f"The callable {callable} is not a valid AiiDA component.")
@@ -126,32 +122,8 @@ def get_task_data_from_aiida_component(
         add_input_recursive(inputs, port, required=port.required)
     for _, port in spec.outputs.ports.items():
         add_output_recursive(outputs, port, required=port.required)
-    # Only check this for calcfunction and workfunction
-    if inspect.isfunction(callable) and spec.inputs.dynamic:
-        if hasattr(callable.process_class, "_varargs"):
-            name = callable.process_class._varargs
-        else:
-            name = (
-                callable.process_class._var_keyword
-                or callable.process_class._var_positional
-            )
-        # if user already defined the var_args in the inputs, skip it
-        if name not in inputs:
-            inputs[name] = {
-                "identifier": "workgraph.namespace",
-                "link_limit": 1e6,
-                "metadata": {"arg_type": "var_kwargs", "dynamic": True},
-            }
-
     tdata["identifier"] = tdata.pop("identifier", callable.__name__)
     tdata["executor"] = NodeExecutor.from_callable(callable).to_dict()
-    # Add default output result for function tasks
-    if task_type.upper() in ["CALCFUNCTION", "WORKFUNCTION"]:
-        outputs = (
-            {"result": {"identifier": "workgraph.any", "name": "result"}}
-            if not outputs
-            else outputs
-        )
     # Add default name for the task
     tdata["default_name"] = callable.__name__
     # add built-in sockets
@@ -180,7 +152,32 @@ class AiiDAComponentTaskFactory(BaseTaskFactory):
     """Factory for creating tasks from AiiDA components."""
 
     @classmethod
-    def from_aiida_component(
+    def from_aiida_process_class(
+        cls,
+        callable: Callable,
+        identifier: Optional[str] = None,
+        error_handlers: Optional[List[Dict[str, Any]]] = None,
+        catalog: str = "Others",
+        additional_data: Optional[Dict[str, Any]] = None,
+    ):
+        """
+        Build the _AiiDAComponentTask subclass from AiiDA process class: CalcJob, WorkChain
+        """
+
+        identifier = identifier or callable.__name__
+        error_handlers = error_handlers or []
+
+        tdata = get_task_data_from_process_class(callable)
+        tdata["metadata"]["catalog"] = catalog
+        additional_data = additional_data or {}
+        tdata.update(additional_data)
+
+        TaskCls = cls(tdata)
+        callable.identifier = identifier
+        return TaskCls
+
+    @classmethod
+    def from_aiida_process_function(
         cls,
         callable: Callable,
         identifier: Optional[str] = None,
@@ -191,17 +188,31 @@ class AiiDAComponentTaskFactory(BaseTaskFactory):
         additional_data: Optional[Dict[str, Any]] = None,
     ):
         """
-        Build the _AiiDAComponentTask subclass from the function
-        and the various decorator arguments.
+        Build the _AiiDAComponentTask subclass from the AiiDA process function: CalcFunction, WorkFunction
         """
 
         identifier = identifier or callable.__name__
         error_handlers = error_handlers or []
-        inputs = validate_socket_data(inputs) or {}
-        outputs = validate_socket_data(outputs) or {}
 
-        tdata = get_task_data_from_aiida_component(
-            callable, inputs=inputs, outputs=outputs
+        TaskCls0 = DecoratedFunctionTaskFactory.from_function(
+            callable,
+            identifier=identifier,
+            inputs=inputs,
+            outputs=outputs,
+            error_handlers=error_handlers,
+        )
+        tdata = TaskCls0._ndata
+        # add additional inputs from the AiiDA process: metadata.
+        spec = callable.spec()
+        add_input_recursive(
+            tdata["inputs"]["sockets"], spec.inputs.get("metadata"), required=False
+        )
+        task_type = inspect_aiida_component_type(callable)
+        if not task_type:
+            raise ValueError(f"The callable {callable} is not a valid AiiDA component.")
+        tdata["metadata"]["node_type"] = task_type
+        tdata["metadata"]["node_class"] = task_class_mapping.get(
+            task_type.upper(), Task
         )
         tdata["metadata"]["catalog"] = catalog
         additional_data = additional_data or {}

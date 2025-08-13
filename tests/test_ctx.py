@@ -1,6 +1,7 @@
 from aiida_workgraph import WorkGraph, task
 from typing import Callable
 from aiida.orm import Float, ArrayData
+from node_graph import spec
 import numpy as np
 import pytest
 
@@ -52,14 +53,8 @@ def test_task_update_ctx(decorated_add: Callable) -> None:
 
 
 def test_task_update_nested_ctx():
-    @task(
-        outputs={
-            "results": {"identifier": "workgraph.namespace"},
-            "results.sum": {},
-            "results.product": {},
-        }
-    )
-    def add(x, y):
+    @task
+    def add(x, y) -> spec.namespace(results=spec.namespace(sum=any, product=any)):
         return {"results": {"sum": x + y, "product": x * y}}
 
     wg = WorkGraph()

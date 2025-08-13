@@ -7,6 +7,7 @@ from .aiida_task import AiiDAComponentTaskFactory
 from aiida_workgraph import Task
 from node_graph.executor import NodeExecutor
 from node_graph.utils import validate_socket_data
+from aiida_workgraph.orm.mapping import type_mapping
 
 additional_inputs = {
     "command": {"identifier": "workgraph.any"},
@@ -107,21 +108,34 @@ class ShellJobTaskFactory(BaseTaskFactory):
     @classmethod
     def create_task(
         cls,
-        outputs: Optional[List[Union[str, dict]]] = None,
-        parser_outputs: Optional[List[Union[str, dict]]] = None,
+        outputs: Optional[type | List[Union[str, dict]]] = None,
+        parser_outputs: Optional[type | List[Union[str, dict]]] = None,
     ):
         from aiida_shell.parsers.shell import ShellParser
+        from node_graph.nodes.utils import _build_output_from_spec_type
 
-        outputs = validate_socket_data(outputs) or {}
-        parser_outputs = validate_socket_data(parser_outputs) or {}
-        TaskCls = AiiDAComponentTaskFactory.from_aiida_component(ShellJob)
+        outputs = validate_socket_data(outputs)
+        parser_outputs = validate_socket_data(parser_outputs)
+        TaskCls = AiiDAComponentTaskFactory.from_aiida_process_class(ShellJob)
         tdata = TaskCls._ndata
         tdata["outputs"]["sockets"].update(additional_outputs.copy())
-
+        outputs = (
+            _build_output_from_spec_type(outputs, type_mapping=type_mapping)["sockets"]
+            if outputs
+            else {}
+        )
         outputs = {
             ShellParser.format_link_label(output): {"identifier": "workgraph.any"}
             for output in outputs
         }
+        parser_outputs = (
+            _build_output_from_spec_type(parser_outputs, type_mapping=type_mapping)[
+                "sockets"
+            ]
+            if parser_outputs
+            else {}
+        )
+
         outputs.update(parser_outputs)
         for name, output in outputs.items():
             if name not in tdata["outputs"]["sockets"]:

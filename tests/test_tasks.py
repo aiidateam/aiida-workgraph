@@ -2,6 +2,7 @@ import pytest
 from aiida_workgraph import WorkGraph, task
 from typing import Callable
 from aiida import orm
+from node_graph import spec
 
 
 def test_normal_task(decorated_add) -> None:
@@ -195,12 +196,9 @@ def test_set_inputs_from_builder(add_code) -> None:
 
 def test_namespace_outputs():
     @task.calcfunction(
-        outputs={
-            "add_multiply": {"identifier": "workgraph.namespace"},
-            "add_multiply.add": {},
-            "add_multiply.multiply": {},
-            "minus": {},
-        }
+        outputs=spec.namespace(
+            add_multiply=spec.namespace(add=any, multiply=any), minus=any
+        )
     )
     def myfunc(x, y):
         return {
@@ -210,6 +208,7 @@ def test_namespace_outputs():
 
     wg = WorkGraph("test_namespace_outputs")
     wg.add_task(myfunc, name="myfunc", x=1.0, y=2.0)
+    print(wg.tasks.myfunc.outputs)
     wg.run()
     assert wg.tasks.myfunc.outputs.minus.value == -1
     assert wg.tasks.myfunc.outputs.add_multiply.add.value == 3
