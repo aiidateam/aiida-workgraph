@@ -174,7 +174,7 @@ class TaskManager:
 
             self.logger.info(f"Run task: {name}, type: {task.node_type}")
             inputs = self.get_inputs(name)
-            print("kwargs: ", inputs["kwargs"])
+            # print("kwargs: ", inputs["kwargs"])
             self.ctx._task_results[task.name] = {}
             task_type = task.node_type.upper()
             if task_type in ["CALCFUNCTION", "PYFUNCTION", "WORKFUNCTION"]:
