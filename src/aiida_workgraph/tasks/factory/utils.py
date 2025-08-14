@@ -17,7 +17,7 @@ def generate_tdata(
     additional_data: Optional[Dict[str, Any]] = None,
 ) -> Dict[str, Any]:
     """Generate task data for creating a task."""
-    from node_graph.decorator import generate_input_sockets
+    from node_graph.nodes.utils import generate_input_sockets
 
     task_inputs = generate_input_sockets(
         func, inputs, properties, type_mapping=type_mapping

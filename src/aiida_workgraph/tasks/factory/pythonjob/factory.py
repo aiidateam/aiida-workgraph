@@ -1,4 +1,4 @@
-from typing import Any, Callable, Dict, List, Optional, Tuple, Union
+from typing import Any, Callable, Dict, List, Optional, Union
 from aiida_workgraph.tasks.factory.aiida_task import AiiDAComponentTaskFactory
 from aiida_workgraph.tasks.factory.function_task import DecoratedFunctionTaskFactory
 from aiida_pythonjob import PythonJob
@@ -29,7 +29,6 @@ class BasePythonTaskFactory(BaseTaskFactory):
         cls,
         func: Callable,
         identifier: Optional[str] = None,
-        properties: Optional[List[Tuple[str, str]]] = None,
         inputs: Optional[List[Union[str, dict]]] = None,
         outputs: Optional[List[Union[str, dict]]] = None,
         error_handlers: Optional[List[Dict[str, Any]]] = None,
@@ -39,15 +38,12 @@ class BasePythonTaskFactory(BaseTaskFactory):
         """The task is a combination of function task and AiiDA component task."""
 
         if not hasattr(func, "_TaskCls"):
-            outputs = outputs or {
-                "result": {"identifier": "workgraph.any", "name": "result"}
-            }
+            outputs = outputs
             TaskCls0 = DecoratedFunctionTaskFactory.from_function(
                 func,
                 identifier=identifier,
                 inputs=inputs,
                 outputs=outputs,
-                properties=properties,
                 error_handlers=error_handlers,
             )
         else:
@@ -56,7 +52,7 @@ class BasePythonTaskFactory(BaseTaskFactory):
             raise ValueError(
                 "Graph task cannot be run remotely. Please remove 'PythonJob'."
             )
-        TaskCls = AiiDAComponentTaskFactory.from_aiida_component(cls.process_class)
+        TaskCls = AiiDAComponentTaskFactory.from_aiida_process_class(cls.process_class)
         tdata = TaskCls0._ndata
         # merge the inputs and outputs from the process_class task to the function task
         # skip the already existed inputs and outputs

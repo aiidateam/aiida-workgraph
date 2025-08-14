@@ -9,7 +9,7 @@ This guide will walk you through how to define, customize, and organize sockets 
 
 """
 from aiida.manage import load_profile
-from aiida_workgraph import task, WorkGraph
+from aiida_workgraph import task, WorkGraph, spec
 from aiida import orm
 
 # Load the AiiDA profile to interact with the database
@@ -47,13 +47,8 @@ print("Output sockets: ", task1.get_output_names())
 # - The function returns a dictionary: The keys of the returned dictionary must match the socket names.
 
 
-@task(
-    outputs={
-        "sum": {"identifier": "workgraph.Any"},
-        "difference": {"identifier": "workgraph.Any"},
-    }
-)
-def add_and_subtract(x, y):
+@task
+def add_and_subtract(x, y) -> spec.namespace(sum=any, difference=any):
     """Return the sum and difference of two numbers in a dict."""
     return {
         "sum": x + y,
@@ -74,13 +69,8 @@ print("Output sockets: ", task2.get_output_names())
 #    Be sure that the number of elements in the returned tuple matches the number of defined output sockets.
 
 
-@task(
-    outputs={
-        "sum": {"identifier": "workgraph.Any"},
-        "difference": {"identifier": "workgraph.Any"},
-    }
-)
-def add_and_subtract(x, y):
+@task
+def add_and_subtract(x, y) -> spec.namespace(sum=any, difference=any):
     """Return the sum and difference of two numbers as a tuple."""
     return x + y, x - y
 
@@ -186,26 +176,14 @@ with WorkGraph("simple_namespace_example") as wg:
 # -----------------
 # For more complex data structures, you can define nested namespaces. This allows you to create a hierarchical organization for your sockets.
 
-
-@task(
-    outputs={
-        "normal": {
-            "identifier": "workgraph.namespace",
-            "sockets": {
-                "sum": {"identifier": "workgraph.any"},
-                "product": {"identifier": "workgraph.any"},
-            },
-        },
-        "squared": {
-            "identifier": "workgraph.namespace",
-            "sockets": {
-                "sum": {"identifier": "workgraph.any"},
-                "product": {"identifier": "workgraph.any"},
-            },
-        },
-    }
+out = spec.namespace(
+    normal=spec.namespace(sum=any, product=any),
+    squared=spec.namespace(sum=any, product=any),
 )
-def advanced_math(x, y):
+
+
+@task
+def advanced_math(x, y) -> out:
     """A task with a nested output structure."""
     return {
         "normal": {"sum": x + y, "product": x * y},
@@ -235,15 +213,8 @@ with WorkGraph("nested_namespace_example") as wg:
 # To create one, define a namespace socket and set its metadata to `{"dynamic": True}`.
 
 
-@task(
-    outputs={
-        "squares": {
-            "identifier": "workgraph.namespace",
-            "metadata": {"dynamic": True},
-        }
-    }
-)
-def generate_squares(n: int):
+@task
+def generate_squares(n: int) -> spec.namespace(squares=spec.dynamic(int)):
     """Generates a dynamic number of square values."""
     # The return dictionary must match the output socket names.
     # The value for the "squares" dynamic namespace is another dictionary,

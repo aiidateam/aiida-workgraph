@@ -15,7 +15,7 @@ Write workflows using the node-graph programming paradigm
 #
 # First, we set up our AiiDA environment:
 
-from aiida_workgraph import WorkGraph, task
+from aiida_workgraph import WorkGraph, task, spec
 from aiida import load_profile
 
 load_profile()
@@ -193,15 +193,8 @@ wg.to_html()
 # which indicates that `result` is a dynamic output and will be a namespace.
 
 
-@task(
-    outputs={
-        "result": {
-            "identifier": "workgraph.namespace",
-            "metadata": {"dynamic": True},
-        }
-    }
-)
-def generate_data(N):
+@task
+def generate_data(N) -> spec.namespace(result=spec.dynamic(any)):
     """Generates a dictionary with N items."""
     data = {f"item_{i}": i for i in range(N)}
     return {"result": data}

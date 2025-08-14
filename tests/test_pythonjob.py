@@ -2,6 +2,7 @@ import pytest
 from aiida_workgraph import WorkGraph, task, Task, TaskPool
 from typing import Any
 import numpy as np
+from node_graph import spec
 
 
 def test_to_dict():
@@ -147,18 +148,15 @@ def test_PythonJob_namespace_output_input(fixture_localhost, python_executable_p
     """Test function with namespace output and input."""
 
     # output namespace
-    @task(
-        outputs={
-            "add_multiply": {"identifier": "workgraph.namespace"},
-            "add_multiply.add": {
-                "identifier": "workgraph.namespace",
-                "metadata": {"dynamic": True},
-            },
-            "add_multiply.multiply": {},
-            "minus": {},
-        }
+    out = spec.namespace(
+        add_multiply=spec.namespace(
+            add=spec.namespace(sum=any, total=any), multiply=any
+        ),
+        minus=any,
     )
-    def myfunc(x, y):
+
+    @task
+    def myfunc(x, y) -> out:
         return {
             "add_multiply": {"add": {"sum": x + y, "total": x + y}, "multiply": x * y},
             "minus": x - y,

@@ -5,6 +5,7 @@ from .tasks import TaskPool
 from .tasks.factory.shelljob_task import shelljob
 from .utils.flow_control import if_, while_, map_
 from .manager import get_current_graph, If, Map, While, Zone
+from node_graph import spec
 
 __version__ = "0.6.0"
 
@@ -23,4 +24,5 @@ __all__ = [
     "While",
     "TaskPool",
     "shelljob",
+    "spec",
 ]

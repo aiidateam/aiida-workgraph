@@ -16,8 +16,8 @@ from aiida_workgraph.tasks.factory import (
 
 def build_task(
     executor: Union[Callable, str],
-    inputs: Optional[List[str | dict]] = None,
-    outputs: Optional[List[str | dict]] = None,
+    inputs: Optional[type | list] = None,
+    outputs: Optional[type | list] = None,
 ) -> Task:
     """Build task from executor."""
 
@@ -31,8 +31,8 @@ def build_task(
 
 def build_task_from_callable(
     executor: Callable,
-    inputs: Optional[List[str | dict]] = None,
-    outputs: Optional[List[str | dict]] = None,
+    inputs: Optional[type | list] = None,
+    outputs: Optional[type | list] = None,
 ) -> Task:
     """Build task from a callable object.
     First, check if the executor is already a task.
@@ -54,7 +54,7 @@ def build_task_from_callable(
     if inspect.isfunction(executor):
         # calcfunction and workfunction
         if getattr(executor, "node_class", False):
-            return AiiDAComponentTaskFactory.from_aiida_component(
+            return AiiDAComponentTaskFactory.from_aiida_process_function(
                 executor, inputs=inputs, outputs=outputs
             )
         else:
@@ -65,9 +65,11 @@ def build_task_from_callable(
             )
     else:
         if issubclass(executor, CalcJob) or issubclass(executor, WorkChain):
-            return AiiDAComponentTaskFactory.from_aiida_component(
-                executor, inputs=inputs, outputs=outputs
-            )
+            if inputs is not None or outputs is not None:
+                raise ValueError(
+                    "Can not override inputs or outputs of an AiiDA process classes."
+                )
+            return AiiDAComponentTaskFactory.from_aiida_process_class(executor)
     raise ValueError(f"The executor {executor} is not supported.")
 
 
@@ -226,9 +228,8 @@ class TaskDecoratorCollection:
     def decorator_task(
         identifier: Optional[str] = None,
         task_type: str = "Normal",
-        properties: Optional[List[Tuple[str, str]]] = None,
-        inputs: Optional[List[str | dict]] = None,
-        outputs: Optional[List[str | dict]] = None,
+        inputs: Optional[type | list] = None,
+        outputs: Optional[type | list] = None,
         error_handlers: Optional[List[Dict[str, Any]]] = None,
         catalog: str = "Others",
         store_provenance: bool = True,
@@ -238,7 +239,6 @@ class TaskDecoratorCollection:
         Attributes:
             indentifier (str): task identifier
             catalog (str): task catalog
-            properties (list): task properties
             inputs (list): task inputs
             outputs (list): task outputs
         """
@@ -249,7 +249,7 @@ class TaskDecoratorCollection:
             if inspect.isfunction(callable) or callable.__module__ == "builtins":
                 # calcfunction and workfunction
                 if getattr(callable, "node_class", False):
-                    TaskCls = AiiDAComponentTaskFactory.from_aiida_component(
+                    TaskCls = AiiDAComponentTaskFactory.from_aiida_process_function(
                         callable, inputs=inputs, outputs=outputs
                     )
                 else:
@@ -265,7 +265,6 @@ class TaskDecoratorCollection:
                             func=callable,
                             identifier=identifier,
                             task_type=task_type,
-                            properties=properties,
                             inputs=inputs,
                             outputs=outputs,
                             error_handlers=error_handlers,
@@ -273,8 +272,12 @@ class TaskDecoratorCollection:
                         )
             else:
                 if issubclass(callable, CalcJob) or issubclass(callable, WorkChain):
-                    TaskCls = AiiDAComponentTaskFactory.from_aiida_component(
-                        callable, inputs=inputs, outputs=outputs
+                    if inputs is not None or outputs is not None:
+                        raise ValueError(
+                            "Can not override inputs or outputs of an AiiDA process classes."
+                        )
+                    TaskCls = AiiDAComponentTaskFactory.from_aiida_process_class(
+                        callable
                     )
             # if callable is a function, we pass it to the make_wrapper
             if not inspect.isfunction(callable):
@@ -287,7 +290,6 @@ class TaskDecoratorCollection:
     @nonfunctional_usage
     def decorator_graph(
         identifier: Optional[str] = None,
-        properties: Optional[List[Tuple[str, str]]] = None,
         inputs: Optional[List[Tuple[str, str]]] = None,
         outputs: Optional[List[Tuple[str, str]]] = None,
         catalog: str = "Others",
@@ -296,7 +298,6 @@ class TaskDecoratorCollection:
         Attributes:
             indentifier (str): task identifier
             catalog (str): task catalog
-            properties (list): task properties
             inputs (list): task inputs
             outputs (list): task outputs
         """
@@ -308,7 +309,6 @@ class TaskDecoratorCollection:
                 func=func,
                 identifier=identifier,
                 task_type="graph_task",
-                properties=properties,
                 inputs=inputs,
                 outputs=outputs,
                 catalog=catalog,
@@ -331,13 +331,13 @@ class TaskDecoratorCollection:
     @staticmethod
     @nonfunctional_usage
     def calcfunction(
-        inputs: Optional[List[str | dict]] = None,
-        outputs: Optional[List[str | dict]] = None,
+        inputs: Optional[type | list] = None,
+        outputs: Optional[type | list] = None,
         error_handlers: Optional[List[Dict[str, Any]]] = None,
     ) -> Callable:
         def decorator(func):
             func_decorated = calcfunction(func)
-            TaskCls = AiiDAComponentTaskFactory.from_aiida_component(
+            TaskCls = AiiDAComponentTaskFactory.from_aiida_process_function(
                 func_decorated,
                 inputs=inputs,
                 outputs=outputs,
@@ -351,13 +351,13 @@ class TaskDecoratorCollection:
     @staticmethod
     @nonfunctional_usage
     def workfunction(
-        inputs: Optional[List[str | dict]] = None,
-        outputs: Optional[List[str | dict]] = None,
+        inputs: Optional[type | list] = None,
+        outputs: Optional[type | list] = None,
         error_handlers: Optional[List[Dict[str, Any]]] = None,
     ) -> Callable:
         def decorator(func):
             func_decorated = workfunction(func)
-            TaskCls = AiiDAComponentTaskFactory.from_aiida_component(
+            TaskCls = AiiDAComponentTaskFactory.from_aiida_process_function(
                 func_decorated,
                 inputs=inputs,
                 outputs=outputs,
@@ -371,8 +371,8 @@ class TaskDecoratorCollection:
     @staticmethod
     @nonfunctional_usage
     def pythonjob(
-        inputs: Optional[List[str | dict]] = None,
-        outputs: Optional[List[str | dict]] = None,
+        inputs: Optional[type | list] = None,
+        outputs: Optional[type | list] = None,
         error_handlers: Optional[List[Dict[str, Any]]] = None,
     ) -> Callable:
         def decorator(func):
@@ -391,8 +391,8 @@ class TaskDecoratorCollection:
     @staticmethod
     @nonfunctional_usage
     def awaitable(
-        inputs: Optional[List[str | dict]] = None,
-        outputs: Optional[List[str | dict]] = None,
+        inputs: Optional[type | list] = None,
+        outputs: Optional[type | list] = None,
     ) -> Callable:
         def decorator(func):
             from aiida_workgraph.tasks.factory.awaitable_task import (
@@ -412,8 +412,8 @@ class TaskDecoratorCollection:
     @staticmethod
     @nonfunctional_usage
     def monitor(
-        inputs: Optional[List[str | dict]] = None,
-        outputs: Optional[List[str | dict]] = None,
+        inputs: Optional[type | list] = None,
+        outputs: Optional[type | list] = None,
     ) -> Callable:
         def decorator(func):
             from aiida_workgraph.tasks.factory.awaitable_task import (
@@ -428,23 +428,9 @@ class TaskDecoratorCollection:
                     f"Function '{func.__name__}' defines parameter(s) {sorted(conflicts)}, "
                     "which conflict with default 'monitor' arguments."
                 )
-            task_inputs = inputs if inputs is not None else {}
-            # Add default interval and timeout
-            task_inputs.update(
-                {
-                    "interval": {
-                        "identifier": "workgraph.float",
-                        "property": {"default": 5},
-                    },
-                    "timeout": {
-                        "identifier": "workgraph.float",
-                        "property": {"default": 3600},
-                    },
-                }
-            )
             TaskCls = MonitorFunctionTaskFactory.from_function(
                 func=func,
-                inputs=task_inputs,
+                inputs=inputs,
                 outputs=outputs,
             )
 

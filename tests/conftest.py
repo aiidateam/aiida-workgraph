@@ -6,6 +6,7 @@ from typing import Callable, Any, Union
 from aiida.orm import WorkflowNode
 import time
 import os
+from node_graph import spec
 
 pytest_plugins = [
     "aiida.tools.pytest_fixtures",
@@ -220,21 +221,10 @@ def decorated_add_multiply_group(decorated_add, decorated_multiply) -> Callable:
 def decorated_namespace_sum_diff() -> Callable:
     """Generate a decorated node for test."""
 
-    @task(
-        inputs={
-            "nested": {"identifier": "namespace"},
-            "nested.x": {},
-            "nested.y": {},
-        },
-        outputs={
-            "sum": {},
-            "diff": {},
-            "nested": {"identifier": "namespace"},
-            "nested.sum": {},
-            "nested.diff": {},
-        },
-    )
-    def sum_diff(x, y, nested):
+    out = spec.namespace(sum=any, diff=any, nested=spec.namespace(diff=any, sum=any))
+
+    @task
+    def sum_diff(x, y, nested: spec.namespace(x=any, y=any)) -> out:
         """Add two numbers and return the result."""
         return {
             "sum": x + y,

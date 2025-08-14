@@ -46,7 +46,7 @@ load_profile()
 #    We're using the ASE EMT (Effective Medium Theory) calculator because it's exceptionally fast and perfect for demonstrations.
 #    You can easily swap it with any other ASE-compatible calculator, like Quantum ESPRESSO, VASP, or GPAW, for your research.
 #
-from aiida_workgraph import task
+from aiida_workgraph import task, spec
 from ase import Atoms
 from ase.build import molecule
 
@@ -143,15 +143,10 @@ def relax_structure(atoms: Atoms) -> Atoms:
     return atoms
 
 
-@task(
-    outputs={
-        "scaled_structures": {
-            "identifier": "workgraph.namespace",
-            "metadata": {"dynamic": True},
-        }
-    }
-)
-def create_strained_structures(atoms: Atoms, scales: list) -> dict:
+@task
+def create_strained_structures(
+    atoms: Atoms, scales: list
+) -> spec.namespace(scaled_structures=spec.dynamic(Atoms)):
     """Generate a series of strained structures from a list of scaling factors."""
     scaled_structures = {}
     for i, scale in enumerate(scales):
@@ -180,12 +175,10 @@ def calculate_energy_and_volume(atoms: Atoms) -> dict:
     }
 
 
-@task.graph(
-    outputs={
-        "results": {"identifier": "workgraph.namespace", "metadata": {"dynamic": True}}
-    }
-)
-def calc_all_structures(**scaled_structures) -> dict:
+@task.graph
+def calc_all_structures(
+    **scaled_structures,
+) -> spec.namespace(results=spec.dynamic(dict)):
     """Sub-workflow to calculate energy and volume for all strained structures in parallel."""
     results = {}
     for key, atoms in scaled_structures.items():

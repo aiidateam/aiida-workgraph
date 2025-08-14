@@ -3,13 +3,14 @@ from aiida_workgraph import WorkGraph, task
 from aiida_workgraph.socket import TaskSocketNamespace
 from typing import Callable
 from aiida_workgraph.manager import get_current_graph, set_current_graph
+from node_graph import spec
 
 
 def test_custom_outputs():
     """Test custom outputs."""
 
-    @task(outputs={"sum": {}, "product": {"identifier": "workgraph.any"}})
-    def add_multiply(x, y):
+    @task
+    def add_multiply(x, y) -> spec.namespace(sum=any, product=any):
         return {"sum": x + y, "product": x * y}
 
     n = add_multiply._TaskCls()
@@ -226,16 +227,8 @@ def test_decorator_graph_namespace_outputs(decorated_add: Callable) -> None:
     """=Test namespace outputs in graph builder."""
     from aiida_workgraph.socket import TaskSocketNamespace, TaskSocket
 
-    @task.graph(
-        outputs={
-            "add1": {
-                "identifier": "workgraph.namespace",
-                "metadata": {"dynamic": True},
-            },
-            "sum": {},
-        }
-    )
-    def add_group(x, y, z):
+    @task.graph
+    def add_group(x, y, z) -> spec.namespace(add1=spec.dynamic(any), sum=any):
         outputs1 = decorated_add(x=x, y=y)
         return {"add1": outputs1, "sum": outputs1.result}
 
