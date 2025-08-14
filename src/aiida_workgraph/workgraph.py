@@ -352,6 +352,8 @@ class WorkGraph(node_graph.NodeGraph):
         for task in wg.tasks:
             if hasattr(task, "children"):
                 task.children.add(wgdata["nodes"][task.name].get("children", []))
+        # reinstate the tasks
+        wgdata["tasks"] = wgdata.pop("nodes")
 
         return wg
 
