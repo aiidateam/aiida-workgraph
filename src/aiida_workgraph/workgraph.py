@@ -8,7 +8,6 @@ from aiida_workgraph.socket import TaskSocket
 from aiida_workgraph.tasks import TaskPool
 from aiida_workgraph.task import Task
 import time
-from aiida_workgraph.collection import TaskCollection
 from aiida_workgraph.utils.graph import (
     task_deletion_hook,
     task_creation_hook,
@@ -19,7 +18,9 @@ from typing import Any, Dict, List, Optional, Union
 
 from node_graph.analysis import NodeGraphAnalysis
 from node_graph.node_graph import BUILTIN_NODES
+from node_graph.collection import NodeCollection
 from aiida_workgraph.sockets import SocketPool
+from aiida_workgraph.orm.mapping import type_mapping
 
 
 class WorkGraph(node_graph.NodeGraph):
@@ -39,6 +40,7 @@ class WorkGraph(node_graph.NodeGraph):
     NodePool = TaskPool
     SocketPool = SocketPool
     platform: str = "aiida_workgraph"
+    type_mapping: dict = type_mapping
 
     def __init__(self, name: str = "WorkGraph", **kwargs) -> None:
         """
@@ -53,7 +55,6 @@ class WorkGraph(node_graph.NodeGraph):
         self.restart_process = None
         self.max_number_jobs = 1000000
         self.max_iteration = 1000000
-        self.nodes = TaskCollection(self, pool=self.NodePool)
         self.nodes.post_deletion_hooks = [task_deletion_hook]
         self.nodes.post_creation_hooks = [task_creation_hook]
         self.links.post_creation_hooks = [link_creation_hook]
@@ -62,7 +63,7 @@ class WorkGraph(node_graph.NodeGraph):
         self.analyzer = NodeGraphAnalysis(self)
 
     @property
-    def tasks(self) -> TaskCollection:
+    def tasks(self) -> NodeCollection:
         """Add alias to `nodes` for WorkGraph"""
         return self.nodes
 

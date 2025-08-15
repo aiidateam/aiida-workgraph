@@ -37,7 +37,7 @@ def test_inputs_outptus_auto_generate(wg_calcfunction: WorkGraph) -> None:
 
 def test_build_task_from_workgraph(decorated_add: Callable) -> None:
     # create a sub workgraph
-    from aiida_workgraph.collection import TaskCollection
+    from node_graph.collection import NodeCollection
 
     x = orm.Int(1).store()
 
@@ -54,7 +54,7 @@ def test_build_task_from_workgraph(decorated_add: Callable) -> None:
     assert hasattr(wg.tasks.sub_wg, "workgraph")
     assert hasattr(wg.tasks.sub_wg, "links")
     assert hasattr(wg.tasks.sub_wg, "tasks")
-    assert isinstance(wg.tasks.sub_wg.tasks, TaskCollection)
+    assert isinstance(wg.tasks.sub_wg.tasks, NodeCollection)
     assert wg.tasks.sub_wg.tasks.add1.graph.name == "build_task_from_workgraph"
 
     wg.add_task(decorated_add, name="add2", y=3)
