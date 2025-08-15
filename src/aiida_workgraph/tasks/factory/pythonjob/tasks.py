@@ -9,6 +9,10 @@ from aiida_workgraph.utils import create_and_pause_process
 from node_graph.executor import NodeExecutor
 from aiida.engine import run_get_node
 from aiida_pythonjob import pyfunction
+from aiida_pythonjob.ports_adapter import (
+    inputs_sockets_to_ports,
+    outputs_sockets_to_ports,
+)
 
 
 class BaseSerializablePythonTask(Task):
@@ -82,31 +86,16 @@ class BaseSerializablePythonTask(Task):
         """
         raise NotImplementedError("Subclasses must implement `execute`.")
 
-    def build_function_ports(self, socket):
-        # Build an explicit list of function outputs
-        port = {
-            "name": socket._name,
-            "identifier": socket._identifier,
-            "required": socket._metadata.required,
-        }
-        if hasattr(socket, "_sockets"):
-            port["ports"] = []
-            for name, sub_socket in socket._sockets.items():
-                if not (
-                    sub_socket._metadata.extras.get("is_pythonjob", False)
-                    or sub_socket._metadata.builtin_socket
-                ):
-                    if sub_socket._identifier.upper() == "WORKGRAPH.NAMESPACE":
-                        port["ports"].append(self.build_function_ports(sub_socket))
-                    else:
-                        port["ports"].append(
-                            {
-                                "name": name,
-                                "identifier": sub_socket._identifier,
-                                "required": sub_socket._metadata.required,
-                            }
-                        )
-        return port
+    def filter_function_ports(self, socket):
+        pop_outputs = []
+        for name, sub_socket in socket["sockets"].items():
+            if sub_socket["metadata"].get("builtin_socket", False):
+                pop_outputs.append(name)
+            elif sub_socket["metadata"].get("extras", {}).get("is_pythonjob", False):
+                pop_outputs.append(name)
+        for name in pop_outputs:
+            socket["sockets"].pop(name, None)
+        return socket
 
 
 class PythonJobTask(BaseSerializablePythonTask):
@@ -160,15 +149,19 @@ class PythonJobTask(BaseSerializablePythonTask):
         if hasattr(func, "is_process_function"):
             func = func.func
 
-        input_ports = self.build_function_ports(self.inputs)
-        output_ports = self.build_function_ports(self.outputs)
+        input_ports = inputs_sockets_to_ports(
+            self.filter_function_ports(self.inputs._to_dict())
+        )
+        output_ports = outputs_sockets_to_ports(
+            self.filter_function_ports(self.outputs._to_dict())
+        )
 
         # Prepare the final inputs for PythonJob
         inputs = prepare_pythonjob_inputs(
             function=func,
             function_inputs=function_inputs,
-            input_ports=input_ports["ports"],
-            output_ports=output_ports["ports"],
+            input_ports=input_ports,
+            output_ports=output_ports,
             code=kwargs.pop("code", None),
             command_info=command_info,
             computer=computer,
@@ -217,12 +210,16 @@ class PyFunctionTask(BaseSerializablePythonTask):
 
         kwargs = kwargs or {}
         kwargs.setdefault("metadata", {})
-        input_ports = self.build_function_ports(self.inputs)
-        output_ports = self.build_function_ports(self.outputs)
+        input_ports = inputs_sockets_to_ports(
+            self.filter_function_ports(self.inputs._to_dict())
+        )
+        output_ports = outputs_sockets_to_ports(
+            self.filter_function_ports(self.outputs._to_dict())
+        )
 
         kwargs["metadata"].update({"call_link_label": self.name})
-        kwargs["input_ports"] = input_ports["ports"]
-        kwargs["output_ports"] = output_ports["ports"]
+        kwargs["input_ports"] = input_ports
+        kwargs["output_ports"] = output_ports
 
         # If we have var_kwargs, pass them in
         if var_kwargs is None:

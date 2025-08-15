@@ -129,7 +129,7 @@ def test_PythonJob_kwargs(fixture_localhost, python_executable_path):
     assert wg.tasks.add1.inputs["kwargs"]._value == {"m": 2, "n": 3}
 
 
-def test_dynamic_inputs() -> None:
+def test_dynamic_inputs(fixture_localhost) -> None:
     """Test dynamic inputs.
     For dynamic inputs, we allow the user to define the inputs manually.
     """
