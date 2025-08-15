@@ -121,14 +121,6 @@ with WorkGraph(
         sums=spec.namespace(first=any, second=any, third=any), product=any
     ),
 ) as wg:
-    wg.inputs = {
-        "add": {
-            "first": dict.fromkeys(["x", "y"]),
-            "second": dict.fromkeys(["x", "y"]),
-        },
-        "multiply": dict.fromkeys(["factor"]),
-    }
-
     first_sum = add(
         x=wg.inputs.add.first.x,
         y=wg.inputs.add.first.y,
