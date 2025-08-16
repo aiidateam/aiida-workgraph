@@ -1,5 +1,5 @@
 import pytest
-from aiida_workgraph import WorkGraph, task
+from aiida_workgraph import WorkGraph, task, spec
 from aiida import orm
 from aiida.calculations.arithmetic.add import ArithmeticAddCalculation
 
@@ -200,7 +200,10 @@ def test_wait_timeout(create_workgraph_process_node):
 def test_inputs_outputs(decorated_namespace_sum_diff):
     """Test the group inputs and outputs of the WorkGraph."""
 
-    wg = WorkGraph(name="test_inputs_outputs")
+    wg = WorkGraph(
+        name="test_inputs_outputs",
+        inputs=spec.namespace(x=any, nested=spec.namespace(x=any)),
+    )
     wg.inputs = {"x": 1, "nested.x": 2}
     # same as
     # wg.add_input("workgraph.any", "x")
@@ -226,8 +229,7 @@ def test_inputs_run_submit_api():
     """Test running a WorkGraph with inputs provided in the `run` and `submit` APIs."""
 
     def generate_workgraph():
-        with WorkGraph() as wg:
-            wg.inputs = dict.fromkeys(["x", "y"])
+        with WorkGraph(inputs=spec.namespace(x=any, y=any)) as wg:
             wg.outputs.sum = wg.inputs.x + wg.inputs.y
         return wg
 

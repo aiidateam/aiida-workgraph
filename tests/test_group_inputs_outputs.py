@@ -1,9 +1,13 @@
-from aiida_workgraph import WorkGraph, task
+from aiida_workgraph import WorkGraph, task, spec
 
 
 def test_group_inputs_outputs(decorated_add):
     """Group inputs and outputs in a WorkGraph."""
-    wg = WorkGraph("test_group_inputs_outputs")
+    wg = WorkGraph(
+        "test_group_inputs_outputs",
+        inputs=spec.namespace(add=spec.namespace(x=any, y=any)),
+        outputs=spec.namespace(results=spec.namespace(sum1=any, sum2=any)),
+    )
     wg.inputs = {
         "add": {
             "x": 1,
@@ -30,7 +34,7 @@ def test_load_from_db():
     """Test loading a WorkGraph from the database."""
     from aiida_workgraph.tasks.builtins import GraphInputs
 
-    wg = WorkGraph("test_load_from_db")
+    wg = WorkGraph("test_load_from_db", inputs=spec.namespace(x=any, y=any, z=any))
     wg.inputs = {"x": 1, "y": 2}
     wg.save()
     wg2 = WorkGraph.load(wg.pk)

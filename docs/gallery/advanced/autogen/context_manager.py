@@ -49,11 +49,11 @@ def AddMultiply(x, y, z):
 # %%
 # Now, let's see how we can achieve the same result using the context manager paradigm.
 
-from aiida_workgraph import WorkGraph
+from aiida_workgraph import WorkGraph, spec
 
-with WorkGraph("AddMultiplyContextManager") as wg:
-    wg.inputs = dict.fromkeys(["x", "y", "z"])
-
+with WorkGraph(
+    "AddMultiplyContextManager", inputs=spec.namespace(x=any, y=any, z=any)
+) as wg:
     the_sum = add(
         x=wg.inputs.x,
         y=wg.inputs.y,
@@ -109,15 +109,18 @@ wg.to_html()
 # We can define our workflow inputs (and outputs) using namespaces for clarity and convenience.
 # For example, consider the following workflow:
 
-with WorkGraph("AddThreeMultiplyContextManager") as wg:
-    wg.inputs = {
-        "add": {
-            "first": dict.fromkeys(["x", "y"]),
-            "second": dict.fromkeys(["x", "y"]),
-        },
-        "multiply": dict.fromkeys(["factor"]),
-    }
-
+with WorkGraph(
+    "AddThreeMultiplyContextManager",
+    inputs=spec.namespace(
+        add=spec.namespace(
+            first=spec.namespace(x=any, y=any), second=spec.namespace(x=any, y=any)
+        ),
+        multiply=spec.namespace(factor=any),
+    ),
+    outputs=spec.namespace(
+        sums=spec.namespace(first=any, second=any, third=any), product=any
+    ),
+) as wg:
     first_sum = add(
         x=wg.inputs.add.first.x,
         y=wg.inputs.add.first.y,
@@ -232,9 +235,7 @@ def generate_random_number(minimum, maximum):
 
 
 def generate_add_multiply_workgraph():
-    with WorkGraph() as wg:
-        wg.inputs = dict.fromkeys(["x", "y", "z"])
-
+    with WorkGraph(inputs=spec.namespace(x=any, y=any, z=any)) as wg:
         the_sum = add(
             x=wg.inputs.x,
             y=wg.inputs.y,
@@ -249,9 +250,9 @@ def generate_add_multiply_workgraph():
     return wg
 
 
-with WorkGraph("AddMultiplyComposed") as wg:
-    wg.inputs = dict.fromkeys(["min", "max", "x", "y"])
-
+with WorkGraph(
+    "AddMultiplyComposed", inputs=spec.namespace(min=any, max=any, x=any, y=any)
+) as wg:
     random_number = generate_random_number(
         minimum=wg.inputs.min,
         maximum=wg.inputs.max,
@@ -551,9 +552,7 @@ assert wg.outputs.result == 12
 #
 # Let's run an add-multiply workflow with a hardcoded multiplication factor:
 
-with WorkGraph("AddMultiplyToBeContinued") as wg1:
-    wg1.inputs = dict.fromkeys(["x", "y"])
-
+with WorkGraph("AddMultiplyToBeContinued", inputs=spec.namespace(x=any, y=any)) as wg1:
     the_sum = add(
         x=wg1.inputs.x,
         y=wg1.inputs.y,
@@ -607,7 +606,7 @@ print(f"  Product: {wg2.outputs.product.value}")
 
 with WorkGraph.load(wg2.pk) as wg3:
     wg3.name = "AddMultiplyContinued"
-    wg3.inputs.z = None  # introduce a new input socket
+    wg3.add_input("workgraph.any", name="z")  # introduce a new input socket
     wg3.restart()
     new_sum = add(
         x=wg3.tasks.multiply.outputs.result,
