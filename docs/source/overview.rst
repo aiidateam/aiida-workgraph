@@ -153,7 +153,7 @@ Advanced control and modularity
         def time_monitor(time):
             """This task waits until a specified time has passed."""
             import datetime
-            return datetime.datetime.now() > datetime.datetime.fromisoformat(time.value)
+            return datetime.datetime.now() > time.value
 
 Intuitive user experience
 -------------------------

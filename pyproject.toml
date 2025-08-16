@@ -81,6 +81,7 @@ workgraph = "aiida_workgraph.cli.cmd_workgraph:workgraph"
 
 [project.entry-points."aiida.data"]
 "workgraph.pickled_data" = "aiida_workgraph.orm.pickled_data:PickledData"
+"workgraph.datetime.datetime" = "aiida_workgraph.orm.data:DateTimeData"
 
 [project.entry-points."aiida.node"]
 "process.workflow.workgraph" = "aiida_workgraph.orm.workgraph:WorkGraphNode"
