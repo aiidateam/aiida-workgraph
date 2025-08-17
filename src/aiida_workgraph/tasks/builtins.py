@@ -1,6 +1,7 @@
 from typing import Any, Dict
 from aiida_workgraph.task import Task, ChildTaskSet
 from aiida_workgraph.tasks.factory.base import BaseTaskFactory
+from node_graph.socket import NodeSocket
 
 
 class GraphLevelTask(Task):
@@ -153,6 +154,11 @@ class Map(Zone):
         )
         self.add_output("workgraph.any", "_wait")
 
+    def gather(self, socket: NodeSocket) -> None:
+        gather_item = self.graph.add_task("workgraph.gather_item")
+        self.graph.add_link(socket, gather_item.inputs.item)
+        return gather_item.outputs.items
+
 
 class MapItem(Task):
     """MapItem"""
@@ -174,6 +180,30 @@ class MapItem(Task):
         executor = {
             "module_path": "aiida_workgraph.executors.builtins",
             "callable_name": "get_item",
+        }
+        return executor
+
+
+class GatherItem(Task):
+    """GatherItem"""
+
+    identifier = "workgraph.gather_item"
+    name = "GatherItem"
+    node_type = "Normal"
+    catalog = "Control"
+
+    def create_sockets(self) -> None:
+        self.inputs._clear()
+        self.outputs._clear()
+
+        self.add_input("workgraph.any", "item")
+        self.add_output("workgraph.namespace", "items")
+        self.add_output("workgraph.any", "_wait")
+
+    def get_executor(self):
+        executor = {
+            "module_path": "aiida_workgraph.executors.builtins",
+            "callable_name": "return_inputs",
         }
         return executor
 
