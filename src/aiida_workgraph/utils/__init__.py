@@ -580,3 +580,28 @@ def serialize_socket_data(input_socket: Dict[str, Any]) -> None:
         if isinstance(value, TaggedValue):
             value = value.__wrapped__
         input_socket["property"]["value"] = general_serializer(value)
+
+
+def clean_node_links_manager(data: Dict[str, Any]) -> Dict[str, Any]:
+    """Recursively clean a NodeLinksManager to a dictionary representation."""
+    results = {}
+    for key, value in data.items():
+        if isinstance(value, orm.NodeLinksManager):
+            results[key] = node_link_manager_to_dict(value)
+        else:
+            results[key] = value
+    return results
+
+
+def node_link_manager_to_dict(
+    node_link_manager: orm.NodeLinksManager,
+) -> Dict[str, Any]:
+    """Convert a NodeLinksManager to a dictionary representation."""
+    data = {}
+    for name in node_link_manager._get_keys():
+        item = node_link_manager._get_node_by_link_label(name)
+        if isinstance(item, orm.NodeLinksManager):
+            data[name] = node_link_manager_to_dict(item)
+        else:
+            data[name] = item
+    return data

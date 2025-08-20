@@ -183,9 +183,13 @@ class TaskStateManager:
             ]:
                 key = link.to_socket._scoped_name
                 result_key = link.from_socket._scoped_name
-                result = get_nested_dict(
-                    self.ctx._task_results[name], result_key, default=None
-                )
+                # built-in "_outputs" means the whole task result
+                if result_key == "_outputs":
+                    result = self.ctx._task_results[name]
+                else:
+                    result = get_nested_dict(
+                        self.ctx._task_results[name], result_key, default=None
+                    )
                 update_nested_dict(
                     self.ctx._task_results[link.to_node.name], key, result
                 )
