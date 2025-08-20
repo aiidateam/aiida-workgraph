@@ -1,19 +1,13 @@
 from node_graph.collection import (
-    NodeCollection,
     PropertyCollection,
     group,
 )
 from typing import Any, Callable, Optional, Union
 
 __all__ = [
-    "TaskCollection",
     "WorkGraphPropertyCollection",
     "group",
 ]
-
-
-class TaskCollection(NodeCollection):
-    """Collection of tasks."""
 
 
 class WorkGraphPropertyCollection(PropertyCollection):
