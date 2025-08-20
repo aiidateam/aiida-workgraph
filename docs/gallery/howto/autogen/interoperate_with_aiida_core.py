@@ -39,7 +39,7 @@ from aiida.calculations.arithmetic.add import ArithmeticAddCalculation
 from aiida.engine import calcfunction, workfunction
 from aiida.workflows.arithmetic.multiply_add import MultiplyAddWorkChain
 
-from aiida_workgraph import task
+from aiida_workgraph import task, spec
 
 # %%
 # Next, let's define a ``calcfunction`` and ``workfunction``
@@ -177,7 +177,7 @@ def multiply(x, y):
 
 
 @task.graph
-def IntegratedAddMultiply():
+def IntegratedAddMultiply() -> spec.namespace(sum=any, product=any):
     the_sum = add(1, 2).result
     the_product = multiply(the_sum, 3).result
     return {"sum": the_sum, "product": the_product}
