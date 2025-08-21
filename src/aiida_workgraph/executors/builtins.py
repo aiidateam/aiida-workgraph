@@ -22,3 +22,9 @@ def select(condition, true=None, false=None):
 def get_item(data: dict, key: str) -> Any:
     """Get an item from a dictionary."""
     return data.get(key, None)
+
+
+def return_inputs(**inputs: dict) -> dict:
+    """Return the inputs"""
+    inputs["items"] = inputs.pop("item", {})
+    return inputs
