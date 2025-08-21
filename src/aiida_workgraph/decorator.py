@@ -73,27 +73,32 @@ def build_task_from_callable(
     raise ValueError(f"The executor {executor} is not supported.")
 
 
-def _assign_wg_outputs(
-    outputs: Any, wg: WorkGraph, graph_task_output_names: List[str]
-) -> None:
+def _assign_wg_outputs(outputs: Any, wg: WorkGraph) -> None:
     """
     Inspect the raw outputs from the function and attach them to the WorkGraph.
     """
-    from node_graph.socket import BaseSocket
+    from node_graph.socket import NodeSocket, NodeSocketNamespace
 
-    if isinstance(outputs, BaseSocket):
+    if isinstance(outputs, NodeSocket):
         wg.outputs.result = outputs
+    elif isinstance(outputs, NodeSocketNamespace):
+        for socket in outputs:
+            # skip some built-in outputs from the task, e.g., the exit_code
+            if socket._name not in wg.outputs:
+                # Should we raise an warning here?
+                continue
+            wg.outputs[socket._name] = socket
     elif isinstance(outputs, dict):
         wg.outputs = outputs
     elif isinstance(outputs, tuple):
-        if len(outputs) != len(graph_task_output_names):
+        if len(outputs) != len(wg.outputs) - 2:  # -2 for built-in outputs
             raise ValueError(
                 f"The length of the outputs {len(outputs)} does not match the length of the \
-                    Graph task outputs {len(graph_task_output_names)}."
+                    Graph task outputs {len(wg.outputs)}."
             )
         outputs_dict = {}
         for i, output in enumerate(outputs):
-            outputs_dict[graph_task_output_names[i]] = output
+            outputs_dict[wg.outputs[i]._name] = output
         wg.outputs = outputs_dict
     else:
         wg.outputs.result = outputs
@@ -120,19 +125,18 @@ def _run_func_with_wg(
             pool=TaskCls.SocketPool,
             graph=wg,
         )
-        graph_task_output_names = [
-            name
-            for name, socket in TaskCls._ndata.get("outputs", {})
-            .get("sockets", {})
-            .items()
-            if not socket.get("metadata", {}).get("builtin_socket", False)
-        ]
+        wg.graph_outputs.inputs = TaskCls.InputCollectionClass._from_dict(
+            TaskCls._ndata.get("outputs", {}),
+            node=wg.graph_outputs,
+            pool=TaskCls.SocketPool,
+            graph=wg,
+        )
         inputs = prepare_function_inputs(func, *args, **merged)
         wg.graph_inputs.set(inputs)
         tag_socket_value(wg.inputs)
         inputs = wg.inputs._value
         raw = func(**wg.inputs._value)
-        _assign_wg_outputs(raw, wg, graph_task_output_names)
+        _assign_wg_outputs(raw, wg)
         return wg
 
 

@@ -360,10 +360,14 @@ class WorkGraphEngine(Process, metaclass=Protect):
         """Finalize the workgraph.
         Output the results of the workgraph and the new data.
         """
+        from aiida_workgraph.utils import resolve_node_link_managers
+
         # in case we expose the ctx and inputs as outputs directly
         self.task_manager.state_manager.update_meta_tasks("graph_ctx")
         self.task_manager.state_manager.update_meta_tasks("graph_inputs")
-        self.out_many(self.ctx._task_results["graph_outputs"])
+        self.out_many(
+            resolve_node_link_managers(self.ctx._task_results["graph_outputs"])
+        )
         # output the new data
         if self.ctx._new_data:
             self.out("new_data", self.ctx._new_data)
