@@ -582,26 +582,28 @@ def serialize_socket_data(input_socket: Dict[str, Any]) -> None:
         input_socket["property"]["value"] = general_serializer(value)
 
 
-def clean_node_links_manager(data: Dict[str, Any]) -> Dict[str, Any]:
-    """Recursively clean a NodeLinksManager to a dictionary representation."""
-    results = {}
-    for key, value in data.items():
-        if isinstance(value, orm.NodeLinksManager):
-            results[key] = node_link_manager_to_dict(value)
-        else:
-            results[key] = value
-    return results
+def resolve_node_link_manager_in_dict(data: Any) -> Any:
+    """Recursively resolve all NodeLinksManagers inside a dict."""
+    if isinstance(data, dict):
+        results = {}
+        for key, value in data.items():
+            results[key] = resolve_node_link_manager_in_dict(value)
+        return results
+    elif isinstance(data, orm.NodeLinksManager):
+        return node_link_manager_as_dict(data)
+    else:
+        return data
 
 
-def node_link_manager_to_dict(
+def node_link_manager_as_dict(
     node_link_manager: orm.NodeLinksManager,
 ) -> Dict[str, Any]:
-    """Convert a NodeLinksManager to a dictionary representation."""
+    """Recursively convert a NodeLinksManager to a dictionary representation."""
     data = {}
     for name in node_link_manager._get_keys():
         item = node_link_manager._get_node_by_link_label(name)
         if isinstance(item, orm.NodeLinksManager):
-            data[name] = node_link_manager_to_dict(item)
+            data[name] = node_link_manager_as_dict(item)
         else:
             data[name] = item
     return data
