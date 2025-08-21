@@ -175,7 +175,7 @@ class TaskStateManager:
     def update_meta_tasks(self, name: str) -> None:
         """Export task results to the context based on context mapping."""
         from aiida_workgraph.utils import update_nested_dict, get_nested_dict
-        from aiida_workgraph.utils import resolve_node_link_manager_in_dict
+        from aiida_workgraph.utils import resolve_node_link_managers
 
         for link in self.process.wg.links:
             if link.from_node.name == name and link.to_node.name in [
@@ -191,7 +191,7 @@ class TaskStateManager:
                     result = get_nested_dict(
                         self.ctx._task_results[name], result_key, default=None
                     )
-                result = resolve_node_link_manager_in_dict(result)
+                result = resolve_node_link_managers(result)
                 update_nested_dict(
                     self.ctx._task_results[link.to_node.name], key, result
                 )
