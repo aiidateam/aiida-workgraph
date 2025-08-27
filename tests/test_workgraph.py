@@ -2,6 +2,7 @@ import pytest
 from aiida_workgraph import WorkGraph, task, spec
 from aiida import orm
 from aiida.calculations.arithmetic.add import ArithmeticAddCalculation
+from typing import Any
 
 
 def test_from_dict(decorated_add):
@@ -21,7 +22,7 @@ def test_add_task():
     add1 = wg.add_task(ArithmeticAddCalculation, name="add1")
     add2 = wg.add_task(ArithmeticAddCalculation, name="add2")
     wg.add_link(add1.outputs.sum, add2.inputs.x)
-    assert len(wg.tasks) == 2
+    assert len(wg.tasks) == 5
     assert len(wg.links) == 1
 
 
@@ -108,7 +109,8 @@ def test_organize_nested_inputs():
         "x": "1",
     }
     collected_data = collect_values_inside_namespace(
-        inputs["workgraph_data"]["tasks"]["task1"]["inputs"]["sockets"]["add"]
+        inputs["workgraph_data"]["tasks"]["task1"]["inputs"]["sockets"]["add"],
+        include_none=False,
     )
     assert collected_data == data
 
@@ -202,7 +204,7 @@ def test_inputs_outputs(decorated_namespace_sum_diff):
 
     wg = WorkGraph(
         name="test_inputs_outputs",
-        inputs=spec.namespace(x=any, nested=spec.namespace(x=any)),
+        inputs=spec.namespace(x=Any, nested=spec.namespace(x=Any)),
     )
     wg.inputs = {"x": 1, "nested.x": 2}
     # same as
@@ -229,7 +231,7 @@ def test_inputs_run_submit_api():
     """Test running a WorkGraph with inputs provided in the `run` and `submit` APIs."""
 
     def generate_workgraph():
-        with WorkGraph(inputs=spec.namespace(x=any, y=any)) as wg:
+        with WorkGraph(inputs=spec.namespace(x=Any, y=Any)) as wg:
             wg.outputs.sum = wg.inputs.x + wg.inputs.y
         return wg
 

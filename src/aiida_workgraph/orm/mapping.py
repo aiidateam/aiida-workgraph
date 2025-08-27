@@ -3,6 +3,7 @@ import importlib.metadata
 from typing import Any
 
 builtins_type_mapping = {
+    "any": "workgraph.any",
     "default": "workgraph.any",
     "namespace": "workgraph.namespace",
     int: "workgraph.int",

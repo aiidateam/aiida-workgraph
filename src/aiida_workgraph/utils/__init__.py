@@ -362,7 +362,7 @@ def process_properties(task: Dict) -> Dict:
             "value": get_raw_value(identifier, value),
         }
     #
-    for name, input in task["inputs"]["sockets"].items():
+    for name, input in task["inputs"].get("sockets", {}).items():
         if input.get("property"):
             prop = input["property"]
             identifier = prop["identifier"]
@@ -392,7 +392,7 @@ def workgraph_to_short_json(
     for name, task in wgdata["tasks"].items():
         # Add required inputs to nodes
         inputs = []
-        for input in task["inputs"]["sockets"].values():
+        for input in task["inputs"].get("sockets", {}).values():
             metadata = input.get("metadata", {}) or {}
             if metadata.get("required", False):
                 inputs.append(
@@ -448,6 +448,12 @@ def workgraph_to_short_json(
     # remove the inputs socket of "graph_inputs"
     if "graph_inputs" in wgdata_short["nodes"]:
         wgdata_short["nodes"]["graph_inputs"]["inputs"] = []
+    # remove the empty graph-level nodes
+    for name in ["graph_inputs", "graph_outputs", "workgraph.namespace"]:
+        if name in wgdata_short["nodes"]:
+            node = wgdata_short["nodes"][name]
+            if len(node["inputs"]) == 0 and len(node["outputs"]) == 0:
+                del wgdata_short["nodes"][name]
 
     return wgdata_short
 
@@ -486,7 +492,7 @@ def serialize_input_values_recursively(
 
         serializer = serialize
     if "property" in inputs:
-        inputs["property"]["value"] = serializer(inputs["property"]["value"])
+        inputs["property"]["value"] = serializer(inputs["property"].get("value"))
     if "sockets" in inputs:
         for socket in inputs["sockets"].values():
             serialize_input_values_recursively(socket)

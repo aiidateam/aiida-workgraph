@@ -1,10 +1,4 @@
-from typing import TYPE_CHECKING
-from .base import BaseTaskFactory
-from aiida_workgraph.config import builtin_inputs, builtin_outputs
 from aiida_workgraph import Task
-
-if TYPE_CHECKING:
-    from aiida_workgraph import WorkGraph
 
 
 class WorkGraphTask(Task):
@@ -70,46 +64,3 @@ class WorkGraphTask(Task):
         process.label = self.name
 
         return process, state
-
-
-class WorkGraphTaskFactory(BaseTaskFactory):
-    """A factory to create Task from WorkGraph."""
-
-    @classmethod
-    def create_task(
-        cls,
-        workgraph: "WorkGraph",
-    ):
-        tdata = {"metadata": {"node_type": "workgraph"}}
-        outputs = {
-            "name": "outputs",
-            "identifier": "workgraph.namespace",
-            "sockets": {},
-        }
-        # add all the inputs/outputs from the tasks in the workgraph
-        # builtin_input_names = [input["name"] for input in builtin_inputs]
-        # generate group inputs/outputs if not exist
-        if len(workgraph.inputs) == 0:
-            workgraph.generate_inputs()
-        if len(workgraph.outputs) == 0:
-            workgraph.generate_outputs()
-        inputs = workgraph.inputs._to_dict()
-        outputs = workgraph.outputs._to_dict()
-        # add built-in sockets
-        inputs["sockets"].update(builtin_inputs.copy())
-        outputs["sockets"].update(builtin_outputs.copy())
-        tdata["inputs"] = inputs
-        tdata["outputs"] = outputs
-        tdata["identifier"] = workgraph.name
-        # get graph_data from the workgraph
-        graph_data = workgraph.prepare_inputs()["workgraph_data"]
-        executor = {
-            "module_path": "aiida_workgraph.engine.workgraph",
-            "callable_name": "WorkGraphEngine",
-            "graph_data": graph_data,
-        }
-        tdata["metadata"]["node_class"] = WorkGraphTask
-        tdata["executor"] = executor
-
-        TaskCls = cls(tdata)
-        return TaskCls
