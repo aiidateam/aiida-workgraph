@@ -1,52 +1,18 @@
 from typing import Any, Dict
-from aiida_workgraph.task import Task, ChildTaskSet
-from aiida_workgraph.tasks.factory.base import BaseTaskFactory
+from aiida_workgraph.task import Task, ChildTaskSet, SpecTask
+from node_graph.nodes.builtins import _GraphIOSharedMixin
+from node_graph import NodeExecutor
 
 
-class GraphLevelTask(Task):
-    """Base class for graph level tasks"""
+class GraphLevelTask(_GraphIOSharedMixin, SpecTask):
+    """Graph level task variant with shared IO."""
 
     catalog = "Builtins"
     is_dynamic: bool = True
-    node_class = Task
-    factory_class = BaseTaskFactory
 
-    @property
-    def outputs(self):
-        return self.inputs
-
-    @outputs.setter
-    def outputs(self, _value):
-        """Outputs are the same as inputs for ctx node."""
-        pass
-
-    def get_metadata(self):
-
-        metadata = super().get_metadata()
-        metadata["node_class"] = {
-            "module_path": self.__class__.__module__,
-            "callable_name": self.__class__.__name__,
-        }
-        metadata["factory_class"] = {
-            "module_path": self.factory_class.__module__,
-            "callable_name": self.factory_class.__name__,
-        }
-        return metadata
-
-
-class GraphInputs(GraphLevelTask):
-    identifier = "workgraph.graph_inputs"
-    name = "Graph_Inputs"
-
-
-class GraphOutputs(GraphLevelTask):
-    identifier = "workgraph.graph_outputs"
-    name = "Graph_Outputs"
-
-
-class GraphContext(GraphLevelTask):
-    identifier = "workgraph.graph_ctx"
-    name = "Graph_Ctx"
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._unify_io()
 
 
 class Zone(Task):
@@ -70,7 +36,7 @@ class Zone(Task):
         task.parent = self
         return task
 
-    def create_sockets(self) -> None:
+    def update_sockets(self) -> None:
         self.inputs._clear()
         self.outputs._clear()
         self.add_input(
@@ -92,7 +58,7 @@ class While(Zone):
     node_type = "WHILE"
     catalog = "Control"
 
-    def create_sockets(self) -> None:
+    def update_sockets(self) -> None:
         self.inputs._clear()
         self.outputs._clear()
         self.add_input(
@@ -111,7 +77,7 @@ class If(Zone):
     node_type = "IF"
     catalog = "Control"
 
-    def create_sockets(self) -> None:
+    def update_sockets(self) -> None:
         self.inputs._clear()
         self.outputs._clear()
         self.add_input(
@@ -144,7 +110,7 @@ class Map(Zone):
         map_item_task = self.add_task("workgraph.map_item")
         return map_item_task.outputs.item
 
-    def create_sockets(self) -> None:
+    def update_sockets(self) -> None:
         self.inputs._clear()
         self.outputs._clear()
         self.add_input("workgraph.any", "source", link_limit=100000)
@@ -162,7 +128,7 @@ class MapItem(Task):
     node_type = "Normal"
     catalog = "Control"
 
-    def create_sockets(self) -> None:
+    def update_sockets(self) -> None:
         self.inputs._clear()
         self.outputs._clear()
         self.add_input("workgraph.any", "source", link_limit=100000)
@@ -171,11 +137,9 @@ class MapItem(Task):
         self.add_output("workgraph.any", "_wait")
 
     def get_executor(self):
-        executor = {
-            "module_path": "aiida_workgraph.executors.builtins",
-            "callable_name": "get_item",
-        }
-        return executor
+        from aiida_workgraph.executors.builtins import get_item
+
+        return NodeExecutor.from_callable(get_item)
 
 
 class SetContext(Task):
@@ -186,7 +150,7 @@ class SetContext(Task):
     node_type = "Normal"
     catalog = "Control"
 
-    def create_sockets(self) -> None:
+    def update_sockets(self) -> None:
         self.inputs._clear()
         self.outputs._clear()
         self.add_input("workgraph.any", "context")
@@ -198,11 +162,9 @@ class SetContext(Task):
         self.add_output("workgraph.any", "_wait")
 
     def get_executor(self):
-        executor = {
-            "module_path": "aiida_workgraph.executors.builtins",
-            "callable_name": "update_ctx",
-        }
-        return executor
+        from aiida_workgraph.executors.builtins import update_ctx
+
+        return NodeExecutor.from_callable(update_ctx)
 
 
 class GetContext(Task):
@@ -213,7 +175,7 @@ class GetContext(Task):
     node_type = "Normal"
     catalog = "Control"
 
-    def create_sockets(self) -> None:
+    def update_sockets(self) -> None:
         self.inputs._clear()
         self.outputs._clear()
         self.add_input("workgraph.any", "context")
@@ -225,11 +187,9 @@ class GetContext(Task):
         self.add_output("workgraph.any", "_wait")
 
     def get_executor(self):
-        executor = {
-            "module_path": "aiida_workgraph.executors.builtins",
-            "callable_name": "get_context",
-        }
-        return executor
+        from aiida_workgraph.executors.builtins import get_context
+
+        return NodeExecutor.from_callable(get_context)
 
 
 class AiiDAInt(Task):
@@ -238,7 +198,7 @@ class AiiDAInt(Task):
     node_type = "Normal"
     catalog = "Test"
 
-    def create_sockets(self) -> None:
+    def update_sockets(self) -> None:
         self.add_input("workgraph.any", "value", property={"default": 0.0})
         self.add_input(
             "workgraph.any", "_wait", link_limit=100000, metadata={"arg_type": "none"}
@@ -247,11 +207,9 @@ class AiiDAInt(Task):
         self.add_output("workgraph.any", "_wait")
 
     def get_executor(self):
-        executor = {
-            "module_path": "aiida.orm",
-            "callable_name": "Int",
-        }
-        return executor
+        from aiida import orm
+
+        return NodeExecutor.from_callable(orm.Int)
 
 
 class AiiDAFloat(Task):
@@ -260,7 +218,7 @@ class AiiDAFloat(Task):
     node_type = "Normal"
     catalog = "Test"
 
-    def create_sockets(self) -> None:
+    def update_sockets(self) -> None:
         self.inputs._clear()
         self.outputs._clear()
         self.add_input("workgraph.float", "value", property={"default": 0.0})
@@ -271,11 +229,9 @@ class AiiDAFloat(Task):
         self.add_output("workgraph.any", "_wait")
 
     def get_executor(self):
-        executor = {
-            "module_path": "aiida.orm",
-            "callable_name": "Float",
-        }
-        return executor
+        from aiida import orm
+
+        return NodeExecutor.from_callable(orm.Float)
 
 
 class AiiDAString(Task):
@@ -284,7 +240,7 @@ class AiiDAString(Task):
     node_type = "Normal"
     catalog = "Test"
 
-    def create_sockets(self) -> None:
+    def update_sockets(self) -> None:
         self.inputs._clear()
         self.outputs._clear()
         self.add_input("workgraph.string", "value", property={"default": ""})
@@ -295,11 +251,9 @@ class AiiDAString(Task):
         self.add_output("workgraph.any", "_wait")
 
     def get_executor(self):
-        executor = {
-            "module_path": "aiida.orm",
-            "callable_name": "Str",
-        }
-        return executor
+        from aiida import orm
+
+        return NodeExecutor.from_callable(orm.Str)
 
 
 class AiiDAList(Task):
@@ -308,7 +262,7 @@ class AiiDAList(Task):
     node_type = "Normal"
     catalog = "Test"
 
-    def create_sockets(self) -> None:
+    def update_sockets(self) -> None:
         self.inputs._clear()
         self.outputs._clear()
         self.add_input("workgraph.any", "value", property={"default": []})
@@ -319,11 +273,9 @@ class AiiDAList(Task):
         self.add_output("workgraph.any", "_wait")
 
     def get_executor(self):
-        executor = {
-            "module_path": "aiida.orm",
-            "callable_name": "List",
-        }
-        return executor
+        from aiida import orm
+
+        return NodeExecutor.from_callable(orm.List)
 
 
 class AiiDADict(Task):
@@ -332,7 +284,7 @@ class AiiDADict(Task):
     node_type = "Normal"
     catalog = "Test"
 
-    def create_sockets(self) -> None:
+    def update_sockets(self) -> None:
         self.inputs._clear()
         self.outputs._clear()
         self.add_input("workgraph.any", "value", property={"default": {}})
@@ -343,11 +295,9 @@ class AiiDADict(Task):
         self.add_output("workgraph.any", "_wait")
 
     def get_executor(self):
-        executor = {
-            "module_path": "aiida.orm",
-            "callable_name": "Dict",
-        }
-        return executor
+        from aiida import orm
+
+        return NodeExecutor.from_callable(orm.Dict)
 
 
 class AiiDANode(Task):
@@ -361,7 +311,7 @@ class AiiDANode(Task):
     def create_properties(self) -> None:
         pass
 
-    def create_sockets(self) -> None:
+    def update_sockets(self) -> None:
         self.inputs._clear()
         self.outputs._clear()
         self.add_input("workgraph.any", "identifier")
@@ -375,11 +325,9 @@ class AiiDANode(Task):
         self.add_output("workgraph.any", "_wait")
 
     def get_executor(self):
-        executor = {
-            "module_path": "aiida.orm",
-            "callable_name": "load_node",
-        }
-        return executor
+        from aiida import orm
+
+        return NodeExecutor.from_callable(orm.load_node)
 
 
 class AiiDACode(Task):
@@ -390,7 +338,7 @@ class AiiDACode(Task):
     node_type = "Normal"
     catalog = "Test"
 
-    def create_sockets(self) -> None:
+    def update_sockets(self) -> None:
         self.inputs._clear()
         self.outputs._clear()
         self.add_input("workgraph.any", "identifier")
@@ -404,11 +352,9 @@ class AiiDACode(Task):
         self.add_output("workgraph.any", "_wait")
 
     def get_executor(self):
-        executor = {
-            "module_path": "aiida.orm",
-            "callable_name": "load_code",
-        }
-        return executor
+        from aiida import orm
+
+        return NodeExecutor.from_callable(orm.load_code)
 
 
 class Select(Task):
@@ -419,7 +365,7 @@ class Select(Task):
     node_type = "Normal"
     catalog = "Control"
 
-    def create_sockets(self) -> None:
+    def update_sockets(self) -> None:
         self.inputs._clear()
         self.outputs._clear()
         self.add_input("workgraph.any", "condition")
@@ -432,59 +378,6 @@ class Select(Task):
         self.add_output("workgraph.any", "_wait")
 
     def get_executor(self):
-        executor = {
-            "module_path": "aiida_workgraph.executors.builtins",
-            "callable_name": "select",
-        }
-        return executor
+        from aiida_workgraph.executors.builtins import select
 
-
-class GraphTask(Task):
-    """Graph builder task"""
-
-    identifier = "workgraph.graph_task"
-    name = "graph_task"
-    node_type = "graph_task"
-    catalog = "builtins"
-
-    def execute(self, engine_process, args=None, kwargs=None, var_kwargs=None):
-        from aiida_workgraph.utils import create_and_pause_process
-        from aiida_workgraph.engine.workgraph import WorkGraphEngine
-        from aiida_workgraph.decorator import _run_func_with_wg
-        from node_graph.executor import NodeExecutor
-        from aiida_workgraph import task
-
-        executor = NodeExecutor(**self.get_executor()).executor
-        # Cloudpickle doesn’t restore the function’s own name in its globals after unpickling,
-        # so any recursive calls would raise NameError. As a temporary workaround, we re-insert
-        # the decorated function into its globals under its original name.
-        # Downside: this mutates the module globals at runtime, if another symbol with the same name exists,
-        # we may introduce hard-to-trace bugs or collisions.
-        if executor.__name__ not in executor.__globals__:
-            if getattr(executor, "is_decoratored", False):
-                executor.__globals__[executor.__name__] = executor
-            else:
-                executor.__globals__[executor.__name__] = task.graph()(executor)
-        if getattr(executor, "is_decoratored", False):
-            executor = executor._func
-        wg = _run_func_with_wg(executor, self.__class__, args, kwargs, var_kwargs)
-        wg.name = self.name
-
-        wg.parent_uuid = engine_process.node.uuid
-        inputs = wg.prepare_inputs(metadata={"call_link_label": self.name})
-        if self.action == "PAUSE":
-            engine_process.report(f"Task {self.name} is created and paused.")
-            process = create_and_pause_process(
-                engine_process.runner,
-                WorkGraphEngine,
-                inputs,
-                state_msg="Paused through WorkGraph",
-            )
-            state = "CREATED"
-            process = process.node
-        else:
-            process = engine_process.submit(WorkGraphEngine, **inputs)
-            state = "RUNNING"
-        process.label = self.name
-
-        return process, state
+        return NodeExecutor.from_callable(select)

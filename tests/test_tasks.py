@@ -2,7 +2,8 @@ import pytest
 from aiida_workgraph import WorkGraph, task
 from typing import Callable
 from aiida import orm
-from node_graph import spec
+from aiida_workgraph import socket_spec as spec
+from typing import Any
 
 
 def test_normal_task(decorated_add) -> None:
@@ -66,7 +67,7 @@ def test_set_non_dynamic_namespace_socket(decorated_add) -> None:
     wg = WorkGraph(name="test_set_namespace")
     task1 = wg.add_task(decorated_add)
     task2 = wg.add_task(WorkChainWithNestNamespace)
-    task2.set(
+    task2.set_inputs(
         {
             "non_dynamic_port": {"a": task1.outputs.result, "b": orm.Int(2)},
         }
@@ -83,7 +84,7 @@ def test_set_namespace_socket(decorated_add) -> None:
     wg = WorkGraph(name="test_set_namespace")
     task1 = wg.add_task(decorated_add)
     task2 = wg.add_task(WorkChainWithNestNamespace)
-    task2.set(
+    task2.set_inputs(
         {
             "add": {"x": task1.outputs.result, "y": orm.Int(2)},
         }
@@ -137,7 +138,7 @@ def test_set_dynamic_port_output(add_code) -> None:
 
     wg = WorkGraph(name="test_set_dynamic_port_input")
     task1 = wg.add_task(WorkChainWithNestNamespace, name="task1")
-    task1.set(
+    task1.set_inputs(
         {
             "add": {"x": orm.Int(1), "y": orm.Int(2), "code": add_code},
             "multiply_add": {
@@ -157,7 +158,7 @@ def test_set_inputs(decorated_add: Callable) -> None:
 
     wg = WorkGraph(name="test_set_inputs")
     add1 = wg.add_task(decorated_add, "add1", x=1)
-    add1.set({"y": 2, "metadata.store_provenance": False})
+    add1.set_inputs({"y": 2, "metadata.store_provenance": False})
     data = wg.prepare_inputs(metadata=None)
     assert (
         data["workgraph_data"]["tasks"]["add1"]["inputs"]["sockets"]["y"]["property"][
@@ -197,7 +198,7 @@ def test_set_inputs_from_builder(add_code) -> None:
 def test_namespace_outputs():
     @task.calcfunction(
         outputs=spec.namespace(
-            add_multiply=spec.namespace(add=any, multiply=any), minus=any
+            add_multiply=spec.namespace(add=Any, multiply=Any), minus=Any
         )
     )
     def myfunc(x, y):
@@ -274,7 +275,7 @@ def test_task_from_builder_multiply_add(add_code, decorated_add) -> None:
     assert isinstance(add_task.inputs.x, SocketAny)
     assert add_task.inputs.x.value is None
 
-    assert len(wg.tasks) == 2
+    assert len(wg.tasks) == 5
     assert len(wg.links) == 1
     assert wg.links_to_dict() == [
         {

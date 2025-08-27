@@ -5,27 +5,27 @@ metadata:
   platform: aiida-workgraph
   worker_name: localhost
 tasks:
-  - identifier: workgraph.aiida_float
-    name: float1
+  - identifier: workgraph.aiida_int
+    name: int1
     inputs:
       value:
         property:
-          value: 3.0
+          value: 3
   - identifier: workgraph.test_sum_diff
     name: sumdiff1
     inputs:
       x:
         property:
-          value: 2.0
+          value: 2
   - identifier: workgraph.test_sum_diff
     name: sumdiff2
     inputs:
       x:
         property:
-          value: 4.0
+          value: 4
 links:
   - to_node: sumdiff1
-    from_node: float1
+    from_node: int1
     to_socket: y
     from_socket: result
   - to_node: sumdiff2

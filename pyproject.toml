@@ -28,12 +28,12 @@ dependencies = [
     "numpy~=1.21",
     "scipy",
     "ase",
-    "node-graph==0.2.23",
+    "node-graph @ git+https://github.com/superstar54/node-graph.git@refactor_dynamic_node",
     "node-graph-widget>=0.0.5",
     "aiida-core~=2.6",
     "cloudpickle",
     "aiida-shell~=0.8",
-    "aiida-pythonjob~=0.3.1",
+    "aiida-pythonjob @ git+https://github.com/aiidateam/aiida-pythonjob.git@only_use_spec",
     "jsonschema",
 ]
 
@@ -87,11 +87,9 @@ workgraph = "aiida_workgraph.cli.cmd_workgraph:workgraph"
 "process.workflow.workgraph" = "aiida_workgraph.orm.workgraph:WorkGraphNode"
 
 [project.entry-points."aiida_workgraph.task"]
-"workgraph.task" = "aiida_workgraph.task:Task"
-"workgraph.graph_inputs" = "aiida_workgraph.tasks.builtins:GraphInputs"
-"workgraph.graph_outputs" = "aiida_workgraph.tasks.builtins:GraphOutputs"
-"workgraph.graph_ctx" = "aiida_workgraph.tasks.builtins:GraphContext"
-"workgraph.workgraph_task" = "aiida_workgraph.tasks.factory.workgraph_task:WorkGraphTask"
+"workgraph.any" = "aiida_workgraph.task:Task"
+"workgraph.graph_level" = "aiida_workgraph.tasks.builtins:GraphLevelTask"
+"workgraph.subgraph_task" = "aiida_workgraph.tasks.subgraph_task:SubGraphTask"
 "workgraph.zone" = "aiida_workgraph.tasks.builtins:Zone"
 "workgraph.while_zone" = "aiida_workgraph.tasks.builtins:While"
 "workgraph.if_zone" = "aiida_workgraph.tasks.builtins:If"
@@ -110,12 +108,9 @@ workgraph = "aiida_workgraph.cli.cmd_workgraph:workgraph"
 "workgraph.aiida_dict" = "aiida_workgraph.tasks.builtins:AiiDADict"
 "workgraph.load_node" = "aiida_workgraph.tasks.builtins:AiiDANode"
 "workgraph.load_code" = "aiida_workgraph.tasks.builtins:AiiDACode"
-"workgraph.test_add" = "aiida_workgraph.tasks.test:TestAdd"
-"workgraph.test_sum_diff" = "aiida_workgraph.tasks.test:TestSumDiff"
+"workgraph.test_add" = "aiida_workgraph.executors.test:add"
+"workgraph.test_sum_diff" = "aiida_workgraph.executors.test:sum_diff"
 "workgraph.test_arithmetic_multiply_add" = "aiida_workgraph.tasks.test:TestArithmeticMultiplyAdd"
-"workgraph.pythonjob" = "aiida_workgraph.tasks.factory.pythonjob.factory:PythonJobTaskFactory"
-"workgraph.pyfunction" = "aiida_workgraph.tasks.factory.pythonjob.factory:PyFunctionTaskFactory"
-"workgraph.shelljob" = "aiida_workgraph.tasks.factory.shelljob_task:ShellJobTaskFactory"
 "workgraph.aiida_process" = "aiida_workgraph.tasks.aiida:AiiDAProcessTask"
 
 [project.entry-points."aiida_workgraph.property"]

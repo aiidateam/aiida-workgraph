@@ -1,19 +1,19 @@
 import pytest
 from aiida_workgraph import WorkGraph, task
 from aiida_workgraph.socket import TaskSocketNamespace
-from typing import Callable
+from typing import Callable, Any
 from aiida_workgraph.manager import get_current_graph, set_current_graph
-from node_graph import spec
+from aiida_workgraph import socket_spec as spec
 
 
 def test_custom_outputs():
     """Test custom outputs."""
 
     @task
-    def add_multiply(x, y) -> spec.namespace(sum=any, product=any):
+    def add_multiply(x, y) -> spec.namespace(sum=Any, product=Any):
         return {"sum": x + y, "product": x * y}
 
-    n = add_multiply._TaskCls()
+    n = add_multiply._spec.to_node()
     assert "sum" in n.outputs
     assert "product" in n.outputs
 
@@ -23,7 +23,7 @@ def test_decorators_args() -> None:
     def test(a, b=1, **c):
         print(a, b, c)
 
-    n = test._TaskCls()
+    n = test._spec.to_node()
     assert n.args_data["args"] == []
     assert set(n.args_data["kwargs"]) == set(
         {
@@ -39,9 +39,7 @@ def test_decorators_args() -> None:
     )
     assert n.args_data["var_args"] is None
     assert n.args_data["var_kwargs"] == "c"
-    assert set(n.get_output_names()) == set(
-        ["result", "_outputs", "_wait", "exit_code"]
-    )
+    assert set(n.get_output_names()) == set(["result", "_outputs", "_wait"])
     assert isinstance(n.inputs.c, TaskSocketNamespace)
 
 
@@ -59,7 +57,7 @@ def test_decorators_calcfunction_args() -> None:
         ]
     )
     kwargs = set(test._func.process_class.spec().inputs.ports.keys())
-    n = test._TaskCls()
+    n = test._spec.to_node()
     assert n.args_data["args"] == []
     assert set(n.args_data["kwargs"]) == set(kwargs)
     assert n.args_data["var_args"] is None
@@ -90,7 +88,7 @@ def task_function(request):
 
 def test_decorators_task_args(task_function):
 
-    n = task_function._TaskCls()
+    n = task_function._spec.to_node()
     tdata = n.to_dict()
     assert n.args_data["args"] == []
     assert set(n.args_data["kwargs"]) == {
@@ -106,7 +104,7 @@ def test_decorators_task_args(task_function):
     assert n.args_data["var_args"] is None
     assert n.args_data["var_kwargs"] == "c"
     assert set(tdata["outputs"]["sockets"].keys()) == set(
-        ["result", "_outputs", "_wait", "exit_code"]
+        ["result", "_outputs", "_wait"]
     )
 
 
@@ -140,7 +138,7 @@ def test_decorators_workfunction_args(task_workfunction) -> None:
     )
     kwargs = set(task_workfunction._func.process_class.spec().inputs.ports.keys())
     #
-    n = task_workfunction._TaskCls()
+    n = task_workfunction._spec.to_node()
     assert n.args_data["args"] == []
     assert set(n.args_data["kwargs"]) == set(kwargs)
     assert n.args_data["var_args"] is None
@@ -158,7 +156,7 @@ def test_decorators_parameters() -> None:
     def test(a, b=1, **c):
         return {"sum": a + b, "product": a * b}
 
-    test1 = test._TaskCls()
+    test1 = test._spec.to_node()
     assert test1.inputs["c"]._link_limit == 1000000
     assert "sum" in test1.get_output_names()
     assert "product" in test1.get_output_names()
@@ -186,7 +184,7 @@ def task_graph_task(request):
 
 def test_decorators_graph_args(task_graph_task) -> None:
     # assert task_graph_task.identifier == "add_multiply_group"
-    n = task_graph_task._TaskCls()
+    n = task_graph_task._spec.to_node()
     assert n.args_data["args"] == []
     assert n.args_data["kwargs"] == ["a", "b"]
     assert n.args_data["var_args"] is None
@@ -228,7 +226,7 @@ def test_decorator_graph_namespace_outputs(decorated_add: Callable) -> None:
     from aiida_workgraph.socket import TaskSocketNamespace, TaskSocket
 
     @task.graph
-    def add_group(x, y, z) -> spec.namespace(add1=spec.dynamic(any), sum=any):
+    def add_group(x, y, z) -> spec.namespace(add1=spec.dynamic(Any), sum=Any):
         outputs1 = decorated_add(x=x, y=y)
         return {"add1": outputs1, "sum": outputs1.result}
 

@@ -50,9 +50,10 @@ def AddMultiply(x, y, z):
 # Now, let's see how we can achieve the same result using the context manager paradigm.
 
 from aiida_workgraph import WorkGraph, spec
+from typing import Any
 
 with WorkGraph(
-    "AddMultiplyContextManager", inputs=spec.namespace(x=any, y=any, z=any)
+    "AddMultiplyContextManager", inputs=spec.namespace(x=Any, y=Any, z=Any)
 ) as wg:
     the_sum = add(
         x=wg.inputs.x,
@@ -113,12 +114,12 @@ with WorkGraph(
     "AddThreeMultiplyContextManager",
     inputs=spec.namespace(
         add=spec.namespace(
-            first=spec.namespace(x=any, y=any), second=spec.namespace(x=any, y=any)
+            first=spec.namespace(x=Any, y=Any), second=spec.namespace(x=Any, y=Any)
         ),
-        multiply=spec.namespace(factor=any),
+        multiply=spec.namespace(factor=Any),
     ),
     outputs=spec.namespace(
-        sums=spec.namespace(first=any, second=any, third=any), product=any
+        sums=spec.namespace(first=Any, second=Any, third=Any), product=Any
     ),
 ) as wg:
     first_sum = add(
@@ -235,7 +236,7 @@ def generate_random_number(minimum, maximum):
 
 
 def generate_add_multiply_workgraph():
-    with WorkGraph(inputs=spec.namespace(x=any, y=any, z=any)) as wg:
+    with WorkGraph(inputs=spec.namespace(x=Any, y=Any, z=Any)) as wg:
         the_sum = add(
             x=wg.inputs.x,
             y=wg.inputs.y,
@@ -251,7 +252,7 @@ def generate_add_multiply_workgraph():
 
 
 with WorkGraph(
-    "AddMultiplyComposed", inputs=spec.namespace(min=any, max=any, x=any, y=any)
+    "AddMultiplyComposed", inputs=spec.namespace(min=Any, max=Any, x=Any, y=Any)
 ) as wg:
     random_number = generate_random_number(
         minimum=wg.inputs.min,
@@ -552,7 +553,7 @@ assert wg.outputs.result == 12
 #
 # Let's run an add-multiply workflow with a hardcoded multiplication factor:
 
-with WorkGraph("AddMultiplyToBeContinued", inputs=spec.namespace(x=any, y=any)) as wg1:
+with WorkGraph("AddMultiplyToBeContinued", inputs=spec.namespace(x=Any, y=Any)) as wg1:
     the_sum = add(
         x=wg1.inputs.x,
         y=wg1.inputs.y,

@@ -1,5 +1,6 @@
 import pytest
 from aiida.workflows.arithmetic.multiply_add import MultiplyAddWorkChain
+from aiida_workgraph import task
 
 
 def test_workchain(wg_workchain):
@@ -13,9 +14,8 @@ def test_workchain(wg_workchain):
 
 def test_build_workchain_inputs_outputs():
     """Submit simple calcjob."""
-    from aiida_workgraph import build_task
 
-    node = build_task(MultiplyAddWorkChain)()
+    node = task(MultiplyAddWorkChain)()._node
     inputs = MultiplyAddWorkChain.spec().inputs
     # inputs + metadata + _wait
     ninput = len(inputs.ports) + 1

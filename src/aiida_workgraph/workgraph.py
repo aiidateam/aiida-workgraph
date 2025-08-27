@@ -3,9 +3,6 @@ from __future__ import annotations
 import aiida.orm
 import node_graph
 import aiida
-from node_graph.link import NodeLink
-from aiida_workgraph.socket import TaskSocket
-from aiida_workgraph.tasks import TaskPool
 from aiida_workgraph.task import Task
 import time
 from aiida_workgraph.utils.graph import (
@@ -15,12 +12,12 @@ from aiida_workgraph.utils.graph import (
     link_deletion_hook,
 )
 from typing import Any, Dict, List, Optional, Union
-
+from .registry import RegistryHub, registry_hub
 from node_graph.analysis import NodeGraphAnalysis
-from node_graph.node_graph import BUILTIN_NODES
+from node_graph.config import BUILTIN_NODES
 from node_graph.collection import NodeCollection
-from aiida_workgraph.sockets import SocketPool
 from aiida_workgraph.orm.mapping import type_mapping
+from aiida_workgraph.socket_spec import SocketSpecAPI
 
 
 class WorkGraph(node_graph.NodeGraph):
@@ -37,12 +34,18 @@ class WorkGraph(node_graph.NodeGraph):
         pk (int): The primary key of the process node.
     """
 
-    NodePool = TaskPool
-    SocketPool = SocketPool
+    registry: Optional[RegistryHub] = registry_hub
     platform: str = "aiida_workgraph"
     type_mapping: dict = type_mapping
+    _socket_spec = SocketSpecAPI
 
-    def __init__(self, name: str = "WorkGraph", **kwargs) -> None:
+    def __init__(
+        self,
+        name: str = "WorkGraph",
+        inputs: Optional[type | List[str]] = None,
+        outputs: Optional[type | List[str]] = None,
+        **kwargs,
+    ) -> None:
         """
         Initialize a WorkGraph instance.
 
@@ -50,7 +53,7 @@ class WorkGraph(node_graph.NodeGraph):
             name (str, optional): The name of the WorkGraph. Defaults to 'WorkGraph'.
             **kwargs: Additional keyword arguments to be passed to the WorkGraph class.
         """
-        super().__init__(name, **kwargs)
+        super().__init__(name, inputs=inputs, outputs=outputs, **kwargs)
         self.process = None
         self.restart_process = None
         self.max_number_jobs = 1000000
@@ -146,15 +149,6 @@ class WorkGraph(node_graph.NodeGraph):
             self.wait(timeout=timeout, interval=interval)
         return self.process
 
-    def set_inputs(self, inputs: Dict[str, Any]):
-        for name, input in inputs.items():
-            if "graph_inputs" in self.tasks and name in self.inputs:
-                setattr(self.inputs, name, input)
-            elif name in self.tasks:
-                self.tasks[name].set(input)
-            else:
-                raise KeyError(f"{name} not found in WorkGraph inputs or tasks.")
-
     def save(self, metadata: Optional[Dict[str, Any]] = None) -> None:
         """Save the udpated workgraph to the process
         This is only used for a running workgraph.
@@ -203,9 +197,13 @@ class WorkGraph(node_graph.NodeGraph):
         connectivity = self.analyzer.build_connectivity()
         return connectivity
 
-    def to_dict(self, should_serialize: bool = False) -> Dict[str, Any]:
+    def to_dict(
+        self, short: bool = False, should_serialize: bool = False
+    ) -> Dict[str, Any]:
         """Convert the workgraph to a dictionary."""
-        wgdata = super().to_dict(should_serialize=should_serialize)
+        from aiida.orm.utils.serialize import serialize
+
+        wgdata = super().to_dict(short=short, should_serialize=should_serialize)
         wgdata.update(
             {
                 "restart_process": self.restart_process.pk
@@ -219,6 +217,8 @@ class WorkGraph(node_graph.NodeGraph):
         wgdata["error_handlers"] = self.get_error_handlers()
         wgdata["tasks"] = wgdata.pop("nodes")
         wgdata["connectivity"] = self.build_connectivity()
+        wgdata["process"] = serialize(self.process) if self.process else serialize(None)
+        wgdata["metadata"]["pk"] = self.process.pk if self.process else None
         return wgdata
 
     def get_error_handlers(self) -> Dict[str, Any]:
@@ -335,11 +335,10 @@ class WorkGraph(node_graph.NodeGraph):
 
     @classmethod
     def from_dict(cls, wgdata: Dict[str, Any]) -> "WorkGraph":
-        from aiida_workgraph.tasks.factory.base import BaseTaskFactory
 
         if "tasks" in wgdata:
             wgdata["nodes"] = wgdata.pop("tasks")
-        wg = super().from_dict(wgdata, class_factory=BaseTaskFactory)
+        wg = super().from_dict(wgdata)
         for key in [
             "max_iteration",
             "max_number_jobs",
@@ -575,48 +574,41 @@ class WorkGraph(node_graph.NodeGraph):
     ) -> Task:
         """Add a task to the workgraph."""
         from aiida_workgraph.decorator import build_task_from_callable
-        from aiida_workgraph.tasks.factory.workgraph_task import WorkGraphTaskFactory
         from aiida.engine import ProcessBuilder
         from aiida_workgraph.utils import get_dict_from_builder
-        from aiida_workgraph.tasks.factory.shelljob_task import (
-            ShellJobTaskFactory,
+        from aiida_workgraph.tasks.shelljob_task import (
             shelljob,
+            _build_shelljob_nodespec,
         )
+        from aiida_workgraph.task import Task, TaskHandle
+        from aiida_workgraph.tasks.subgraph_task import _build_subgraph_task_nodespec
+        from node_graph.node_spec import NodeSpec
 
         if name in BUILTIN_NODES and not include_builtins:
             raise ValueError(f"Task name {name} can not be used, it is reserved.")
 
+        if isinstance(identifier, str):
+            identifier = self.NodePool[identifier.lower()].load()
         if isinstance(identifier, WorkGraph):
-            identifier = WorkGraphTaskFactory.create_task(identifier)
+            identifier = _build_subgraph_task_nodespec(identifier, name=name)
         elif isinstance(identifier, ProcessBuilder):
             kwargs = {**kwargs, **get_dict_from_builder(identifier)}
             identifier = build_task_from_callable(identifier.process_class)
+        # todo
+        elif identifier is shelljob:
+            spec = _build_shelljob_nodespec(
+                outputs=kwargs.get("outputs"),
+                parser_outputs=kwargs.pop("parser_outputs", None),
+            )
+            identifier = TaskHandle(spec)
         # build the task on the fly if the identifier is a callable
-        elif callable(identifier):
-            if identifier is shelljob:
-                identifier = ShellJobTaskFactory.create_class(kwargs)
-            elif hasattr(identifier, "_TaskCls"):
-                identifier = identifier._TaskCls
-            else:
-                identifier = build_task_from_callable(identifier)
+        elif callable(identifier) and not isinstance(
+            identifier, (NodeSpec, TaskHandle, Task)
+        ):
+            identifier = build_task_from_callable(identifier)
         node = self.tasks._new(identifier, name, **kwargs)
         self._version += 1
         return node
-
-    def add_link(self, source: TaskSocket | Task, target: TaskSocket) -> NodeLink:
-        """Add a link between two tasks."""
-        if isinstance(source, Task):
-            source = source.outputs["_outputs"]
-        elif source._parent is None:
-            # if the source is the top-level outputs,
-            # we use the built-in "_outputs" socket to represent it
-            source = source._outputs
-        key = f"{source._node.name}.{source._scoped_name} -> {target._node.name}.{target._scoped_name}"
-        if key in self.links:
-            return self.links[key]
-        link = self.links._new(source, target)
-        self._version += 1
-        return link
 
     def to_widget_value(self) -> Dict[str, Any]:
         """Convert the workgraph to a dictionary that can be used by the widget."""
@@ -676,5 +668,5 @@ class WorkGraph(node_graph.NodeGraph):
         graph = get_current_graph()
         task = graph.add_task(self)
         inputs = inputs or {}
-        task.set(inputs)
+        task.set_inputs(inputs)
         return task.outputs

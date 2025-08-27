@@ -25,7 +25,7 @@ from .awaitable_manager import AwaitableManager
 from .task_manager import TaskManager
 from .error_handler_manager import ErrorHandlerManager
 from aiida.engine.processes.workchains.awaitable import Awaitable
-from node_graph.node_graph import BUILTIN_NODES
+from node_graph.config import BUILTIN_NODES
 
 if t.TYPE_CHECKING:
     from aiida.engine.runners import Runner  # pylint: disable=unused-import

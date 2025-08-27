@@ -44,7 +44,7 @@ class PropertyList(TaskProperty):
     """A new class for List type."""
 
     identifier: str = "workgraph.list"
-    allowed_types = (list, orm.List, type(None))
+    allowed_types = (list, tuple, orm.List, type(None))
 
 
 class PropertyDict(TaskProperty):

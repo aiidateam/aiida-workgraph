@@ -109,7 +109,7 @@ def handle_negative_sum(task: Task):
 
     print(f"Executing error handler for task: {task.name}")
     # Modify the inputs of the failed task for the next retry.
-    task.set(
+    task.set_inputs(
         {"x": Int(abs(task.inputs["x"].value)), "y": Int(abs(task.inputs["y"].value))}
     )
     msg = "Run error handler: handle_negative_sum."

@@ -31,7 +31,6 @@ def test_while_instruction(decorated_add, decorated_multiply, decorated_smaller_
     wg.ctx = {"n": 1}
     add1 = wg.add_task(decorated_add, name="add1", x=1, y=1)
     wg.update_ctx({"n": add1.outputs.result})
-    # ---------------------------------------------------------------------
     compare1 = wg.add_task(decorated_smaller_than, name="compare1", x=wg.ctx.n, y=20)
     while_(compare1.outputs["result"], max_iterations=10)(
         wg.add_task(decorated_add, name="add2", x=wg.ctx.n, y=1),
@@ -46,7 +45,7 @@ def test_while_instruction(decorated_add, decorated_multiply, decorated_smaller_
     wg.update_ctx({"n": wg.tasks.multiply1.outputs.result})
     add3 = wg.add_task(decorated_add, name="add3", x=1, y=1)
     wg.add_link(wg.tasks.multiply1.outputs["result"], add3.inputs["x"])
-    assert len(wg.tasks) == 7
+    assert len(wg.tasks) == 9
     assert "while_1" in wg.tasks
     assert len(wg.tasks.while_1.children) == 2
     wg.run()
@@ -95,14 +94,12 @@ def test_while_task(decorated_add, decorated_smaller_than):
     }
     add1 = wg.add_task(decorated_add, name="add1", x=1, y=1)
     wg.update_ctx({"n": add1.outputs.result})
-    # ---------------------------------------------------------------------
     # the `result` of compare1 taskis used as condition
     compare1 = wg.add_task(decorated_smaller_than, name="compare1", x=wg.ctx.m, y=10)
     while1 = wg.add_task(
         TaskPool.workgraph.while_zone, name="while1", conditions=compare1.outputs.result
     )
     add11 = wg.add_task(decorated_add, name="add11", x=1, y=1)
-    # ---------------------------------------------------------------------
     compare2 = wg.add_task(decorated_smaller_than, name="compare2", x=wg.ctx.n, y=5)
     while2 = wg.add_task(
         TaskPool.workgraph.while_zone, name="while2", conditions=compare2.outputs.result
@@ -112,7 +109,6 @@ def test_while_task(decorated_add, decorated_smaller_than):
     add22 = wg.add_task(decorated_add, name="add22", x=add21.outputs.result, y=1)
     wg.update_ctx({"n": add22.outputs.result})
     while2.children.add(["add21", "add22"])
-    # ---------------------------------------------------------------------
     compare3 = wg.add_task(decorated_smaller_than, name="compare3", x=wg.ctx.l, y=5)
     while3 = wg.add_task(
         TaskPool.workgraph.while_zone,
@@ -125,11 +121,9 @@ def test_while_task(decorated_add, decorated_smaller_than):
     add32 = wg.add_task(decorated_add, name="add32", x=add31.outputs.result, y=1)
     wg.update_ctx({"l": add32.outputs.result})
     while3.children.add(["add31", "add32"])
-    # ---------------------------------------------------------------------
     add12 = wg.add_task(decorated_add, name="add12", x=wg.ctx.m, y=add32.outputs.result)
     wg.update_ctx({"m": add12.outputs.result})
     while1.children.add(["add11", "while2", "while3", "add12", "compare2", "compare3"])
-    # ---------------------------------------------------------------------
     add2 = wg.add_task(
         decorated_add, name="add2", x=add12.outputs.result, y=add31.outputs.result
     )
