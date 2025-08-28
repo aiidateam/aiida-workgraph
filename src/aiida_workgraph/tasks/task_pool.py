@@ -1,8 +1,6 @@
-from node_graph.collection import EntryPointPool
+from node_graph.registry import EntryPointPool
 
 # global instance
 TaskPool = EntryPointPool(entry_point_group="aiida_workgraph.task")
-TaskPool["any"] = TaskPool.workgraph.task
-TaskPool["graph_inputs"] = TaskPool.workgraph.graph_inputs
-TaskPool["graph_outputs"] = TaskPool.workgraph.graph_outputs
-TaskPool["graph_ctx"] = TaskPool.workgraph.graph_ctx
+TaskPool["any"] = TaskPool.workgraph.any
+TaskPool["graph_level"] = TaskPool.workgraph.graph_level

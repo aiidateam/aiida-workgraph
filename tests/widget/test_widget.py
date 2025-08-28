@@ -9,7 +9,7 @@ def test_workgraph_widget(wg_calcfunction, decorated_add):
     wg.add_task(decorated_add, "add1", x=1, y=3)
     wg.tasks["sumdiff2"].waiting_on.add(wg.tasks["sumdiff2"])
     value = wg.to_widget_value()
-    assert len(value["nodes"]) == 3
+    assert len(value["nodes"]) == 4
     # the waiting_on is also transformed to links
     assert len(value["links"]) == 3
     # check required sockets

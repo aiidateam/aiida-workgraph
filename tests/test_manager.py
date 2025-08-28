@@ -5,7 +5,7 @@ from aiida_workgraph.manager import (
     While,
     Map,
 )
-from node_graph import spec
+from aiida_workgraph import socket_spec as spec
 
 
 @task()

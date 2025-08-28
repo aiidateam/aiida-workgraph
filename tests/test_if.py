@@ -14,7 +14,7 @@ def test_if_instruction(decorated_add, decorated_multiply, decorated_smaller_tha
     ).else_(
         wg.add_task(decorated_multiply, name="multiply1", x=add1.outputs.result, y=2),
     )
-    assert len(wg.tasks) == 6
+    assert len(wg.tasks) == 9
     assert "if_true_1" in wg.tasks
     assert "if_false_2" in wg.tasks
     assert len(wg.tasks["if_true_1"].children) == 1

@@ -1,9 +1,13 @@
 import asyncio
-from aiida_workgraph import Task
-from .function_task import DecoratedFunctionTaskFactory
+from aiida_workgraph.task import SpecTask
+from typing import Callable, Optional, Any
+from node_graph.socket_spec import SocketSpec
+from node_graph.node_spec import NodeSpec
+from .function_task import build_callable_nodespec, namespace_with_defaults
+from aiida_workgraph.socket_spec import namespace
 
 
-class AwaitableFunctionTask(Task):
+class AwaitableFunctionTask(SpecTask):
     """Awaitable task with function as executor."""
 
     identifier = "workgraph.awaitable_function"
@@ -12,9 +16,8 @@ class AwaitableFunctionTask(Task):
     catalog = "Control"
 
     def execute(self, engine_process, args=None, kwargs=None, var_kwargs=None):
-        from node_graph.executor import NodeExecutor
 
-        executor = NodeExecutor(**self.get_executor()).executor
+        executor = self.get_executor().executor
         if var_kwargs is None:
             awaitable_target = asyncio.ensure_future(
                 executor(*args, **kwargs),
@@ -28,7 +31,7 @@ class AwaitableFunctionTask(Task):
         return awaitable_target, "FINISHED"
 
 
-class MonitorFunctionTask(Task):
+class MonitorFunctionTask(SpecTask):
     """Monitor task with function as executor."""
 
     identifier = "workgraph.monitor_function"
@@ -37,10 +40,9 @@ class MonitorFunctionTask(Task):
     catalog = "Control"
 
     def execute(self, engine_process, args=None, kwargs=None, var_kwargs=None):
-        from node_graph.executor import NodeExecutor
         from aiida_workgraph.tasks.monitors import monitor
 
-        executor = NodeExecutor(**self.get_executor()).executor
+        executor = self.get_executor().executor
         # get the raw function without the decorator
         if hasattr(executor, "_func"):
             executor = executor._func
@@ -65,26 +67,46 @@ class MonitorFunctionTask(Task):
         return awaitable_target, "FINISHED"
 
 
-class AwaitableFunctionTaskFactory(DecoratedFunctionTaskFactory):
-    """A factory to create an AwaitableFunctionTask from functions."""
+def _build_awaitable_function_nodespec(
+    obj: Callable,
+    identifier: Optional[str] = None,
+    in_spec: Optional[SocketSpec] = None,
+    out_spec: Optional[SocketSpec] = None,
+) -> NodeSpec:
 
-    default_task_type = "awaitable"
-    default_base_class = AwaitableFunctionTask
+    return build_callable_nodespec(
+        obj=obj,
+        node_type="AWAITABLE",
+        base_class=AwaitableFunctionTask,
+        identifier=identifier,
+        process_cls=None,
+        in_spec=in_spec,
+        out_spec=out_spec,
+    )
 
 
-class MonitorFunctionTaskFactory(DecoratedFunctionTaskFactory):
-    """A factory to create a MonitorFunctionTask from functions."""
+def _build_monitor_function_nodespec(
+    obj: Callable,
+    identifier: Optional[str] = None,
+    in_spec: Optional[SocketSpec] = None,
+    out_spec: Optional[SocketSpec] = None,
+) -> NodeSpec:
+    # defaults for interval/timeout — set on the NAMESPACE (keys = field names)
+    add_in = namespace_with_defaults(
+        {"interval": 5, "timeout": 3600},
+        interval=int,
+        timeout=int,
+    )
+    add_out = namespace(exit_code=Any)
 
-    default_task_type = "monitor"
-    default_base_class = MonitorFunctionTask
-
-    additional_inputs = {
-        "interval": {
-            "identifier": "workgraph.float",
-            "property": {"default": 5},
-        },
-        "timeout": {
-            "identifier": "workgraph.float",
-            "property": {"default": 3600},
-        },
-    }
+    return build_callable_nodespec(
+        obj=obj,
+        node_type="MONITOR",
+        base_class=MonitorFunctionTask,
+        identifier=identifier,
+        process_cls=None,
+        in_spec=in_spec,
+        out_spec=out_spec,
+        add_inputs=add_in,
+        add_outputs=add_out,
+    )

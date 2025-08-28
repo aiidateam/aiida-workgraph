@@ -1,23 +1,18 @@
-from typing import Union, Dict
 import time
-from aiida.engine import calcfunction
-from aiida.orm import Int, Float
+from aiida.orm import Int
 from aiida_workgraph import task
+from aiida_workgraph.socket_spec import namespace
 
 
-@calcfunction
-def add(
-    x: Union[Int, Float], y: Union[Int, Float], t: Union[Int, Float] = 1.0
-) -> Dict[str, Union[Int, Float]]:
+@task.calcfunction
+def add(x: Int = 0, y: Int = 0, t: Int = 1) -> Int:
     """Add node."""
     time.sleep(t.value)
-    return {"sum": x + y}
+    return x + y
 
 
-@calcfunction
-def sum_diff(
-    x: Union[Int, Float], y: Union[Int, Float], t: Union[Int, Float] = 1.0
-) -> Dict[str, Union[Int, Float]]:
+@task.calcfunction
+def sum_diff(x: Int = 0, y: Int = 0, t: Int = 1) -> namespace(sum=Int, diff=Int):
     """Add node."""
     time.sleep(t.value)
     return {"sum": x + y, "diff": x - y}

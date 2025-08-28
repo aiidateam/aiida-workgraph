@@ -2,7 +2,8 @@ import pytest
 from aiida_workgraph import WorkGraph, task
 from typing import Callable
 from aiida import orm
-from node_graph import spec
+from aiida_workgraph import socket_spec as spec
+from typing import Any
 
 
 def test_normal_task(decorated_add) -> None:
@@ -197,7 +198,7 @@ def test_set_inputs_from_builder(add_code) -> None:
 def test_namespace_outputs():
     @task.calcfunction(
         outputs=spec.namespace(
-            add_multiply=spec.namespace(add=any, multiply=any), minus=any
+            add_multiply=spec.namespace(add=Any, multiply=Any), minus=Any
         )
     )
     def myfunc(x, y):
@@ -274,7 +275,7 @@ def test_task_from_builder_multiply_add(add_code, decorated_add) -> None:
     assert isinstance(add_task.inputs.x, SocketAny)
     assert add_task.inputs.x.value is None
 
-    assert len(wg.tasks) == 2
+    assert len(wg.tasks) == 5
     assert len(wg.links) == 1
     assert wg.links_to_dict() == [
         {
