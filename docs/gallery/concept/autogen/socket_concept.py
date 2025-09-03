@@ -11,6 +11,7 @@ This guide will walk you through how to define, customize, and organize sockets 
 from aiida.manage import load_profile
 from aiida_workgraph import task, WorkGraph, spec
 from aiida import orm
+from typing import Any
 
 # Load the AiiDA profile to interact with the database
 load_profile()
@@ -48,7 +49,7 @@ print("Output sockets: ", task1.get_output_names())
 
 
 @task
-def add_and_subtract(x, y) -> spec.namespace(sum=any, difference=any):
+def add_and_subtract(x, y) -> spec.namespace(sum=Any, difference=Any):
     """Return the sum and difference of two numbers in a dict."""
     return {
         "sum": x + y,
@@ -70,7 +71,7 @@ print("Output sockets: ", task2.get_output_names())
 
 
 @task
-def add_and_subtract(x, y) -> spec.namespace(sum=any, difference=any):
+def add_and_subtract(x, y) -> spec.namespace(sum=Any, difference=Any):
     """Return the sum and difference of two numbers as a tuple."""
     return x + y, x - y
 
@@ -177,13 +178,13 @@ with WorkGraph("simple_namespace_example") as wg:
 # For more complex data structures, you can define nested namespaces. This allows you to create a hierarchical organization for your sockets.
 
 out = spec.namespace(
-    normal=spec.namespace(sum=any, product=any),
-    squared=spec.namespace(sum=any, product=any),
+    normal=spec.namespace(sum=Any, product=Any),
+    squared=spec.namespace(sum=Any, product=Any),
 )
 
 
-@task
-def advanced_math(x, y) -> out:
+@task(outputs=out)
+def advanced_math(x, y):
     """A task with a nested output structure."""
     return {
         "normal": {"sum": x + y, "product": x * y},

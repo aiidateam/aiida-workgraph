@@ -8,6 +8,7 @@ This section contains a collection of HowTos for various topics.
    :maxdepth: 1
    :caption: Contents:
 
+   autogen/annotate_inputs_outputs
    autogen/parallel
    autogen/control-flow
    autogen/context

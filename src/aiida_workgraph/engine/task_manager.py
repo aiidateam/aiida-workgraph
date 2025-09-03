@@ -15,7 +15,7 @@ process_task_types = [
     "CALCJOB",
     "WORKCHAIN",
     "GRAPH_TASK",
-    "WORKGRAPH",
+    "SUBGRAPH",
     "PYTHONJOB",
     "SHELLJOB",
 ]
@@ -63,7 +63,7 @@ class TaskManager:
         return task
 
     def set_task_results(self) -> None:
-        from node_graph.node_graph import BUILTIN_NODES
+        from node_graph.config import BUILTIN_NODES
 
         for task in self.process.wg.tasks:
             if task.name in BUILTIN_NODES:
@@ -184,8 +184,8 @@ class TaskManager:
                 "WORKCHAIN",
                 "SHELLJOB",
                 "PYTHONJOB",
-                "WORKGRAPH",
-                "GRAPH_TASK",
+                "SUBGRAPH",
+                "GRAPH",
             ]:
                 self.execute_process_task(task, **inputs)
             elif task_type == "WHILE":
@@ -527,7 +527,6 @@ class TaskManager:
         self.state_manager.set_task_runtime_info(new_name, "state", "FINISHED")
 
     def copy_task(self, name: str, prefix: str) -> "Task":
-        from aiida_workgraph.task import Task
         import uuid
 
         # keep track of the mapped tasks
@@ -543,10 +542,7 @@ class TaskManager:
         self.state_manager.set_task_runtime_info(new_name, "state", "PLANNED")
         self.state_manager.set_task_runtime_info(new_name, "action", "")
         # Insert new_data in ctx._tasks
-        task = Task.from_dict(task_data)
-        task.graph = self.process.wg
-        self.process.wg.tasks._append(task)
-
+        task = self.process.wg.add_node_from_dict(task_data)
         self.process.wg.tasks[name].mapped_tasks[prefix] = task
         return task
 

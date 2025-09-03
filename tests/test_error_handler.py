@@ -11,7 +11,7 @@ def test_error_handlers(add_code, capsys):
         self is the WorkGraph instance, thus we can access the tasks and the context.
         """
         # modify task inputs
-        task.set(
+        task.set_inputs(
             {
                 "x": orm.Int(abs(task.inputs.x.value)),
                 "y": orm.Int(abs(task.inputs["y"].value)),

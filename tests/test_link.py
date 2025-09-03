@@ -37,4 +37,6 @@ def test_top_level_outputs_link(decorated_add) -> None:
     add2 = wg.add_task(decorated_add, "add2")
     wg.add_link(add1.outputs, add2.inputs.x)
     # built-in "_outputs" socket is used to represent top-level outputs
+    for link in wg.links:
+        print(link)
     assert "add1._outputs -> add2.x" in wg.links

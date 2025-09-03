@@ -2,6 +2,7 @@ import pytest
 from aiida_workgraph import WorkGraph, task, spec
 from aiida import orm
 from aiida.calculations.arithmetic.add import ArithmeticAddCalculation
+from typing import Any
 
 
 def test_from_dict(decorated_add):
@@ -21,7 +22,7 @@ def test_add_task():
     add1 = wg.add_task(ArithmeticAddCalculation, name="add1")
     add2 = wg.add_task(ArithmeticAddCalculation, name="add2")
     wg.add_link(add1.outputs.sum, add2.inputs.x)
-    assert len(wg.tasks) == 2
+    assert len(wg.tasks) == 5
     assert len(wg.links) == 1
 
 
@@ -89,7 +90,7 @@ def test_organize_nested_inputs():
 
     wg = WorkGraph("test_organize_nested_inputs")
     task1 = wg.add_task(WorkChainWithNestNamespace, name="task1")
-    task1.set(
+    task1.set_inputs(
         {
             "add": {"x": "1"},
             "add.metadata": {
@@ -108,7 +109,8 @@ def test_organize_nested_inputs():
         "x": "1",
     }
     collected_data = collect_values_inside_namespace(
-        inputs["workgraph_data"]["tasks"]["task1"]["inputs"]["sockets"]["add"]
+        inputs["workgraph_data"]["tasks"]["task1"]["inputs"]["sockets"]["add"],
+        include_none=False,
     )
     assert collected_data == data
 
@@ -124,7 +126,7 @@ def test_reset_message(wg_calcjob):
     timeout = 30
     wg.wait(tasks={"add1": ["RUNNING"]}, timeout=timeout, interval=1)
     wg = WorkGraph.load(wg.process.pk)
-    wg.tasks.add1.set({"y": orm.Int(10).store()})
+    wg.tasks.add1.set_inputs({"y": orm.Int(10).store()})
     wg.save()
     wg.wait(timeout=timeout * 2)
     report = get_workchain_report(wg.process, "REPORT")
@@ -149,7 +151,7 @@ def test_restart_and_reset(wg_calcfunction):
     wg1 = WorkGraph.load(wg.process.pk)
     wg1.restart()
     wg1.name = "test_restart_1"
-    wg1.tasks.sumdiff2.set({"x": orm.Int(10).store()})
+    wg1.tasks.sumdiff2.set_inputs({"x": orm.Int(10).store()})
     wg1.run()
     assert wg1.tasks.sumdiff1.pk == wg.tasks.sumdiff1.pk
     assert wg1.tasks.sumdiff2.pk != wg.tasks.sumdiff2.pk
@@ -202,7 +204,7 @@ def test_inputs_outputs(decorated_namespace_sum_diff):
 
     wg = WorkGraph(
         name="test_inputs_outputs",
-        inputs=spec.namespace(x=any, nested=spec.namespace(x=any)),
+        inputs=spec.namespace(x=Any, nested=spec.namespace(x=Any)),
     )
     wg.inputs = {"x": 1, "nested.x": 2}
     # same as
@@ -229,7 +231,7 @@ def test_inputs_run_submit_api():
     """Test running a WorkGraph with inputs provided in the `run` and `submit` APIs."""
 
     def generate_workgraph():
-        with WorkGraph(inputs=spec.namespace(x=any, y=any)) as wg:
+        with WorkGraph(inputs=spec.namespace(x=Any, y=Any)) as wg:
             wg.outputs.sum = wg.inputs.x + wg.inputs.y
         return wg
 
@@ -285,3 +287,30 @@ def test_calling_workgraph_in_context_manager():
     wg2.run()
 
     assert wg2.outputs.sum == 12
+
+
+def test_expose_task_spec():
+    from aiida_workgraph import task
+    from aiida_workgraph.socket_spec import namespace as ns
+
+    @task()
+    def test_calc(x: int) -> ns(square=int, double=int):
+        return {"square": x * x, "double": x + x}
+
+    @task()
+    def add_multiply(data: ns(x=int, y=int)) -> ns(sum=int, product=int):
+        return {"sum": data["x"] + data["y"], "product": data["x"] * data["y"]}
+
+    out = ns(out1=add_multiply.outputs, out2=test_calc.outputs["square"])
+
+    @task.graph()
+    def test_graph(x: int, data: ns(y=int)) -> out:
+        am = add_multiply(data={"x": x, "y": data["y"]})
+        tc = test_calc(x)
+        return {"out1": am, "out2": tc.square}
+
+    wg = test_graph.build_graph(x=1, data={"y": 2})
+    wg.run()
+    assert wg.outputs.out1.sum == 3
+    assert wg.outputs.out1.product == 2
+    assert wg.outputs.out2 == 1

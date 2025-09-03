@@ -25,7 +25,7 @@ def test_reset_node(wg_engine: WorkGraph) -> None:
     wg.name = "test_reset"
     wg.submit()
     time.sleep(15)
-    wg.tasks["add3"].set({"y": orm.Int(10).store()})
+    wg.tasks["add3"].set_inputs({"y": orm.Int(10).store()})
     wg.save()
     wg.wait()
     wg.update()

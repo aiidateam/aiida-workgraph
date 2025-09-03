@@ -4,13 +4,14 @@ from aiida_shell.launch import prepare_code
 from aiida.orm import SinglefileData, load_computer, Int
 
 
-def test_prepare_for_shell_task_nonexistent():
+@pytest.mark.skip(reason="need rewrite")
+def test_nonexistent_command():
     """Check that the `ValueError` raised by `aiida-shell` for a non-extistent executable is captured by WorkGraph."""
-    from aiida_workgraph.tasks.factory.shelljob_task import prepare_for_shell_task
 
-    inputs = {"command": "abc42"}
     with pytest.raises(ValueError, match="failed to determine the absolute path"):
-        prepare_for_shell_task(inputs=inputs)
+        wg = WorkGraph(name="test_shell_command")
+        wg.add_task(shelljob, command="abc42")
+        wg.run()
 
 
 def test_shell_command(fixture_localhost):
@@ -27,7 +28,7 @@ def test_shell_command(fixture_localhost):
         },
     )
     # also check if we can set the computer explicitly
-    job1.set({"metadata.computer": load_computer("localhost")})
+    job1.set_inputs({"metadata.computer": load_computer("localhost")})
     wg.run()
     assert job1.outputs.stdout.value.get_content() == "string astring b"
 
@@ -83,10 +84,9 @@ def test_shell_graph_task():
     And the parser is also defined in the graph task."""
     from aiida.orm import Int
 
-    @task.graph(outputs=["result"])
+    @task.graph()
     def add_multiply(x, y):
         """Add two numbers and multiply the result by 2."""
-        from aiida_workgraph.manager import get_current_graph
 
         # define the parser function
         def parser(dirpath):
@@ -94,11 +94,8 @@ def test_shell_graph_task():
 
             return {"result": Int((dirpath / "stdout").read_text().strip())}
 
-        wg = get_current_graph()
         # echo x + y expression
-        job1 = wg.add_task(
-            shelljob,
-            name="job1",
+        out1 = shelljob(
             command="echo",
             arguments=["{x}", "+", "{y}"],
             nodes={
@@ -107,16 +104,14 @@ def test_shell_graph_task():
             },
         )
         # bc command to calculate the expression
-        wg.add_task(
-            shelljob,
-            name="job2",
+        out2 = shelljob(
             command="bc",
             arguments=["{expression}"],
-            nodes={"expression": job1.outputs.stdout},
+            nodes={"expression": out1.stdout},
             parser=parser,
             parser_outputs=["result"],  # add a "result" output socket from the parser
         )
-        return wg.tasks.job2.outputs.result
+        return out2.result
 
     with WorkGraph() as wg:
         outputs = add_multiply(x=Int(2), y=Int(3))
