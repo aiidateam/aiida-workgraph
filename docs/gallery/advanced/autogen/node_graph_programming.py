@@ -191,10 +191,11 @@ wg.to_html()
 #
 # First, let's define a task that generates a dictionary of data. Notice the `outputs` decorator,
 # which indicates that `result` is a dynamic output and will be a namespace.
+from typing import Any
 
 
 @task
-def generate_data(N) -> spec.namespace(result=spec.dynamic(any)):
+def generate_data(N) -> spec.namespace(result=spec.dynamic(Any)):
     """Generates a dictionary with N items."""
     data = {f"item_{i}": i for i in range(N)}
     return {"result": data}

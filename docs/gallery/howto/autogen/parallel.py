@@ -84,9 +84,11 @@ generate_node_graph(wg.pk)
 #     We pack the two lists into a dictionary to pass the data to a task, because ``aiida-core`` supports dynamically sized data structures only through dictionaries.
 #     While lists are supported to some extent, their usage is limited to primitive types.
 
+from typing import Any, Annotated
 
-@task.graph()
-def parallel_add_workflow(data) -> spec.namespace(result=spec.dynamic(any)):
+
+@task.graph(outputs=spec.namespace(result=spec.dynamic(Any)))
+def parallel_add_workflow(data) -> dict:
     result = {}
     for i, item in enumerate(data.values()):
         outputs = add(x=item["x"], y=item["y"])
@@ -131,12 +133,12 @@ generate_node_graph(wg.pk)
 # -------------
 # We will extend it the whole workflow only by the ``aggregate_sum`` task
 @task
-def aggregate_sum(data: spec.dynamic(any)):
+def aggregate_sum(data: Annotated[dict, spec.dynamic(Any)]):
     return sum(data.values())
 
 
-@task.graph()
-def parallel_add_workflow(data) -> spec.namespace(result=spec.dynamic(any)):
+@task.graph(outputs=spec.namespace(result=spec.dynamic(Any)))
+def parallel_add_workflow(data) -> dict:
     result = {}
     for i, item in enumerate(data.values()):
         outputs = add(x=item["x"], y=item["y"])

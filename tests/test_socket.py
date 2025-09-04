@@ -10,6 +10,7 @@ from typing import Any
     (
         (Any, 1, "workgraph.any"),
         (int, 1, "workgraph.int"),
+        (int, None, "workgraph.int"),
         (float, 2.0, "workgraph.float"),
         (bool, True, "workgraph.bool"),
         (str, "abc", "workgraph.string"),
@@ -173,3 +174,11 @@ def test_node_value(data_type, socket_value, node_value):
     socket_node_value = socket.node_value
     assert isinstance(socket_node_value, type(node_value))
     assert socket_node_value == node_value
+
+
+def test_set_NoneData():
+    from aiida_workgraph.sockets.builtins import SocketInt
+    from aiida_pythonjob.data.common_data import NoneData
+
+    s = SocketInt("test")
+    s.value = NoneData()
