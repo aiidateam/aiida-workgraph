@@ -148,7 +148,7 @@ def test_dynamic_inputs(fixture_localhost, python_executable_path) -> None:
         command_info={"label": python_executable_path},
     )
     wg.run()
-    assert (wg.tasks.add1.outputs.result.value.value == np.array([4, 6])).all()
+    assert (wg.tasks.add1.outputs.result.value.get_array() == np.array([4, 6])).all()
 
 
 def test_PythonJob_namespace_output_input(fixture_localhost, python_executable_path):
@@ -315,8 +315,8 @@ def test_exit_code(fixture_localhost, python_executable_path):
         # therefore, we need use the `value` attribute to get the raw data
         task.set_inputs(
             {
-                "x": abs(task.inputs.x.value.value),
-                "y": abs(task.inputs.y.value.value),
+                "x": abs(task.inputs.x.value.get_array()),
+                "y": abs(task.inputs.y.value.get_array()),
             }
         )
 
@@ -357,4 +357,4 @@ def test_exit_code(fixture_localhost, python_executable_path):
     )
     # the final task should have exit status 0
     assert wg.tasks.add1.process.exit_status == 0
-    assert (wg.tasks.add1.outputs.sum.value.value == np.array([2, 3])).all()
+    assert (wg.tasks.add1.outputs.sum.value.get_array() == np.array([2, 3])).all()
