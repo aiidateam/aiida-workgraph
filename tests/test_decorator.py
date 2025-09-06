@@ -37,7 +37,7 @@ def test_decorators_args() -> None:
     )
     assert n.args_data["var_args"] is None
     assert n.args_data["var_kwargs"] == "c"
-    assert set(n.get_output_names()) == set(["result", "_outputs", "_wait"])
+    assert set(n.get_output_names()) == set(["_outputs", "_wait"])
     assert isinstance(n.inputs.c, TaskSocketNamespace)
 
 
@@ -60,7 +60,7 @@ def test_decorators_calcfunction_args() -> None:
     assert set(n.args_data["kwargs"]) == set(kwargs)
     assert n.args_data["var_args"] is None
     assert n.args_data["var_kwargs"] == "c"
-    assert set(n.get_output_names()) == set(["result", "_outputs", "_wait"])
+    assert set(n.get_output_names()) == set(["_outputs", "_wait"])
     assert isinstance(n.inputs.c, TaskSocketNamespace)
     assert set(n.inputs.metadata._get_keys()) == metadata_kwargs
 
@@ -99,9 +99,7 @@ def test_decorators_task_args(task_function):
     }
     assert n.args_data["var_args"] is None
     assert n.args_data["var_kwargs"] == "c"
-    assert set(tdata["outputs"]["sockets"].keys()) == set(
-        ["result", "_outputs", "_wait"]
-    )
+    assert set(tdata["outputs"]["sockets"].keys()) == set(["_outputs", "_wait"])
 
 
 @pytest.fixture(params=["decorator_factory", "decorator"])
@@ -139,7 +137,7 @@ def test_decorators_workfunction_args(task_workfunction) -> None:
     assert set(n.args_data["kwargs"]) == set(kwargs)
     assert n.args_data["var_args"] is None
     assert n.args_data["var_kwargs"] == "c"
-    assert set(n.get_output_names()) == set(["result", "_outputs", "_wait"])
+    assert set(n.get_output_names()) == set(["_outputs", "_wait"])
     assert set(n.inputs.metadata._get_keys()) == metadata_kwargs
 
 
@@ -185,7 +183,7 @@ def test_decorators_graph_args(task_graph_task) -> None:
     assert n.args_data["kwargs"] == ["a", "b"]
     assert n.args_data["var_args"] is None
     assert n.args_data["var_kwargs"] == "c"
-    assert set(n.get_output_names()) == set(["result", "_outputs", "_wait"])
+    assert set(n.get_output_names()) == set(["_outputs", "_wait"])
 
 
 def test_inputs_outputs_workchain() -> None:
@@ -265,3 +263,31 @@ def test_set_current_graph():
     g2 = WorkGraph()
     set_current_graph(g2)
     assert get_current_graph() == g2
+
+
+def test_use_pickle():
+    # non-jsonable data
+    class Data:
+        def __init__(self, value):
+            self.value = value
+
+    # without pickle, should raise error
+    @task()
+    def add(x, y):
+        return x + y.value
+
+    with pytest.raises(
+        ValueError, match="Cannot serialize type=Data. No suitable method found"
+    ):
+        with WorkGraph() as wg:
+            wg.outputs.result = add(3, Data(4)).result
+            wg.run()
+
+    # now use pickle
+    @task(use_pickle=True)
+    def add(x, y):
+        return x + y.value
+
+    with WorkGraph() as wg:
+        wg.outputs.result = add(3, Data(4)).result
+        wg.run()

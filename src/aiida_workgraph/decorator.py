@@ -6,9 +6,10 @@ from .workgraph import WorkGraph
 import inspect
 from .task import TaskHandle
 from node_graph.node_spec import NodeSpec
-from node_graph.socket_spec import SocketSpec
+from node_graph.socket_spec import SocketSpec, set_default
 from aiida_workgraph.tasks.aiida import _build_aiida_function_nodespec
 from node_graph.error_handler import ErrorHandlerSpec, normalize_error_handlers
+from dataclasses import replace
 
 
 def _spec_for(
@@ -165,6 +166,7 @@ class TaskDecoratorCollection:
         error_handlers: Optional[Dict[str, ErrorHandlerSpec]] = None,
         catalog: str = "Others",
         store_provenance: bool = True,
+        use_pickle: bool | None = None,
     ) -> Callable:
         """Generate a decorator that register a function as a task.
 
@@ -177,12 +179,16 @@ class TaskDecoratorCollection:
 
         def decorator(obj: Union[WorkGraph, type, callable]) -> TaskHandle:
             spec = _spec_for(obj, identifier=identifier, inputs=inputs, outputs=outputs)
+            if spec.metadata["node_type"] in ["PYFUNCTION", "PYTHONJOB"]:
+                new_inputs = set_default(spec.inputs, "metadata.use_pickle", use_pickle)
+            else:
+                new_inputs = spec.inputs
             handlers = normalize_error_handlers(error_handlers)
             # allow catalog override
             spec = NodeSpec(
                 identifier=spec.identifier,
                 catalog=catalog or spec.catalog,
-                inputs=spec.inputs,
+                inputs=new_inputs,
                 outputs=spec.outputs,
                 executor=spec.executor,
                 error_handlers=handlers,
@@ -267,18 +273,20 @@ class TaskDecoratorCollection:
         inputs: Optional[SocketSpec | list] = None,
         outputs: Optional[SocketSpec | list] = None,
         error_handlers: Optional[Dict[str, ErrorHandlerSpec]] = None,
+        use_pickle: bool | None = None,
     ) -> Callable:
         def decorator(func) -> TaskHandle:
             from aiida_workgraph.tasks.pythonjob_tasks import _build_pythonjob_nodespec
 
-            handle = TaskHandle(
-                _build_pythonjob_nodespec(
-                    func,
-                    in_spec=inputs,
-                    out_spec=outputs,
-                    error_handlers=error_handlers,
-                )
+            spec = _build_pythonjob_nodespec(
+                func,
+                in_spec=inputs,
+                out_spec=outputs,
+                error_handlers=error_handlers,
             )
+            new_inputs = set_default(spec.inputs, "metadata.use_pickle", use_pickle)
+            spec = replace(spec, inputs=new_inputs)
+            handle = TaskHandle(spec)
             handle._func = func
             return handle
 

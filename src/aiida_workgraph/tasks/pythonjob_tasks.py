@@ -29,14 +29,15 @@ class BaseSerializablePythonTask(SpecTask):
         and run our specialized Python serialization.
         """
         non_function_inputs = self.non_function_inputs
+        use_pickle = self.inputs.metadata.use_pickle.value
         for name, socket in data["inputs"]["sockets"].items():
             # skip metadata etc
             if name in non_function_inputs:
                 continue
             if socket["identifier"] == "workgraph.namespace":
-                self._serialize_python_data(socket["sockets"])
+                self._serialize_python_data(socket["sockets"], use_pickle=use_pickle)
             else:
-                self._serialize_socket_data(socket)
+                self._serialize_socket_data(socket, use_pickle=use_pickle)
 
     def update_from_dict(
         self, data: Dict[str, Any], **kwargs
@@ -49,7 +50,9 @@ class BaseSerializablePythonTask(SpecTask):
         return self
 
     @classmethod
-    def _serialize_python_data(cls, input_sockets: Dict[str, Any]) -> None:
+    def _serialize_python_data(
+        cls, input_sockets: Dict[str, Any], use_pickle: bool | None = None
+    ) -> None:
         """
         Recursively walk over the sockets and convert raw Python
         values to AiiDA Data nodes, if needed.
@@ -57,9 +60,9 @@ class BaseSerializablePythonTask(SpecTask):
         for socket in input_sockets.values():
             if not socket["metadata"].get("extras", {}).get("is_pythonjob", False):
                 if socket["identifier"] == "workgraph.namespace":
-                    cls._serialize_python_data(socket["sockets"])
+                    cls._serialize_python_data(socket["sockets"], use_pickle=use_pickle)
                 elif socket.get("property", {}).get("value") is not None:
-                    cls._serialize_socket_data(socket)
+                    cls._serialize_socket_data(socket, use_pickle=use_pickle)
 
     @classmethod
     def _deserialize_python_data(cls, input_sockets: Dict[str, Any]) -> None:
@@ -75,12 +78,14 @@ class BaseSerializablePythonTask(SpecTask):
                     cls._deserialize_socket_data(socket)
 
     @classmethod
-    def _serialize_socket_data(cls, socket: Dict[str, Any]) -> Any:
+    def _serialize_socket_data(
+        cls, socket: Dict[str, Any], use_pickle: bool | None = None
+    ) -> Any:
         value = socket.get("property", {}).get("value")
         if value is None or isinstance(value, orm.Data):
             return  # Already stored or is None
         socket["property"]["value"] = general_serializer(
-            value, serializers=all_serializers
+            value, serializers=all_serializers, use_pickle=use_pickle
         )
 
     @classmethod
