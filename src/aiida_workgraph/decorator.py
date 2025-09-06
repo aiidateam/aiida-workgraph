@@ -9,6 +9,7 @@ from node_graph.node_spec import NodeSpec
 from node_graph.socket_spec import SocketSpec, set_default
 from aiida_workgraph.tasks.aiida import _build_aiida_function_nodespec
 from node_graph.error_handler import ErrorHandlerSpec, normalize_error_handlers
+from dataclasses import replace
 
 
 def _spec_for(
@@ -270,18 +271,20 @@ class TaskDecoratorCollection:
         inputs: Optional[SocketSpec | list] = None,
         outputs: Optional[SocketSpec | list] = None,
         error_handlers: Optional[Dict[str, ErrorHandlerSpec]] = None,
+        use_pickle: bool | None = None,
     ) -> Callable:
         def decorator(func) -> TaskHandle:
             from aiida_workgraph.tasks.pythonjob_tasks import _build_pythonjob_nodespec
 
-            handle = TaskHandle(
-                _build_pythonjob_nodespec(
-                    func,
-                    in_spec=inputs,
-                    out_spec=outputs,
-                    error_handlers=error_handlers,
-                )
+            spec = _build_pythonjob_nodespec(
+                func,
+                in_spec=inputs,
+                out_spec=outputs,
+                error_handlers=error_handlers,
             )
+            new_inputs = set_default(spec.inputs, "metadata.use_pickle", use_pickle)
+            spec = replace(spec, inputs=new_inputs)
+            handle = TaskHandle(spec)
             handle._func = func
             return handle
 
