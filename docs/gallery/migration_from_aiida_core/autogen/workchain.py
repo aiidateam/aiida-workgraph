@@ -138,7 +138,7 @@ def sum_even_workgraph(N: int):
         wg.ctx.n = n_new.result
 
     # The 'result' step: define the final output of the graph.
-    wg.outputs.result = wg.ctx.total
+    return wg.ctx.total
 
 
 # %%
@@ -153,7 +153,8 @@ from aiida import load_profile
 load_profile()
 
 # Generate the WorkGraph instance with a specific input.
-wg = sum_even_workgraph.build_graph(N=5)
+N = 5
+wg = sum_even_workgraph.build_graph(N=N)
 
 # The `to_html()` method generates an interactive visualization of the graph.
 # In a Sphinx-Gallery build, this will be embedded directly in the output.
@@ -162,7 +163,7 @@ wg.to_html()
 # %%
 # Execute the WorkGraph and print the result.
 wg.run()
-print(f"The sum of even numbers up to 10 is: {wg.outputs['result'].value}")
+print(f"The sum of even numbers up to {N} is: {wg.outputs['result'].value}")
 
 
 # %%
