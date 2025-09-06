@@ -1,38 +1,91 @@
 from __future__ import annotations
-import functools
-from typing import Any, Callable, Dict, List, Optional, Union, Tuple
+from typing import Callable, Dict, Optional, Union
 from aiida.engine import calcfunction, workfunction, CalcJob, WorkChain
 from aiida_workgraph.task import Task
 from .workgraph import WorkGraph
 import inspect
-from node_graph.executor import NodeExecutor
-from aiida_workgraph.tasks.factory import (
-    DecoratedFunctionTaskFactory,
-    AiiDAComponentTaskFactory,
-    WorkGraphTaskFactory,
-    PyFunctionTaskFactory,
-)
+from .task import TaskHandle
+from node_graph.node_spec import NodeSpec
+from node_graph.socket_spec import SocketSpec
+from aiida_workgraph.tasks.aiida import _build_aiida_function_nodespec
+from node_graph.error_handler import ErrorHandlerSpec, normalize_error_handlers
 
 
-def build_task(
-    executor: Union[Callable, str],
-    inputs: Optional[type | list] = None,
-    outputs: Optional[type | list] = None,
-) -> Task:
-    """Build task from executor."""
+def _spec_for(
+    obj,
+    *,
+    identifier: Optional[str],
+    inputs: Optional[SocketSpec] = None,
+    outputs: Optional[SocketSpec] = None,
+) -> NodeSpec:
+    from aiida_workgraph.socket_spec import from_aiida_process
+    from aiida_workgraph.utils import inspect_aiida_component_type
+    from node_graph.executor import NodeExecutor
 
-    if isinstance(executor, WorkGraph):
-        return WorkGraphTaskFactory.create_task(executor)
-    elif isinstance(executor, str):
-        executor = NodeExecutor(module_path=executor).executor
-    if callable(executor):
-        return build_task_from_callable(executor, inputs=inputs, outputs=outputs)
+    # WorkGraph -> pack as a node
+    if isinstance(obj, WorkGraph):
+        from aiida_workgraph.tasks.factory.workgraph_task import SubGraphTask
+
+        # ensure group IO exists
+        if len(obj.inputs) == 0:
+            obj.generate_inputs()
+        if len(obj.outputs) == 0:
+            obj.generate_outputs()
+        in_spec = inputs or obj.graph_inputs_spec.inputs
+        out_spec = outputs or obj.graph_outputs_spec.inputs
+        exec_payload = {
+            "module_path": "aiida_workgraph.engine.workgraph",
+            "callable_name": "WorkGraphEngine",
+            "graph_data": obj.prepare_inputs()["workgraph_data"],
+        }
+        return NodeSpec(
+            identifier=identifier or obj.name,
+            catalog="AIIDA",
+            inputs=in_spec,
+            outputs=out_spec,
+            executor=NodeExecutor(**exec_payload),
+            base_class=SubGraphTask,
+            metadata={"node_type": "workgraph"},
+        )
+
+    # AiiDA process classes
+    if inspect.isclass(obj) and issubclass(obj, (CalcJob, WorkChain)):
+        from aiida_workgraph.tasks.aiida import AiiDAProcessTask
+
+        in_spec, out_spec = from_aiida_process(obj)
+        return NodeSpec(
+            identifier=identifier or obj.__name__,
+            catalog="AIIDA",
+            inputs=in_spec,
+            outputs=out_spec,
+            executor=NodeExecutor.from_callable(obj),
+            base_class=AiiDAProcessTask,
+            metadata={"node_type": inspect_aiida_component_type(obj)},
+        )
+
+    # AiiDA process functions (calcfunction/workfunction)
+    if callable(obj) and getattr(obj, "node_class", False):
+        from aiida_workgraph.tasks.aiida import _build_aiida_function_nodespec
+
+        return _build_aiida_function_nodespec(
+            obj, identifier=identifier, in_spec=inputs, out_spec=outputs
+        )
+
+    # Plain Python function -> PyFunction
+    if callable(obj):
+        from aiida_workgraph.tasks.pythonjob_tasks import _build_pyfunction_nodespec
+
+        return _build_pyfunction_nodespec(
+            obj, identifier=identifier, in_spec=inputs, out_spec=outputs
+        )
+
+    raise ValueError(f"Unsupported object for @task: {obj!r}")
 
 
 def build_task_from_callable(
     executor: Callable,
-    inputs: Optional[type | list] = None,
-    outputs: Optional[type | list] = None,
+    inputs: Optional[SocketSpec | list] = None,
+    outputs: Optional[SocketSpec | list] = None,
 ) -> Task:
     """Build task from a callable object.
     First, check if the executor is already a task.
@@ -54,138 +107,17 @@ def build_task_from_callable(
     if inspect.isfunction(executor):
         # calcfunction and workfunction
         if getattr(executor, "node_class", False):
-            return AiiDAComponentTaskFactory.from_aiida_process_function(
-                executor, inputs=inputs, outputs=outputs
-            )
+            return task(inputs=inputs, outputs=outputs)(executor)
         else:
-            return PyFunctionTaskFactory.from_function(
-                executor,
-                inputs=inputs,
-                outputs=outputs,
-            )
+            return task(inputs=inputs, outputs=outputs)(executor)
     else:
         if issubclass(executor, CalcJob) or issubclass(executor, WorkChain):
             if inputs is not None or outputs is not None:
                 raise ValueError(
                     "Can not override inputs or outputs of an AiiDA process classes."
                 )
-            return AiiDAComponentTaskFactory.from_aiida_process_class(executor)
+            return task()(executor)
     raise ValueError(f"The executor {executor} is not supported.")
-
-
-def _assign_wg_outputs(
-    outputs: Any, wg: WorkGraph, graph_task_output_names: List[str]
-) -> None:
-    """
-    Inspect the raw outputs from the function and attach them to the WorkGraph.
-    """
-    from node_graph.socket import BaseSocket
-
-    if isinstance(outputs, BaseSocket):
-        wg.outputs.result = outputs
-    elif isinstance(outputs, dict):
-        wg.outputs = outputs
-    elif isinstance(outputs, tuple):
-        if len(outputs) != len(graph_task_output_names):
-            raise ValueError(
-                f"The length of the outputs {len(outputs)} does not match the length of the \
-                    Graph task outputs {len(graph_task_output_names)}."
-            )
-        outputs_dict = {}
-        for i, output in enumerate(outputs):
-            outputs_dict[graph_task_output_names[i]] = output
-        wg.outputs = outputs_dict
-    else:
-        wg.outputs.result = outputs
-
-
-def _run_func_with_wg(
-    func: Callable,
-    TaskCls: callable,
-    args: tuple,
-    kwargs: dict,
-    var_kwargs: Optional[dict] = None,
-) -> WorkGraph:
-    """
-    Run func(*args, **kwargs, **(var_kwargs or {})) inside a WorkGraph,
-    assign its outputs and return the WorkGraph.
-    """
-    from node_graph.utils import tag_socket_value
-
-    merged = {**kwargs, **(var_kwargs or {})}
-    with WorkGraph(func.__name__) as wg:
-        wg.graph_inputs.inputs = TaskCls.InputCollectionClass._from_dict(
-            TaskCls._ndata.get("inputs", {}),
-            node=wg.graph_inputs,
-            pool=TaskCls.SocketPool,
-            graph=wg,
-        )
-        graph_task_output_names = [
-            name
-            for name, socket in TaskCls._ndata.get("outputs", {})
-            .get("sockets", {})
-            .items()
-            if not socket.get("metadata", {}).get("builtin_socket", False)
-        ]
-        inputs = prepare_function_inputs(func, *args, **merged)
-        wg.graph_inputs.set(inputs)
-        tag_socket_value(wg.inputs)
-        inputs = wg.inputs._value
-        raw = func(**wg.inputs._value)
-        _assign_wg_outputs(raw, wg, graph_task_output_names)
-        return wg
-
-
-def prepare_function_inputs(func, *call_args, **call_kwargs):
-    """Prepare the inputs for the function call.
-    This function extracts the arguments from the function signature and
-    assigns them to the inputs dictionary."""
-    inputs = dict(call_kwargs or {})
-    if func is not None:
-        arguments = list(call_args)
-        orginal_func = func._func if hasattr(func, "_func") else func
-        for name, parameter in inspect.signature(orginal_func).parameters.items():
-            if parameter.kind in [
-                parameter.POSITIONAL_ONLY,
-                parameter.POSITIONAL_OR_KEYWORD,
-            ]:
-                try:
-                    inputs[name] = arguments.pop(0)
-                except IndexError:
-                    pass
-            elif parameter.kind is parameter.VAR_POSITIONAL:
-                # not supported
-                raise ValueError("VAR_POSITIONAL is not supported.")
-    return inputs
-
-
-def _make_wrapper(TaskCls, func=None):
-    """
-    Common wrapper that, when called, adds a node to the current graph
-    and returns the outputs.
-    """
-
-    @functools.wraps(func)
-    def wrapper(*call_args, **call_kwargs):
-        from aiida_workgraph.manager import get_current_graph
-
-        graph = get_current_graph()
-        if graph is None:
-            raise RuntimeError(f"No active Graph available for {TaskCls.name}.")
-        task = graph.add_task(TaskCls)
-        active_zone = getattr(graph, "_active_zone", None)
-        if active_zone:
-            active_zone.children.add(task)
-
-        inputs = prepare_function_inputs(func, *call_args, **call_kwargs)
-        task.set(inputs)
-        return task.outputs
-
-    # Expose the TaskCls on the wrapper if you want
-    wrapper._TaskCls = wrapper._NodeCls = TaskCls
-    wrapper._func = func
-    wrapper.is_decoratored = True
-    return wrapper
 
 
 def nonfunctional_usage(callable: Callable):
@@ -228,9 +160,9 @@ class TaskDecoratorCollection:
     def decorator_task(
         identifier: Optional[str] = None,
         task_type: str = "Normal",
-        inputs: Optional[type | list] = None,
-        outputs: Optional[type | list] = None,
-        error_handlers: Optional[List[Dict[str, Any]]] = None,
+        inputs: Optional[SocketSpec | list] = None,
+        outputs: Optional[SocketSpec | list] = None,
+        error_handlers: Optional[Dict[str, ErrorHandlerSpec]] = None,
         catalog: str = "Others",
         store_provenance: bool = True,
     ) -> Callable:
@@ -243,46 +175,24 @@ class TaskDecoratorCollection:
             outputs (list): task outputs
         """
 
-        def decorator(callable):
-
-            # function or builtin function
-            if inspect.isfunction(callable) or callable.__module__ == "builtins":
-                # calcfunction and workfunction
-                if getattr(callable, "node_class", False):
-                    TaskCls = AiiDAComponentTaskFactory.from_aiida_process_function(
-                        callable, inputs=inputs, outputs=outputs
-                    )
-                else:
-                    if store_provenance:
-                        TaskCls = PyFunctionTaskFactory.from_function(
-                            callable,
-                            inputs=inputs,
-                            outputs=outputs,
-                            error_handlers=error_handlers,
-                        )
-                    else:
-                        TaskCls = DecoratedFunctionTaskFactory.from_function(
-                            func=callable,
-                            identifier=identifier,
-                            task_type=task_type,
-                            inputs=inputs,
-                            outputs=outputs,
-                            error_handlers=error_handlers,
-                            catalog=catalog,
-                        )
-            else:
-                if issubclass(callable, CalcJob) or issubclass(callable, WorkChain):
-                    if inputs is not None or outputs is not None:
-                        raise ValueError(
-                            "Can not override inputs or outputs of an AiiDA process classes."
-                        )
-                    TaskCls = AiiDAComponentTaskFactory.from_aiida_process_class(
-                        callable
-                    )
-            # if callable is a function, we pass it to the make_wrapper
-            if not inspect.isfunction(callable):
-                callable = None
-            return _make_wrapper(TaskCls, func=callable)
+        def decorator(obj: Union[WorkGraph, type, callable]) -> TaskHandle:
+            spec = _spec_for(obj, identifier=identifier, inputs=inputs, outputs=outputs)
+            handlers = normalize_error_handlers(error_handlers)
+            # allow catalog override
+            spec = NodeSpec(
+                identifier=spec.identifier,
+                catalog=catalog or spec.catalog,
+                inputs=spec.inputs,
+                outputs=spec.outputs,
+                executor=spec.executor,
+                error_handlers=handlers,
+                metadata=spec.metadata,
+                base_class=spec.base_class,
+                version=spec.version,
+            )
+            handle = TaskHandle(spec)
+            handle._func = obj
+            return handle
 
         return decorator
 
@@ -290,8 +200,8 @@ class TaskDecoratorCollection:
     @nonfunctional_usage
     def decorator_graph(
         identifier: Optional[str] = None,
-        inputs: Optional[List[Tuple[str, str]]] = None,
-        outputs: Optional[List[Tuple[str, str]]] = None,
+        inputs: Optional[SocketSpec | list] = None,
+        outputs: Optional[SocketSpec | list] = None,
         catalog: str = "Others",
     ) -> Callable:
         """Generate a decorator that register a function as a graph task.
@@ -302,139 +212,115 @@ class TaskDecoratorCollection:
             outputs (list): task outputs
         """
 
-        def decorator(func):
-            from aiida_workgraph.tasks.builtins import GraphTask
+        def decorator(func) -> TaskHandle:
+            from aiida_workgraph.tasks.graph_task import _build_graph_task_nodespec
 
-            TaskCls = DecoratedFunctionTaskFactory.from_function(
-                func=func,
-                identifier=identifier,
-                task_type="graph_task",
-                inputs=inputs,
-                outputs=outputs,
-                catalog=catalog,
-                node_class=GraphTask,
+            handle = TaskHandle(
+                _build_graph_task_nodespec(func, in_spec=inputs, out_spec=outputs)
             )
-
-            wrapped_func = _make_wrapper(TaskCls, func)
-
-            def build_graph(*args, **kwargs):
-                """This function is used to get the graph from the wrapped function."""
-
-                return _run_func_with_wg(func, TaskCls, args, kwargs)
-
-            wrapped_func.build_graph = build_graph
-
-            return wrapped_func
+            handle._func = func
+            return handle
 
         return decorator
 
     @staticmethod
     @nonfunctional_usage
     def calcfunction(
-        inputs: Optional[type | list] = None,
-        outputs: Optional[type | list] = None,
-        error_handlers: Optional[List[Dict[str, Any]]] = None,
+        inputs: Optional[SocketSpec | list] = None,
+        outputs: Optional[SocketSpec | list] = None,
+        error_handlers: Optional[Dict[str, ErrorHandlerSpec]] = None,
     ) -> Callable:
-        def decorator(func):
+        def decorator(func) -> TaskHandle:
             func_decorated = calcfunction(func)
-            TaskCls = AiiDAComponentTaskFactory.from_aiida_process_function(
-                func_decorated,
-                inputs=inputs,
-                outputs=outputs,
-                error_handlers=error_handlers,
+            handle = TaskHandle(
+                _build_aiida_function_nodespec(
+                    func_decorated, in_spec=inputs, out_spec=outputs
+                )
             )
-
-            return _make_wrapper(TaskCls, func_decorated)
+            handle._func = func_decorated
+            return handle
 
         return decorator
 
     @staticmethod
     @nonfunctional_usage
     def workfunction(
-        inputs: Optional[type | list] = None,
-        outputs: Optional[type | list] = None,
-        error_handlers: Optional[List[Dict[str, Any]]] = None,
+        inputs: Optional[SocketSpec | list] = None,
+        outputs: Optional[SocketSpec | list] = None,
+        error_handlers: Optional[Dict[str, ErrorHandlerSpec]] = None,
     ) -> Callable:
-        def decorator(func):
+        def decorator(func) -> TaskHandle:
             func_decorated = workfunction(func)
-            TaskCls = AiiDAComponentTaskFactory.from_aiida_process_function(
-                func_decorated,
-                inputs=inputs,
-                outputs=outputs,
-                error_handlers=error_handlers,
+            handle = TaskHandle(
+                _build_aiida_function_nodespec(
+                    func_decorated, in_spec=inputs, out_spec=outputs
+                )
             )
-
-            return _make_wrapper(TaskCls, func_decorated)
+            handle._func = func_decorated
+            return handle
 
         return decorator
 
     @staticmethod
     @nonfunctional_usage
     def pythonjob(
-        inputs: Optional[type | list] = None,
-        outputs: Optional[type | list] = None,
-        error_handlers: Optional[List[Dict[str, Any]]] = None,
+        inputs: Optional[SocketSpec | list] = None,
+        outputs: Optional[SocketSpec | list] = None,
+        error_handlers: Optional[Dict[str, ErrorHandlerSpec]] = None,
     ) -> Callable:
-        def decorator(func):
-            from aiida_workgraph.tasks.factory import (
-                PythonJobTaskFactory,
-            )
+        def decorator(func) -> TaskHandle:
+            from aiida_workgraph.tasks.pythonjob_tasks import _build_pythonjob_nodespec
 
-            TaskCls = PythonJobTaskFactory.from_function(
-                func, inputs=inputs, outputs=outputs, error_handlers=error_handlers
+            handle = TaskHandle(
+                _build_pythonjob_nodespec(
+                    func,
+                    in_spec=inputs,
+                    out_spec=outputs,
+                    error_handlers=error_handlers,
+                )
             )
-
-            return _make_wrapper(TaskCls, func)
+            handle._func = func
+            return handle
 
         return decorator
 
     @staticmethod
     @nonfunctional_usage
     def awaitable(
-        inputs: Optional[type | list] = None,
-        outputs: Optional[type | list] = None,
+        inputs: Optional[SocketSpec | list] = None,
+        outputs: Optional[SocketSpec | list] = None,
     ) -> Callable:
-        def decorator(func):
-            from aiida_workgraph.tasks.factory.awaitable_task import (
-                AwaitableFunctionTaskFactory,
+        def decorator(func) -> TaskHandle:
+            from aiida_workgraph.tasks.awaitable_tasks import (
+                _build_awaitable_function_nodespec,
             )
 
-            TaskCls = AwaitableFunctionTaskFactory.from_function(
-                func=func,
-                inputs=inputs,
-                outputs=outputs,
+            handle = TaskHandle(
+                _build_awaitable_function_nodespec(
+                    func, in_spec=inputs, out_spec=outputs
+                )
             )
-
-            return _make_wrapper(TaskCls, func)
+            handle._func = func
+            return handle
 
         return decorator
 
     @staticmethod
     @nonfunctional_usage
     def monitor(
-        inputs: Optional[type | list] = None,
-        outputs: Optional[type | list] = None,
+        inputs: Optional[SocketSpec | list] = None,
+        outputs: Optional[SocketSpec | list] = None,
     ) -> Callable:
-        def decorator(func):
-            from aiida_workgraph.tasks.factory.awaitable_task import (
-                MonitorFunctionTaskFactory,
+        def decorator(func) -> TaskHandle:
+            from aiida_workgraph.tasks.awaitable_tasks import (
+                _build_monitor_function_nodespec,
             )
 
-            sig = inspect.signature(func)
-            forbidden = {"interval", "timeout"}
-            conflicts = forbidden.intersection(sig.parameters)
-            if conflicts:
-                raise ValueError(
-                    f"Function '{func.__name__}' defines parameter(s) {sorted(conflicts)}, "
-                    "which conflict with default 'monitor' arguments."
-                )
-            TaskCls = MonitorFunctionTaskFactory.from_function(
-                func=func,
-                inputs=inputs,
-                outputs=outputs,
+            handle = TaskHandle(
+                _build_monitor_function_nodespec(func, in_spec=inputs, out_spec=outputs)
             )
-
-            return _make_wrapper(TaskCls, func)
+            handle._func = func
+            return handle
 
         return decorator
 

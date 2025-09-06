@@ -98,7 +98,7 @@ def handle_negative_sum(task: Task):
     Simply make the inputs positive by taking the absolute value.
     """
     # modify task inputs
-    task.set({"x": abs(task.inputs.x.value), "y": abs(task.inputs.y.value)})
+    task.set_inputs({"x": abs(task.inputs.x.value), "y": abs(task.inputs.y.value)})
 
 
 wg = WorkGraph("handling_error_negative_number")
@@ -136,7 +136,7 @@ def handle_negative_sum(task: Task, increment: int = 1):
     Simply add an increment to the inputs.
     """
     # modify task inputs
-    task.set(
+    task.set_inputs(
         {"x": task.inputs.x.value + increment, "y": task.inputs.y.value + increment}
     )
 

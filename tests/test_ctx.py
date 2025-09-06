@@ -1,7 +1,8 @@
 from aiida_workgraph import WorkGraph, task
 from typing import Callable
 from aiida.orm import Float, ArrayData
-from node_graph import spec
+from aiida_workgraph import socket_spec as spec
+from typing import Any
 import numpy as np
 import pytest
 
@@ -43,7 +44,7 @@ def test_task_update_ctx(decorated_add: Callable) -> None:
     wg = WorkGraph(name="test_node_set_ctx")
     add1 = wg.add_task(decorated_add, "add1", x=Float(2).store(), y=Float(3).store())
     with pytest.raises(
-        AttributeError, match="TaskSocketNamespace has no attribute 'resul'"
+        AttributeError, match="TaskSocketNamespace: add1.outputs has no attribute"
     ):
         wg.update_ctx({"sum": add1.outputs.resul})
     wg.update_ctx({"sum": add1.outputs.result})
@@ -54,7 +55,7 @@ def test_task_update_ctx(decorated_add: Callable) -> None:
 
 def test_task_update_nested_ctx():
     @task
-    def add(x, y) -> spec.namespace(results=spec.namespace(sum=any, product=any)):
+    def add(x, y) -> spec.namespace(results=spec.namespace(sum=Any, product=Any)):
         return {"results": {"sum": x + y, "product": x * y}}
 
     wg = WorkGraph()

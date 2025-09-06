@@ -1,15 +1,15 @@
 from __future__ import annotations
 
 from node_graph.node import Node as GraphNode
-from node_graph.executor import NodeExecutor
-from aiida_workgraph.properties import PropertyPool
-from aiida_workgraph.sockets import SocketPool
-from aiida_workgraph.socket import TaskSocketNamespace
+from .registry import RegistryHub, registry_hub
 from aiida_workgraph.collection import (
     WorkGraphPropertyCollection,
 )
 import aiida
 from typing import Any, Dict, Optional, Union, Callable, List, Set, Iterable
+from node_graph.node_spec import NodeSpec, BaseHandle
+from node_graph.spec_node import _SpecBackedMixin
+from aiida_workgraph.socket_spec import SocketSpecAPI
 
 
 class Task(GraphNode):
@@ -19,15 +19,12 @@ class Task(GraphNode):
     attributes to it.
     """
 
-    PropertyPool = PropertyPool
-    SocketPool = SocketPool
-    InputCollectionClass = TaskSocketNamespace
-    OutputCollectionClass = TaskSocketNamespace
-    PropertyCollectionClass = WorkGraphPropertyCollection
+    registry: Optional[RegistryHub] = registry_hub
+    _PropertyClass = WorkGraphPropertyCollection
+    _socket_spec = SocketSpecAPI
 
     identifier: str = "workgraph.task"
     is_aiida_component = False
-    _error_handlers = None
 
     def __init__(
         self,
@@ -58,9 +55,6 @@ class Task(GraphNode):
         from aiida.orm.utils.serialize import serialize
 
         tdata = super().to_dict(short=short, should_serialize=should_serialize)
-        # clear unused keys
-        for key in ["ctrl_inputs", "ctrl_outputs"]:
-            tdata.pop(key, None)
         tdata["wait"] = [task.name for task in self.waiting_on]
         tdata["children"] = []
         tdata["execution_count"] = self.execution_count
@@ -68,7 +62,6 @@ class Task(GraphNode):
         tdata["process"] = serialize(self.process) if self.process else serialize(None)
         tdata["metadata"]["pk"] = self.process.pk if self.process else None
         tdata["metadata"]["is_aiida_component"] = self.is_aiida_component
-        tdata["error_handlers"] = self.get_error_handlers()
 
         return tdata
 
@@ -77,12 +70,12 @@ class Task(GraphNode):
         from aiida_workgraph.utils import get_dict_from_builder
 
         data = get_dict_from_builder(builder)
-        self.set(data)
+        self.set_inputs(data)
 
     def set_from_protocol(self, *args: Any, **kwargs: Any) -> None:
         """Set the task inputs from protocol data."""
 
-        executor = NodeExecutor(**self.get_executor()).executor
+        executor = self.get_executor().executor
         # check if the executor has the get_builder_from_protocol method
         if not hasattr(executor, "get_builder_from_protocol"):
             raise AttributeError(
@@ -129,53 +122,12 @@ class Task(GraphNode):
         if process and isinstance(process, str):
             process = deserialize_safe(process)
         self.process = process
-        self._error_handlers = data.get("error_handlers", [])
         self.waiting_on.add(data.get("wait", []))
         self.map_data = data.get("map_data", None)
 
     def reset(self) -> None:
         self.process = None
         self.state = "PLANNED"
-
-    @property
-    def error_handlers(self) -> list:
-        return self.get_error_handlers()
-
-    def get_error_handlers(self) -> list:
-        """Get the error handler function for this task."""
-        from aiida.engine import ExitCode
-
-        if self._error_handlers is None:
-            return {}
-
-        handlers = {}
-        if isinstance(self._error_handlers, dict):
-            for handler in self._error_handlers.values():
-                handler["handler"] = NodeExecutor.from_callable(
-                    handler["handler"]
-                ).to_dict()
-        elif isinstance(self._error_handlers, list):
-            for handler in self._error_handlers:
-                if isinstance(handler["handler"], dict):
-                    name = handler.get("name", handler["handler"]["callable_name"])
-                else:
-                    name = handler.get("name", handler["handler"].__name__)
-                    handler["handler"] = NodeExecutor.from_callable(
-                        handler["handler"]
-                    ).to_dict()
-                handlers[name] = handler
-        # convert exit code label (str) to status (int)
-        for handler in handlers.values():
-            exit_codes = []
-            for exit_code in handler["exit_codes"]:
-                if isinstance(exit_code, int):
-                    exit_codes.append(exit_code)
-                elif isinstance(exit_code, ExitCode):
-                    exit_codes.append(exit_code.status)
-                else:
-                    raise ValueError(f"Exit code {exit_code} is not a valid exit code.")
-            handler["exit_codes"] = exit_codes
-        return handlers
 
     def update_state(self, data: Dict[str, Any]) -> None:
         """Set the outputs of the task from a dictionary."""
@@ -216,11 +168,11 @@ class Task(GraphNode):
 
     def execute(self, args=None, kwargs=None, var_kwargs=None):
         """Execute the task."""
-        from node_graph.executor import NodeExecutor
+        from node_graph.node_spec import BaseHandle
 
-        executor = NodeExecutor(**self.get_executor()).executor
+        executor = self.get_executor().executor
         # the imported executor could be a wrapped function
-        if hasattr(executor, "_NodeCls") and hasattr(executor, "_func"):
+        if isinstance(executor, BaseHandle) and hasattr(executor, "_func"):
             executor = getattr(executor, "_func")
         if var_kwargs is None:
             result = executor(*args, **kwargs)
@@ -353,3 +305,23 @@ class WaitingTaskSet(TaskSet):
             source = task.outputs._wait
             target = self.parent.inputs._wait
             self.graph.add_link(source, target)
+
+
+class SpecTask(_SpecBackedMixin, Task):
+    """Concrete task materialized from a NodeSpec."""
+
+    identifier: str = "aiida_workgraph.spec_task"
+
+    def __init__(
+        self, *args, spec: NodeSpec, embed_spec: bool = True, **kwargs
+    ) -> None:
+        super().__init__(*args, **kwargs)
+        self._init_with_spec(spec, embed_spec=embed_spec)
+
+
+class TaskHandle(BaseHandle):
+    def __init__(self, spec):
+        from aiida_workgraph.manager import get_current_graph
+        from aiida_workgraph import WorkGraph
+
+        super().__init__(spec, get_current_graph, graph_class=WorkGraph)

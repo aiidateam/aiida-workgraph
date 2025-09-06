@@ -258,7 +258,7 @@ wg.run()
 # %%
 # The result is an AiiDA Dict node. We access its content via the `.value` attribute.
 eos_result = wg.outputs.result.value
-print("Equation of state results for Cu: ", eos_result.value)
+print("Equation of state results for Cu: ", eos_result.get_dict())
 
 # %%
 # Visualize the EOS Provenance Graph

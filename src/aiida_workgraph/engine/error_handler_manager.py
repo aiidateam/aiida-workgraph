@@ -40,6 +40,7 @@ class ErrorHandlerManager:
         """Run the error handler for a task."""
         from inspect import signature
         from node_graph.executor import NodeExecutor
+        from aiida_workgraph.utils import remove_output_values
 
         handler = NodeExecutor(**handler).executor
         handler_sig = signature(handler)
@@ -55,6 +56,11 @@ class ErrorHandlerManager:
                     msg = handler(task, **metadata.get("kwargs", {}))
                 # Reset the task to rerun it
                 self.process.task_manager.state_manager.reset_task(task.name)
+                # Save the updated task into self.ctx._wgdata
+                tdata = task.to_dict()
+                # Outputs is not needed, so remove outputs value to avoid serialization issues
+                remove_output_values(tdata["outputs"])
+                self.ctx._wgdata["tasks"][task.name] = tdata
                 if msg:
                     self.process.report(msg)
                 metadata["retry"] += 1

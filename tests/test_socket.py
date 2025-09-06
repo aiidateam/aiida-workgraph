@@ -10,6 +10,7 @@ from typing import Any
     (
         (Any, 1, "workgraph.any"),
         (int, 1, "workgraph.int"),
+        (int, None, "workgraph.int"),
         (float, 2.0, "workgraph.float"),
         (bool, True, "workgraph.bool"),
         (str, "abc", "workgraph.string"),
@@ -35,10 +36,10 @@ def test_type_mapping(data_type, data, identifier) -> None:
     def add(x: data_type):
         pass
 
-    assert add._TaskCls().inputs.x._identifier == identifier
-    assert add._TaskCls().inputs.x.property.identifier == identifier
-    add_task = add._TaskCls()
-    add_task.set({"x": data})
+    assert add()._node.inputs.x._identifier == identifier
+    assert add()._node.inputs.x.property.identifier == identifier
+    add_task = add()._node
+    add_task.set_inputs({"x": data})
 
     assert (
         type_mapping.get(data_type, None) == identifier
@@ -78,12 +79,12 @@ def test_aiida_data_socket() -> None:
         def add(x: data_type):
             pass
 
-        assert add._TaskCls().inputs.x._identifier == identifier
-        assert add._TaskCls().inputs.x.property.identifier == identifier
-        add_task = add._TaskCls()
-        add_task.set({"x": data})
-        with pytest.raises(TypeError, match="Expected value of type"):
-            add_task.set({"x": "{{variable}}"})
+        assert add()._node.inputs.x._identifier == identifier
+        assert add()._node.inputs.x.property.identifier == identifier
+        add_task = add()._node
+        add_task.set_inputs({"x": data})
+        with pytest.raises(TypeError, match="Invalid value for property"):
+            add_task.set_inputs({"x": "{{variable}}"})
 
 
 @pytest.mark.parametrize(
@@ -105,12 +106,12 @@ def test_socket_validate(data_type, data) -> None:
     def add(x: data_type):
         """"""
 
-    add_task = add._TaskCls()
+    add_task = add()._node
     # Test setting a value that should raise an exception
     with pytest.raises(Exception) as excinfo:
-        add_task.set({"x": data})
+        add_task.set_inputs({"x": data})
 
-    assert "Expected value of type" in str(excinfo.value)
+    assert "Invalid value for property" in str(excinfo.value)
 
 
 @pytest.mark.skip(reason="SafeLoader not implemented for numpy")
@@ -134,7 +135,7 @@ def test_kwargs() -> None:
     def test(a, b=1, **kwargs):
         return {"sum": a + b, "product": a * b}
 
-    test1 = test._TaskCls()
+    test1 = test()._node
     assert test1.inputs["kwargs"]._link_limit == 1e6
     assert test1.inputs["kwargs"]._identifier == "workgraph.namespace"
 
@@ -173,3 +174,11 @@ def test_node_value(data_type, socket_value, node_value):
     socket_node_value = socket.node_value
     assert isinstance(socket_node_value, type(node_value))
     assert socket_node_value == node_value
+
+
+def test_set_NoneData():
+    from aiida_workgraph.sockets.builtins import SocketInt
+    from aiida_pythonjob.data.common_data import NoneData
+
+    s = SocketInt("test")
+    s.value = NoneData()

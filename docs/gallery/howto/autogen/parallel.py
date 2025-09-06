@@ -20,7 +20,7 @@ from aiida import load_profile
 load_profile()
 
 from aiida_workgraph.utils import generate_node_graph
-from aiida_workgraph import WorkGraph, task
+from aiida_workgraph import WorkGraph, task, spec
 
 # %%
 # Perfectly parallelizable problem
@@ -84,9 +84,11 @@ generate_node_graph(wg.pk)
 #     We pack the two lists into a dictionary to pass the data to a task, because ``aiida-core`` supports dynamically sized data structures only through dictionaries.
 #     While lists are supported to some extent, their usage is limited to primitive types.
 
+from typing import Any, Annotated
 
-@task.graph()
-def parallel_add_workflow(data):
+
+@task.graph(outputs=spec.namespace(result=spec.dynamic(Any)))
+def parallel_add_workflow(data) -> dict:
     result = {}
     for i, item in enumerate(data.values()):
         outputs = add(x=item["x"], y=item["y"])
@@ -101,9 +103,11 @@ wg = WorkGraph("parallel_graph_task")
 wg.add_task(parallel_add_workflow, data=data)
 wg.outputs.result = wg.tasks.parallel_add_workflow.outputs.result
 wg.run()
-print("Result:", wg.outputs.result.value)
+print("Result:")
+for socket in wg.outputs.result:
+    print(socket._name, socket.value)
 # (1+1) + (2+2) + (3+3) = 12
-assert sum(wg.outputs.result.value.values()) == 12
+assert sum(wg.outputs.result._value.values()) == 12
 
 # %%
 # Workflow view
@@ -129,12 +133,12 @@ generate_node_graph(wg.pk)
 # -------------
 # We will extend it the whole workflow only by the ``aggregate_sum`` task
 @task
-def aggregate_sum(data):
+def aggregate_sum(data: Annotated[dict, spec.dynamic(Any)]):
     return sum(data.values())
 
 
-@task.graph()
-def parallel_add_workflow(data):
+@task.graph(outputs=spec.namespace(result=spec.dynamic(Any)))
+def parallel_add_workflow(data) -> dict:
     result = {}
     for i, item in enumerate(data.values()):
         outputs = add(x=item["x"], y=item["y"])

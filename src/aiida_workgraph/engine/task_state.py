@@ -24,9 +24,6 @@ class TaskStateManager:
         self.process = process
         self.awaitable_manager = awaitable_manager
 
-    # -------------------------
-    # Basic get/set operations
-    # -------------------------
     def get_task_runtime_info(self, name: str, key: str) -> Any:
         """Fetch a task runtime property (e.g. process, state, action)."""
         if key == "process":
@@ -76,6 +73,8 @@ class TaskStateManager:
 
     def update_task_state(self, name: str, success=True) -> None:
         """Update task state when the task is finished."""
+        from aiida_workgraph.utils import resolve_node_link_managers
+
         task = self.process.wg.tasks[name]
         self.ctx._task_results.setdefault(name, {})
         if success:
@@ -90,7 +89,9 @@ class TaskStateManager:
                         if len(keys) > 0:
                             # if graph-level outputs are defined, expose them
                             for key in node.outputs._get_keys():
-                                self.ctx._task_results[name][key] = node.outputs[key]
+                                self.ctx._task_results[name][
+                                    key
+                                ] = resolve_node_link_managers(node.outputs[key])
                         else:
                             # otherwise, expose the outputs of all the tasks in the workgraph
                             outgoing = node.base.links.get_outgoing()
@@ -100,9 +101,11 @@ class TaskStateManager:
                                 ):
                                     self.ctx._task_results[name][
                                         link.link_label
-                                    ] = link.node.outputs
+                                    ] = resolve_node_link_managers(link.node.outputs)
                     else:
-                        self.ctx._task_results[name] = node.outputs
+                        self.ctx._task_results[name] = resolve_node_link_managers(
+                            node.outputs
+                        )
                         # self.ctx._new_data[name] = self.ctx._task_results[name]
                     self.set_task_runtime_info(task.name, "state", "FINISHED")
                     self.update_meta_tasks(name)
@@ -111,7 +114,9 @@ class TaskStateManager:
                     )
                 # all other states are considered as failed
                 else:
-                    self.ctx._task_results[name] = node.outputs
+                    self.ctx._task_results[name] = resolve_node_link_managers(
+                        node.outputs
+                    )
                     self.on_task_failed(name)
             elif isinstance(node, Data):
                 #
@@ -175,6 +180,7 @@ class TaskStateManager:
     def update_meta_tasks(self, name: str) -> None:
         """Export task results to the context based on context mapping."""
         from aiida_workgraph.utils import update_nested_dict, get_nested_dict
+        from aiida_workgraph.utils import resolve_node_link_managers
 
         for link in self.process.wg.links:
             if link.from_node.name == name and link.to_node.name in [
@@ -183,16 +189,18 @@ class TaskStateManager:
             ]:
                 key = link.to_socket._scoped_name
                 result_key = link.from_socket._scoped_name
-                result = get_nested_dict(
-                    self.ctx._task_results[name], result_key, default=None
-                )
+                # built-in "_outputs" means the whole task result
+                if result_key == "_outputs":
+                    result = self.ctx._task_results[name]
+                else:
+                    result = get_nested_dict(
+                        self.ctx._task_results[name], result_key, default=None
+                    )
+                result = resolve_node_link_managers(result)
                 update_nested_dict(
                     self.ctx._task_results[link.to_node.name], key, result
                 )
 
-    # --------------------------------------------------
-    # Reset & removing from executed tasks
-    # --------------------------------------------------
     def reset_task(
         self,
         name: str,
@@ -236,9 +244,6 @@ class TaskStateManager:
             label for label in self.ctx._executed_tasks if label.split(".")[0] != name
         ]
 
-    # --------------------------------------------------
-    # Checking readiness, finishing, failures, etc.
-    # --------------------------------------------------
     def is_task_ready_to_run(self, name: str) -> Tuple[bool, Optional[str]]:
         """
         Check if the task is ready to run. We consider parent states, input tasks, etc.
@@ -264,9 +269,6 @@ class TaskStateManager:
                 break
         return all(parent_states), parent_states
 
-    # --------------------------------------------------
-    # Relationship & parent updates
-    # --------------------------------------------------
     def on_task_failed(self, name: str) -> None:
         """
         Mark a task as FAILED, skip its children, and run any error handlers.

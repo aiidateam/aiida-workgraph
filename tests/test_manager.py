@@ -5,7 +5,8 @@ from aiida_workgraph.manager import (
     While,
     Map,
 )
-from node_graph import spec
+from aiida_workgraph import socket_spec as spec
+from typing import Any
 
 
 @task()
@@ -34,10 +35,9 @@ def test_while_and_if(decorated_add):
 def test_map(decorated_add):
     """"""
 
-    @task
-    def generate_list(N) -> spec.namespace(result=spec.dynamic(any)):
+    @task(outputs=spec.namespace(result=spec.dynamic(Any)))
+    def generate_list(N):
         """Generate a list of N items."""
-        # This is a simple example, in practice you might want to generate more complex data
         return {"result": {f"item_{i}": i for i in range(1, N + 1)}}
 
     @task()

@@ -30,10 +30,10 @@ def multiply(x, y):
 
 
 # export the task to html file so that it can be visualized in a browser
-add._TaskCls().to_html()
+add()._node.to_html()
 
 # visualize the task in jupyter-notebook
-# add._TaskCls()
+# add()._node
 
 
 ######################################################################
@@ -44,7 +44,7 @@ add._TaskCls().to_html()
 # outputs:
 #
 
-add1 = add._TaskCls()
+add1 = add()._node
 print("Inputs:", add1.get_input_names())
 print("Outputs:", add1.get_output_names())
 
@@ -145,7 +145,7 @@ class MyAdd(Task):
         "callable_name": "add",
     }
 
-    def create_sockets(self):
+    def update_sockets(self):
         self.inputs._clear()
         self.outputs._clear()
         inp = self.add_input("workgraph.Any", "x")
@@ -167,7 +167,7 @@ add1_task = wg.add_task(MyAdd, name="add1")
 # One can also register the task in task pool, and then use its
 # ``identifer`` directly.
 #
-# .. code:: python
+# . code:: python
 #
 #    wg.add_task("MyAdd", name="add1")
 #

@@ -25,7 +25,7 @@ from .awaitable_manager import AwaitableManager
 from .task_manager import TaskManager
 from .error_handler_manager import ErrorHandlerManager
 from aiida.engine.processes.workchains.awaitable import Awaitable
-from node_graph.node_graph import BUILTIN_NODES
+from node_graph.config import BUILTIN_NODES
 
 if t.TYPE_CHECKING:
     from aiida.engine.runners import Runner  # pylint: disable=unused-import
@@ -139,10 +139,15 @@ class WorkGraphEngine(Process, metaclass=Protect):
         self, saved_state: t.Dict[str, t.Any], load_context: t.Any
     ) -> None:
         from aiida.orm.utils.log import create_logger_adapter
+        from aiida_workgraph import WorkGraph
 
         super().load_instance_state(saved_state, load_context)
         # Load the context
         self._context = saved_state[self._CONTEXT]
+        # Load the WorkGraph
+        # if `_wgdata` does not exist, which means this is the first time the process is run
+        if "_wgdata" in self.ctx:
+            self.wg = WorkGraph.from_dict(self.ctx._wgdata)
         # TODO: avoid hardcoding the logger
         self.node._logger = logging.getLogger(
             "aiida.orm.nodes.process.workflow.workchain.WorkChainNode"
@@ -279,13 +284,17 @@ class WorkGraphEngine(Process, metaclass=Protect):
     def setup(self) -> None:
         """Setup the variables in the context."""
         from aiida_workgraph import WorkGraph
+        from aiida_workgraph.utils import get_workgraph_data
 
         # track if the awaitable callback is added to the runner
         self.ctx._awaitable_actions = []
         self.ctx._new_data = {}
         self.ctx._executed_tasks = []
-        # read the latest workgraph data
-        self.wg = WorkGraph.load(self.node, safe_load=False)
+        # read the workgraph data
+        wgdata = get_workgraph_data(self.node, safe_load=False)
+        self.wg = WorkGraph.from_dict(wgdata)
+        # store the workgraph data in the context, so that one can resume from checkpoint
+        self.ctx._wgdata = wgdata
         # init task results
         self.ctx._task_results = {}
         # create a builtin `_context` task with its results as the context variables
@@ -351,10 +360,14 @@ class WorkGraphEngine(Process, metaclass=Protect):
         """Finalize the workgraph.
         Output the results of the workgraph and the new data.
         """
+        from aiida_workgraph.utils import resolve_node_link_managers
+
         # in case we expose the ctx and inputs as outputs directly
         self.task_manager.state_manager.update_meta_tasks("graph_ctx")
         self.task_manager.state_manager.update_meta_tasks("graph_inputs")
-        self.out_many(self.ctx._task_results["graph_outputs"])
+        self.out_many(
+            resolve_node_link_managers(self.ctx._task_results["graph_outputs"])
+        )
         # output the new data
         if self.ctx._new_data:
             self.out("new_data", self.ctx._new_data)

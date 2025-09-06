@@ -79,9 +79,6 @@ class WorkGraphNode(WorkChainNode):
             cls.TASK_MAP_INFO_KEY,
         )
 
-    # -------------------------
-    # Dictionary-backed properties
-    # -------------------------
     task_states = make_dict_property(TASK_STATES_KEY, default={})
     task_processes = make_dict_property(TASK_PROCESSES_KEY, default={})
     task_actions = make_dict_property(TASK_ACTIONS_KEY, default={})
@@ -95,9 +92,6 @@ class WorkGraphNode(WorkChainNode):
         WORKGRAPH_ERROR_HANDLERS_KEY, default=None
     )
 
-    # -------------------------
-    # Single-item convenience methods
-    # -------------------------
     def get_task_state(self, task_name: str) -> Optional[str]:
         """Return the state of a single task."""
         return get_item_from_dict(

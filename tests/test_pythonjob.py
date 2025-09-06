@@ -1,8 +1,8 @@
 import pytest
-from aiida_workgraph import WorkGraph, task, Task, TaskPool
+from aiida_workgraph import WorkGraph, task, Task
 from typing import Any
 import numpy as np
-from node_graph import spec
+from aiida_workgraph.socket_spec import namespace
 
 
 def test_to_dict():
@@ -102,6 +102,7 @@ def test_decorator(fixture_localhost, python_executable_path):
 def test_PythonJob_kwargs(fixture_localhost, python_executable_path):
     """Test function with kwargs."""
 
+    @task.pythonjob()
     def add(x, y=1, **kwargs):
         x += y
         for value in kwargs.values():
@@ -109,7 +110,7 @@ def test_PythonJob_kwargs(fixture_localhost, python_executable_path):
         return x
 
     wg = WorkGraph("test_PythonJob")
-    wg.add_task(TaskPool.workgraph.pythonjob, function=add, name="add1")
+    wg.add_task(add, name="add1")
     wg.run(
         inputs={
             "add1": {
@@ -129,7 +130,7 @@ def test_PythonJob_kwargs(fixture_localhost, python_executable_path):
     assert wg.tasks.add1.inputs["kwargs"]._value == {"m": 2, "n": 3}
 
 
-def test_dynamic_inputs(fixture_localhost) -> None:
+def test_dynamic_inputs(fixture_localhost, python_executable_path) -> None:
     """Test dynamic inputs.
     For dynamic inputs, we allow the user to define the inputs manually.
     """
@@ -139,23 +140,27 @@ def test_dynamic_inputs(fixture_localhost) -> None:
         return sum(kwargs.values())
 
     wg = WorkGraph("test_dynamic_inputs")
-    wg.add_task(add, name="add1", x=np.array([1, 2]), y=np.array([3, 4]))
+    wg.add_task(
+        add,
+        name="add1",
+        x=np.array([1, 2]),
+        y=np.array([3, 4]),
+        command_info={"label": python_executable_path},
+    )
     wg.run()
-    assert (wg.tasks.add1.outputs.result.value.value == np.array([4, 6])).all()
+    assert (wg.tasks.add1.outputs.result.value.get_array() == np.array([4, 6])).all()
 
 
 def test_PythonJob_namespace_output_input(fixture_localhost, python_executable_path):
     """Test function with namespace output and input."""
 
     # output namespace
-    out = spec.namespace(
-        add_multiply=spec.namespace(
-            add=spec.namespace(sum=any, total=any), multiply=any
-        ),
-        minus=any,
+    out = namespace(
+        add_multiply=namespace(add=namespace(sum=Any, total=Any), multiply=Any),
+        minus=Any,
     )
 
-    @task
+    @task.pythonjob
     def myfunc(x, y) -> out:
         return {
             "add_multiply": {"add": {"sum": x + y, "total": x + y}, "multiply": x * y},
@@ -163,27 +168,25 @@ def test_PythonJob_namespace_output_input(fixture_localhost, python_executable_p
         }
 
     # input namespace
-    @task()
+    @task.pythonjob
     def myfunc2(x, y):
         add = x["add"]["sum"]
         multiply = x["multiply"]
         return y + add + multiply
 
-    @task()
+    @task.pythonjob
     def myfunc3(x, y):
         return x["sum"] + y
 
     wg = WorkGraph("test_namespace_outputs")
-    wg.add_task(TaskPool.workgraph.pythonjob, function=myfunc, name="myfunc")
+    wg.add_task(myfunc, name="myfunc")
     wg.add_task(
-        TaskPool.workgraph.pythonjob,
-        function=myfunc2,
+        myfunc2,
         name="myfunc2",
         x=wg.tasks.myfunc.outputs.add_multiply,
     )
     wg.add_task(
-        TaskPool.workgraph.pythonjob,
-        function=myfunc3,
+        myfunc3,
         name="myfunc3",
         x=wg.tasks.myfunc.outputs.add_multiply.add,
     )
@@ -217,7 +220,7 @@ def test_PythonJob_copy_files(fixture_localhost, python_executable_path):
     """Test function with copy files."""
 
     # define add task
-    @task()
+    @task.pythonjob()
     def add(x, y):
         z = x + y
         with open("result.txt", "w") as f:
@@ -225,7 +228,7 @@ def test_PythonJob_copy_files(fixture_localhost, python_executable_path):
         return x + y
 
     # define multiply task
-    @task()
+    @task.pythonjob()
     def multiply(x_folder_name, y_folder_name):
         with open(f"{x_folder_name}/result.txt", "r") as f:
             x = int(f.read())
@@ -234,11 +237,10 @@ def test_PythonJob_copy_files(fixture_localhost, python_executable_path):
         return x * y
 
     wg = WorkGraph("test_PythonJob_parent_folder")
-    wg.add_task(TaskPool.workgraph.pythonjob, function=add, name="add1")
-    wg.add_task(TaskPool.workgraph.pythonjob, function=add, name="add2")
+    wg.add_task(add, name="add1")
+    wg.add_task(add, name="add2")
     wg.add_task(
-        TaskPool.workgraph.pythonjob,
-        function=multiply,
+        multiply,
         name="multiply",
     )
     wg.add_link(
@@ -249,7 +251,6 @@ def test_PythonJob_copy_files(fixture_localhost, python_executable_path):
         wg.tasks.add2.outputs.remote_folder,
         wg.tasks["multiply"].inputs["copy_files"],
     )
-    # ------------------------- Submit the calculation -------------------
     wg.run(
         inputs={
             "add1": {
@@ -312,10 +313,10 @@ def test_exit_code(fixture_localhost, python_executable_path):
         # because the error_handler is ran by the engine
         # all the inputs are serialized to AiiDA data
         # therefore, we need use the `value` attribute to get the raw data
-        task.set(
+        task.set_inputs(
             {
-                "x": abs(task.inputs.x.value.value),
-                "y": abs(task.inputs.y.value.value),
+                "x": abs(task.inputs.x.value.get_array()),
+                "y": abs(task.inputs.y.value.get_array()),
             }
         )
 
@@ -323,9 +324,13 @@ def test_exit_code(fixture_localhost, python_executable_path):
 
     @task.pythonjob(
         outputs=["sum"],
-        error_handlers=[
-            {"handler": handle_negative_sum, "exit_codes": [410], "max_retries": 5}
-        ],
+        error_handlers={
+            "handle_negative_sum": {
+                "handler": handle_negative_sum,
+                "exit_codes": [410],
+                "max_retries": 5,
+            }
+        },
     )
     def add(x: np.array, y: np.array) -> np.array:
         sum = x + y
@@ -352,4 +357,4 @@ def test_exit_code(fixture_localhost, python_executable_path):
     )
     # the final task should have exit status 0
     assert wg.tasks.add1.process.exit_status == 0
-    assert (wg.tasks.add1.outputs.sum.value.value == np.array([2, 3])).all()
+    assert (wg.tasks.add1.outputs.sum.value.get_array() == np.array([2, 3])).all()

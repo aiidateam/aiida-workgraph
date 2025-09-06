@@ -1,4 +1,4 @@
-from node_graph.collection import EntryPointPool
+from node_graph.registry import EntryPointPool
 
 # global instance
 SocketPool = EntryPointPool(entry_point_group="aiida_workgraph.socket")
