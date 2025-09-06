@@ -181,6 +181,8 @@ class TaskDecoratorCollection:
             spec = _spec_for(obj, identifier=identifier, inputs=inputs, outputs=outputs)
             if spec.metadata["node_type"] in ["PYFUNCTION", "PYTHONJOB"]:
                 new_inputs = set_default(spec.inputs, "metadata.use_pickle", use_pickle)
+            else:
+                new_inputs = spec.inputs
             handlers = normalize_error_handlers(error_handlers)
             # allow catalog override
             spec = NodeSpec(

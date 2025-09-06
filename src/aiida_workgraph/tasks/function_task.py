@@ -1,22 +1,14 @@
 from __future__ import annotations
-from dataclasses import replace
 from copy import deepcopy
-from typing import Callable, List, Optional, Any, Type, Dict
+from typing import Callable, List, Optional, Type, Dict
 from aiida_workgraph.socket_spec import (
     from_aiida_process,
     infer_specs_from_callable,
-    namespace,
 )
 from node_graph.socket_spec import SocketSpec, merge_specs
 from node_graph.node_spec import NodeSpec
 from node_graph.executor import NodeExecutor
 from node_graph.error_handler import ErrorHandlerSpec, normalize_error_handlers
-
-
-def namespace_with_defaults(defaults: dict[str, Any], **fields: Any) -> SocketSpec:
-    """Build a namespace and attach per-field default values."""
-    ns = namespace(**fields)
-    return replace(ns, defaults=deepcopy(defaults))
 
 
 def _record_specs_block(
