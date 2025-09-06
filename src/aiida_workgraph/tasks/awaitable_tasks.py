@@ -3,7 +3,7 @@ from aiida_workgraph.task import SpecTask
 from typing import Callable, Optional, Any
 from node_graph.socket_spec import SocketSpec
 from node_graph.node_spec import NodeSpec
-from .function_task import build_callable_nodespec, namespace_with_defaults
+from .function_task import build_callable_nodespec
 from aiida_workgraph.socket_spec import namespace
 
 
@@ -92,10 +92,9 @@ def _build_monitor_function_nodespec(
     out_spec: Optional[SocketSpec] = None,
 ) -> NodeSpec:
     # defaults for interval/timeout — set on the NAMESPACE (keys = field names)
-    add_in = namespace_with_defaults(
-        {"interval": 5, "timeout": 3600},
-        interval=int,
-        timeout=int,
+    add_in = namespace(
+        interval=(int, 5),
+        timeout=(int, 3600),
     )
     add_out = namespace(exit_code=Any)
 
