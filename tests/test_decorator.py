@@ -29,9 +29,7 @@ def test_decorators_args() -> None:
         {
             "metadata",
             "function_data",
-            "deserializers",
             "a",
-            "serializers",
             "process_label",
             "b",
             "function_inputs",
@@ -94,9 +92,7 @@ def test_decorators_task_args(task_function):
     assert set(n.args_data["kwargs"]) == {
         "metadata",
         "function_data",
-        "deserializers",
         "a",
-        "serializers",
         "process_label",
         "b",
         "function_inputs",

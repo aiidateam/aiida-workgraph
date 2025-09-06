@@ -83,7 +83,7 @@ def test_aiida_data_socket() -> None:
         assert add()._node.inputs.x.property.identifier == identifier
         add_task = add()._node
         add_task.set_inputs({"x": data})
-        with pytest.raises(TypeError, match="Expected value of type"):
+        with pytest.raises(TypeError, match="Invalid value for property"):
             add_task.set_inputs({"x": "{{variable}}"})
 
 
@@ -111,7 +111,7 @@ def test_socket_validate(data_type, data) -> None:
     with pytest.raises(Exception) as excinfo:
         add_task.set_inputs({"x": data})
 
-    assert "Expected value of type" in str(excinfo.value)
+    assert "Invalid value for property" in str(excinfo.value)
 
 
 @pytest.mark.skip(reason="SafeLoader not implemented for numpy")
