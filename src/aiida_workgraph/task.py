@@ -325,3 +325,31 @@ class TaskHandle(BaseHandle):
         from aiida_workgraph import WorkGraph
 
         super().__init__(spec, get_current_graph, graph_class=WorkGraph)
+
+    def __call__(self, *args, **kwargs):
+        """Build a task into the current graph; forbid calling a task from inside
+        another running @task/@task.calcfunction/@task.workfunction body (i.e., during process execution)."""
+
+        from aiida_pythonjob import PyFunction
+        from aiida.engine import FunctionProcess
+        from aiida.engine import Process
+
+        try:
+            current = Process.current()
+        except Exception:
+            current = None
+
+        if current is not None and isinstance(current, (PyFunction, FunctionProcess)):
+            running = getattr(current, "process_label", current.__class__.__name__)
+            raise RuntimeError(
+                "Invalid nested task call.\n\n"
+                f"• You invoked task '{self.identifier}' from inside the running process "
+                f"'{running}' ({current.__class__.__name__}).\n"
+                "• Tasks must not call other tasks directly inside a "
+                "@task/@task.calcfunction/@task.workfunction body.\n\n"
+                "Do one of the following instead:\n"
+                "  1) Compose tasks in a @task.graph function (build a graph and connect tasks), or\n"
+                "  2) Move shared logic into a plain Python helper function and call that."
+            )
+
+        return super().__call__(*args, **kwargs)
