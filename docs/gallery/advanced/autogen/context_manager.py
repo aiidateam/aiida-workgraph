@@ -297,6 +297,9 @@ wg.to_html()
 # ----------------
 #
 # Before we describe the control flow constructs, we need to understand the use of the workflow context.
+# The details on AiiDA's context variables can be found in the :doc:`/advanced/autogen/context` advanced section.
+# Here we describe how the context is treated by the ``WorkGraph``.
+#
 # ``WorkGraph`` doesn't track context variables (``wg.ctx``) for automatic dependency resolution because they could introduce cyclical dependencies between tasks.
 # As such, when defining dynamic branching in a workflow (as is done in the following sections), we must explicitly do the following:
 #
