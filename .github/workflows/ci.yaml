@@ -73,6 +73,7 @@ jobs:
         -   name: Install Python dependencies
             run: |
                 pip install -e .[widget,pre-commit,tests]
+                pip install pytest-xdist
                 playwright install
                 pip list
 
@@ -89,7 +90,8 @@ jobs:
             env:
                 AIIDA_WARN_v3: 1
             run: |
-                pytest -v --cov --durations=0
+                verdi config set logging.aiida_loglevel REPORT
+                pytest -n auto -v --cov --durations=0
 
         -   name: Upload coverage reports to Codecov
             uses: codecov/codecov-action@v4.0.1
