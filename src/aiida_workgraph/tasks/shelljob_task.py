@@ -122,7 +122,7 @@ def _build_shelljob_nodespec(
             ShellParser.format_link_label(key): value
             for key, value in outputs.fields.items()
         }
-        replace(outputs, fields=fields)
+        outputs = replace(outputs, fields=fields)
         out_spec = merge_specs(out_spec, outputs)
 
     if parser_outputs:
