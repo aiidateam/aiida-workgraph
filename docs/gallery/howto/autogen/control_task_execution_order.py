@@ -17,11 +17,6 @@ Control task execution order
 #    For dependencies between different WorkGraphs, use the ``monitor`` task.
 #    Please refer to the :doc:`monitor <./monitor>` HowTo for more details.
 
-
-# %%
-# Setup
-# -----
-
 # sphinx_gallery_start_ignore
 from aiida_workgraph.utils.logging import set_aiida_loglevel
 

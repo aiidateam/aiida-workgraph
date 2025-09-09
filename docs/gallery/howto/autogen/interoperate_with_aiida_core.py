@@ -18,10 +18,6 @@ Interoperate with ``aiida-core`` components
 #    This guide assumes prior knowledge of ``aiida-core`` components.
 #    If you’re unfamiliar with them, please refer to the official documentation on `Calculations <https://aiida.readthedocs.io/projects/aiida-core/en/stable/topics/calculations/index.html>`_ and `Workflows <https://aiida.readthedocs.io/projects/aiida-core/en/stable/topics/workflows/index.html>`_.
 
-# %%
-# Setup
-# -----
-
 import typing as t
 
 from aiida import load_profile, orm

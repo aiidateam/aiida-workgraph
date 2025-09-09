@@ -11,15 +11,11 @@ Run tasks in parallel
 # This typically involves applying the same workflow to many independent data points.
 # In this how-to, we show how to run the workflow in parallel for each data point to improve performance and scalability.
 
-# %%
-# Setup
-# ~~~~~
-
 import typing as t
 
 from aiida import load_profile
 
-from aiida_workgraph import WorkGraph, namespace, task, dynamic
+from aiida_workgraph import namespace, task, dynamic
 from aiida_workgraph.utils import generate_node_graph
 
 load_profile()

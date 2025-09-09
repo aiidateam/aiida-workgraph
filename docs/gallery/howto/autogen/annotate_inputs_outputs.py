@@ -18,12 +18,6 @@ Use annotations to control data provenance
 #
 # This guide will walk you through the various ways to annotate your tasks.
 
-# %%
-# Initial setup
-# =============
-#
-# First, let's set up the AiiDA environment.
-
 import typing as t
 from aiida import load_profile
 from aiida_workgraph import task
@@ -34,13 +28,13 @@ load_profile()
 
 # %%
 # Data creation
-# =============
+# -------------
 #
 # Data creation is controlled at the ``Calculation`` level.
 # In AiiDA, a ``Calculation`` is a process that performs a computation and creates new data nodes.
 #
 # Static namespaces for outputs
-# -----------------------------
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #
 # Let's define two tasks that perform the same calculation but have different output annotations.
 #
@@ -96,7 +90,7 @@ generate_node_graph(wg.pk)
 # As the provenance graph shows, ``add_multiply1`` has a single output node (``result``), while ``add_multiply2`` has two separate output nodes (``sum`` and ``product``), as defined in its namespace.
 #
 # Static namespaces for inputs
-# ----------------------------
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #
 # Similarly, we can annotate inputs to unpack a dictionary into distinct data nodes.
 # We use Python's standard ``typing.Annotated`` to attach the `aiida-workgraph` namespace metadata to the input type.
@@ -138,7 +132,7 @@ generate_node_graph(wg.pk)
 # We can see that even though we passed the inputs as a single dictionary, they were serialized as two separate ``Int`` nodes, ``x`` and ``y``, before being passed to the task.
 #
 # Dynamic namespaces
-# ------------------
+# ~~~~~~~~~~~~~~~~~~
 #
 # Sometimes, the number and names of outputs are not known until the task runs.
 # Dynamic namespaces are designed for this scenario.
@@ -177,7 +171,7 @@ generate_node_graph(wg.pk)
 # The ``dynamic(typing.Any)`` specification instructs the workgraph to treat each value in the returned dictionary as a separate output node of any type.
 #
 # Nested namespaces
-# -----------------
+# ~~~~~~~~~~~~~~~~~
 #
 # Namespaces can be nested to represent complex, structured data.
 # Let's define a task that returns a nested dictionary.
@@ -244,7 +238,7 @@ print(get_process_summary(wg.tasks[-1].pk))
 # The output shows a dictionary with dynamic keys (``data_0``, ``data_1``, etc.), where each value is itself a dictionary with a fixed ``square`` and ``cube`` structure, as specified by ``dynamic(namespace(...))``.
 #
 # Data linkage
-# ============
+# ------------
 #
 # Data linkage tracks the flow of data between tasks.
 # At the workflow level, a `task.graph` can define its own inputs and outputs, providing a clean interface to a complex chain of tasks.
@@ -322,7 +316,7 @@ wg.to_html()
 
 # %%
 # Conclusion
-# ==========
+# ----------
 #
 # You now know how to annotate task and graph inputs and outputs in `aiida-workgraph`.
 # By leveraging static (``namespace``), dynamic (``dynamic``), and nested namespaces, you can precisely control data serialization and create transparent data lineages.
