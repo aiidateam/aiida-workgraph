@@ -78,6 +78,17 @@ def test_dynamic_port():
     assert cat_task.inputs["nodes"]._value == {"input2": Int(2)}
 
 
+def test_outputs_with_dot():
+    """Test the outputs with dot in the name."""
+    wg = WorkGraph(name="test_outputs_with_dot")
+    job1 = wg.add_task(
+        shelljob, command="cat", resolve_command=False, outputs=["file.txt"]
+    )
+
+    assert "file_txt" in job1.outputs
+    assert "file.txt" not in job1.outputs
+
+
 @pytest.mark.usefixtures("started_daemon_client")
 def test_shell_graph_task():
     """Test the ShellJob inside a graph task.
