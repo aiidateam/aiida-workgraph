@@ -18,7 +18,7 @@ class AiiDAFunctionTask(SpecTask):
         from aiida.engine import run_get_node
         from node_graph.node_spec import BaseHandle
 
-        executor = self.get_executor().executor
+        executor = self.get_executor().callable
         # the imported executor could be a wrapped function
         if isinstance(executor, BaseHandle) and hasattr(executor, "_func"):
             executor = getattr(executor, "_func")
@@ -45,7 +45,7 @@ class AiiDAProcessTask(SpecTask):
     def execute(self, engine_process, args=None, kwargs=None, var_kwargs=None):
         from aiida_workgraph.utils import create_and_pause_process
 
-        executor = self.get_executor().executor
+        executor = self.get_executor().callable
 
         kwargs.setdefault("metadata", {})
         kwargs["metadata"].update({"call_link_label": self.name})

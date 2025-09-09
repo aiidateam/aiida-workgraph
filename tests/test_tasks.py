@@ -160,18 +160,8 @@ def test_set_inputs(decorated_add: Callable) -> None:
     add1 = wg.add_task(decorated_add, "add1", x=1)
     add1.set_inputs({"y": 2, "metadata.store_provenance": False})
     data = wg.prepare_inputs(metadata=None)
-    assert (
-        data["workgraph_data"]["tasks"]["add1"]["inputs"]["sockets"]["y"]["property"][
-            "value"
-        ]
-        == 2
-    )
-    assert (
-        data["workgraph_data"]["tasks"]["add1"]["inputs"]["sockets"]["metadata"][
-            "sockets"
-        ]["store_provenance"]["property"]["value"]
-        is False
-    )
+    assert data["tasks"]["add1"]["y"] == 2
+    assert data["tasks"]["add1"]["metadata"]["store_provenance"] is False
 
 
 def test_set_inputs_from_builder(add_code) -> None:

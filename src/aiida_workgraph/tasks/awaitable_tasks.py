@@ -17,7 +17,7 @@ class AwaitableFunctionTask(SpecTask):
 
     def execute(self, engine_process, args=None, kwargs=None, var_kwargs=None):
 
-        executor = self.get_executor().executor
+        executor = self.get_executor().callable
         if var_kwargs is None:
             awaitable_target = asyncio.ensure_future(
                 executor(*args, **kwargs),
@@ -42,7 +42,7 @@ class MonitorFunctionTask(SpecTask):
     def execute(self, engine_process, args=None, kwargs=None, var_kwargs=None):
         from aiida_workgraph.tasks.monitors import monitor
 
-        executor = self.get_executor().executor
+        executor = self.get_executor().callable
         # get the raw function without the decorator
         if hasattr(executor, "_func"):
             executor = executor._func

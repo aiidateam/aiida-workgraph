@@ -52,6 +52,7 @@ class WorkGraphNode(WorkChainNode):
     TASK_ERROR_HANDLERS_KEY = "task_error_handlers"
     TASK_EXECUTION_COUNTS_KEY = "task_execution_counts"
     TASK_MAP_INFO_KEY = "task_map_info"
+    TASK_INPUTS_KEY = "task_inputs"
     WORKGRAPH_DATA_KEY = "workgraph_data"
     WORKGRAPH_DATA_SHORT_KEY = "workgraph_data_short"
     WORKGRAPH_ERROR_HANDLERS_KEY = "workgraph_error_handlers"
@@ -68,6 +69,7 @@ class WorkGraphNode(WorkChainNode):
         # pylint: disable=no-self-argument
         return super()._updatable_attributes + (
             cls.WORKGRAPH_DATA_KEY,
+            cls.TASK_INPUTS_KEY,
             cls.WORKGRAPH_DATA_SHORT_KEY,
             cls.WORKGRAPH_ERROR_HANDLERS_KEY,
             cls.TASK_STATES_KEY,
@@ -87,6 +89,7 @@ class WorkGraphNode(WorkChainNode):
     task_execution_counts = make_dict_property(TASK_EXECUTION_COUNTS_KEY, default={})
     task_map_info = make_dict_property(TASK_MAP_INFO_KEY, default={})
     workgraph_data = make_dict_property(WORKGRAPH_DATA_KEY, default=None)
+    task_inputs = make_dict_property(TASK_INPUTS_KEY, default=None)
     workgraph_data_short = make_dict_property(WORKGRAPH_DATA_SHORT_KEY, default=None)
     workgraph_error_handlers = make_dict_property(
         WORKGRAPH_ERROR_HANDLERS_KEY, default=None

@@ -29,12 +29,12 @@ def test_to_dict():
     )
     data = wg.tasks.make_supercell_1.to_dict()
     assert not isinstance(
-        data["inputs"]["sockets"]["atoms"]["property"]["value"],
+        data["inputs"]["atoms"],
         orm.Data,
     )
     data = wg.tasks.make_supercell_1.to_dict(should_serialize=True)
     assert isinstance(
-        data["inputs"]["sockets"]["atoms"]["property"]["value"],
+        data["inputs"]["atoms"],
         orm.Data,
     )
 
@@ -123,7 +123,7 @@ def test_PythonJob_kwargs(fixture_localhost, python_executable_path):
         },
     )
     # data inside the kwargs should be serialized separately
-    wg.process.inputs.workgraph_data.tasks.add1.inputs.sockets.kwargs.sockets.m.property.value == 2
+    wg.process.inputs.tasks.add1.kwargs.m == 2
     assert wg.tasks.add1.outputs.result.value.value == 8
     # load the workgraph
     wg = WorkGraph.load(wg.pk)
@@ -326,7 +326,7 @@ def test_exit_code(fixture_localhost, python_executable_path):
         outputs=["sum"],
         error_handlers={
             "handle_negative_sum": {
-                "handler": handle_negative_sum,
+                "executor": handle_negative_sum,
                 "exit_codes": [410],
                 "max_retries": 5,
             }
