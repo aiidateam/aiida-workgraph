@@ -23,7 +23,7 @@ import typing as t
 from aiida import load_profile
 
 from aiida_workgraph import dynamic, namespace, task
-from aiida_workgraph.utils import generate_node_graph, get_process_summary
+from aiida_workgraph.utils import get_process_summary
 
 load_profile()
 
@@ -69,7 +69,7 @@ def AddMultiply(x: int, y: int):
     add_multiply2(x=x, y=y)
 
 
-wg = AddMultiply.build_graph(x=1, y=2)
+wg = AddMultiply.build(x=1, y=2)
 wg.run()
 
 # %%
@@ -82,7 +82,7 @@ wg.run()
 #
 # Let's visualize the data provenance of our executed workflow:
 
-generate_node_graph(wg.pk)
+wg.generate_provenance_graph()
 
 # %%
 # As the provenance graph shows, ``add_multiply1`` has a single output node (``result``), while ``add_multiply2`` has two separate output nodes (``sum`` and ``product``), as defined in its namespace.
@@ -110,7 +110,7 @@ def AddMultiplyInputs(x: int, y: int):
     add_multiply3(data={"x": x, "y": y})
 
 
-wg = AddMultiplyInputs.build_graph(x=1, y=2)
+wg = AddMultiplyInputs.build(x=1, y=2)
 wg.to_html()
 
 # %%
@@ -123,7 +123,7 @@ wg.run()
 # %%
 # Finally, we can inspect the provenance graph for this workflow:
 
-generate_node_graph(wg.pk)
+wg.generate_provenance_graph()
 
 
 # %%
@@ -151,13 +151,13 @@ def SquareNumbersGenerator(n: int):
     generate_square_numbers(n=n)
 
 
-wg = SquareNumbersGenerator.build_graph(n=5)
+wg = SquareNumbersGenerator.build(n=5)
 wg.run()
 
 # %%
 # Let's examine the provenance of this dynamic workflow:
 
-generate_node_graph(wg.pk)
+wg.generate_provenance_graph()
 
 # %%
 # The graph shows that the ``generate_square_numbers`` task has multiple output nodes, one for each entry in the dynamically generated dictionary.
@@ -184,7 +184,7 @@ def NestedDictGenerator(x: int, y: int):
     generate_nested_dict(x=x, y=y)
 
 
-wg = NestedDictGenerator.build_graph(x=1, y=2)
+wg = NestedDictGenerator.build(x=1, y=2)
 wg.run()
 
 # %%
@@ -212,7 +212,7 @@ def DynamicNestedDictGenerator(n: int):
     generate_dynamic_nested_dict(n=n)
 
 
-wg = DynamicNestedDictGenerator.build_graph(n=3)
+wg = DynamicNestedDictGenerator.build(n=3)
 wg.run()
 
 # %%
@@ -275,7 +275,7 @@ def AddMultiplyFinal(
     return {"square": square_numbers, "add_multiply1": out1, "add_multiply2": out2}
 
 
-wg = AddMultiplyFinal.build_graph(
+wg = AddMultiplyFinal.build(
     n=3,
     data={
         "add_multiply1": {"data": {"x": 1, "y": 2}},
@@ -311,7 +311,7 @@ wg.to_html()
 
 wg.run()
 
-generate_node_graph(wg.pk)
+wg.generate_provenance_graph()
 
 # %%
 # Note how the outputs of the various tasks are exposed (linked) to the graph, making accessible via the graph node.

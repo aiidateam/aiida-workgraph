@@ -327,3 +327,16 @@ class TaskHandle(BaseHandle):
         from aiida_workgraph import WorkGraph
 
         super().__init__(spec, get_current_graph, graph_class=WorkGraph)
+
+    def run(self, /, *args, **kwargs):
+        graph = self.build(*args, **kwargs)
+        return graph.run()
+
+    def run_get_graph(self, /, *args, **kwargs):
+        graph = self.build(*args, **kwargs)
+        return graph.run(), graph
+
+    def submit(self, /, *args, **kwargs):
+        graph = self.build(*args, **kwargs)
+        graph.submit()
+        return graph

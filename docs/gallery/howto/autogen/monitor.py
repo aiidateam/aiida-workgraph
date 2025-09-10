@@ -64,7 +64,7 @@ def TimeMonitor(time, x, y):
     return the_sum
 
 
-wg = TimeMonitor.build_graph(
+wg = TimeMonitor.build(
     time=datetime.datetime.now() + datetime.timedelta(seconds=5),
     x=1,
     y=2,
@@ -132,7 +132,7 @@ def FileMonitor(x, y, z):
     return multiply(the_sum, z).result
 
 
-wg = FileMonitor.build_graph(x=1, y=2, z=3)
+wg = FileMonitor.build(x=1, y=2, z=3)
 wg.to_html()
 
 # %%

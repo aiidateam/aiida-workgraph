@@ -20,7 +20,7 @@ from aiida import load_profile, orm
 from aiida_shell.data import PickledData
 
 from aiida_workgraph import dynamic, shelljob, task
-from aiida_workgraph.utils import generate_node_graph, get_or_create_code
+from aiida_workgraph.utils import get_or_create_code
 
 load_profile()
 
@@ -37,7 +37,7 @@ def ShellDate() -> t.Annotated[dict, dynamic(t.Any)]:
     return shelljob(command="date")
 
 
-wg = ShellDate.build_graph()
+wg = ShellDate.build()
 wg.run()
 
 print("\nResult: ", wg.outputs.stdout.value.get_content())
@@ -109,7 +109,7 @@ def ShellDateWithArguments() -> t.Annotated[dict, dynamic(t.Any)]:
     return shelljob(command="date", arguments=["--iso-8601"])
 
 
-wg = ShellDateWithArguments.build_graph()
+wg = ShellDateWithArguments.build()
 wg.run()
 
 print("\nResult: ", wg.outputs.stdout.value.get_content())
@@ -135,7 +135,7 @@ def ShellCatWithFileArguments() -> t.Annotated[dict, dynamic(t.Any)]:
     )
 
 
-wg = ShellCatWithFileArguments.build_graph()
+wg = ShellCatWithFileArguments.build()
 wg.run()
 
 print("\nResult: ", wg.outputs.stdout.value.get_content())
@@ -173,7 +173,7 @@ def ShellAddMultiply(x: int, y: int, z: int) -> int:
 
 
 # Create a workgraph
-wg = ShellAddMultiply.build_graph(2, 3, 4)
+wg = ShellAddMultiply.build(2, 3, 4)
 wg.to_html()
 
 # %%
@@ -188,7 +188,7 @@ assert wg.outputs.result.value == 20
 # %%
 # Let's have a look at the provenance graph.
 
-generate_node_graph(wg.pk)
+wg.generate_provenance_graph()
 
 # %%
 # What's Next

@@ -154,7 +154,7 @@ load_profile()
 
 # Generate the WorkGraph instance with a specific input.
 N = 5
-wg = sum_even_workgraph.build_graph(N=N)
+wg = sum_even_workgraph.build(N=N)
 
 # The `to_html()` method generates an interactive visualization of the graph.
 # In a Sphinx-Gallery build, this will be embedded directly in the output.

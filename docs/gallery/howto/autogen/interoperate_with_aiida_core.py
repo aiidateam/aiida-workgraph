@@ -86,7 +86,7 @@ def AiiDAComponentsWorkflow():
     return workfunction_sum
 
 
-wg = AiiDAComponentsWorkflow.build_graph()
+wg = AiiDAComponentsWorkflow.build()
 wg.to_html()
 
 # %%
@@ -113,9 +113,9 @@ wg.to_html()
 wg.run()
 
 # %%
-from aiida_workgraph.utils import generate_node_graph
 
-generate_node_graph(wg.pk)
+
+wg.generate_provenance_graph()
 
 # %%
 # Use ``WorkGraph`` in ``WorkChain``
@@ -179,7 +179,7 @@ def IntegratedAddMultiply() -> t.Annotated[dict, namespace(sum=int, product=int)
     return {"sum": the_sum, "product": the_product}
 
 
-wg = IntegratedAddMultiply.build_graph()
+wg = IntegratedAddMultiply.build()
 
 # %%
 # We can export our workgraph as a dictionary using the ``prepare_inputs()`` method and use it as the input to our ``WorkChain``:
@@ -210,10 +210,9 @@ print("  Product:", result["product"])
 
 # %%
 # And finally, we can have a look at the provenance graph:
+from aiida_workgraph.utils import generate_provenance_graph
 
-from aiida_workgraph.utils import generate_node_graph
-
-generate_node_graph(node.pk)
+generate_provenance_graph(node.pk)
 
 # %%
 # Further reading

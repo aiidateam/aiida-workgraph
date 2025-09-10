@@ -142,7 +142,7 @@ def update_nested_dict_with_special_keys(data: Dict[str, Any]) -> Dict[str, Any]
     return data
 
 
-def generate_node_graph(
+def generate_provenance_graph(
     pk: int, output: str = None, width: str = "100%", height: str = "600px"
 ) -> Any:
     """Generate the node graph for the given node pk.

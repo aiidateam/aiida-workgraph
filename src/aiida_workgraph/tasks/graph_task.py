@@ -60,7 +60,7 @@ class GraphTask(SpecTask):
         return process, state
 
 
-def _build_graph_task_nodespec(
+def _build_task_nodespec(
     obj: Callable,
     identifier: Optional[str] = None,
     in_spec: Optional[SocketSpec] = None,

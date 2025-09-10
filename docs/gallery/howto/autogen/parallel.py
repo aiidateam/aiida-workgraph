@@ -16,7 +16,7 @@ import typing as t
 from aiida import load_profile
 
 from aiida_workgraph import namespace, task, dynamic
-from aiida_workgraph.utils import generate_node_graph
+
 
 load_profile()
 
@@ -63,7 +63,7 @@ def ParallelAdd(
 
 data = {f"list_{i}": {"x": i, "y": i} for i in range(1, 5)}
 
-wg = ParallelAdd.build_graph(data)
+wg = ParallelAdd.build(data)
 wg.run()
 
 print("\nResults:")
@@ -84,7 +84,7 @@ wg.to_html()
 # Provenance graph
 # """"""""""""""""
 
-generate_node_graph(wg.pk)
+wg.generate_provenance_graph()
 
 # %%
 # .. note::
@@ -116,7 +116,7 @@ def ParallelAddAggregate(
     return aggregate_sums(data=sums).result
 
 
-wg = ParallelAddAggregate.build_graph(data)
+wg = ParallelAddAggregate.build(data)
 wg.run()
 
 print("\nResult:", wg.outputs.result.value)
