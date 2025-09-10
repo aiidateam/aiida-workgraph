@@ -14,8 +14,6 @@ def test_zone_task(decorated_add, capsys):
     wg.run()
     captured = capsys.readouterr()
     report = captured.out
-    captured = capsys.readouterr()
-    report = captured.out
     assert "tasks ready to run: add2,add3" in report
     assert "tasks ready to run: add4,add5" in report
     # load the WorkGraph should add the cihld tasks

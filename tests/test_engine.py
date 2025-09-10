@@ -1,18 +1,18 @@
 import time
 import pytest
 from aiida_workgraph import WorkGraph
+from aiida.cmdline.utils.common import get_workchain_report
 
 
 @pytest.mark.usefixtures("started_daemon_client")
-def test_run_order(decorated_add, capsys) -> None:
+def test_run_order(decorated_add) -> None:
     """Test the order.
     Tasks should run in parallel and only depend on the input tasks."""
     wg = WorkGraph(name="test_run_order")
     wg.add_task(decorated_add, "add0", x=2, y=0)
     wg.add_task(decorated_add, "add1", x=2, y=1)
     wg.submit(wait=True)
-    captured = capsys.readouterr()
-    report = captured.out
+    report = get_workchain_report(wg.process, "REPORT")
     assert "tasks ready to run: add0,add1" in report
 
 
@@ -35,7 +35,7 @@ def test_reset_node(wg_engine: WorkGraph) -> None:
 
 
 @pytest.mark.usefixtures("started_daemon_client")
-def test_max_number_jobs(add_code, capsys) -> None:
+def test_max_number_jobs(add_code) -> None:
     from aiida_workgraph import WorkGraph
     from aiida.orm import Int
     from aiida.calculations.arithmetic.add import ArithmeticAddCalculation
@@ -50,7 +50,6 @@ def test_max_number_jobs(add_code, capsys) -> None:
     # Set the maximum number of running jobs inside the WorkGraph
     wg.max_number_jobs = 2
     wg.submit(wait=True, timeout=40)
-    captured = capsys.readouterr()
-    report = captured.out
+    report = get_workchain_report(wg.process, "REPORT")
     assert "tasks ready to run: add2" in report
     wg.tasks.add2.outputs.sum.value == 2

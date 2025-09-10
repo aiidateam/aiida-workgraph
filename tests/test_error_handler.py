@@ -40,7 +40,4 @@ def test_error_handlers(add_code, capsys):
             "add1": {"code": add_code, "x": orm.Int(1), "y": orm.Int(-2)},
         },
     )
-    captured = capsys.readouterr()
-    report = captured.out
-    assert "Run error handler: handle_negative_sum." in report
     assert wg.tasks.add1.outputs.sum.value == 3

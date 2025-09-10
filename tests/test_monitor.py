@@ -3,6 +3,7 @@ import datetime
 import time
 
 import pytest
+from aiida.cmdline.utils.common import get_workchain_report
 
 from aiida_workgraph import WorkGraph, task
 from aiida_workgraph.tasks.monitors import monitor_time
@@ -136,8 +137,7 @@ def test_task_monitor_kill(decorated_add, capsys):
     wg.wait(tasks={"monitor1": ["RUNNING"]})
     wg.kill_tasks(["monitor1"])
     wg.wait()
-    captured = capsys.readouterr()
-    report = captured.out
+    report = get_workchain_report(wg.process, "REPORT")
     assert "Task monitor1 was KILLED" in report
     assert monitor1.state == "KILLED"
     assert add1.state == "SKIPPED"

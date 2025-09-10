@@ -114,6 +114,7 @@ def test_organize_nested_inputs():
 def test_reset_message(wg_calcjob, capsys):
     """Modify a node and save the workgraph.
     This will add a message to the workgraph_queue extra field."""
+    from aiida.cmdline.utils.common import get_workchain_report
 
     wg = wg_calcjob
     wg.submit()
@@ -123,8 +124,7 @@ def test_reset_message(wg_calcjob, capsys):
     wg.tasks.add1.set_inputs({"y": orm.Int(10).store()})
     wg.save()
     wg.wait(timeout=timeout * 2)
-    captured = capsys.readouterr()
-    report = captured.out
+    report = get_workchain_report(wg.process, "REPORT")
     assert "Action: RESET. Tasks: ['add1']" in report
 
 
