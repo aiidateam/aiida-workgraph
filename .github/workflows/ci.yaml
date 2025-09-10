@@ -90,7 +90,6 @@ jobs:
             env:
                 AIIDA_WARN_v3: 1
             run: |
-                verdi config set logging.aiida_loglevel REPORT
                 pytest -n auto -v --cov --durations=0
 
         -   name: Upload coverage reports to Codecov

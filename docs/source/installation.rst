@@ -49,14 +49,14 @@ GUI
 ___
 
 In addition to the main ``aiida-workgraph`` Python package, we also provide a graphical user interface (GUI), which can be installed as follows:
-   
+
 .. code-block:: console
 
     $ pip install aiida-gui-workgraph
 
 .. warning::
    **Experimental Feature**
-   
+
    The GUI is still an experimental feature and under active development.
    Changes may be applied in future versions.
    Use with caution in production environments.

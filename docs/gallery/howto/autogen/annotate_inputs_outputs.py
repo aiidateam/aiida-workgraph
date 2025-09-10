@@ -57,10 +57,7 @@ def add_multiply1(x, y):
 def add_multiply2(
     x: int,
     y: int,
-) -> t.Annotated[
-    dict,
-    namespace(sum=int, product=int),
-]:
+) -> t.Annotated[dict, namespace(sum=int, product=int),]:
     """Return a dictionary, but its elements are stored as separate Int nodes."""
     return {"sum": x + y, "product": x * y}
 
@@ -103,10 +100,7 @@ def add_multiply3(
         dict,
         namespace(x=int, y=int),
     ],
-) -> t.Annotated[
-    dict,
-    namespace(sum=int, product=int),
-]:
+) -> t.Annotated[dict, namespace(sum=int, product=int),]:
     """Take a dictionary as input but treat 'x' and 'y' as separate nodes."""
     return {"sum": data["x"] + data["y"], "product": data["x"] * data["y"]}
 
@@ -147,10 +141,7 @@ generate_node_graph(wg.pk)
 @task
 def generate_square_numbers(
     n: int,
-) -> t.Annotated[
-    dict,
-    dynamic(t.Any),
-]:
+) -> t.Annotated[dict, dynamic(t.Any),]:
     """Generate a dict of square numbers. The number of outputs depends on 'n'."""
     return {f"square_{i}": i**2 for i in range(n)}
 
@@ -183,10 +174,7 @@ generate_node_graph(wg.pk)
 def generate_nested_dict(
     x: int,
     y: int,
-) -> t.Annotated[
-    dict,
-    namespace(sum=int, nested=namespace(diff=int, product=int)),
-]:
+) -> t.Annotated[dict, namespace(sum=int, nested=namespace(diff=int, product=int)),]:
     """Returns a nested dictionary with a corresponding nested namespace."""
     return {"sum": x + y, "nested": {"diff": x - y, "product": x * y}}
 
@@ -214,10 +202,7 @@ print(get_process_summary(wg.tasks[-1].pk))
 @task
 def generate_dynamic_nested_dict(
     n: int,
-) -> t.Annotated[
-    dict,
-    dynamic(namespace(square=int, cube=int)),
-]:
+) -> t.Annotated[dict, dynamic(namespace(square=int, cube=int)),]:
     """Generate a nested dict of square and cube numbers from 0 to n."""
     return {f"data_{i}": {"square": i**2, "cube": i**3} for i in range(n)}
 
@@ -256,10 +241,7 @@ def add_multiply(
         dict,
         namespace(x=int, y=int),
     ],
-) -> t.Annotated[
-    dict,
-    namespace(sum=int, product=int),
-]:
+) -> t.Annotated[dict, namespace(sum=int, product=int),]:
     """A reusable task with well-defined I/O specifications."""
     return {"sum": data["x"] + data["y"], "product": data["x"] * data["y"]}
 
