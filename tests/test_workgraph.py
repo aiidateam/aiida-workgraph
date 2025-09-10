@@ -3,7 +3,6 @@ from aiida_workgraph import WorkGraph, task, spec
 from aiida import orm
 from aiida.calculations.arithmetic.add import ArithmeticAddCalculation
 from typing import Any
-from aiida.cmdline.utils.common import get_workchain_report
 
 
 def test_from_dict(decorated_add):
@@ -112,7 +111,7 @@ def test_organize_nested_inputs():
 
 
 @pytest.mark.usefixtures("started_daemon_client")
-def test_reset_message(wg_calcjob):
+def test_reset_message(wg_calcjob, capsys):
     """Modify a node and save the workgraph.
     This will add a message to the workgraph_queue extra field."""
 
@@ -124,7 +123,8 @@ def test_reset_message(wg_calcjob):
     wg.tasks.add1.set_inputs({"y": orm.Int(10).store()})
     wg.save()
     wg.wait(timeout=timeout * 2)
-    report = get_workchain_report(wg.process, "REPORT")
+    captured = capsys.readouterr()
+    report = captured.out
     assert "Action: RESET. Tasks: ['add1']" in report
 
 

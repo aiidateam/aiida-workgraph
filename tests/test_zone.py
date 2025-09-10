@@ -1,5 +1,4 @@
 from aiida_workgraph import WorkGraph
-from aiida.cmdline.utils.common import get_workchain_report
 
 
 def test_zone_task(decorated_add, capsys):
@@ -15,7 +14,8 @@ def test_zone_task(decorated_add, capsys):
     wg.run()
     captured = capsys.readouterr()
     report = captured.out
-    report = get_workchain_report(wg.process, "REPORT")
+    captured = capsys.readouterr()
+    report = captured.out
     assert "tasks ready to run: add2,add3" in report
     assert "tasks ready to run: add4,add5" in report
     # load the WorkGraph should add the cihld tasks

@@ -1,10 +1,9 @@
 from aiida_workgraph import WorkGraph, Task
 from aiida import orm
 from aiida.calculations.arithmetic.add import ArithmeticAddCalculation
-from aiida.cmdline.utils.common import get_workchain_report
 
 
-def test_error_handlers(add_code):
+def test_error_handlers(add_code, capsys):
     """Test error handlers."""
 
     def handle_negative_sum(task: Task):
@@ -41,6 +40,7 @@ def test_error_handlers(add_code):
             "add1": {"code": add_code, "x": orm.Int(1), "y": orm.Int(-2)},
         },
     )
-    report = get_workchain_report(wg.process, "REPORT")
+    captured = capsys.readouterr()
+    report = captured.out
     assert "Run error handler: handle_negative_sum." in report
     assert wg.tasks.add1.outputs.sum.value == 3

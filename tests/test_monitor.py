@@ -3,13 +3,12 @@ import datetime
 import time
 
 import pytest
-from aiida.cmdline.utils.common import get_workchain_report
 
 from aiida_workgraph import WorkGraph, task
 from aiida_workgraph.tasks.monitors import monitor_time
 
 
-def test_monitor_decorator():
+def test_monitor_decorator(capsys):
     wg = WorkGraph(name="test_monitor_decorator")
     wg.add_task(
         monitor_time,
@@ -17,12 +16,13 @@ def test_monitor_decorator():
         time=datetime.datetime.now() + datetime.timedelta(seconds=5),
     )
     wg.run()
-    report = get_workchain_report(wg.process, "REPORT")
+    captured = capsys.readouterr()
+    report = captured.out
     assert "Waiting for child processes: time_monitor1" in report
     assert wg.process.is_finished_ok is True
 
 
-def test_monitor_timeout_and_interval():
+def test_monitor_timeout_and_interval(capsys):
     with WorkGraph() as wg:
         monitor_time(
             time=datetime.datetime.now() + datetime.timedelta(seconds=20),
@@ -30,12 +30,13 @@ def test_monitor_timeout_and_interval():
             timeout=5,
         )
         wg.run()
-        report = get_workchain_report(wg.process, "REPORT")
+        captured = capsys.readouterr()
+        report = captured.out
         assert "Timeout reached for monitor" in report
         assert wg.process.is_finished_ok is False
 
 
-def test_builtin_time_monitor_entrypoint(decorated_add):
+def test_builtin_time_monitor_entrypoint(decorated_add, capsys):
     """Test the time monitor task."""
     wg = WorkGraph(name="test_time_monitor")
     monitor1 = wg.add_task(
@@ -46,12 +47,13 @@ def test_builtin_time_monitor_entrypoint(decorated_add):
     add1 = wg.add_task(decorated_add, "add1", x=1, y=2)
     add1.waiting_on.add(monitor1)
     wg.run()
-    report = get_workchain_report(wg.process, "REPORT")
+    captured = capsys.readouterr()
+    report = captured.out
     assert "Waiting for child processes: monitor1" in report
     assert add1.outputs.result.value == 3
 
 
-def test_builtin_file_monitor_entrypoint(decorated_add, tmp_path):
+def test_builtin_file_monitor_entrypoint(decorated_add, tmp_path, capsys):
     """Test the file monitor task."""
 
     @task.awaitable()
@@ -70,7 +72,8 @@ def test_builtin_file_monitor_entrypoint(decorated_add, tmp_path):
     add1 = wg.add_task(decorated_add, "add1", x=1, y=2)
     add1.waiting_on.add(monitor1)
     wg.run()
-    report = get_workchain_report(wg.process, "REPORT")
+    captured = capsys.readouterr()
+    report = captured.out
     assert "Waiting for child processes: monitor1" in report
     assert add1.outputs.result.value == 3
 
@@ -97,7 +100,7 @@ def test_builtin_task_monitor_entrypoint(decorated_add):
 
 
 @pytest.mark.usefixtures("started_daemon_client")
-def test_builtin_task_monitor_entrypoint_timeout(decorated_add):
+def test_builtin_task_monitor_entrypoint_timeout(decorated_add, capsys):
     """Test the monitor task with a timeout."""
     wg = WorkGraph(name="test_monitor_timeout")
     monitor1 = wg.add_task(
@@ -109,14 +112,15 @@ def test_builtin_task_monitor_entrypoint_timeout(decorated_add):
     add1 = wg.add_task(decorated_add, "add1", x=1, y=2)
     add1.waiting_on.add(monitor1)
     wg.run()
-    report = get_workchain_report(wg.process, "REPORT")
+    captured = capsys.readouterr()
+    report = captured.out
     assert "Timeout reached for monitor function" in report
     assert monitor1.state == "FAILED"
     assert add1.state == "SKIPPED"
 
 
 @pytest.mark.usefixtures("started_daemon_client")
-def test_task_monitor_kill(decorated_add):
+def test_task_monitor_kill(decorated_add, capsys):
     """Test killing a monitor task."""
     wg = WorkGraph(name="test_monitor_kill")
     monitor1 = wg.add_task(
@@ -132,7 +136,8 @@ def test_task_monitor_kill(decorated_add):
     wg.wait(tasks={"monitor1": ["RUNNING"]})
     wg.kill_tasks(["monitor1"])
     wg.wait()
-    report = get_workchain_report(wg.process, "REPORT")
+    captured = capsys.readouterr()
+    report = captured.out
     assert "Task monitor1 was KILLED" in report
     assert monitor1.state == "KILLED"
     assert add1.state == "SKIPPED"
