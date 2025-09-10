@@ -287,3 +287,19 @@ def test_task_children():
     zone2.children.add(zone1)
     with pytest.raises(ValueError, match="Task is already a child of the task: "):
         zone3.children.add(zone1)
+
+
+def test_call_task_inside_task():
+    @task
+    def add(x, y):
+        return x + y
+
+    @task()
+    def multiply(m, n):
+        return add(m, n).result * 2
+
+    with WorkGraph() as wg:
+        result = multiply(3, 4).result
+        wg.run()
+        assert result._node.process.exit_status == 323
+        assert "Invalid nested task call." in result._node.process.exit_message
