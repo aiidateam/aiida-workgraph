@@ -141,6 +141,7 @@ class WorkGraph(node_graph.NodeGraph):
         _, node = aiida.engine.run_get_node(WorkGraphEngine, inputs=inputs)
         self.process = node
         self.update()
+        return self.outputs._value
 
     def submit(
         self,
