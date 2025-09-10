@@ -50,11 +50,13 @@ class Task(GraphNode):
         self.execution_count = 0
 
     def to_dict(
-        self, short: bool = False, should_serialize: bool = False
+        self, include_sockets: bool = False, should_serialize: bool = False
     ) -> Dict[str, Any]:
         from aiida.orm.utils.serialize import serialize
 
-        tdata = super().to_dict(short=short, should_serialize=should_serialize)
+        tdata = super().to_dict(
+            include_sockets=include_sockets, should_serialize=should_serialize
+        )
         tdata["wait"] = [task.name for task in self.waiting_on]
         tdata["children"] = []
         tdata["execution_count"] = self.execution_count
@@ -75,7 +77,7 @@ class Task(GraphNode):
     def set_from_protocol(self, *args: Any, **kwargs: Any) -> None:
         """Set the task inputs from protocol data."""
 
-        executor = self.get_executor().executor
+        executor = self.get_executor().callable
         # check if the executor has the get_builder_from_protocol method
         if not hasattr(executor, "get_builder_from_protocol"):
             raise AttributeError(
@@ -170,7 +172,7 @@ class Task(GraphNode):
         """Execute the task."""
         from node_graph.node_spec import BaseHandle
 
-        executor = self.get_executor().executor
+        executor = self.get_executor().callable
         # the imported executor could be a wrapped function
         if isinstance(executor, BaseHandle) and hasattr(executor, "_func"):
             executor = getattr(executor, "_func")
@@ -183,7 +185,7 @@ class Task(GraphNode):
     def to_widget_value(self):
         from aiida_workgraph.utils import workgraph_to_short_json
 
-        tdata = self.to_dict()
+        tdata = self.to_dict(include_sockets=True)
         wgdata = {"name": self.name, "tasks": {self.name: tdata}, "links": []}
         wgdata = workgraph_to_short_json(wgdata)
         return wgdata
@@ -353,3 +355,16 @@ class TaskHandle(BaseHandle):
             )
 
         return super().__call__(*args, **kwargs)
+
+    def run(self, /, *args, **kwargs):
+        graph = self.build(*args, **kwargs)
+        return graph.run()
+
+    def run_get_graph(self, /, *args, **kwargs):
+        graph = self.build(*args, **kwargs)
+        return graph.run(), graph
+
+    def submit(self, /, *args, **kwargs):
+        graph = self.build(*args, **kwargs)
+        graph.submit()
+        return graph

@@ -18,6 +18,17 @@ Interoperate with ``aiida-core`` components
 #    This guide assumes prior knowledge of ``aiida-core`` components.
 #    If you’re unfamiliar with them, please refer to the official documentation on `Calculations <https://aiida.readthedocs.io/projects/aiida-core/en/stable/topics/calculations/index.html>`_ and `Workflows <https://aiida.readthedocs.io/projects/aiida-core/en/stable/topics/workflows/index.html>`_.
 
+import typing as t
+
+from aiida import load_profile, orm
+from aiida.calculations.arithmetic.add import ArithmeticAddCalculation
+from aiida.engine import calcfunction, workfunction
+from aiida.workflows.arithmetic.multiply_add import MultiplyAddWorkChain
+
+from aiida_workgraph import namespace, task
+
+load_profile()
+
 # %%
 # Use ``aiida-core`` components in a ``WorkGraph``
 # ------------------------------------------------
@@ -26,24 +37,8 @@ Interoperate with ``aiida-core`` components
 # This means that any ``aiida-core`` component can be cast as a task and used within a ``WorkGraph``.
 #
 # In the following example, we combine all four ``aiida-core`` processes in a single ``WorkGraph``, connecting their inputs and outputs as needed.
-
-# %%
-# We start by loading the AiiDA profile and importing the necessary components:
-
-from aiida import load_profile, orm
-
-load_profile()
-
-# %%
-from aiida.calculations.arithmetic.add import ArithmeticAddCalculation
-from aiida.engine import calcfunction, workfunction
-from aiida.workflows.arithmetic.multiply_add import MultiplyAddWorkChain
-
-from aiida_workgraph import task, spec
-from typing import Any
-
-# %%
-# Next, let's define a ``calcfunction`` and ``workfunction``
+#
+# Let's first define a ``calcfunction`` and ``workfunction``
 
 
 @calcfunction
@@ -91,7 +86,7 @@ def AiiDAComponentsWorkflow():
     return workfunction_sum
 
 
-wg = AiiDAComponentsWorkflow.build_graph()
+wg = AiiDAComponentsWorkflow.build()
 wg.to_html()
 
 # %%
@@ -118,9 +113,9 @@ wg.to_html()
 wg.run()
 
 # %%
-from aiida_workgraph.utils import generate_node_graph
 
-generate_node_graph(wg.pk)
+
+wg.generate_provenance_graph()
 
 # %%
 # Use ``WorkGraph`` in ``WorkChain``
@@ -178,13 +173,13 @@ def multiply(x, y):
 
 
 @task.graph
-def IntegratedAddMultiply() -> spec.namespace(sum=Any, product=Any):
+def IntegratedAddMultiply() -> t.Annotated[dict, namespace(sum=int, product=int)]:
     the_sum = add(1, 2).result
     the_product = multiply(the_sum, 3).result
     return {"sum": the_sum, "product": the_product}
 
 
-wg = IntegratedAddMultiply.build_graph()
+wg = IntegratedAddMultiply.build()
 
 # %%
 # We can export our workgraph as a dictionary using the ``prepare_inputs()`` method and use it as the input to our ``WorkChain``:
@@ -215,10 +210,9 @@ print("  Product:", result["product"])
 
 # %%
 # And finally, we can have a look at the provenance graph:
+from aiida_workgraph.utils import generate_provenance_graph
 
-from aiida_workgraph.utils import generate_node_graph
-
-generate_node_graph(node.pk)
+generate_provenance_graph(node.pk)
 
 # %%
 # Further reading

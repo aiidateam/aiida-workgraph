@@ -68,7 +68,7 @@ def ForLoop(n, m):
     return m
 
 
-ForLoop.build_graph(n=4, m=0).to_html()
+ForLoop.build(n=4, m=0).to_html()
 
 # %%
 # .. important::
@@ -108,7 +108,7 @@ def WhileLoop(n, m):
     return WhileLoop(n=n, m=m)
 
 
-WhileLoop.build_graph(n=4, m=0).to_html()
+WhileLoop.build(n=4, m=0).to_html()
 
 # %%
 #

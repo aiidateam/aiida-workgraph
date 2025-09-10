@@ -28,10 +28,10 @@ class ShellJobTask(SpecTask):
         """Overwrite the serialize_data method to handle the parser function."""
         import inspect
 
-        prop = data["inputs"]["sockets"]["parser"]["property"]
-        if prop["value"] is not None:
-            if inspect.isfunction(prop["value"]):
-                prop["value"] = NodeExecutor.from_callable(prop["value"]).to_dict()
+        parser = data["inputs"].get("parser")
+        if parser is not None:
+            if inspect.isfunction(parser):
+                data["inputs"]["parser"] = NodeExecutor.from_callable(parser).to_dict()
 
     def execute(self, engine_process, args=None, kwargs=None, var_kwargs=None):
         """Submit/launch the AiiDA ShellJob.
@@ -53,9 +53,9 @@ class ShellJobTask(SpecTask):
         parser = subset.get("parser", None)
         if isinstance(parser, dict) and {"module_path", "callable_name"} <= set(parser):
             # already a NodeExecutor dict -> build executor instance
-            subset["parser"] = NodeExecutor(**parser).executor
+            subset["parser"] = NodeExecutor(**parser).callable
         elif inspect.isfunction(parser):
-            subset["parser"] = NodeExecutor.from_callable(parser).executor
+            subset["parser"] = NodeExecutor.from_callable(parser).callable
 
         if subset:
             prepared = prepare_shell_job_inputs(**subset)
@@ -122,7 +122,7 @@ def _build_shelljob_nodespec(
             ShellParser.format_link_label(key): value
             for key, value in outputs.fields.items()
         }
-        replace(outputs, fields=fields)
+        outputs = replace(outputs, fields=fields)
         out_spec = merge_specs(out_spec, outputs)
 
     if parser_outputs:

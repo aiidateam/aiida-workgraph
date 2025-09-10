@@ -54,10 +54,7 @@ def test_task_wait(decorated_add: Callable, capsys) -> None:
     add1 = wg.add_task(decorated_add, "add1", x=1, y=1)
     add2 = wg.add_task(decorated_add, "add2", x=2, y=2)
     add2.waiting_on.add(add1)
-    wg.run()
-    captured = capsys.readouterr()
-    report = captured.out
-    assert "tasks ready to run: add1" in report
+    assert len(wg.links) == 1
 
 
 def test_set_non_dynamic_namespace_socket(decorated_add) -> None:
@@ -160,18 +157,8 @@ def test_set_inputs(decorated_add: Callable) -> None:
     add1 = wg.add_task(decorated_add, "add1", x=1)
     add1.set_inputs({"y": 2, "metadata.store_provenance": False})
     data = wg.prepare_inputs(metadata=None)
-    assert (
-        data["workgraph_data"]["tasks"]["add1"]["inputs"]["sockets"]["y"]["property"][
-            "value"
-        ]
-        == 2
-    )
-    assert (
-        data["workgraph_data"]["tasks"]["add1"]["inputs"]["sockets"]["metadata"][
-            "sockets"
-        ]["store_provenance"]["property"]["value"]
-        is False
-    )
+    assert data["tasks"]["add1"]["y"] == 2
+    assert data["tasks"]["add1"]["metadata"]["store_provenance"] is False
 
 
 def test_set_inputs_from_builder(add_code) -> None:

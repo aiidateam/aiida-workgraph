@@ -11,7 +11,6 @@ This section contains a collection of HowTos for various topics.
    autogen/annotate_inputs_outputs
    autogen/parallel
    autogen/control-flow
-   autogen/context
    autogen/shelljob
    autogen/remote_job
    autogen/combine_workgraphs

@@ -50,7 +50,7 @@ def AwaitableSum(x, y):
     return multiply(async_sum, sync_sum).result
 
 
-wg = AwaitableSum.build_graph(1, 2)
+wg = AwaitableSum.build(1, 2)
 wg.run()
 
 

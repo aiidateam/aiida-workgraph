@@ -13,7 +13,6 @@ import kiwipy
 
 from aiida.common.extendeddicts import AttributeDict
 from aiida.common.lang import override
-from aiida import orm
 from aiida.orm import Node
 from aiida_workgraph.orm.workgraph import WorkGraphNode
 
@@ -81,15 +80,25 @@ class WorkGraphEngine(Process, metaclass=Protect):
     @classmethod
     def define(cls, spec: WorkGraphSpec) -> None:
         super().define(spec)
-        spec.input("input_file", valid_type=orm.SinglefileData, required=False)
         spec.input_namespace(
-            spec.WORKGRAPH_DATA_KEY,
+            "graph_inputs",
             dynamic=True,
             required=False,
-            help="WorkGraph inputs",
+            help="Graph level inputs",
+        )
+        spec.input_namespace(
+            "tasks",
+            dynamic=True,
+            required=False,
+            help="Tasks inputs",
+        )
+        spec.input_namespace(
+            f"metadata.{spec.WORKGRAPH_DATA_KEY}",
+            dynamic=True,
+            required=False,
+            help="WorkGraph metadata",
         )
         spec.exit_code(2, "ERROR_SUBPROCESS", message="A subprocess has failed.")
-
         spec.outputs.dynamic = True
         #
         spec.exit_code(
@@ -112,6 +121,11 @@ class WorkGraphEngine(Process, metaclass=Protect):
             "TASK_NON_ZERO_EXIT_STATUS",
             message="Some of the tasks exited with non-zero status.",
         )
+
+    def _setup_metadata(self, metadata: dict) -> None:  # type: ignore[override]
+        """Store common metadata on the ProcessNode and forward the rest."""
+        metadata.pop(WorkGraphSpec.WORKGRAPH_DATA_KEY, None)
+        super()._setup_metadata(metadata)
 
     @property
     def ctx(self) -> AttributeDict:
@@ -264,22 +278,18 @@ class WorkGraphEngine(Process, metaclass=Protect):
 
     def _build_process_label(self) -> str:
         """Use the workgraph name as the process label."""
-        return f"WorkGraph<{self.inputs.workgraph_data['name']}>"
+        return f"WorkGraph<{self.inputs.metadata[WorkGraphSpec.WORKGRAPH_DATA_KEY]['name']}>"
 
     def on_create(self) -> None:
         """Called when a Process is created."""
-        from aiida_workgraph.utils.analysis import WorkGraphSaver
+        from aiida_workgraph.utils import save_workgraph_data
 
         super().on_create()
-        self.node.label = self._raw_inputs[WorkGraphSpec.WORKGRAPH_DATA_KEY]["name"]
-        saver = WorkGraphSaver(
-            self.node,
-            self._raw_inputs[WorkGraphSpec.WORKGRAPH_DATA_KEY],
-            restart_process=self._raw_inputs[WorkGraphSpec.WORKGRAPH_DATA_KEY].get(
-                "restart_process", None
-            ),
-        )
-        saver.save()
+        raw_inputs = dict(self.inputs)
+        self.node.label = raw_inputs["metadata"][WorkGraphSpec.WORKGRAPH_DATA_KEY][
+            "name"
+        ]
+        save_workgraph_data(self.node, raw_inputs)
 
     def setup(self) -> None:
         """Setup the variables in the context."""

@@ -20,7 +20,7 @@ class GraphTask(SpecTask):
         from node_graph.utils.graph import materialize_graph
         from node_graph.node_spec import BaseHandle
 
-        executor = self.get_executor().executor
+        executor = self.get_executor().callable
         # Cloudpickle doesn’t restore the function’s own name in its globals after unpickling,
         # so any recursive calls would raise NameError. As a temporary workaround, we re-insert
         # the decorated function into its globals under its original name.
@@ -60,7 +60,7 @@ class GraphTask(SpecTask):
         return process, state
 
 
-def _build_graph_task_nodespec(
+def _build_task_nodespec(
     obj: Callable,
     identifier: Optional[str] = None,
     in_spec: Optional[SocketSpec] = None,

@@ -18,6 +18,7 @@ from node_graph.config import BUILTIN_NODES
 from node_graph.collection import NodeCollection
 from aiida_workgraph.orm.mapping import type_mapping
 from aiida_workgraph.socket_spec import SocketSpecAPI
+from node_graph.error_handler import ErrorHandlerSpec
 
 
 class WorkGraph(node_graph.NodeGraph):
@@ -44,6 +45,7 @@ class WorkGraph(node_graph.NodeGraph):
         name: str = "WorkGraph",
         inputs: Optional[type | List[str]] = None,
         outputs: Optional[type | List[str]] = None,
+        error_handlers: Optional[Dict[str, ErrorHandlerSpec]] = None,
         **kwargs,
     ) -> None:
         """
@@ -62,7 +64,7 @@ class WorkGraph(node_graph.NodeGraph):
         self.nodes.post_creation_hooks = [task_creation_hook]
         self.links.post_creation_hooks = [link_creation_hook]
         self.links.post_deletion_hooks = [link_deletion_hook]
-        self._error_handlers = {}
+        self._error_handlers = error_handlers or {}
         self.analyzer = NodeGraphAnalysis(self)
 
     @property
@@ -73,23 +75,45 @@ class WorkGraph(node_graph.NodeGraph):
     def prepare_inputs(
         self, metadata: Optional[Dict[str, Any]] = None
     ) -> Dict[str, Any]:
-        from aiida_workgraph.utils import remove_output_values, serialize_socket_data
+        from aiida_workgraph.utils import serialize_graph_level_data
+        from aiida_pythonjob.data.serializer import all_serializers
 
         wgdata = self.to_dict(should_serialize=True)
-        for task in wgdata["tasks"].values():
-            remove_output_values(task["outputs"])
-        # serialize the meta tasks
-        for task_name in ["graph_ctx", "graph_inputs"]:
-            if task_name in wgdata["tasks"]:
-                serialize_socket_data(wgdata["tasks"][task_name]["inputs"])
+        task_inputs = self.gather_task_inputs(wgdata["tasks"])
+        # serialize the graph-level tasks
+        if "graph_inputs" in task_inputs:
+            graph_inputs = serialize_graph_level_data(
+                task_inputs.pop("graph_inputs", {}),
+                self._inputs,
+                all_serializers,
+            )
+        if "graph_ctx" in task_inputs:
+            task_inputs["graph_ctx"] = serialize_graph_level_data(
+                task_inputs["graph_ctx"],
+                self._ctx,
+                all_serializers,
+            )
         metadata = metadata or {}
-        inputs = {"workgraph_data": wgdata, "metadata": metadata}
+        metadata["workgraph_data"] = wgdata
+        inputs = {
+            "metadata": metadata,
+            "tasks": task_inputs,
+            "graph_inputs": graph_inputs,
+        }
+        return inputs
+
+    def gather_task_inputs(self, data: Dict[str, Any] = None) -> Dict[str, Any]:
+        """Gather the inputs of all tasks."""
+        inputs = {}
+        for name, task in data.items():
+            inputs[name] = task.pop("inputs", {})
         return inputs
 
     def check_before_run(self) -> bool:
         existing_process = self._load_existing_process()
         if existing_process:
             diffs = self.analyzer.compare_graphs(existing_process, self)
+            print("diffs:", diffs)
             self.reset_tasks(diffs["modified_nodes"])
 
     def run(
@@ -117,6 +141,7 @@ class WorkGraph(node_graph.NodeGraph):
         _, node = aiida.engine.run_get_node(WorkGraphEngine, inputs=inputs)
         self.process = node
         self.update()
+        return self.outputs._value
 
     def submit(
         self,
@@ -170,19 +195,16 @@ class WorkGraph(node_graph.NodeGraph):
             process_inited.close()
             print(f"WorkGraph process created, PK: {self.process.pk}")
         else:
-            self.save_to_base(inputs["workgraph_data"])
+            self.save_to_base(inputs)
         self.update()
 
     def save_to_base(self, wgdata: Dict[str, Any]) -> None:
         """Save new wgdata to attribute.
         It will first check the difference, and reset tasks if needed.
         """
-        from aiida_workgraph.utils.analysis import WorkGraphSaver
+        from aiida_workgraph.utils import save_workgraph_data
 
-        saver = WorkGraphSaver(
-            self.process, wgdata, restart_process=self.restart_process
-        )
-        saver.save()
+        save_workgraph_data(self.process, wgdata)
 
     def _load_existing_process(self):
         """Load an existing workgraph process if available."""
@@ -198,12 +220,14 @@ class WorkGraph(node_graph.NodeGraph):
         return connectivity
 
     def to_dict(
-        self, short: bool = False, should_serialize: bool = False
+        self, include_sockets: bool = False, should_serialize: bool = False
     ) -> Dict[str, Any]:
         """Convert the workgraph to a dictionary."""
         from aiida.orm.utils.serialize import serialize
 
-        wgdata = super().to_dict(short=short, should_serialize=should_serialize)
+        wgdata = super().to_dict(
+            include_sockets=include_sockets, should_serialize=should_serialize
+        )
         wgdata.update(
             {
                 "restart_process": self.restart_process.pk
@@ -214,35 +238,14 @@ class WorkGraph(node_graph.NodeGraph):
             }
         )
         # save error handlers
-        wgdata["error_handlers"] = self.get_error_handlers()
+        wgdata["error_handlers"] = {
+            name: eh.to_dict() for name, eh in self.get_error_handlers().items()
+        }
         wgdata["tasks"] = wgdata.pop("nodes")
         wgdata["connectivity"] = self.build_connectivity()
         wgdata["process"] = serialize(self.process) if self.process else serialize(None)
         wgdata["metadata"]["pk"] = self.process.pk if self.process else None
         return wgdata
-
-    def get_error_handlers(self) -> Dict[str, Any]:
-        """Get the error handlers."""
-        from aiida.engine import ExitCode
-
-        error_handlers = {}
-        for name, error_handler in self._error_handlers.items():
-            error_handlers[name] = error_handler
-        # convert exit code label (str) to status (int)
-        for handler in error_handlers.values():
-            for task in handler["tasks"].values():
-                exit_codes = []
-                for exit_code in task["exit_codes"]:
-                    if isinstance(exit_code, int):
-                        exit_codes.append(exit_code)
-                    elif isinstance(exit_code, ExitCode):
-                        exit_codes.append(exit_code.status)
-                    else:
-                        raise ValueError(
-                            f"Exit code {exit_code} is not a valid exit code."
-                        )
-                task["exit_codes"] = exit_codes
-        return error_handlers
 
     def wait(self, timeout: int = 600, tasks: dict = None, interval: int = 5) -> None:
         """
@@ -347,7 +350,10 @@ class WorkGraph(node_graph.NodeGraph):
             if key in wgdata:
                 setattr(wg, key, wgdata[key])
         if "error_handlers" in wgdata:
-            wg._error_handlers = wgdata["error_handlers"]
+            wg._error_handlers = {
+                name: ErrorHandlerSpec.from_dict(eh)
+                for name, eh in wgdata.get("error_handlers", {}).items()
+            }
         # for zone tasks, add their children
         for task in wg.tasks:
             if hasattr(task, "children"):
@@ -361,11 +367,13 @@ class WorkGraph(node_graph.NodeGraph):
     def from_yaml(cls, filename: str = None, string: str = None) -> "WorkGraph":
         """Build WrokGraph from yaml file."""
         import yaml
-        import json
-        from aiida_workgraph.utils import make_json_serializable
+
+        # import json
+        # from aiida_workgraph.utils import make_json_serializable
         from node_graph.utils import yaml_to_dict
-        import importlib.resources
-        import jsonschema
+
+        # import importlib.resources
+        # import jsonschema
 
         if filename:
             with open(filename, "r") as f:
@@ -377,12 +385,12 @@ class WorkGraph(node_graph.NodeGraph):
         wgdata["nodes"] = wgdata.pop("tasks")
         wgdata = yaml_to_dict(wgdata)
         wgdata["tasks"] = wgdata.pop("nodes")
-        serialized_data = make_json_serializable(wgdata)
-        with importlib.resources.open_text(
-            "aiida_workgraph.schemas", "aiida_workgraph.schema.json"
-        ) as f:
-            schema = json.load(f)
-            jsonschema.validate(instance=serialized_data, schema=schema)
+        # serialized_data = make_json_serializable(wgdata)
+        # with importlib.resources.open_text(
+        #     "aiida_workgraph.schemas", "aiida_workgraph.schema.json"
+        # ) as f:
+        #     schema = json.load(f)
+        #     jsonschema.validate(instance=serialized_data, schema=schema)
 
         nt = cls.from_dict(wgdata)
         return nt
@@ -397,8 +405,8 @@ class WorkGraph(node_graph.NodeGraph):
         Args:
             pk (int): The primary key of the process node.
         """
-        from aiida_workgraph.utils import get_workgraph_data
         from aiida_workgraph.orm.workgraph import WorkGraphNode
+        from aiida_workgraph.utils import get_workgraph_data
 
         if isinstance(pk, int):
             process = aiida.orm.load_node(pk)
@@ -551,19 +559,9 @@ class WorkGraph(node_graph.NodeGraph):
                 continue
             self.links._append(link)
 
-    @property
-    def error_handlers(self) -> Dict[str, Any]:
+    def get_error_handlers(self) -> Dict[str, ErrorHandlerSpec]:
         """Get the error handlers."""
         return self._error_handlers
-
-    def add_error_handler(self, handler, name, tasks: dict = None) -> None:
-        """Attach an error handler to the workgraph."""
-        from node_graph.executor import NodeExecutor
-
-        self._error_handlers[name] = {
-            "handler": NodeExecutor.from_callable(handler).to_dict(),
-            "tasks": tasks,
-        }
 
     def add_task(
         self,
@@ -614,7 +612,7 @@ class WorkGraph(node_graph.NodeGraph):
         """Convert the workgraph to a dictionary that can be used by the widget."""
         from aiida_workgraph.utils import workgraph_to_short_json, wait_to_link
 
-        wgdata = self.to_dict()
+        wgdata = self.to_dict(include_sockets=True)
         wait_to_link(wgdata)
         wgdata = workgraph_to_short_json(wgdata)
         return wgdata
@@ -631,6 +629,16 @@ class WorkGraph(node_graph.NodeGraph):
         """Write a standalone html file to visualize the workgraph."""
         self.widget.value = self.to_widget_value()
         return self.widget.to_html(output=output, **kwargs)
+
+    def generate_provenance_graph(self):
+        """Generate the provenance graph of the workgraph process."""
+        from aiida_workgraph.utils import generate_provenance_graph
+
+        if self.process is None:
+            raise ValueError(
+                "No process found. Please run or submit the workgraph first."
+            )
+        return generate_provenance_graph(self.process.pk)
 
     def __repr__(self) -> str:
         return f'WorkGraph(name="{self.name}", uuid="{self.uuid}")'

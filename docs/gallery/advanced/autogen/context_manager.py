@@ -17,6 +17,14 @@ Write workflows using the context manager paradigm
 # Let's get started!
 
 # %%
+# Setup
+# =====
+
+from aiida import load_profile
+
+load_profile()
+
+# %%
 # Creating a simple workflow
 # ==========================
 #
@@ -80,7 +88,7 @@ with WorkGraph(
 #
 # How do they compare visually?
 
-AddMultiply.build_graph(x=1, y=2, z=3).to_html()
+AddMultiply.build(x=1, y=2, z=3).to_html()
 
 # %%
 
@@ -156,9 +164,6 @@ with WorkGraph(
 # Similarly, we can access the outputs using the same notation.
 # Let's run our workflow, now with a clear input layout:
 
-from aiida import load_profile
-
-load_profile()
 
 wg.run(
     inputs={
@@ -297,6 +302,9 @@ wg.to_html()
 # ----------------
 #
 # Before we describe the control flow constructs, we need to understand the use of the workflow context.
+# The details on AiiDA's context variables can be found in the :doc:`/advanced/autogen/context` advanced section.
+# Here we describe how the context is treated by the ``WorkGraph``.
+#
 # ``WorkGraph`` doesn't track context variables (``wg.ctx``) for automatic dependency resolution because they could introduce cyclical dependencies between tasks.
 # As such, when defining dynamic branching in a workflow (as is done in the following sections), we must explicitly do the following:
 #
@@ -304,6 +312,44 @@ wg.to_html()
 # 2. Define task dependencies using the ``<<`` or ``>>`` operators
 #
 # For further details, please refer to the :doc:`/howto/autogen/control_task_execution_order` how-to section.
+
+# %%
+# ``Zone``
+# ---------
+#
+# A ``Zone`` acts as a single unit for dependency management, governed by two rules:
+#
+# 1. **Entry Condition**: A ``Zone`` (and all tasks within it) will only start
+#    after *all* tasks with links pointing *into* the ``Zone`` are finished.
+# 2. **Exit Condition**: Any task that needs an output from *any* task inside the
+#    ``Zone`` must wait for the entire `Zone` to complete.
+#
+# This can be used to group a set of tasks.
+# For example, consider the following workflow:
+
+
+from aiida_workgraph import Zone
+
+
+with WorkGraph("zone_example") as wg:
+    task0_outputs = add(x=1, y=1)
+
+    # This Zone will only start after task1 is finished,
+    # because task3 depends on its result.
+    with Zone() as zone1:
+        task1_outputs = add(x=1, y=1)
+        task2_outputs = add(x=1, y=task0_outputs.result)
+
+    # Task 4 will wait for the entire Zone to finish,
+    # even though it only needs the result from task2.
+    task3_outputs = add(x=1, y=task1_outputs.result)
+
+wg.to_html()
+
+# %%
+# The graph shows the first executed ``add`` task providing its result to the zone,
+# then the two grouped ``add`` tasks inside the zone executing in parallel, and finally
+# the last ``add`` task, which waits for the entire zone to finish before executing.
 
 # %%
 # ``If`` zone
@@ -374,9 +420,7 @@ wg.to_html()
 # %%
 # Finally, after the workflow has finished, we generate the provenance graph from the AiiDA process, where we can see that the result of the ``op_lt`` (less than) comparison is ``False`` and the branch ends there, while for the ``op_ge`` (greater or equal) comparison it is ``True``, meaning that the branch with the intermediate multiplication was executed.
 
-from aiida_workgraph.utils import generate_node_graph
-
-generate_node_graph(wg.pk)
+wg.generate_provenance_graph()
 
 # %%
 # ``While`` zone
@@ -439,7 +483,7 @@ wg.to_html()
 #
 # In the provenance graph, we can see the looping and execution of multiple tasks in the loop reflected in the deep tree structure:
 
-generate_node_graph(wg.pk)
+wg.generate_provenance_graph()
 
 # %%
 # ``Map`` zone
@@ -508,7 +552,7 @@ wg.to_html()
 # %%
 # Finally, let's have a look at the provenance graph:
 
-generate_node_graph(wg.pk)
+wg.generate_provenance_graph()
 
 # %%
 # Data aggregation
@@ -644,9 +688,8 @@ print(f"  New sum: {wg3.outputs.new_sum.value}")
 #
 # The full provenance remains intact, including the original workflow:
 
-from aiida_workgraph.utils import generate_node_graph
 
-generate_node_graph(wg3.pk)
+wg3.generate_provenance_graph()
 
 # %%
 # Conclusion

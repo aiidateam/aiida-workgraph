@@ -88,7 +88,7 @@ mol = molecule("N2")
 
 # %%
 # Next, build the workgraph, but doesn't run it.
-wg = atomization_energy_workflow.build_graph(molecule_obj=mol, atom_obj=atom)
+wg = atomization_energy_workflow.build(molecule_obj=mol, atom_obj=atom)
 
 # %%
 # You can visualize the planned workflow.
@@ -111,9 +111,8 @@ print(f"Atomization energy for N2: {wg.outputs.result.value.value:.4f} eV")
 # We can visualize the *provenance* graph of a completed workflow. This graph is the key to reproducibility,
 # showing not just the tasks but also the actual data nodes that were created and stored in the AiiDA database.
 
-from aiida_workgraph.utils import generate_node_graph
 
-generate_node_graph(wg.pk)
+wg.generate_provenance_graph()
 
 
 # %%
@@ -247,7 +246,7 @@ scales = [0.95, 0.98, 1.0, 1.02, 1.05]
 
 # %%
 # Next, we build the workgraph with the inputs and visualize it:
-wg = eos_workflow.build_graph(atoms=cu, scales=scales)
+wg = eos_workflow.build(atoms=cu, scales=scales)
 wg.to_html()
 
 # %%
@@ -267,9 +266,8 @@ print("Equation of state results for Cu: ", eos_result.get_dict())
 # ``create_strained_structures`` and the "fan-in" to ``fit_eos_model``, illustrating
 # the power of AiiDA-WorkGraph to manage complex data flows automatically.
 
-from aiida_workgraph.utils import generate_node_graph
 
-generate_node_graph(wg.pk)
+wg.generate_provenance_graph()
 
 # %%
 # Conclusion
