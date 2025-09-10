@@ -81,10 +81,16 @@ class WorkGraphEngine(Process, metaclass=Protect):
     def define(cls, spec: WorkGraphSpec) -> None:
         super().define(spec)
         spec.input_namespace(
+            "graph_inputs",
+            dynamic=True,
+            required=False,
+            help="Graph level inputs",
+        )
+        spec.input_namespace(
             "tasks",
             dynamic=True,
             required=False,
-            help="WorkGraph inputs",
+            help="Tasks inputs",
         )
         spec.input_namespace(
             f"metadata.{spec.WORKGRAPH_DATA_KEY}",

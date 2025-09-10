@@ -211,7 +211,9 @@ def save_workgraph_data(node: Union[int, orm.Node], inputs: Dict[str, Any]) -> N
     node.workgraph_data = wgdata
     node.workgraph_data_short = short_wgdata
     node.workgraph_error_handlers = wgdata.pop("error_handlers", {})
+    graph_inputs = dict(inputs.pop("graph_inputs", {}))
     tasks = dict(inputs.pop("tasks", {}))
+    tasks["graph_inputs"] = graph_inputs
     node.task_inputs = serialize(tasks)
 
 

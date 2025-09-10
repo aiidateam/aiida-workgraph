@@ -82,8 +82,8 @@ class WorkGraph(node_graph.NodeGraph):
         task_inputs = self.gather_task_inputs(wgdata["tasks"])
         # serialize the graph-level tasks
         if "graph_inputs" in task_inputs:
-            task_inputs["graph_inputs"] = serialize_graph_level_data(
-                task_inputs["graph_inputs"],
+            graph_inputs = serialize_graph_level_data(
+                task_inputs.pop("graph_inputs", {}),
                 self._inputs,
                 all_serializers,
             )
@@ -95,7 +95,11 @@ class WorkGraph(node_graph.NodeGraph):
             )
         metadata = metadata or {}
         metadata["workgraph_data"] = wgdata
-        inputs = {"metadata": metadata, "tasks": task_inputs}
+        inputs = {
+            "metadata": metadata,
+            "tasks": task_inputs,
+            "graph_inputs": graph_inputs,
+        }
         return inputs
 
     def gather_task_inputs(self, data: Dict[str, Any] = None) -> Dict[str, Any]:

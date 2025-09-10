@@ -26,7 +26,7 @@ def test_group_inputs_outputs(decorated_add):
     assert wg.outputs.results.sum2 == 6
     # the graph inputs will be serialized as AiiDA nodes
     print(list(wg.process.inputs._get_keys()))
-    assert wg.process.inputs.tasks.graph_inputs.add.x == 1
+    assert wg.process.inputs.graph_inputs.add.x == 1
 
 
 def test_load_from_db():
