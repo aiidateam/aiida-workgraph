@@ -60,7 +60,7 @@ def add(x, y):
 
 @task.graph
 def TimeMonitor(time, x, y):
-    monitor_time(time) >> (the_sum := add(x, y).result)  # wait THEN (>>) add
+    monitor_time(time) >> (the_sum := add(x, y).result)  # wait, THEN (>>) add
     return the_sum
 
 
@@ -122,22 +122,18 @@ def FileMonitor(x, y, z):
     )
 
     # While above is running, monitor for the file
-    # Once done (`>>` means wait on left operant), add two numbers and discard the file
-    # Finally, multiply the sum by a factor
-    (
-        monitor_file(
-            "/tmp/monitor_test.txt",
-            interval=1,
-            timeout=10,
-        )
-        >> group(
-            discard_file("/tmp/monitor_test.txt"),
-            the_sum := add(x, y).result,
-        )
-        >> (the_product := multiply(the_sum, z).result)
+    # Once done (`>>` means wait on left operant), discard the file and add two numbers
+    monitor_file(
+        "/tmp/monitor_test.txt",
+        interval=1,
+        timeout=10,
+    ) >> group(
+        discard_file("/tmp/monitor_test.txt"),
+        the_sum := add(x, y).result,
     )
 
-    return the_product
+    # Finally, multiply the sum by a factor
+    return multiply(the_sum, z).result
 
 
 wg = FileMonitor.build_graph(x=1, y=2, z=3)
