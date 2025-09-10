@@ -88,7 +88,7 @@ with WorkGraph(
 #
 # How do they compare visually?
 
-AddMultiply.build_graph(x=1, y=2, z=3).to_html()
+AddMultiply.build(x=1, y=2, z=3).to_html()
 
 # %%
 

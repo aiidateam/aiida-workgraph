@@ -69,7 +69,7 @@ def AddMultiply(x: int, y: int):
     add_multiply2(x=x, y=y)
 
 
-wg = AddMultiply.build_graph(x=1, y=2)
+wg = AddMultiply.build(x=1, y=2)
 wg.run()
 
 # %%
@@ -110,7 +110,7 @@ def AddMultiplyInputs(x: int, y: int):
     add_multiply3(data={"x": x, "y": y})
 
 
-wg = AddMultiplyInputs.build_graph(x=1, y=2)
+wg = AddMultiplyInputs.build(x=1, y=2)
 wg.to_html()
 
 # %%
@@ -151,7 +151,7 @@ def SquareNumbersGenerator(n: int):
     generate_square_numbers(n=n)
 
 
-wg = SquareNumbersGenerator.build_graph(n=5)
+wg = SquareNumbersGenerator.build(n=5)
 wg.run()
 
 # %%
@@ -184,7 +184,7 @@ def NestedDictGenerator(x: int, y: int):
     generate_nested_dict(x=x, y=y)
 
 
-wg = NestedDictGenerator.build_graph(x=1, y=2)
+wg = NestedDictGenerator.build(x=1, y=2)
 wg.run()
 
 # %%
@@ -212,7 +212,7 @@ def DynamicNestedDictGenerator(n: int):
     generate_dynamic_nested_dict(n=n)
 
 
-wg = DynamicNestedDictGenerator.build_graph(n=3)
+wg = DynamicNestedDictGenerator.build(n=3)
 wg.run()
 
 # %%
@@ -275,7 +275,7 @@ def AddMultiplyFinal(
     return {"square": square_numbers, "add_multiply1": out1, "add_multiply2": out2}
 
 
-wg = AddMultiplyFinal.build_graph(
+wg = AddMultiplyFinal.build(
     n=3,
     data={
         "add_multiply1": {"data": {"x": 1, "y": 2}},

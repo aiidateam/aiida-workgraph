@@ -63,7 +63,7 @@ def ParallelAdd(
 
 data = {f"list_{i}": {"x": i, "y": i} for i in range(1, 5)}
 
-wg = ParallelAdd.build_graph(data)
+wg = ParallelAdd.build(data)
 wg.run()
 
 print("\nResults:")
@@ -116,7 +116,7 @@ def ParallelAddAggregate(
     return aggregate_sums(data=sums).result
 
 
-wg = ParallelAddAggregate.build_graph(data)
+wg = ParallelAddAggregate.build(data)
 wg.run()
 
 print("\nResult:", wg.outputs.result.value)

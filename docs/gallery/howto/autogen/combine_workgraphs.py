@@ -59,7 +59,7 @@ def AddMultiplyComposed(minimum, maximum, x, y):
     return AddMultiply(x=x, y=y, z=random_number).result
 
 
-wg = AddMultiplyComposed.build_graph(minimum=1, maximum=10, x=1, y=2)
+wg = AddMultiplyComposed.build(minimum=1, maximum=10, x=1, y=2)
 
 # %%
 # See how we're using `AddMultiply` as a regular task? It's as simple as that!

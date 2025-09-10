@@ -88,7 +88,7 @@ mol = molecule("N2")
 
 # %%
 # Next, build the workgraph, but doesn't run it.
-wg = atomization_energy_workflow.build_graph(molecule_obj=mol, atom_obj=atom)
+wg = atomization_energy_workflow.build(molecule_obj=mol, atom_obj=atom)
 
 # %%
 # You can visualize the planned workflow.
@@ -247,7 +247,7 @@ scales = [0.95, 0.98, 1.0, 1.02, 1.05]
 
 # %%
 # Next, we build the workgraph with the inputs and visualize it:
-wg = eos_workflow.build_graph(atoms=cu, scales=scales)
+wg = eos_workflow.build(atoms=cu, scales=scales)
 wg.to_html()
 
 # %%

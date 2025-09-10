@@ -219,10 +219,10 @@ class TaskDecoratorCollection:
         """
 
         def decorator(func) -> TaskHandle:
-            from aiida_workgraph.tasks.graph_task import _build_graph_task_nodespec
+            from aiida_workgraph.tasks.graph_task import _build_task_nodespec
 
             handle = TaskHandle(
-                _build_graph_task_nodespec(func, in_spec=inputs, out_spec=outputs)
+                _build_task_nodespec(func, in_spec=inputs, out_spec=outputs)
             )
             handle._func = func
             return handle

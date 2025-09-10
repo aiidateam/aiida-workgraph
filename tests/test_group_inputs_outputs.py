@@ -54,7 +54,7 @@ def test_detect_graph_inputs(decorated_add):
     def graph1(x, y):
         decorated_add(x=x, y=y)
 
-    wg = graph1.build_graph(x=1, y=1)
+    wg = graph1.build(x=1, y=1)
     assert "graph_inputs.x -> add.x" in wg.links
     assert "graph_inputs.y -> add.y" in wg.links
 

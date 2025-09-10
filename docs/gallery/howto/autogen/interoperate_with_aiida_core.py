@@ -86,7 +86,7 @@ def AiiDAComponentsWorkflow():
     return workfunction_sum
 
 
-wg = AiiDAComponentsWorkflow.build_graph()
+wg = AiiDAComponentsWorkflow.build()
 wg.to_html()
 
 # %%
@@ -179,7 +179,7 @@ def IntegratedAddMultiply() -> t.Annotated[dict, namespace(sum=int, product=int)
     return {"sum": the_sum, "product": the_product}
 
 
-wg = IntegratedAddMultiply.build_graph()
+wg = IntegratedAddMultiply.build()
 
 # %%
 # We can export our workgraph as a dictionary using the ``prepare_inputs()`` method and use it as the input to our ``WorkChain``:

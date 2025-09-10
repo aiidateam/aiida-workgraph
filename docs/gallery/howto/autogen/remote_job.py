@@ -41,7 +41,7 @@ def RemoteAdd(x: int, y: int, computer: str) -> int:
     return add(x=x, y=y, computer=computer).result
 
 
-wg = RemoteAdd.build_graph(x=1, y=2, computer="localhost")
+wg = RemoteAdd.build(x=1, y=2, computer="localhost")
 wg.run()
 
 print("\nResult: ", wg.outputs.result.value)
@@ -92,7 +92,7 @@ def RemoteAddLocalMultiply(x: int, y: int, computer: str, metadata: dict) -> int
     return multiply(x=the_sum, y=4)  # this will run locally
 
 
-wg = RemoteAddLocalMultiply.build_graph(
+wg = RemoteAddLocalMultiply.build(
     x=2,
     y=3,
     computer="localhost",

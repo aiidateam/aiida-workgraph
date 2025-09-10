@@ -163,7 +163,7 @@ def test_extend_workgraph(decorated_add_multiply_group):
 
     wg = WorkGraph("test_graph_build")
     add1 = wg.add_task("workgraph.test_add", "add1", x=2, y=3)
-    add_multiply_wg = decorated_add_multiply_group.build_graph(x=0, y=4, z=5)
+    add_multiply_wg = decorated_add_multiply_group.build(x=0, y=4, z=5)
     # test wait
     add_multiply_wg.tasks.multiply.waiting_on.add("add")
     # extend workgraph
@@ -304,7 +304,7 @@ def test_expose_task_spec():
         tc = test_calc(x)
         return {"out1": am, "out2": tc.square}
 
-    wg = test_graph.build_graph(x=1, data={"y": 2})
+    wg = test_graph.build(x=1, data={"y": 2})
     wg.run()
     assert wg.outputs.out1.sum == 3
     assert wg.outputs.out1.product == 2

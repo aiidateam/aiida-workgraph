@@ -94,7 +94,7 @@ def wait_graph(x, y):
     )
 
 
-wg = wait_graph.build_graph(x=1, y=2)
+wg = wait_graph.build(x=1, y=2)
 wg.run()
 
 # %%

@@ -107,7 +107,7 @@ def AddMultiply(x, y, z):
 #
 #    If you are following along in a Jupyter notebook, replace ``wg.to_html()`` with ``wg``.
 
-wg = AddMultiply.build_graph(x=2, y=3, z=4)
+wg = AddMultiply.build(x=2, y=3, z=4)
 wg.to_html()
 
 # %%
