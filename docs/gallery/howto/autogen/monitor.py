@@ -123,11 +123,7 @@ def FileMonitor(x, y, z):
 
     # While above is running, monitor for the file
     # Once done (`>>` means wait on left operant), discard the file and add two numbers
-    monitor_file(
-        "/tmp/monitor_test.txt",
-        interval=1,
-        timeout=10,
-    ) >> group(
+    monitor_file("/tmp/monitor_test.txt", interval=1, timeout=10,) >> group(
         discard_file("/tmp/monitor_test.txt"),
         the_sum := add(x, y).result,
     )

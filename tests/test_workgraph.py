@@ -86,7 +86,6 @@ def test_load_failure(create_process_node):
 def test_organize_nested_inputs():
     """Merge sub properties to the root properties."""
     from .utils.test_workchain import WorkChainWithNestNamespace
-    from node_graph.utils import collect_values_inside_namespace
 
     wg = WorkGraph("test_organize_nested_inputs")
     task1 = wg.add_task(WorkChainWithNestNamespace, name="task1")
@@ -108,15 +107,11 @@ def test_organize_nested_inputs():
         },
         "x": "1",
     }
-    collected_data = collect_values_inside_namespace(
-        inputs["workgraph_data"]["tasks"]["task1"]["inputs"]["sockets"]["add"],
-        include_none=False,
-    )
-    assert collected_data == data
+    assert inputs["tasks"]["task1"]["add"] == data
 
 
 @pytest.mark.usefixtures("started_daemon_client")
-def test_reset_message(wg_calcjob):
+def test_reset_message(wg_calcjob, capsys):
     """Modify a node and save the workgraph.
     This will add a message to the workgraph_queue extra field."""
     from aiida.cmdline.utils.common import get_workchain_report

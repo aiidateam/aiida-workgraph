@@ -87,7 +87,6 @@ def task_function(request):
 def test_decorators_task_args(task_function):
 
     n = task_function._spec.to_node()
-    tdata = n.to_dict()
     assert n.args_data["args"] == []
     assert set(n.args_data["kwargs"]) == {
         "metadata",
@@ -99,7 +98,6 @@ def test_decorators_task_args(task_function):
     }
     assert n.args_data["var_args"] is None
     assert n.args_data["var_kwargs"] == "c"
-    assert set(tdata["outputs"]["sockets"].keys()) == set(["_outputs", "_wait"])
 
 
 @pytest.fixture(params=["decorator_factory", "decorator"])

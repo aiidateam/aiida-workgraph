@@ -2,11 +2,12 @@ from __future__ import annotations
 from typing import Any, Dict, Optional, Callable
 from aiida import orm
 from aiida.common.extendeddicts import AttributeDict
-from aiida_pythonjob.data.serializer import general_serializer, all_serializers
+from aiida_pythonjob.data.serializer import all_serializers
 from aiida_pythonjob.data.deserializer import deserialize_to_raw_python_data
 from aiida_workgraph.utils import create_and_pause_process
 from aiida.engine import run_get_node
 from aiida_pythonjob import pyfunction, PythonJob, PyFunction
+from aiida_pythonjob.utils import serialize_ports
 from aiida_workgraph.task import SpecTask
 from node_graph.socket_spec import SocketSpec
 from node_graph.node_spec import NodeSpec
@@ -30,14 +31,19 @@ class BaseSerializablePythonTask(SpecTask):
         """
         non_function_inputs = self.non_function_inputs
         use_pickle = self.inputs.metadata.use_pickle.value
-        for name, socket in data["inputs"]["sockets"].items():
-            # skip metadata etc
-            if name in non_function_inputs:
-                continue
-            if socket["identifier"] == "workgraph.namespace":
-                self._serialize_python_data(socket["sockets"], use_pickle=use_pickle)
-            else:
-                self._serialize_socket_data(socket, use_pickle=use_pickle)
+        non_function_inputs = self.non_function_inputs
+        function_inputs = {
+            key: data["inputs"][key]
+            for key in data["inputs"]
+            if key not in non_function_inputs
+        }
+        serialized_inputs = serialize_ports(
+            python_data=function_inputs,
+            port_schema=self._spec.inputs,
+            serializers=all_serializers,
+            use_pickle=use_pickle,
+        )
+        data["inputs"].update(serialized_inputs)
 
     def update_from_dict(
         self, data: Dict[str, Any], **kwargs
@@ -48,21 +54,6 @@ class BaseSerializablePythonTask(SpecTask):
         """
         super().update_from_dict(data, **kwargs)
         return self
-
-    @classmethod
-    def _serialize_python_data(
-        cls, input_sockets: Dict[str, Any], use_pickle: bool | None = None
-    ) -> None:
-        """
-        Recursively walk over the sockets and convert raw Python
-        values to AiiDA Data nodes, if needed.
-        """
-        for socket in input_sockets.values():
-            if not socket["metadata"].get("extras", {}).get("is_pythonjob", False):
-                if socket["identifier"] == "workgraph.namespace":
-                    cls._serialize_python_data(socket["sockets"], use_pickle=use_pickle)
-                elif socket.get("property", {}).get("value") is not None:
-                    cls._serialize_socket_data(socket, use_pickle=use_pickle)
 
     @classmethod
     def _deserialize_python_data(cls, input_sockets: Dict[str, Any]) -> None:
@@ -76,17 +67,6 @@ class BaseSerializablePythonTask(SpecTask):
                     cls._deserialize_python_data(socket["sockets"])
                 else:
                     cls._deserialize_socket_data(socket)
-
-    @classmethod
-    def _serialize_socket_data(
-        cls, socket: Dict[str, Any], use_pickle: bool | None = None
-    ) -> Any:
-        value = socket.get("property", {}).get("value")
-        if value is None or isinstance(value, orm.Data):
-            return  # Already stored or is None
-        socket["property"]["value"] = general_serializer(
-            value, serializers=all_serializers, use_pickle=use_pickle
-        )
 
     @classmethod
     def _deserialize_socket_data(cls, socket: Dict[str, Any]) -> Any:
@@ -163,7 +143,7 @@ class PythonJobTask(BaseSerializablePythonTask):
                 else:
                     raise ValueError(f"Invalid var_kwargs type: {type(var_kwargs)}")
         # Resolve the actual function from the NodeExecutor
-        func = self.get_executor().executor
+        func = self.get_executor().callable
         if hasattr(func, "_TaskCls") and hasattr(func, "_func"):
             func = func._func
 
@@ -216,7 +196,7 @@ class PyFunctionTask(BaseSerializablePythonTask):
         """
         from node_graph.node_spec import BaseHandle
 
-        executor = self.get_executor().executor
+        executor = self.get_executor().callable
         # If it's a wrapped function, unwrap
         if isinstance(executor, BaseHandle) and hasattr(executor, "_func"):
             executor = executor._func

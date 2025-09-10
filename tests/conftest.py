@@ -292,9 +292,13 @@ def create_workgraph_process_node():
 
         process = WorkGraphEngine(
             inputs={
-                "workgraph_data": {
-                    "name": "test",
-                    "state": "",
+                "metadata": {
+                    "workgraph_data": {
+                        "name": "test",
+                        "state": "",
+                        "tasks": {},
+                        "links": [],
+                    }
                 }
             }
         )
