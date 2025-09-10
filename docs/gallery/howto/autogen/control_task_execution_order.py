@@ -6,6 +6,7 @@ Control task execution order
 # %%
 # Introduction
 # ------------
+#
 # In `aiida-workgraph`, a task typically runs as soon as its inputs are available.
 # However, you sometimes need to control the execution order more precisely, forcing
 # a task to wait for another unrelated task to complete. This is useful when a task
@@ -103,7 +104,7 @@ wg.run()
 
 # %%
 # Conclusion
-# ==========
+# ----------
 #
 # You now know two effective methods to control task execution order in ``aiida-workgraph``:
 #

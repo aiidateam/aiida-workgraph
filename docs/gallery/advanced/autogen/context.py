@@ -70,7 +70,7 @@ wg3.add_task(
 # -------------------
 # To organize the context data in a hierarchical structure, the keys may contain dots ``.``` that create nesting
 # Here is an example, to group the results of multipl add tasks to `ctx.sum`:
-#
+
 wg = WorkGraph(name="ctx_nested")
 add1 = wg.add_task(add, "add1", x=1, y=2)
 add2 = wg.add_task(add, "add2", x=3, y=4)
@@ -112,9 +112,6 @@ wg.show()
 wg.to_html()
 
 
-#
-# 2. One can export the data from context to the graph builder outputs.
-#
 @task.graph()
 def internal_add(x, y):
     outputs1 = add(x=x, y=y)

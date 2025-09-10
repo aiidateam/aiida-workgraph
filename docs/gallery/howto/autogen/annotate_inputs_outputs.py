@@ -19,8 +19,10 @@ Use annotations to control data provenance
 # This guide will walk you through the various ways to annotate your tasks.
 
 import typing as t
+
 from aiida import load_profile
-from aiida_workgraph import task
+
+from aiida_workgraph import dynamic, namespace, task
 from aiida_workgraph.utils import generate_node_graph, get_process_summary
 
 load_profile()
@@ -43,7 +45,6 @@ load_profile()
 # The second task, ``add_multiply2``, uses an output namespace to specify that each key-value pair in the dictionary should be stored as a separate AiiDA node.
 
 # Import the `namespace` module for specifications
-from aiida_workgraph import namespace
 
 
 @task
@@ -65,13 +66,13 @@ def add_multiply2(
 
 
 @task.graph
-def add_multiply_graph(x: int, y: int):
+def AddMultiply(x: int, y: int):
     """A graph to run both versions of the add_multiply task."""
     add_multiply1(x=x, y=y)
     add_multiply2(x=x, y=y)
 
 
-wg = add_multiply_graph.build_graph(x=1, y=2)
+wg = AddMultiply.build_graph(x=1, y=2)
 wg.run()
 
 # %%
@@ -111,19 +112,22 @@ def add_multiply3(
 
 
 @task.graph
-def add_multiply_graph_inputs(x: int, y: int):
-    return add_multiply3(data={"x": x, "y": y})
+def AddMultiplyInputs(x: int, y: int):
+    add_multiply3(data={"x": x, "y": y})
 
 
-wg = add_multiply_graph_inputs.build_graph(x=1, y=2)
+wg = AddMultiplyInputs.build_graph(x=1, y=2)
 wg.to_html()
 
 # %%
+# Note how the ``x`` input is passed to ``data.x`` (and similarly for ``y``).
+# This is due to the namespace specifications.
+
 wg.run()
 
 
 # %%
-# Let's inspect the provenance graph for this workflow:
+# Finally, we can inspect the provenance graph for this workflow:
 
 generate_node_graph(wg.pk)
 
@@ -139,8 +143,6 @@ generate_node_graph(wg.pk)
 #
 # This is particularly useful for tasks that generate a variable number of outputs based on their inputs.
 
-from aiida_workgraph import dynamic
-
 
 @task
 def generate_square_numbers(
@@ -154,11 +156,11 @@ def generate_square_numbers(
 
 
 @task.graph
-def generate_square_numbers_graph(n: int):
+def SquareNumbersGenerator(n: int):
     generate_square_numbers(n=n)
 
 
-wg = generate_square_numbers_graph.build_graph(n=5)
+wg = SquareNumbersGenerator.build_graph(n=5)
 wg.run()
 
 # %%
@@ -178,7 +180,7 @@ generate_node_graph(wg.pk)
 
 
 @task
-def nested_dict_task(
+def generate_nested_dict(
     x: int,
     y: int,
 ) -> t.Annotated[
@@ -190,11 +192,11 @@ def nested_dict_task(
 
 
 @task.graph
-def nested_dict_graph(x: int, y: int):
-    nested_dict_task(x=x, y=y)
+def NestedDictGenerator(x: int, y: int):
+    generate_nested_dict(x=x, y=y)
 
 
-wg = nested_dict_graph.build_graph(x=1, y=2)
+wg = NestedDictGenerator.build_graph(x=1, y=2)
 wg.run()
 
 # %%
@@ -221,11 +223,11 @@ def generate_dynamic_nested_dict(
 
 
 @task.graph
-def generate_dynamic_nested_dict_graph(n: int):
+def DynamicNestedDictGenerator(n: int):
     generate_dynamic_nested_dict(n=n)
 
 
-wg = generate_dynamic_nested_dict_graph.build_graph(n=3)
+wg = DynamicNestedDictGenerator.build_graph(n=3)
 wg.run()
 
 # %%
@@ -241,7 +243,7 @@ print(get_process_summary(wg.tasks[-1].pk))
 # ------------
 #
 # Data linkage tracks the flow of data between tasks.
-# At the workflow level, a `task.graph` can define its own inputs and outputs, providing a clean interface to a complex chain of tasks.
+# At the workflow level, a ``task.graph`` can define its own inputs and outputs, providing a clean interface to a complex chain of tasks.
 # `aiida-workgraph` validates data against these graph-level specifications and automatically links graph inputs to the appropriate task inputs.
 #
 # In this final example, we will build a graph that reuses the input and output specifications from the tasks it contains.
@@ -263,7 +265,7 @@ def add_multiply(
 
 
 @task.graph
-def add_multiply_graph_final(
+def AddMultiplyFinal(
     n: int,
     data: t.Annotated[
         dict,
@@ -291,28 +293,46 @@ def add_multiply_graph_final(
     return {"square": square_numbers, "add_multiply1": out1, "add_multiply2": out2}
 
 
-wg = add_multiply_graph_final.build_graph(
+wg = AddMultiplyFinal.build_graph(
     n=3,
     data={
         "add_multiply1": {"data": {"x": 1, "y": 2}},
         "add_multiply2": {"data": {"x": 3, "y": 4}},
     },
 )
-# Generate an interactive HTML visualization of the graph
 wg.to_html()
 
 # %%
 # In the example above:
 #
-# - **Graph outputs:** The ``outputs`` argument in the ``@task.graph`` decorator defines the *shape* of the final result.
-#   We reuse ``generate_square_numbers.outputs`` and ``add_multiply_task.outputs`` to ensure the graph's output signature is consistent with the tasks it contains.
+# - **Graph outputs:** The outputs are annotated with a nested namespace that defines the *shape* of the final result.
+#   Here we reuse ``generate_square_numbers.outputs`` and ``add_multiply_task.outputs`` to ensure the graph's output signature is consistent with the tasks it contains.
 #
 # - **Graph inputs:** The ``data`` input is annotated with a nested namespace that reuses ``add_multiply_task.inputs``.
-#   This allows ``aiida-workgraph`` to validate the complex input dictionary and create the correct data links.
+#   This allows `aiida-workgraph` to validate the complex input dictionary and create the correct data links.
 #
 # In the GUI representation of the WorkGraph, you will see how the nested inputs are correctly wired.
 # For instance, there is a direct link from the graph input socket ``data.add_multiply1.data.x`` to the task input socket ``add_multiply_task_1.data.x``, guaranteeing perfect data lineage.
+#
+# .. tip::
+#
+#    If a graph only exposes the outputs of a single task, this can be simplified as
+#
+#    .. code-block::
+#
+#       @task.graph
+#       def SomeGraph(...) - t.Annotated[dict, some_task.outputs]:
+#           return some_task(...)
+#
+# We can see similar linkage in the provenance graph.
+# Let's run the graph and visualize its provenance.
 
+wg.run()
+
+generate_node_graph(wg.pk)
+
+# %%
+# Note how the outputs of the various tasks are exposed (linked) to the graph, making accessible via the graph node.
 
 # %%
 # Conclusion
@@ -323,8 +343,8 @@ wg.to_html()
 #
 # The key takeaways are:
 #
-# - Annotate task ``outputs`` to unpack results into individual AiiDA nodes.
-# - Use ``typing.Annotated`` to specify input structures.
+# - Annotate task/graph outputs to unpack results into individual AiiDA nodes.
+# - Annotate inputs to specify input structures.
 # - Employ ``dynamic`` for tasks with a variable number of outputs.
 # - Reuse ``.inputs`` and ``.outputs`` specifications at the graph level to build modular and robust workflows.
 #
