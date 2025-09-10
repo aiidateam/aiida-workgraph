@@ -20,7 +20,7 @@ from aiida import load_profile, orm
 from aiida_shell.data import PickledData
 
 from aiida_workgraph import dynamic, shelljob, task
-from aiida_workgraph.utils import generate_node_graph, get_or_create_code
+from aiida_workgraph.utils import get_or_create_code
 
 load_profile()
 
@@ -188,7 +188,7 @@ assert wg.outputs.result.value == 20
 # %%
 # Let's have a look at the provenance graph.
 
-generate_node_graph(wg.pk)
+wg.generate_provenance_graph()
 
 # %%
 # What's Next

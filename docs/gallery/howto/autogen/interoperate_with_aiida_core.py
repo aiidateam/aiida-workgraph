@@ -113,9 +113,9 @@ wg.to_html()
 wg.run()
 
 # %%
-from aiida_workgraph.utils import generate_node_graph
 
-generate_node_graph(wg.pk)
+
+wg.generate_provenance_graph()
 
 # %%
 # Use ``WorkGraph`` in ``WorkChain``
@@ -210,10 +210,9 @@ print("  Product:", result["product"])
 
 # %%
 # And finally, we can have a look at the provenance graph:
+from aiida_workgraph.utils import generate_provenance_graph
 
-from aiida_workgraph.utils import generate_node_graph
-
-generate_node_graph(node.pk)
+generate_provenance_graph(node.pk)
 
 # %%
 # Further reading

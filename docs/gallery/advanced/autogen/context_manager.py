@@ -420,9 +420,7 @@ wg.to_html()
 # %%
 # Finally, after the workflow has finished, we generate the provenance graph from the AiiDA process, where we can see that the result of the ``op_lt`` (less than) comparison is ``False`` and the branch ends there, while for the ``op_ge`` (greater or equal) comparison it is ``True``, meaning that the branch with the intermediate multiplication was executed.
 
-from aiida_workgraph.utils import generate_node_graph
-
-generate_node_graph(wg.pk)
+wg.generate_provenance_graph()
 
 # %%
 # ``While`` zone
@@ -485,7 +483,7 @@ wg.to_html()
 #
 # In the provenance graph, we can see the looping and execution of multiple tasks in the loop reflected in the deep tree structure:
 
-generate_node_graph(wg.pk)
+wg.generate_provenance_graph()
 
 # %%
 # ``Map`` zone
@@ -554,7 +552,7 @@ wg.to_html()
 # %%
 # Finally, let's have a look at the provenance graph:
 
-generate_node_graph(wg.pk)
+wg.generate_provenance_graph()
 
 # %%
 # Data aggregation
@@ -690,9 +688,8 @@ print(f"  New sum: {wg3.outputs.new_sum.value}")
 #
 # The full provenance remains intact, including the original workflow:
 
-from aiida_workgraph.utils import generate_node_graph
 
-generate_node_graph(wg3.pk)
+wg3.generate_provenance_graph()
 
 # %%
 # Conclusion

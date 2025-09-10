@@ -90,9 +90,8 @@ print("  Final result:", f"{wg.outputs.result.value.value} = (1 + 2) * {random_n
 # %%
 # Let's have a look at the provenance graph:
 
-from aiida_workgraph.utils import generate_node_graph
 
-generate_node_graph(wg.pk)
+wg.generate_provenance_graph()
 
 # %%
 # Summary

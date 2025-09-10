@@ -23,7 +23,7 @@ import typing as t
 from aiida import load_profile
 
 from aiida_workgraph import dynamic, namespace, task
-from aiida_workgraph.utils import generate_node_graph, get_process_summary
+from aiida_workgraph.utils import get_process_summary
 
 load_profile()
 
@@ -82,7 +82,7 @@ wg.run()
 #
 # Let's visualize the data provenance of our executed workflow:
 
-generate_node_graph(wg.pk)
+wg.generate_provenance_graph()
 
 # %%
 # As the provenance graph shows, ``add_multiply1`` has a single output node (``result``), while ``add_multiply2`` has two separate output nodes (``sum`` and ``product``), as defined in its namespace.
@@ -123,7 +123,7 @@ wg.run()
 # %%
 # Finally, we can inspect the provenance graph for this workflow:
 
-generate_node_graph(wg.pk)
+wg.generate_provenance_graph()
 
 
 # %%
@@ -157,7 +157,7 @@ wg.run()
 # %%
 # Let's examine the provenance of this dynamic workflow:
 
-generate_node_graph(wg.pk)
+wg.generate_provenance_graph()
 
 # %%
 # The graph shows that the ``generate_square_numbers`` task has multiple output nodes, one for each entry in the dynamically generated dictionary.
@@ -311,7 +311,7 @@ wg.to_html()
 
 wg.run()
 
-generate_node_graph(wg.pk)
+wg.generate_provenance_graph()
 
 # %%
 # Note how the outputs of the various tasks are exposed (linked) to the graph, making accessible via the graph node.

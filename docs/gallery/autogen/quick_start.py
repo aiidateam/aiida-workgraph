@@ -146,9 +146,7 @@ print("Result of multiplication:", wg.tasks.multiply.outputs.result.value)
 #
 # Let's have a look at the full data provenance of our executed workflow:
 
-from aiida_workgraph.utils import generate_node_graph
-
-generate_node_graph(wg.pk)
+wg.generate_provenance_graph()
 
 # %%
 # Summary

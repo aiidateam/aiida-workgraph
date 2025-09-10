@@ -111,9 +111,8 @@ print(f"Atomization energy for N2: {wg.outputs.result.value.value:.4f} eV")
 # We can visualize the *provenance* graph of a completed workflow. This graph is the key to reproducibility,
 # showing not just the tasks but also the actual data nodes that were created and stored in the AiiDA database.
 
-from aiida_workgraph.utils import generate_node_graph
 
-generate_node_graph(wg.pk)
+wg.generate_provenance_graph()
 
 
 # %%
@@ -267,9 +266,8 @@ print("Equation of state results for Cu: ", eos_result.get_dict())
 # ``create_strained_structures`` and the "fan-in" to ``fit_eos_model``, illustrating
 # the power of AiiDA-WorkGraph to manage complex data flows automatically.
 
-from aiida_workgraph.utils import generate_node_graph
 
-generate_node_graph(wg.pk)
+wg.generate_provenance_graph()
 
 # %%
 # Conclusion

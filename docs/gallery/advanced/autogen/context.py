@@ -182,9 +182,9 @@ print("Result of add1            : {}".format(wg.tasks.add1.outputs.result.value
 # %%
 
 # Generate node graph from the AiiDA process
-from aiida_workgraph.utils import generate_node_graph
 
-generate_node_graph(wg.pk)
+
+wg.generate_provenance_graph()
 
 # %%
 # .. note::

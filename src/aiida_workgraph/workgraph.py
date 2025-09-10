@@ -630,6 +630,16 @@ class WorkGraph(node_graph.NodeGraph):
         self.widget.value = self.to_widget_value()
         return self.widget.to_html(output=output, **kwargs)
 
+    def generate_provenance_graph(self):
+        """Generate the provenance graph of the workgraph process."""
+        from aiida_workgraph.utils import generate_provenance_graph
+
+        if self.process is None:
+            raise ValueError(
+                "No process found. Please run or submit the workgraph first."
+            )
+        return generate_provenance_graph(self.process.pk)
+
     def __repr__(self) -> str:
         return f'WorkGraph(name="{self.name}", uuid="{self.uuid}")'
 

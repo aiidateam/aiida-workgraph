@@ -16,7 +16,7 @@ import typing as t
 from aiida import load_profile
 
 from aiida_workgraph import namespace, task, dynamic
-from aiida_workgraph.utils import generate_node_graph
+
 
 load_profile()
 
@@ -84,7 +84,7 @@ wg.to_html()
 # Provenance graph
 # """"""""""""""""
 
-generate_node_graph(wg.pk)
+wg.generate_provenance_graph()
 
 # %%
 # .. note::
