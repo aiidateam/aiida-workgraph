@@ -43,6 +43,7 @@ def test_get_parent_workgraphs():
 def test_generate_provenance_graph():
 
     from IPython.display import IFrame
+    from aiida_workgraph.utils import generate_provenance_graph
     import os
 
     wn1 = orm.WorkflowNode()

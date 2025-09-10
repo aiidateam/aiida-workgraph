@@ -42,8 +42,10 @@ def test_single_namespace_outputs():
     def test_graph(x, y) -> spec.namespace(sum=int, product=int):
         return add_multiply(x, y)
 
-    wg = test_graph.build(1, 2)
-    wg.run()
+    results, wg = test_graph.run_get_graph(1, 2)
+    #
+    assert results["sum"] == 3
+    assert results["product"] == 2
     # graph outputs
     assert wg.outputs.sum.value == 3
     assert wg.outputs.product.value == 2
