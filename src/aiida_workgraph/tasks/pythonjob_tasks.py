@@ -30,7 +30,6 @@ class BaseSerializablePythonTask(SpecTask):
         and run our specialized Python serialization.
         """
         non_function_inputs = self.non_function_inputs
-        use_pickle = self.inputs.metadata.use_pickle.value
         non_function_inputs = self.non_function_inputs
         function_inputs = {
             key: data["inputs"][key]
@@ -41,7 +40,6 @@ class BaseSerializablePythonTask(SpecTask):
             python_data=function_inputs,
             port_schema=self._spec.inputs,
             serializers=all_serializers,
-            use_pickle=use_pickle,
         )
         data["inputs"].update(serialized_inputs)
 

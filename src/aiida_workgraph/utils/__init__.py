@@ -565,7 +565,6 @@ def serialize_graph_level_data(
     input_socket: Dict[str, Any],
     port_schema: SocketSpec | Dict[str, Any],
     serializers: Optional[Dict[str, str]] = None,
-    use_pickle: bool | None = None,
 ) -> None:
     """Recursively walk over the sockets and convert raw Python
     values to AiiDA Data nodes, if needed.
@@ -577,7 +576,6 @@ def serialize_graph_level_data(
         python_data=input_socket,
         port_schema=port_schema,
         serializers=serializers or {},
-        use_pickle=use_pickle,
     )
 
 

@@ -17,7 +17,6 @@ Run shell commands as a task
 import typing as t
 
 from aiida import load_profile, orm
-from aiida_shell.data import PickledData
 
 from aiida_workgraph import dynamic, shelljob, task
 from aiida_workgraph.utils import get_or_create_code
@@ -159,14 +158,14 @@ def ShellAddMultiply(x: int, y: int, z: int) -> int:
         command="expr",
         arguments=["{x}", "+", "{y}"],
         nodes={"x": x, "y": y},
-        parser=PickledData(parser),
+        parser=parser,
         parser_outputs=["result"],
     ).result
     the_product = shelljob(
         command="expr",
         arguments=["{x}", "*", "{y}"],
         nodes={"x": the_sum, "y": z},
-        parser=PickledData(parser),
+        parser=parser,
         parser_outputs=["result"],
     ).result
     return the_product

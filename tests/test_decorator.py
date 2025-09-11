@@ -261,31 +261,3 @@ def test_set_current_graph():
     g2 = WorkGraph()
     set_current_graph(g2)
     assert get_current_graph() == g2
-
-
-def test_use_pickle():
-    # non-jsonable data
-    class Data:
-        def __init__(self, value):
-            self.value = value
-
-    # without pickle, should raise error
-    @task()
-    def add(x, y):
-        return x + y.value
-
-    with pytest.raises(
-        ValueError, match="Cannot serialize type=Data. No suitable method found"
-    ):
-        with WorkGraph() as wg:
-            wg.outputs.result = add(3, Data(4)).result
-            wg.run()
-
-    # now use pickle
-    @task(use_pickle=True)
-    def add(x, y):
-        return x + y.value
-
-    with WorkGraph() as wg:
-        wg.outputs.result = add(3, Data(4)).result
-        wg.run()

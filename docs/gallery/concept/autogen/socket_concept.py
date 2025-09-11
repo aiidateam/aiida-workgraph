@@ -231,7 +231,7 @@ def generate_squares(n: int) -> spec.namespace(squares=spec.dynamic(int)):
 #     graph, allowing you to trace the history and reuse of every single result.
 #
 # 2.  **Database integrity**: It avoids serializing large, complex Python objects
-#     into a single, opaque file (like a pickle file, which is disabled by default in AiiDA).
+#     into a single, opaque file.
 #     Instead, each result is a native, queryable entry in the AiiDA database.
 #
 # To consume these dynamic outputs, we can create a task that accepts an arbitrary
