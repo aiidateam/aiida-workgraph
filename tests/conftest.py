@@ -75,7 +75,7 @@ def fixture_code(fixture_localhost):
 
 
 @pytest.fixture
-def wg_calcfunction() -> WorkGraph:
+def wg_task() -> WorkGraph:
     """A workgraph with calcfunction."""
 
     wg = WorkGraph(name="test_debug_math")

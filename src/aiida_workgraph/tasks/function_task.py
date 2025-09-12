@@ -1,5 +1,4 @@
 from __future__ import annotations
-from copy import deepcopy
 from typing import Callable, List, Optional, Type, Dict
 from aiida_workgraph.socket_spec import (
     from_aiida_process,
@@ -56,7 +55,6 @@ def build_callable_nodespec(
 
     # 1) infer from the callable (keep a snapshot before augmentation)
     func_in, func_out = infer_specs_from_callable(obj, in_spec, out_spec)
-    origin_in, origin_out = deepcopy(func_in), deepcopy(func_out)
 
     # 2) process-contributed I/O (if any)
     proc_in = proc_out = None
@@ -71,15 +69,24 @@ def build_callable_nodespec(
     if add_outputs is not None:
         func_out = merge_specs(func_out, add_outputs)
 
-    # 4) metadata: keep a full audit trail of contributions
-    meta_specs = {}
-    meta_specs.update(_record_specs_block("function", origin_in, origin_out))
-    meta_specs.update(_record_specs_block("process", proc_in, proc_out))
-    meta_specs.update(_record_specs_block("additional", add_inputs, add_outputs))
+    # 4) metadata: keep a record of each contribution
+    inputs_keys = []
+    if proc_in:
+        inputs_keys.extend(proc_in.fields.keys())
+    if add_inputs:
+        inputs_keys.extend(add_inputs.fields.keys())
+    inputs_keys = list(set(inputs_keys))
+    outputs_keys = []
+    if proc_out:
+        outputs_keys.extend(proc_out.fields.keys())
+    if add_outputs:
+        outputs_keys.extend(add_outputs.fields.keys())
+    outputs_keys = list(set(outputs_keys))
 
     meta = {
         "node_type": node_type,
-        "specs": meta_specs,
+        "non_function_inputs": inputs_keys,
+        "non_function_outputs": outputs_keys,
     }
 
     return NodeSpec(

@@ -1,7 +1,7 @@
 import pytest
 from aiida_workgraph import WorkGraph, task
 from aiida_workgraph.socket import TaskSocketNamespace
-from typing import Callable, Any
+from typing import Callable, Any, Annotated
 from aiida_workgraph.manager import get_current_graph, set_current_graph
 from aiida_workgraph import socket_spec as spec
 
@@ -10,12 +10,17 @@ def test_custom_outputs():
     """Test custom outputs."""
 
     @task
-    def add_multiply(x, y) -> spec.namespace(sum=Any, product=Any):
+    def add_multiply(x, y) -> Annotated[dict, spec.namespace(sum=Any, product=Any)]:
         return {"sum": x + y, "product": x * y}
 
-    n = add_multiply._spec.to_node()
-    assert "sum" in n.outputs
-    assert "product" in n.outputs
+    @task.graph(outputs=add_multiply.outputs)
+    def test_graph(x, y):
+        return add_multiply(x, y)
+
+    wg = test_graph.build(1, 2)
+    wg.run()
+    assert wg.outputs.sum.value == 3
+    assert wg.outputs.product.value == 2
 
 
 def test_decorators_args() -> None:

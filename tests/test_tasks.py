@@ -6,24 +6,6 @@ from aiida_workgraph import socket_spec as spec
 from typing import Any
 
 
-def test_normal_task(decorated_add) -> None:
-    """Test a normal task."""
-
-    @task(outputs=["sum", "diff"])
-    def sum_diff(x, y):
-        return x + y, x - y
-
-    wg = WorkGraph("test_normal_task")
-    task1 = wg.add_task(sum_diff, name="sum_diff", x=2, y=3)
-    task2 = wg.add_task(
-        decorated_add, name="add", x=task1.outputs.sum, y=task1.outputs["diff"]
-    )
-    wg.run()
-    print("node: ", task2.outputs.result)
-    wg.update()
-    assert task2.outputs.result.value == 4
-
-
 def test_task_collection(decorated_add: Callable) -> None:
     """Test the TaskCollection class.
     Since waiting_on and children are TaskCollection instances, we test the waiting_on."""

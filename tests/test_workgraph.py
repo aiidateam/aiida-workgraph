@@ -26,7 +26,7 @@ def test_add_task():
     assert len(wg.links) == 1
 
 
-def test_show_state(wg_calcfunction):
+def test_show_state(wg_task):
     from io import StringIO
     import sys
 
@@ -34,8 +34,8 @@ def test_show_state(wg_calcfunction):
     captured_output = StringIO()
     sys.stdout = captured_output
     # Call the method
-    wg_calcfunction.name = "test_show_state"
-    wg_calcfunction.show()
+    wg_task.name = "test_show_state"
+    wg_task.show()
     # Reset stdout
     sys.stdout = sys.__stdout__
     # Check the output
@@ -45,12 +45,12 @@ def test_show_state(wg_calcfunction):
     assert "PLANNED" in output
 
 
-def test_save_load(wg_calcfunction, decorated_add):
+def test_save_load(wg_task, decorated_add):
     """Save the workgraph"""
     from aiida.calculations.arithmetic.add import ArithmeticAddCalculation
     from aiida_workgraph.executors.builtins import UnavailableExecutor
 
-    wg = wg_calcfunction
+    wg = wg_task
     wg.add_task(decorated_add, name="add1", x=2, y=3)
     metadata = {
         "options": {
@@ -134,11 +134,11 @@ def test_reset_message(wg_calcjob, capsys):
     assert "Action: RESET. Tasks: ['add1']" in report
 
 
-def test_restart_and_reset(wg_calcfunction):
+def test_restart_and_reset(wg_task):
     """Restart from a finished workgraph.
     Load the workgraph, modify the task, and restart the workgraph.
     Only the modified node and its child tasks will be rerun."""
-    wg = wg_calcfunction
+    wg = wg_task
     wg.outputs.diff = wg.tasks.sumdiff1.outputs.diff
     wg.outputs.sum = wg.tasks.sumdiff2.outputs.sum
     wg.add_task(
