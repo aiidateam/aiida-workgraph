@@ -117,7 +117,7 @@ def test_organize_nested_inputs():
 
 
 @pytest.mark.usefixtures("started_daemon_client")
-def test_reset_message(wg_calcjob, capsys):
+def test_reset_message(wg_calcjob):
     """Modify a node and save the workgraph.
     This will add a message to the workgraph_queue extra field."""
     from aiida.cmdline.utils.common import get_workchain_report

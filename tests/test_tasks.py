@@ -29,7 +29,7 @@ def test_task_collection(decorated_add: Callable) -> None:
 
 
 @pytest.mark.usefixtures("started_daemon_client")
-def test_task_wait(decorated_add: Callable, capsys) -> None:
+def test_task_wait(decorated_add: Callable) -> None:
     """Run a WorkGraph with a task that waits on other tasks."""
 
     wg = WorkGraph(name="test_task_wait")
