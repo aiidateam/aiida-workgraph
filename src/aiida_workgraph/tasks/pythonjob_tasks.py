@@ -14,6 +14,7 @@ from node_graph.node_spec import NodeSpec
 from aiida_workgraph.socket_spec import namespace
 from .function_task import build_callable_nodespec
 from node_graph.error_handler import ErrorHandlerSpec
+from node_graph.executor import RuntimeExecutor
 
 
 class BaseSerializablePythonTask(SpecTask):
@@ -141,7 +142,8 @@ class PythonJobTask(BaseSerializablePythonTask):
                 else:
                     raise ValueError(f"Invalid var_kwargs type: {type(var_kwargs)}")
         # Resolve the actual function from the NodeExecutor
-        func = self.get_executor().callable
+        executor = RuntimeExecutor(**self.get_executor().to_dict())
+        func = executor.callable
         if hasattr(func, "_TaskCls") and hasattr(func, "_func"):
             func = func._func
 
@@ -194,7 +196,7 @@ class PyFunctionTask(BaseSerializablePythonTask):
         """
         from node_graph.node_spec import BaseHandle
 
-        executor = self.get_executor().callable
+        executor = RuntimeExecutor(**self.get_executor().to_dict()).callable
         # If it's a wrapped function, unwrap
         if isinstance(executor, BaseHandle) and hasattr(executor, "_func"):
             executor = executor._func

@@ -73,7 +73,9 @@ def test_save_load(wg_calcfunction, decorated_add):
     assert wg2.tasks.add1.get_executor().callable == UnavailableExecutor
     # The ArithmeticAddCalculation is importable,
     # so we can restore the executor from the module path.
-    assert wg2.tasks.add2.get_executor() == wg.tasks.add2.get_executor()
+    assert (
+        wg2.tasks.add2.get_executor().callable == wg.tasks.add2.get_executor().callable
+    )
     assert wg.tasks.add2.inputs.metadata._value == wg2.tasks.add2.inputs.metadata._value
     # TODO, the following code is not working
     # wg2.save()

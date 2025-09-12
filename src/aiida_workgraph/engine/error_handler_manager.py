@@ -37,8 +37,9 @@ class ErrorHandlerManager:
     def run_error_handler(self, handler: ErrorHandlerSpec, task_name: str) -> None:
         """Run the error handler for a task."""
         from inspect import signature
+        from node_graph.executor import RuntimeExecutor
 
-        executor = handler.executor.callable
+        executor = RuntimeExecutor(**handler.executor.to_dict()).callable
         executor_sig = signature(executor)
         self.process.report(f"Run error handler: {executor.__name__}")
         if handler.retry < handler.max_retries:

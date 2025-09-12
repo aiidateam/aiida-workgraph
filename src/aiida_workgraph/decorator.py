@@ -20,7 +20,7 @@ def _spec_for(
 ) -> NodeSpec:
     from aiida_workgraph.socket_spec import from_aiida_process
     from aiida_workgraph.utils import inspect_aiida_component_type
-    from node_graph.executor import NodeExecutor
+    from node_graph.executor import RuntimeExecutor
 
     # WorkGraph -> pack as a node
     if isinstance(obj, WorkGraph):
@@ -43,7 +43,7 @@ def _spec_for(
             catalog="AIIDA",
             inputs=in_spec,
             outputs=out_spec,
-            executor=NodeExecutor(**exec_payload),
+            executor=SafeExecutor(**exec_payload),
             base_class=SubGraphTask,
             metadata={"node_type": "workgraph"},
         )
@@ -58,7 +58,7 @@ def _spec_for(
             catalog="AIIDA",
             inputs=in_spec,
             outputs=out_spec,
-            executor=NodeExecutor.from_callable(obj),
+            executor=RuntimeExecutor.from_callable(obj),
             base_class=AiiDAProcessTask,
             metadata={"node_type": inspect_aiida_component_type(obj)},
         )

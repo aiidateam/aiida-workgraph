@@ -73,7 +73,7 @@ def _build_subgraph_task_nodespec(
     graph: "WorkGraph",
     name: str | None = None,
 ) -> NodeSpec:
-    from node_graph.executor import NodeExecutor
+    from node_graph.executor import RuntimeExecutor
     from aiida_workgraph.orm.mapping import type_mapping
 
     # mirror IO from the child graph
@@ -98,7 +98,7 @@ def _build_subgraph_task_nodespec(
         identifier=name or graph.name,
         inputs=in_spec,
         outputs=out_spec,
-        executor=NodeExecutor.from_graph(graph),
+        executor=RuntimeExecutor.from_graph(graph),
         base_class=SubGraphTask,
         metadata=meta,
     )

@@ -192,20 +192,28 @@ def get_dict_from_builder(builder: Any) -> Dict:
         return builder
 
 
-def clean_pickled_executor_recursively(data: Dict[str, Any]) -> None:
-    """Clean the pickled executor in the workgraph data."""
-    from node_graph.executor import NodeExecutor
+def clean_pickled_task_executor(tdata: Dict[str, Any]) -> None:
+    """Clean the pickled executor in the task data."""
+    from node_graph.executor import RuntimeExecutor
     from aiida_workgraph.executors.builtins import UnavailableExecutor
 
-    for key, value in data.items():
-        if isinstance(value, dict):
-            if key == "executor":
-                if value.get("mode", "") == "pickled_callable":
-                    data[key] = NodeExecutor.from_callable(
-                        UnavailableExecutor
-                    ).to_dict()
-            else:
-                clean_pickled_executor_recursively(value)
+    # spec
+    if "spec_schema" in tdata["metadata"]:
+        executor = tdata["metadata"]["spec_schema"].get("executor", {})
+        if executor.get("mode", "") == "pickled_callable":
+            tdata["metadata"]["spec_schema"][
+                "executor"
+            ] = RuntimeExecutor.from_callable(UnavailableExecutor).to_dict()
+        if executor.get("mode", "") == "graph":
+            wgdata = executor["graph_data"]
+            for task in wgdata["tasks"].values():
+                clean_pickled_task_executor(task)
+    # error handler
+    for name, handler in tdata.get("error_handlers", {}).items():
+        if handler.get("mode", "") == "pickled_callable":
+            tdata["error_handlers"][name] = RuntimeExecutor.from_callable(
+                UnavailableExecutor
+            ).to_dict()
 
 
 def save_workgraph_data(node: Union[int, orm.Node], inputs: Dict[str, Any]) -> None:
@@ -222,7 +230,8 @@ def save_workgraph_data(node: Union[int, orm.Node], inputs: Dict[str, Any]) -> N
         task_states[name] = task["state"]
         task_processes[name] = task["process"]
         task_actions[name] = task["action"]
-        clean_pickled_executor_recursively(task)
+        # clean pickled executor before save to database
+        clean_pickled_task_executor(task)
     node.task_states = task_states
     node.task_processes = task_processes
     node.task_actions = task_actions

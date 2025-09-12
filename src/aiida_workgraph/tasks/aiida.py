@@ -4,6 +4,7 @@ from typing import Callable, Optional
 from node_graph.socket_spec import SocketSpec
 from node_graph.node_spec import NodeSpec
 from .function_task import build_callable_nodespec
+from node_graph.executor import RuntimeExecutor
 
 
 class AiiDAFunctionTask(SpecTask):
@@ -18,7 +19,7 @@ class AiiDAFunctionTask(SpecTask):
         from aiida.engine import run_get_node
         from node_graph.node_spec import BaseHandle
 
-        executor = self.get_executor().callable
+        executor = RuntimeExecutor(**self.get_executor().to_dict()).callable
         # the imported executor could be a wrapped function
         if isinstance(executor, BaseHandle) and hasattr(executor, "_func"):
             executor = getattr(executor, "_func")
@@ -45,7 +46,7 @@ class AiiDAProcessTask(SpecTask):
     def execute(self, engine_process, args=None, kwargs=None, var_kwargs=None):
         from aiida_workgraph.utils import create_and_pause_process
 
-        executor = self.get_executor().callable
+        executor = RuntimeExecutor(**self.get_executor().to_dict()).callable
 
         kwargs.setdefault("metadata", {})
         kwargs["metadata"].update({"call_link_label": self.name})

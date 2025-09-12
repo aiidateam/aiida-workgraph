@@ -28,7 +28,7 @@ dependencies = [
     "numpy~=1.21",
     "scipy",
     "ase",
-    "node-graph>=0.3.5",
+    "node-graph @ git+https://github.com/superstar54/node-graph.git@add_safe_runtime_executor",
     "node-graph-widget>=0.0.5",
     "aiida-core~=2.6",
     "cloudpickle",
