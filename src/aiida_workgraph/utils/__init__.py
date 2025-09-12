@@ -479,23 +479,7 @@ def workgraph_to_short_json(
             "position": task.get("position", [0, 0]),
             "children": task.get("children", []),
         }
-    for name, socket in wgdata.get("meta_sockets", {}).items():
-        inputs = []
-        for input in socket.get("sockets", {}).values():
-            metadata = input.get("metadata", {}) or {}
-            if metadata.get("required", False):
-                inputs.append(
-                    {"name": input["name"], "identifier": input["identifier"]}
-                )
-        wgdata_short["nodes"][name] = {
-            "label": name,
-            "node_type": name,
-            "inputs": inputs,
-            "properties": {},
-            "outputs": [],
-            "position": [0, 0],
-            "children": [],
-        }
+
     # Add links to nodes
     for link in wgdata_short.get("links", []):
         wgdata_short["nodes"][link["to_node"]]["inputs"].append(
@@ -508,11 +492,6 @@ def workgraph_to_short_json(
                 "name": link["from_socket"],
             }
         )
-    # hide meta nodes if there is no link to them
-    for name, socket in wgdata.get("meta_sockets", {}).items():
-        node = wgdata_short["nodes"][name]
-        if len(node["inputs"]) == 0 and len(node["outputs"]) == 0:
-            del wgdata_short["nodes"][name]
 
     # remove the inputs socket of "graph_inputs"
     if "graph_inputs" in wgdata_short["nodes"]:
@@ -602,7 +581,7 @@ def serialize_graph_level_data(
     input_socket: Dict[str, Any],
     port_schema: SocketSpec | Dict[str, Any],
     serializers: Optional[Dict[str, str]] = None,
-) -> None:
+) -> Dict[str, Any]:
     """Recursively walk over the sockets and convert raw Python
     values to AiiDA Data nodes, if needed.
     """

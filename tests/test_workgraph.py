@@ -105,7 +105,7 @@ def test_organize_nested_inputs():
             "add.metadata.options": {"resources": {"num_machines": 1}},
         }
     )
-    inputs = wg.prepare_inputs()
+    inputs = wg.to_engine_inputs()
     data = {
         "metadata": {
             "call_link_label": "nest",
@@ -260,7 +260,7 @@ def test_run_workgraph_builder():
 
     wg = WorkGraph()
     wg.add_task(add, x=1, y=2)
-    wgdata = wg.prepare_inputs()
+    wgdata = wg.to_engine_inputs()
     builder = WorkGraphEngine.get_builder()
     builder._update(wgdata)
     _, node = run_get_node(builder)

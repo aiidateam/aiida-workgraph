@@ -182,11 +182,11 @@ def IntegratedAddMultiply() -> t.Annotated[dict, namespace(sum=int, product=int)
 wg = IntegratedAddMultiply.build()
 
 # %%
-# We can export our workgraph as a dictionary using the ``prepare_inputs()`` method and use it as the input to our ``WorkChain``:
+# We can export our workgraph as a dictionary using the ``to_engine_inputs()`` method and use it as the input to our ``WorkChain``:
 
 from aiida.engine import run_get_node
 
-inputs = {"workgraph": wg.prepare_inputs(metadata={"call_link_label": "workgraph"})}
+inputs = {"workgraph": wg.to_engine_inputs(metadata={"call_link_label": "workgraph"})}
 result, node = run_get_node(TestWorkChain, **inputs)
 
 # %%
@@ -199,7 +199,7 @@ result, node = run_get_node(TestWorkChain, **inputs)
 #    .. code:: python
 #
 #       builder = WorkGraphEngine.get_builder()
-#       builder.workgraph_data = wg.prepare_inputs(metadata={"call_link_label": "workgraph"})
+#       builder.workgraph_data = wg.to_engine_inputs(metadata={"call_link_label": "workgraph"})
 #
 # Let's check the outputs of our ``WorkChain``:
 

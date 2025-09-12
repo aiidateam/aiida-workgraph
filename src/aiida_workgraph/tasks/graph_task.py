@@ -42,7 +42,7 @@ class GraphTask(SpecTask):
             var_kwargs=var_kwargs,
         )
         wg.parent_uuid = engine_process.node.uuid
-        inputs = wg.prepare_inputs(metadata={"call_link_label": self.name})
+        inputs = wg.to_engine_inputs(metadata={"call_link_label": self.name})
         if self.action == "PAUSE":
             engine_process.report(f"Task {self.name} is created and paused.")
             process = create_and_pause_process(
