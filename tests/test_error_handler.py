@@ -3,7 +3,7 @@ from aiida import orm
 from aiida.calculations.arithmetic.add import ArithmeticAddCalculation
 
 
-def test_error_handlers(add_code, capsys):
+def test_error_handlers(add_code):
     """Test error handlers."""
 
     def handle_negative_sum(task: Task):

@@ -30,12 +30,10 @@ class BaseSerializablePythonTask(SpecTask):
         Called during Task -> dict conversion. We walk over the input sockets
         and run our specialized Python serialization.
         """
-        non_function_inputs = self.non_function_inputs
-        non_function_inputs = self.non_function_inputs
         function_inputs = {
             key: data["inputs"][key]
             for key in data["inputs"]
-            if key not in non_function_inputs
+            if key not in self.non_function_inputs
         }
         serialized_inputs = serialize_ports(
             python_data=function_inputs,
@@ -79,27 +77,13 @@ class BaseSerializablePythonTask(SpecTask):
         """
         raise NotImplementedError("Subclasses must implement `execute`.")
 
-    def get_origin_specs(
-        self, label: str = "function"
-    ) -> tuple[Optional[SocketSpec], Optional[SocketSpec]]:
-        block = self._spec.metadata.get("specs", {}).get(label, {})
-        in_d = block.get("inputs")
-        out_d = block.get("outputs")
-        return (
-            SocketSpec.from_dict(in_d) if in_d else None,
-            SocketSpec.from_dict(out_d) if out_d else None,
-        )
-
     @property
     def non_function_inputs(self):
-        process_in, _ = self.get_origin_specs(label="process")
-        additions_in, _ = self.get_origin_specs(label="additional")
-        keys = []
-        if process_in:
-            keys.extend(process_in.fields.keys())
-        if additions_in:
-            keys.extend(additions_in.fields.keys())
-        return keys
+        return self._spec.metadata.get("non_function_inputs", [])
+
+    @property
+    def non_function_outputs(self):
+        return self._spec.metadata.get("non_function_outputs", [])
 
 
 class PythonJobTask(BaseSerializablePythonTask):
@@ -114,7 +98,9 @@ class PythonJobTask(BaseSerializablePythonTask):
         """
         from aiida_pythonjob import prepare_pythonjob_inputs
 
-        inputs_spec, outputs_spec = self.get_origin_specs()
+        inputs_spec = self._spec.inputs.exclude(*self.non_function_inputs)
+        outputs_spec = self._spec.outputs.exclude(*self.non_function_outputs)
+
         # Pull out code, computer, etc
         computer = kwargs.pop("computer", "localhost")
         if isinstance(computer, orm.Str):
@@ -126,9 +112,8 @@ class PythonJobTask(BaseSerializablePythonTask):
         metadata.update({"call_link_label": self.name})
         # Prepare inputs (similar to the old 'prepare_for_python_task' method):
         function_inputs = kwargs.pop("function_inputs", {}) or {}
-        non_function_inputs = self.non_function_inputs
         for key in list(kwargs.keys()):
-            if key not in non_function_inputs:
+            if key not in self.non_function_inputs:
                 function_inputs[key] = kwargs.pop(key)
         # Handle var_kwargs
         if self.get_args_data()["var_kwargs"] is not None:
@@ -207,7 +192,9 @@ class PyFunctionTask(BaseSerializablePythonTask):
         kwargs = kwargs or {}
         kwargs.setdefault("metadata", {})
         kwargs["metadata"].update({"call_link_label": self.name})
-        inputs_spec, outputs_spec = self.get_origin_specs()
+        inputs_spec = self._spec.inputs.exclude(*self.non_function_inputs)
+        outputs_spec = self._spec.outputs.exclude(*self.non_function_outputs)
+
         kwargs["inputs_spec"] = inputs_spec
         kwargs["outputs_spec"] = outputs_spec
 

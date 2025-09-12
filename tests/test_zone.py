@@ -1,7 +1,7 @@
 from aiida_workgraph import WorkGraph
 
 
-def test_zone_task(decorated_add, capsys):
+def test_zone_task(decorated_add):
     """Test the zone task."""
 
     wg = WorkGraph("test_zone")
