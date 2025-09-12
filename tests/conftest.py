@@ -1,6 +1,6 @@
 import pytest
 from aiida_workgraph import task, WorkGraph
-from aiida.orm import Int, StructureData
+from aiida.orm import Int
 from aiida.calculations.arithmetic.add import ArithmeticAddCalculation
 from typing import Callable, Any, Union
 from aiida.orm import WorkflowNode
@@ -235,15 +235,6 @@ def decorated_namespace_sum_diff() -> Callable:
         }
 
     return sum_diff
-
-
-@pytest.fixture
-def structure_si() -> StructureData:
-    from ase.build import bulk
-
-    si = bulk("Si")
-    structure_si = StructureData(ase=si)
-    return structure_si
 
 
 @pytest.fixture

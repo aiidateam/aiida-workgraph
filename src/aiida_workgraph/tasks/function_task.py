@@ -70,23 +70,16 @@ def build_callable_nodespec(
         func_out = merge_specs(func_out, add_outputs)
 
     # 4) metadata: keep a record of each contribution
-    inputs_keys = []
-    if proc_in:
-        inputs_keys.extend(proc_in.fields.keys())
-    if add_inputs:
-        inputs_keys.extend(add_inputs.fields.keys())
-    inputs_keys = list(set(inputs_keys))
-    outputs_keys = []
-    if proc_out:
-        outputs_keys.extend(proc_out.fields.keys())
-    if add_outputs:
-        outputs_keys.extend(add_outputs.fields.keys())
-    outputs_keys = list(set(outputs_keys))
-
     meta = {
         "node_type": node_type,
-        "non_function_inputs": inputs_keys,
-        "non_function_outputs": outputs_keys,
+        "non_function_inputs": list(
+            set((proc_in and proc_in.fields.keys()) or [])
+            | set((add_inputs and add_inputs.fields.keys()) or [])
+        ),
+        "non_function_outputs": list(
+            set((proc_out and proc_out.fields.keys()) or [])
+            | set((add_outputs and add_outputs.fields.keys()) or [])
+        ),
     }
 
     return NodeSpec(

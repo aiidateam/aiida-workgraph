@@ -25,10 +25,9 @@ classifiers = [
 keywords = ["aiida", "workflows"]
 requires-python = ">=3.9"
 dependencies = [
-    "numpy~=1.21",
+    "numpy",
     "scipy",
-    "ase",
-    "node-graph @ git+https://github.com/superstar54/node-graph.git@minimal_db_refactor",
+    "node-graph @ git+https://github.com/superstar54/node-graph.git@main",
     "node-graph-widget>=0.0.5",
     "aiida-core~=2.6",
     "cloudpickle",
