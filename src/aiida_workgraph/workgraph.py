@@ -78,11 +78,11 @@ class WorkGraph(node_graph.NodeGraph):
 
         wgdata = self.to_dict(should_serialize=True)
         metadata = metadata or {}
-        metadata["workgraph_data"] = wgdata
         task_inputs = self.gather_task_inputs(wgdata["tasks"])
         graph_inputs = task_inputs.pop("graph_inputs", {})
         inputs = {
             "metadata": metadata,
+            "workgraph_data": wgdata,
             "tasks": task_inputs,
             "graph_inputs": graph_inputs,
         }

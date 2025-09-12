@@ -93,10 +93,10 @@ class WorkGraphEngine(Process, metaclass=Protect):
             help="Tasks inputs",
         )
         spec.input_namespace(
-            f"metadata.{spec.WORKGRAPH_DATA_KEY}",
+            spec.WORKGRAPH_DATA_KEY,
             dynamic=True,
             required=False,
-            help="WorkGraph metadata",
+            help="WorkGraph data",
         )
         spec.exit_code(2, "ERROR_SUBPROCESS", message="A subprocess has failed.")
         spec.outputs.dynamic = True
@@ -124,7 +124,6 @@ class WorkGraphEngine(Process, metaclass=Protect):
 
     def _setup_metadata(self, metadata: dict) -> None:  # type: ignore[override]
         """Store common metadata on the ProcessNode and forward the rest."""
-        metadata.pop(WorkGraphSpec.WORKGRAPH_DATA_KEY, None)
         super()._setup_metadata(metadata)
 
     @property
@@ -278,7 +277,7 @@ class WorkGraphEngine(Process, metaclass=Protect):
 
     def _build_process_label(self) -> str:
         """Use the workgraph name as the process label."""
-        return f"WorkGraph<{self.inputs.metadata[WorkGraphSpec.WORKGRAPH_DATA_KEY]['name']}>"
+        return f"WorkGraph<{self.inputs[WorkGraphSpec.WORKGRAPH_DATA_KEY]['name']}>"
 
     def on_create(self) -> None:
         """Called when a Process is created."""
@@ -286,9 +285,7 @@ class WorkGraphEngine(Process, metaclass=Protect):
 
         super().on_create()
         raw_inputs = dict(self.inputs)
-        self.node.label = raw_inputs["metadata"][WorkGraphSpec.WORKGRAPH_DATA_KEY][
-            "name"
-        ]
+        self.node.label = raw_inputs[WorkGraphSpec.WORKGRAPH_DATA_KEY]["name"]
         save_workgraph_data(self.node, raw_inputs)
 
     def setup(self) -> None:

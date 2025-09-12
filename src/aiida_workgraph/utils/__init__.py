@@ -220,8 +220,7 @@ def save_workgraph_data(node: Union[int, orm.Node], inputs: Dict[str, Any]) -> N
     from aiida_workgraph.engine.workgraph import WorkGraphSpec
 
     inputs = shallow_copy_nested_dict(inputs)
-    metadata = inputs.pop("metadata", {})
-    wgdata = metadata.pop(WorkGraphSpec.WORKGRAPH_DATA_KEY, {})
+    wgdata = inputs.pop(WorkGraphSpec.WORKGRAPH_DATA_KEY, {})
     task_states = {}
     task_processes = {}
     task_actions = {}
@@ -251,8 +250,7 @@ def restore_workgraph_data_from_raw_inputs(
     from aiida_workgraph.engine.workgraph import WorkGraphSpec
 
     raw_inputs = dict(raw_inputs)
-    metadata = dict(raw_inputs.pop("metadata", {}))
-    wgdata = dict(metadata.pop(WorkGraphSpec.WORKGRAPH_DATA_KEY, {}))
+    wgdata = dict(raw_inputs.pop(WorkGraphSpec.WORKGRAPH_DATA_KEY, {}))
     task_inputs = dict(raw_inputs.pop("tasks", {}))
     graph_inputs = dict(raw_inputs.pop("graph_inputs", {}))
     task_inputs["graph_inputs"] = graph_inputs
