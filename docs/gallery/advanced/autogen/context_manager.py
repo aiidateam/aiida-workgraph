@@ -578,7 +578,7 @@ with WorkGraph("AddAggregate") as wg:
 wg.run()
 
 print("\nResult:", wg.outputs.result.value)
-assert wg.outputs.result == 12
+assert wg.outputs.result.value == 12
 
 
 # %%

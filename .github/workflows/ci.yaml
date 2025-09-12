@@ -93,7 +93,6 @@ jobs:
                 pytest -n auto -v --cov --durations=0
 
         -   name: Upload coverage reports to Codecov
-            uses: codecov/codecov-action@v4.0.1
+            uses: codecov/codecov-action@v5
             with:
                 token: ${{ secrets.CODECOV_TOKEN }}
-                flags: python-${{ matrix.python-version }}

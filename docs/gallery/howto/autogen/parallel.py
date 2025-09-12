@@ -122,7 +122,7 @@ wg.run()
 print("\nResult:", wg.outputs.result.value)
 
 # (1+1) + (2+2) + (3+3) + (4+4) = 20
-assert wg.outputs.result == 20
+assert wg.outputs.result.value == 20
 
 # %%
 # Conclusion
