@@ -29,12 +29,14 @@ def _spec_for(
         in_spec, out_spec = from_aiida_process(obj)
         return NodeSpec(
             identifier=identifier or obj.__name__,
+            mode="decorator_build",
             catalog="AIIDA",
             inputs=in_spec,
             outputs=out_spec,
             executor=RuntimeExecutor.from_callable(obj),
             base_class=AiiDAProcessTask,
             metadata={"node_type": inspect_aiida_component_type(obj)},
+            decorator_path="aiida_workgraph.decorator.task",
         )
 
     # AiiDA process functions (calcfunction/workfunction)
@@ -155,6 +157,7 @@ class TaskDecoratorCollection:
             # allow catalog override
             spec = NodeSpec(
                 identifier=spec.identifier,
+                mode=spec.mode,
                 catalog=catalog or spec.catalog,
                 inputs=spec.inputs,
                 outputs=spec.outputs,
@@ -162,6 +165,9 @@ class TaskDecoratorCollection:
                 error_handlers=handlers,
                 metadata=spec.metadata,
                 base_class=spec.base_class,
+                base_class_path=spec.base_class_path,
+                decorator=spec.decorator,
+                decorator_path=spec.decorator_path,
                 version=spec.version,
             )
             handle = TaskHandle(spec)

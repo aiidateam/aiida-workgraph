@@ -2,6 +2,9 @@ import time
 from aiida.orm import Int
 from aiida_workgraph import task
 from aiida_workgraph.socket_spec import namespace
+from aiida.calculations.arithmetic.add import ArithmeticAddCalculation
+
+ArithmeticAddTask = task(ArithmeticAddCalculation)
 
 
 @task
