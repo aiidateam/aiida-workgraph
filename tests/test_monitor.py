@@ -90,12 +90,12 @@ def test_builtin_task_monitor_entrypoint(decorated_add):
         task_name="add1",
     )
     add1 = wg2.add_task(decorated_add, "add1", x=1, y=2, t=0)
-    add1.waiting_on.add(monitor1)
+    monitor1 >> add1
     wg2.submit()
     #
     wg1 = WorkGraph(name="wg1")
     wg1.add_task(decorated_add, "add1", x=1, y=2, t=5)
-    wg1.submit(wait=True, timeout=60)
+    wg1.run()
     wg2.wait()
     assert wg2.tasks.add1.node.ctime > wg1.tasks.add1.node.ctime
 
@@ -111,7 +111,7 @@ def test_builtin_task_monitor_entrypoint_timeout(decorated_add, capsys):
         filepath="/tmp/test_file_monitor.txt",
     )
     add1 = wg.add_task(decorated_add, "add1", x=1, y=2)
-    add1.waiting_on.add(monitor1)
+    monitor1 >> add1
     wg.run()
     captured = capsys.readouterr()
     report = captured.out
@@ -131,7 +131,7 @@ def test_task_monitor_kill(decorated_add, capsys):
         filepath="/tmp/test_file_monitor.txt",
     )
     add1 = wg.add_task(decorated_add, "add1", x=1, y=2)
-    add1.waiting_on.add(monitor1)
+    monitor1 >> add1
     wg.submit()
     time.sleep(5)
     wg.wait(tasks={"monitor1": ["RUNNING"]})

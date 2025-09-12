@@ -11,10 +11,11 @@ from aiida_pythonjob import PythonJob
 from aiida_pythonjob.calculations.pyfunction import PyFunction
 from aiida_shell.calculations.shell import ShellJob
 import inspect
-from yaml.constructor import ConstructorError
+import yaml
 from node_graph.socket import TaggedValue
 from node_graph.socket_spec import SocketSpec
 from aiida.orm.utils.serialize import serialize
+from aiida_workgraph.orm.utils import deserialize_safe
 
 
 def inspect_aiida_component_type(executor: Callable) -> str:
@@ -191,12 +192,28 @@ def get_dict_from_builder(builder: Any) -> Dict:
         return builder
 
 
+def clean_pickled_executor_recursively(data: Dict[str, Any]) -> None:
+    """Clean the pickled executor in the workgraph data."""
+    from node_graph.executor import NodeExecutor
+    from aiida_workgraph.executors.builtins import UnavailableExecutor
+
+    for key, value in data.items():
+        if isinstance(value, dict):
+            if key == "executor":
+                if value.get("mode", "") == "pickled_callable":
+                    data[key] = NodeExecutor.from_callable(
+                        UnavailableExecutor
+                    ).to_dict()
+            else:
+                clean_pickled_executor_recursively(value)
+
+
 def save_workgraph_data(node: Union[int, orm.Node], inputs: Dict[str, Any]) -> None:
     from aiida_workgraph.engine.workgraph import WorkGraphSpec
 
-    inputs = dict(inputs)
-    metadata = dict(inputs.pop("metadata", {}))
-    wgdata = dict(metadata.pop(WorkGraphSpec.WORKGRAPH_DATA_KEY, {}))
+    inputs = shallow_copy_nested_dict(inputs)
+    metadata = inputs.pop("metadata", {})
+    wgdata = metadata.pop(WorkGraphSpec.WORKGRAPH_DATA_KEY, {})
     task_states = {}
     task_processes = {}
     task_actions = {}
@@ -205,6 +222,7 @@ def save_workgraph_data(node: Union[int, orm.Node], inputs: Dict[str, Any]) -> N
         task_states[name] = task["state"]
         task_processes[name] = task["process"]
         task_actions[name] = task["action"]
+        clean_pickled_executor_recursively(task)
     node.task_states = task_states
     node.task_processes = task_processes
     node.task_actions = task_actions
@@ -217,32 +235,41 @@ def save_workgraph_data(node: Union[int, orm.Node], inputs: Dict[str, Any]) -> N
     node.task_inputs = serialize(tasks)
 
 
-def get_workgraph_data(
-    node: Union[int, orm.Node], safe_load: bool = True
-) -> Optional[Dict[str, Any]]:
+def restore_workgraph_data_from_raw_inputs(
+    raw_inputs: Dict[str, Any]
+) -> Dict[str, Any]:
+    """Restore the workgraph data from the raw inputs."""
+    from aiida_workgraph.engine.workgraph import WorkGraphSpec
+
+    raw_inputs = dict(raw_inputs)
+    metadata = dict(raw_inputs.pop("metadata", {}))
+    wgdata = dict(metadata.pop(WorkGraphSpec.WORKGRAPH_DATA_KEY, {}))
+    task_inputs = dict(raw_inputs.pop("tasks", {}))
+    graph_inputs = dict(raw_inputs.pop("graph_inputs", {}))
+    task_inputs["graph_inputs"] = graph_inputs
+    for name, data in task_inputs.items():
+        wgdata["tasks"][name]["inputs"] = data
+    return wgdata
+
+
+def load_workgraph_data(node: Union[int, orm.Node]) -> Optional[Dict[str, Any]]:
     """
     Get the workgraph data from the given process node.
     """
-    from aiida_workgraph.orm.utils import deserialize_safe
-    from aiida.orm.utils.serialize import deserialize_unsafe
     from aiida.orm import load_node
     from aiida_workgraph.engine.workgraph import WorkGraphSpec
 
     if isinstance(node, int):
         node = load_node(node)
     wgdata = node.base.attributes.get(WorkGraphSpec.WORKGRAPH_DATA_KEY)
-    if safe_load:
-        try:
-            task_inputs = deserialize_safe(node.task_inputs or "")
-        except ConstructorError:
-            print(
-                "Info: could not deserialize input. The raw input value is left in place."
-                "The workgraph is still loaded and you can inspect tasks, inputs and outputs. "
-                "If you trust the data, reload with safe_load=False."
-            )
-            task_inputs = {}
-    else:
-        task_inputs = deserialize_unsafe(node.task_inputs or "")
+    try:
+        task_inputs = deserialize_safe(node.task_inputs or "")
+    except (yaml.constructor.ConstructorError, yaml.YAMLError):
+        print(
+            "Info: could not deserialize inputs."
+            "The workgraph is still loaded and you can inspect tasks and outputs. "
+        )
+        task_inputs = {}
 
     for name, data in task_inputs.items():
         wgdata["tasks"][name]["inputs"] = data
@@ -271,7 +298,6 @@ def get_processes_latest(
 ) -> Dict[str, Dict[str, Union[int, str]]]:
     """Get the latest info of all tasks from the process."""
     import aiida
-    from aiida_workgraph.orm.utils import deserialize_safe
     from aiida_workgraph.orm.workgraph import WorkGraphNode
 
     tasks = {}
@@ -528,7 +554,9 @@ def wait_to_link(wgdata: Dict[str, Any]) -> None:
 
 def shallow_copy_nested_dict(d):
     """Recursively copies only the dictionary structure but keeps value references."""
-    if isinstance(d, dict):
+    from plumpy.utils import AttributesFrozendict
+
+    if isinstance(d, (dict, AttributesFrozendict)):
         return {key: shallow_copy_nested_dict(value) for key, value in d.items()}
     return d
 
