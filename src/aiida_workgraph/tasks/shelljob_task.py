@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import replace
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional, Union, Callable
 import inspect
 from aiida_shell import ShellJob
 from aiida_shell.launch import prepare_shell_job_inputs
@@ -151,7 +151,7 @@ def shelljob(
     nodes: Optional[Dict[str, Any]] = None,
     filenames: Optional[Dict[str, str]] = None,
     outputs: Optional[List[Union[str, Dict[str, Any]]]] = None,
-    parser: Optional[SocketSpec | List[str]] = None,
+    parser: Optional[Callable] = None,
     parser_outputs: Optional[SocketSpec | List[str]] = None,
     metadata: Optional[Dict[str, Any]] = None,
     resolve_command: bool = True,

@@ -9,7 +9,7 @@ def test_workchain(wg_workchain):
     wg.name = "test_workchain"
     wg.run()
     # print("results: ", results[])
-    assert wg.tasks.multiply_add2.outputs.result == 17
+    assert wg.tasks.multiply_add2.outputs.result.value == 17
 
 
 def test_build_workchain_inputs_outputs():
@@ -48,7 +48,7 @@ def test_build_workchain(add_code):
     wg.add_link(code1.outputs[0], multiply_add2.inputs["code"])
     wg.add_link(multiply_add1.outputs[0], multiply_add2.inputs["z"])
     wg.submit(wait=True, timeout=100)
-    assert wg.tasks.multiply_add2.outputs.result == 17
+    assert wg.tasks.multiply_add2.outputs.result.value == 17
     # reload wg
     wg1 = WorkGraph.load(wg.pk)
-    assert wg1.tasks.multiply_add2.outputs.result == 17
+    assert wg1.tasks.multiply_add2.outputs.result.value == 17

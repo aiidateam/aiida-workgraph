@@ -28,7 +28,6 @@ AiiDASafeLoader.add_constructor(_NODE_TAG, node_constructor)
 AiiDASafeLoader.add_constructor(_COMPUTER_TAG, computer_constructor)
 AiiDASafeLoader.add_constructor(_NODE_LINKS_MANAGER_TAG, node_links_manager_constructor)
 AiiDASafeLoader.add_constructor(_GROUP_TAG, group_constructor)
-AiiDASafeLoader.add_constructor(_NODE_LINKS_MANAGER_TAG, node_links_manager_constructor)
 
 
 def deserialize_safe(serialized: str) -> Any:

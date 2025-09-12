@@ -294,14 +294,14 @@ class WorkGraphEngine(Process, metaclass=Protect):
     def setup(self) -> None:
         """Setup the variables in the context."""
         from aiida_workgraph import WorkGraph
-        from aiida_workgraph.utils import get_workgraph_data
+        from aiida_workgraph.utils import restore_workgraph_data_from_raw_inputs
 
         # track if the awaitable callback is added to the runner
         self.ctx._awaitable_actions = []
         self.ctx._new_data = {}
         self.ctx._executed_tasks = []
         # read the workgraph data
-        wgdata = get_workgraph_data(self.node, safe_load=False)
+        wgdata = restore_workgraph_data_from_raw_inputs(self.inputs)
         self.wg = WorkGraph.from_dict(wgdata)
         # store the workgraph data in the context, so that one can resume from checkpoint
         self.ctx._wgdata = wgdata

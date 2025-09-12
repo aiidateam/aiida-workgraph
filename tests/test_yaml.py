@@ -11,7 +11,7 @@ def test_calcfunction():
     assert wg.tasks.sumdiff1.inputs.x.value == 2
     assert wg.tasks.sumdiff2.inputs.x.value == 4
     wg.run()
-    assert wg.tasks.sumdiff2.outputs.sum == 9
+    assert wg.tasks.sumdiff2.outputs.sum.value == 9
 
 
 # skip this test for now
@@ -19,4 +19,4 @@ def test_calcfunction():
 def test_calcjob():
     wg = WorkGraph.from_yaml(os.path.join(cwd, "datas/test_calcjob.yaml"))
     wg.submit(wait=True)
-    assert wg.tasks.add2.outputs.sum == 9
+    assert wg.tasks.add2.outputs.sum.value == 9
