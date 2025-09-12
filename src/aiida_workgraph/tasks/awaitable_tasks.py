@@ -5,6 +5,7 @@ from node_graph.socket_spec import SocketSpec
 from node_graph.node_spec import NodeSpec
 from .function_task import build_callable_nodespec
 from aiida_workgraph.socket_spec import namespace
+from node_graph.executor import RuntimeExecutor
 
 
 class AwaitableFunctionTask(SpecTask):
@@ -17,7 +18,7 @@ class AwaitableFunctionTask(SpecTask):
 
     def execute(self, engine_process, args=None, kwargs=None, var_kwargs=None):
 
-        executor = self.get_executor().callable
+        executor = RuntimeExecutor(**self.get_executor().to_dict()).callable
         if var_kwargs is None:
             awaitable_target = asyncio.ensure_future(
                 executor(*args, **kwargs),
@@ -42,7 +43,7 @@ class MonitorFunctionTask(SpecTask):
     def execute(self, engine_process, args=None, kwargs=None, var_kwargs=None):
         from aiida_workgraph.tasks.monitors import monitor
 
-        executor = self.get_executor().callable
+        executor = RuntimeExecutor(**self.get_executor().to_dict()).callable
         # get the raw function without the decorator
         if hasattr(executor, "_func"):
             executor = executor._func

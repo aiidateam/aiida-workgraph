@@ -72,31 +72,17 @@ class WorkGraph(node_graph.NodeGraph):
         """Add alias to `nodes` for WorkGraph"""
         return self.nodes
 
-    def prepare_inputs(
+    def to_engine_inputs(
         self, metadata: Optional[Dict[str, Any]] = None
     ) -> Dict[str, Any]:
-        from aiida_workgraph.utils import serialize_graph_level_data
-        from aiida_pythonjob.data.serializer import all_serializers
 
         wgdata = self.to_dict(should_serialize=True)
-        task_inputs = self.gather_task_inputs(wgdata["tasks"])
-        # serialize the graph-level tasks
-        if "graph_inputs" in task_inputs:
-            graph_inputs = serialize_graph_level_data(
-                task_inputs.pop("graph_inputs", {}),
-                self._inputs,
-                all_serializers,
-            )
-        if "graph_ctx" in task_inputs:
-            task_inputs["graph_ctx"] = serialize_graph_level_data(
-                task_inputs["graph_ctx"],
-                self._ctx,
-                all_serializers,
-            )
         metadata = metadata or {}
-        metadata["workgraph_data"] = wgdata
+        task_inputs = self.gather_task_inputs(wgdata["tasks"])
+        graph_inputs = task_inputs.pop("graph_inputs", {})
         inputs = {
             "metadata": metadata,
+            "workgraph_data": wgdata,
             "tasks": task_inputs,
             "graph_inputs": graph_inputs,
         }
@@ -137,7 +123,7 @@ class WorkGraph(node_graph.NodeGraph):
             print("Your workgraph is already created. Please use the submit() method.")
             return
         self.check_before_run()
-        inputs = self.prepare_inputs(metadata=metadata)
+        inputs = self.to_engine_inputs(metadata=metadata)
         _, node = aiida.engine.run_get_node(WorkGraphEngine, inputs=inputs)
         self.process = node
         self.update()
@@ -184,7 +170,7 @@ class WorkGraph(node_graph.NodeGraph):
         from aiida_workgraph.engine.workgraph import WorkGraphEngine
 
         self.check_before_run()
-        inputs = self.prepare_inputs(metadata)
+        inputs = self.to_engine_inputs(metadata)
         if self.process is None:
             runner = manager.get_manager().get_runner()
             # init a process node
@@ -224,6 +210,8 @@ class WorkGraph(node_graph.NodeGraph):
     ) -> Dict[str, Any]:
         """Convert the workgraph to a dictionary."""
         from aiida.orm.utils.serialize import serialize
+        from aiida_workgraph.utils import serialize_graph_level_data
+        from aiida_pythonjob.data.serializer import all_serializers
 
         wgdata = super().to_dict(
             include_sockets=include_sockets, should_serialize=should_serialize
@@ -245,6 +233,12 @@ class WorkGraph(node_graph.NodeGraph):
         wgdata["connectivity"] = self.build_connectivity()
         wgdata["process"] = serialize(self.process) if self.process else serialize(None)
         wgdata["metadata"]["pk"] = self.process.pk if self.process else None
+        if should_serialize:
+            # serialize the graph-level tasks
+            wgdata["tasks"]["graph_inputs"]["inputs"] = serialize_graph_level_data(
+                wgdata["tasks"]["graph_inputs"]["inputs"], self._inputs, all_serializers
+            )
+
         return wgdata
 
     def wait(self, timeout: int = 600, tasks: dict = None, interval: int = 5) -> None:

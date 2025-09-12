@@ -156,7 +156,7 @@ def test_set_inputs(decorated_add: Callable) -> None:
     wg = WorkGraph(name="test_set_inputs")
     add1 = wg.add_task(decorated_add, "add1", x=1)
     add1.set_inputs({"y": 2, "metadata.store_provenance": False})
-    data = wg.prepare_inputs(metadata=None)
+    data = wg.to_engine_inputs(metadata=None)
     assert data["tasks"]["add1"]["y"] == 2
     assert data["tasks"]["add1"]["metadata"]["store_provenance"] is False
 

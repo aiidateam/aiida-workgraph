@@ -73,7 +73,9 @@ def test_save_load(wg_calcfunction, decorated_add):
     assert wg2.tasks.add1.get_executor().callable == UnavailableExecutor
     # The ArithmeticAddCalculation is importable,
     # so we can restore the executor from the module path.
-    assert wg2.tasks.add2.get_executor() == wg.tasks.add2.get_executor()
+    assert (
+        wg2.tasks.add2.get_executor().callable == wg.tasks.add2.get_executor().callable
+    )
     assert wg.tasks.add2.inputs.metadata._value == wg2.tasks.add2.inputs.metadata._value
     # TODO, the following code is not working
     # wg2.save()
@@ -103,7 +105,7 @@ def test_organize_nested_inputs():
             "add.metadata.options": {"resources": {"num_machines": 1}},
         }
     )
-    inputs = wg.prepare_inputs()
+    inputs = wg.to_engine_inputs()
     data = {
         "metadata": {
             "call_link_label": "nest",
@@ -258,7 +260,7 @@ def test_run_workgraph_builder():
 
     wg = WorkGraph()
     wg.add_task(add, x=1, y=2)
-    wgdata = wg.prepare_inputs()
+    wgdata = wg.to_engine_inputs()
     builder = WorkGraphEngine.get_builder()
     builder._update(wgdata)
     _, node = run_get_node(builder)

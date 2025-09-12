@@ -20,33 +20,7 @@ def _spec_for(
 ) -> NodeSpec:
     from aiida_workgraph.socket_spec import from_aiida_process
     from aiida_workgraph.utils import inspect_aiida_component_type
-    from node_graph.executor import NodeExecutor
-
-    # WorkGraph -> pack as a node
-    if isinstance(obj, WorkGraph):
-        from aiida_workgraph.tasks.factory.workgraph_task import SubGraphTask
-
-        # ensure group IO exists
-        if len(obj.inputs) == 0:
-            obj.generate_inputs()
-        if len(obj.outputs) == 0:
-            obj.generate_outputs()
-        in_spec = inputs or obj.graph_inputs_spec.inputs
-        out_spec = outputs or obj.graph_outputs_spec.inputs
-        exec_payload = {
-            "module_path": "aiida_workgraph.engine.workgraph",
-            "callable_name": "WorkGraphEngine",
-            "graph_data": obj.prepare_inputs()["workgraph_data"],
-        }
-        return NodeSpec(
-            identifier=identifier or obj.name,
-            catalog="AIIDA",
-            inputs=in_spec,
-            outputs=out_spec,
-            executor=NodeExecutor(**exec_payload),
-            base_class=SubGraphTask,
-            metadata={"node_type": "workgraph"},
-        )
+    from node_graph.executor import RuntimeExecutor
 
     # AiiDA process classes
     if inspect.isclass(obj) and issubclass(obj, (CalcJob, WorkChain)):
@@ -58,7 +32,7 @@ def _spec_for(
             catalog="AIIDA",
             inputs=in_spec,
             outputs=out_spec,
-            executor=NodeExecutor.from_callable(obj),
+            executor=RuntimeExecutor.from_callable(obj),
             base_class=AiiDAProcessTask,
             metadata={"node_type": inspect_aiida_component_type(obj)},
         )

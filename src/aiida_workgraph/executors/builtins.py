@@ -1,11 +1,10 @@
 from typing import Any
 
 
-class UnavailableExecutor:
-    def __call__(self, *args, **kwargs):
-        raise RuntimeError(
-            "This executor was defined dynamically and is not available from the database snapshot."
-        )
+def UnavailableExecutor(*args, **kwargs):
+    raise RuntimeError(
+        "This executor was defined dynamically and is not available from the database snapshot."
+    )
 
 
 def get_context(context: dict, key: str) -> Any:

@@ -3,6 +3,7 @@ from typing import Callable, Optional
 from node_graph.socket_spec import SocketSpec
 from node_graph.node_spec import NodeSpec
 from .function_task import build_callable_nodespec
+from node_graph.executor import RuntimeExecutor
 
 
 class GraphTask(SpecTask):
@@ -20,7 +21,7 @@ class GraphTask(SpecTask):
         from node_graph.utils.graph import materialize_graph
         from node_graph.node_spec import BaseHandle
 
-        executor = self.get_executor().callable
+        executor = RuntimeExecutor(**self.get_executor().to_dict()).callable
         # Cloudpickle doesn’t restore the function’s own name in its globals after unpickling,
         # so any recursive calls would raise NameError. As a temporary workaround, we re-insert
         # the decorated function into its globals under its original name.
@@ -41,7 +42,7 @@ class GraphTask(SpecTask):
             var_kwargs=var_kwargs,
         )
         wg.parent_uuid = engine_process.node.uuid
-        inputs = wg.prepare_inputs(metadata={"call_link_label": self.name})
+        inputs = wg.to_engine_inputs(metadata={"call_link_label": self.name})
         if self.action == "PAUSE":
             engine_process.report(f"Task {self.name} is created and paused.")
             process = create_and_pause_process(

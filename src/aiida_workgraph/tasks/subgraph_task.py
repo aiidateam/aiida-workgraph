@@ -42,7 +42,7 @@ class SubGraphTask(SpecTask):
             input_socket._set_socket_value(data)
         # merge the properties
         metadata = {"call_link_label": self.name}
-        inputs = self.subgraph.prepare_inputs(metadata=metadata)
+        inputs = self.subgraph.to_engine_inputs(metadata=metadata)
         return inputs
 
     def execute(self, engine_process, args=None, kwargs=None, var_kwargs=None):
@@ -73,7 +73,7 @@ def _build_subgraph_task_nodespec(
     graph: "WorkGraph",
     name: str | None = None,
 ) -> NodeSpec:
-    from node_graph.executor import NodeExecutor
+    from node_graph.executor import SafeExecutor
     from aiida_workgraph.orm.mapping import type_mapping
 
     # mirror IO from the child graph
@@ -98,7 +98,7 @@ def _build_subgraph_task_nodespec(
         identifier=name or graph.name,
         inputs=in_spec,
         outputs=out_spec,
-        executor=NodeExecutor.from_graph(graph),
+        executor=SafeExecutor.from_graph(graph),
         base_class=SubGraphTask,
         metadata=meta,
     )

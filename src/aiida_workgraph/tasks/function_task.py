@@ -7,7 +7,7 @@ from aiida_workgraph.socket_spec import (
 )
 from node_graph.socket_spec import SocketSpec, merge_specs
 from node_graph.node_spec import NodeSpec
-from node_graph.executor import NodeExecutor
+from node_graph.executor import RuntimeExecutor
 from node_graph.error_handler import ErrorHandlerSpec, normalize_error_handlers
 
 
@@ -87,7 +87,7 @@ def build_callable_nodespec(
         catalog=catalog,
         inputs=func_in,
         outputs=func_out,
-        executor=NodeExecutor.from_callable(obj),
+        executor=RuntimeExecutor.from_callable(obj),
         error_handlers=error_handlers,
         base_class=base_class,
         metadata=meta,
