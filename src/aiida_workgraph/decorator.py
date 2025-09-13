@@ -135,12 +135,10 @@ class TaskDecoratorCollection:
     @nonfunctional_usage
     def decorator_task(
         identifier: Optional[str] = None,
-        task_type: str = "Normal",
         inputs: Optional[SocketSpec | list] = None,
         outputs: Optional[SocketSpec | list] = None,
         error_handlers: Optional[Dict[str, ErrorHandlerSpec]] = None,
         catalog: str = "Others",
-        store_provenance: bool = True,
     ) -> Callable:
         """Generate a decorator that register a function as a task.
 
@@ -182,7 +180,7 @@ class TaskDecoratorCollection:
         identifier: Optional[str] = None,
         inputs: Optional[SocketSpec | list] = None,
         outputs: Optional[SocketSpec | list] = None,
-        catalog: str = "Others",
+        max_depth: int = 100,
     ) -> Callable:
         """Generate a decorator that register a function as a graph task.
         Attributes:
@@ -193,10 +191,16 @@ class TaskDecoratorCollection:
         """
 
         def decorator(func) -> TaskHandle:
-            from aiida_workgraph.tasks.graph_task import _build_task_nodespec
+            from aiida_workgraph.tasks.graph_task import _build_graph_task_nodespec
 
             handle = TaskHandle(
-                _build_task_nodespec(func, in_spec=inputs, out_spec=outputs)
+                _build_graph_task_nodespec(
+                    func,
+                    identifier=identifier,
+                    in_spec=inputs,
+                    out_spec=outputs,
+                    max_depth=max_depth,
+                )
             )
             handle._func = func
             return handle
@@ -214,7 +218,10 @@ class TaskDecoratorCollection:
             func_decorated = calcfunction(func)
             handle = TaskHandle(
                 _build_aiida_function_nodespec(
-                    func_decorated, in_spec=inputs, out_spec=outputs
+                    func_decorated,
+                    in_spec=inputs,
+                    out_spec=outputs,
+                    error_handlers=error_handlers,
                 )
             )
             handle._func = func_decorated
@@ -233,7 +240,10 @@ class TaskDecoratorCollection:
             func_decorated = workfunction(func)
             handle = TaskHandle(
                 _build_aiida_function_nodespec(
-                    func_decorated, in_spec=inputs, out_spec=outputs
+                    func_decorated,
+                    in_spec=inputs,
+                    out_spec=outputs,
+                    error_handlers=error_handlers,
                 )
             )
             handle._func = func_decorated
@@ -268,6 +278,7 @@ class TaskDecoratorCollection:
     def awaitable(
         inputs: Optional[SocketSpec | list] = None,
         outputs: Optional[SocketSpec | list] = None,
+        error_handlers: Optional[Dict[str, ErrorHandlerSpec]] = None,
     ) -> Callable:
         def decorator(func) -> TaskHandle:
             from aiida_workgraph.tasks.awaitable_tasks import (
@@ -276,7 +287,10 @@ class TaskDecoratorCollection:
 
             handle = TaskHandle(
                 _build_awaitable_function_nodespec(
-                    func, in_spec=inputs, out_spec=outputs
+                    func,
+                    in_spec=inputs,
+                    out_spec=outputs,
+                    error_handlers=error_handlers,
                 )
             )
             handle._func = func
@@ -289,6 +303,7 @@ class TaskDecoratorCollection:
     def monitor(
         inputs: Optional[SocketSpec | list] = None,
         outputs: Optional[SocketSpec | list] = None,
+        error_handlers: Optional[Dict[str, ErrorHandlerSpec]] = None,
     ) -> Callable:
         def decorator(func) -> TaskHandle:
             from aiida_workgraph.tasks.awaitable_tasks import (
@@ -296,7 +311,12 @@ class TaskDecoratorCollection:
             )
 
             handle = TaskHandle(
-                _build_monitor_function_nodespec(func, in_spec=inputs, out_spec=outputs)
+                _build_monitor_function_nodespec(
+                    func,
+                    in_spec=inputs,
+                    out_spec=outputs,
+                    error_handlers=error_handlers,
+                )
             )
             handle._func = func
             return handle

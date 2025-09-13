@@ -6,6 +6,11 @@ def add(x, y):
     return x + y
 
 
+@task.graph(max_depth=2)
+def dump_graph():
+    return dump_graph()
+
+
 @task.graph()
 def sum_to_n(n, total, N):
     if n >= N:
@@ -22,6 +27,14 @@ def test_graph_task():
         wg.outputs.result = outputs.result
         wg.run()
         assert wg.outputs.result.value == 10
+
+
+def test_max_depth():
+    """Test the max_depth parameter of the graph task decorator."""
+
+    wg = dump_graph.build()
+    wg.run()
+    assert wg.process.exit_status == 302
 
 
 def test_while_instruction(decorated_add, decorated_multiply, decorated_smaller_than):

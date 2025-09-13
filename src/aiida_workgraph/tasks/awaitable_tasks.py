@@ -1,11 +1,12 @@
 import asyncio
 from aiida_workgraph.task import SpecTask
-from typing import Callable, Optional, Any
+from typing import Callable, Optional, Any, Dict
 from node_graph.socket_spec import SocketSpec
 from node_graph.node_spec import NodeSpec
 from .function_task import build_callable_nodespec
 from aiida_workgraph.socket_spec import namespace
 from node_graph.executor import RuntimeExecutor
+from node_graph.error_handler import ErrorHandlerSpec
 
 
 class AwaitableFunctionTask(SpecTask):
@@ -73,6 +74,7 @@ def _build_awaitable_function_nodespec(
     identifier: Optional[str] = None,
     in_spec: Optional[SocketSpec] = None,
     out_spec: Optional[SocketSpec] = None,
+    error_handlers: Optional[Dict[str, ErrorHandlerSpec]] = None,
 ) -> NodeSpec:
 
     return build_callable_nodespec(
@@ -83,6 +85,7 @@ def _build_awaitable_function_nodespec(
         process_cls=None,
         in_spec=in_spec,
         out_spec=out_spec,
+        error_handlers=error_handlers,
     )
 
 
@@ -91,6 +94,7 @@ def _build_monitor_function_nodespec(
     identifier: Optional[str] = None,
     in_spec: Optional[SocketSpec] = None,
     out_spec: Optional[SocketSpec] = None,
+    error_handlers: Optional[Dict[str, ErrorHandlerSpec]] = None,
 ) -> NodeSpec:
     # defaults for interval/timeout — set on the NAMESPACE (keys = field names)
     add_in = namespace(
@@ -109,4 +113,5 @@ def _build_monitor_function_nodespec(
         out_spec=out_spec,
         add_inputs=add_in,
         add_outputs=add_out,
+        error_handlers=error_handlers,
     )

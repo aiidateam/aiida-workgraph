@@ -1,10 +1,11 @@
 from aiida_workgraph.task import SpecTask
 from aiida.engine import Process
-from typing import Callable, Optional
+from typing import Callable, Optional, Dict
 from node_graph.socket_spec import SocketSpec
 from node_graph.node_spec import NodeSpec
 from .function_task import build_callable_nodespec
 from node_graph.executor import RuntimeExecutor
+from node_graph.error_handler import ErrorHandlerSpec
 
 
 class AiiDAFunctionTask(SpecTask):
@@ -87,6 +88,7 @@ def _build_aiida_function_nodespec(
     identifier: Optional[str] = None,
     in_spec: Optional[SocketSpec] = None,
     out_spec: Optional[SocketSpec] = None,
+    error_handlers: Optional[Dict[str, ErrorHandlerSpec]] = None,
 ) -> NodeSpec:
     from aiida_workgraph.utils import inspect_aiida_component_type
 
@@ -98,4 +100,5 @@ def _build_aiida_function_nodespec(
         process_cls=Process,
         in_spec=in_spec,
         out_spec=out_spec,
+        error_handlers=error_handlers,
     )
