@@ -119,6 +119,11 @@ class Map(Zone):
         )
         self.add_output("workgraph.any", "_wait")
 
+    def gather(self, socket: NodeSocket) -> None:
+        gather_item = self.graph.add_task("workgraph.gather_item")
+        self.graph.add_link(socket, gather_item.inputs.item)
+        return gather_item.outputs.items
+
 
 class MapItem(Task):
     """MapItem"""
@@ -140,6 +145,28 @@ class MapItem(Task):
         from aiida_workgraph.executors.builtins import get_item
 
         return RuntimeExecutor.from_callable(get_item)
+
+
+class GatherItem(Task):
+    """GatherItem"""
+
+    identifier = "workgraph.gather_item"
+    name = "GatherItem"
+    node_type = "Normal"
+    catalog = "Control"
+
+    def create_sockets(self) -> None:
+        self.inputs._clear()
+        self.outputs._clear()
+
+        self.add_input("workgraph.any", "item")
+        self.add_output("workgraph.namespace", "items")
+        self.add_output("workgraph.any", "_wait")
+
+    def get_executor(self):
+        from aiida_workgraph.executors.builtins import return_inputs
+
+        return NodeExecutor.from_callable(return_inputs)
 
 
 class SetContext(Task):
