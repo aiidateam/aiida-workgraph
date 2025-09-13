@@ -4,97 +4,145 @@
 [![codecov](https://codecov.io/gh/aiidateam/aiida-workgraph/branch/main/graph/badge.svg)](https://codecov.io/gh/aiidateam/aiida-workgraph)
 [![Docs status](https://readthedocs.org/projects/aiida-workgraph/badge)](http://aiida-workgraph.readthedocs.io/)
 
-Efficiently design and manage flexible workflows with AiiDA, featuring an interactive GUI, checkpoints, provenance tracking, error-resistant, and remote execution capabilities.
+**A powerful Python library for creating, managing, and executing scalable scientific workflows with automatic data provenance.**
 
 
+-----
 
-## Installation
+## ✨ Why AiiDA-WorkGraph?
+
+AiiDA-WorkGraph empowers researchers and developers to build complex, reproducible workflows with ease.
+
+  - **🎨 Pythonic Workflow Design**: Define workflows using familiar Python functions and decorators.
+  - **🖥️ Interactive GUI**: Visualize, monitor, and debug your workflows in real-time with a user-friendly web interface.
+  - **🔗 Automatic Data Provenance**: Guarantee scientific reproducibility with zero effort. The complete history of all data and calculations is automatically tracked.
+  - **🚀 Remote & Parallel Execution**: Seamlessly offload tasks to remote supercomputers and run them concurrently.
+  - **🧠 Dynamic Control Flow**: Build adaptive workflows that respond to data at runtime using standard Python `if/else` statements and loops.
+  - **🛡️ Checkpointing & Error Handling**: Protect long-running workflows from interruptions and build resilient logic to recover from failures.
+  - **⚡ High-Throughput Computing**: Built to scale, AiiDA-WorkGraph can efficiently manage thousands of concurrent workflows.
+  - **🧩 Reusable Components**: Encapsulate common routines as sub-workflows and easily reuse them in larger, more complex pipelines.
+
+-----
+
+## 🚀 Getting Started
+
+### 1\. Installation
 
 ```console
-    pip install aiida-workgraph
+pip install aiida-workgraph
 ```
 
-To install the latest version from source, first clone the repository and then install using `pip`:
+First, ensure you have a working AiiDA environment.
 
 ```console
-git clone https://github.com/aiidateam/aiida-workgraph
-cd aiida-workgraph
-pip install -e .
+verdi presto  # Or 'verdi quicksetup' for a detailed setup
 ```
 
+### 2\. Quick Start Example
 
-## Documentation
-Explore the comprehensive [documentation](https://aiida-workgraph.readthedocs.io/en/latest/) to discover all the features and capabilities of AiiDA Workgraph.
+Let's create a simple workflow to calculate $(x + y) \times z$.
 
-## Demo
-Visit the [Workgraph Collections repository](https://github.com/superstar54/workgraph-collections) to see demonstrations of how to utilize AiiDA Workgraph for different computational codes.
+**1️⃣ Define Tasks**
 
-## Examples
-Suppose we want to calculate ```(x + y) * z ``` in two steps. First, add `x` and `y`, then multiply the result with `z`.
+Use the `@task` decorator to turn Python functions into workflow components.
 
 ```python
-from aiida_workgraph import WorkGraph, task
+from aiida_workgraph import task
 
-# define add task
-@task()
+@task
 def add(x, y):
+    """Adds two numbers."""
     return x + y
 
-# define multiply task
-@task()
+@task
 def multiply(x, y):
-    return x*y
-
-# Create a workgraph to link the tasks.
-wg = WorkGraph("test_add_multiply")
-wg.add_task(add, name="add1")
-wg.add_task(multiply, name="multiply1")
-wg.add_link(wg.tasks.add1.outputs.result, wg.tasks.multiply1.inputs.x)
-
+    """Multiplies two numbers."""
+    return x * y
 ```
 
-Prepare inputs and run the workflow:
+**2️⃣ Compose a Workflow**
+
+Use the `@task.graph` decorator to link tasks. Data flows naturally from one task's output to the next one's input.
+
+```python
+@task.graph
+def add_multiply(x, y, z):
+    """A workflow to add two numbers and then multiply by a third."""
+    sum_result = add(x, y).result
+    product_result = multiply(x=sum_result, y=z).result
+    return product_result
+```
+
+**3️⃣ Run the Workflow**
+
+Build the workflow with your inputs and run it.
 
 ```python
 from aiida import load_profile
 
+# Load your AiiDA profile
 load_profile()
 
-wg.run(inputs = {"add1": {"x": 2, "y": 3}, "multiply1": {"y": 4}})
-print("Result of multiply1 is", wg.tasks.multiply1.outputs.result.value)
+# Build and run the workflow
+results = add_multiply.run(x=2, y=3, z=4)
+
+# Print the final result
+print(f"✅ Result: {results}")
+# Expected output: ✅ Result: 20
 ```
-## Web ui
-To use the web ui, first install the web ui package:
+
+**4️⃣ Automatic Provenance Tracking**
+
+AiiDA-WorkGraph automatically generates a detailed provenance graph, tracking the full history of data and calculations to ensure full traceability and reproducibility.
+Here is an example of the provenance graph generated for the above workflow:
+
+</div>
+
+<p align="center">
+<img src="docs/source/_static/images/add_multiply.png" height="600" alt="Provenance Graph Example"/>
+</p>
+
+
+-----
+
+## 🛠️ Flexible Workflow Construction
+
+AiiDA-WorkGraph supports three complementary approaches to building workflows, letting you choose the best method for your needs.
+
+  - **🐍 Pythonic Workflows (Recommended)**: Use `@task.graph` for clean, readable, and powerful workflows, as shown in the Quick Start.
+
+  - **👁️ Visual Graph with Explicit Logic**: Use zones like `If`, `While`, and `Map` to build a graph where the control flow is visually explicit.
+
+  - **⚙️ Low-Level Node-Graph Programming**: Programmatically define each task and link them manually for maximum control and dynamic graph generation.
+
+-----
+
+
+## 🖥️ Interactive GUI
+
+Visualize, monitor, and debug your workflows in real-time. To launch the GUI, first install the package and then run:
+
+
 ```console
-pip install aiida-workgraph-web-ui
-```
-Then, start the web app with the following command:
-```console
-
-workgraph web start
+pip install aiida-gui-workgraph
+aiida-gui start
 ```
 
-Then visit the page http://127.0.0.1:8000/workgraph, you should find a `first_workflow` WorkGraph, click the pk and view the WorkGraph.
+Navigate to `http://127.0.0.1:8000/workgraph` in your web browser.
 
-<img src="docs/source/_static/images/first-workflow.png" />
+</div>
 
+<p align="center">
+<img src="docs/source/_static/images/web-detail.png" width="90%" alt="AiiDA-WorkGraph Web UI"/>
+</p>
 
-One can also generate the node graph from the process:
-```console
-verdi node generate pk
-```
+> **Note:** The GUI is an experimental feature and is under active development.
 
-<img src="docs/source/_static/images/add_multiply.png"/>
+-----
 
+## 🔗 Useful Links
 
-## Development
-
-### Pre-commit and Tests
-To contribute to this repository, please enable pre-commit so the code in commits are conform to the standards.
-```console
-pip install -e .[tests,pre-commit]
-pre-commit install
-```
-
-## License
-[MIT](http://opensource.org/licenses/MIT)
+  - **📚 [Full Documentation](https://aiida-workgraph.readthedocs.io/en/latest/)**: Dive deep into all features and capabilities.
+  - **🧪 [Demo & Examples Repository](https://github.com/superstar54/workgraph-collections)**: See real-world examples with various computational codes.
+  - **🧑‍💻 [Development & Contribution](https://aiida-workgraph.readthedocs.io/en/latest/development/index.html)**: Learn how to contribute to the project.
+  - **📄 [License](http://opensource.org/licenses/MIT)**: AiiDA-WorkGraph is licensed under the MIT License.
