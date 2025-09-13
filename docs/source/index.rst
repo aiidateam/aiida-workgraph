@@ -59,16 +59,6 @@ Sections
 
       .. container:: descr
 
-         :doc:`/advanced/index`
-            Advanced usage of AiiDA WorkGraph.
-
-      .. container:: descr
-
-         :doc:`/migration_from_aiida_core/index`
-            Transition your existing workflows from AiiDA Core to the AiiDA Workgraph
-
-      .. container:: descr
-
          :doc:`concept/index`
             Concepts and terminologies used in AiiDA WorkGraph.
 
@@ -76,6 +66,16 @@ Sections
 
          :doc:`gui/index`
             Interactive GUI and job menagement of WorkGraph.
+
+      .. container:: descr
+
+         :doc:`/advanced/index`
+            Advanced usage of AiiDA WorkGraph.
+
+      .. container:: descr
+
+         :doc:`/migration_from_aiida_core/index`
+            Transition your existing workflows from AiiDA Core to the AiiDA Workgraph
 
       .. container:: descr
 
@@ -93,9 +93,9 @@ Sections
    autogen/quick_start
    installation
    tutorial/index
-   advanced/index
    howto/index
-   migration_from_aiida_core/index
    concept/index
    gui/index
+   advanced/index
+   migration_from_aiida_core/index
    development/index
