@@ -1,6 +1,10 @@
 """
 Combine workgraphs
 ==================
+
+.. warning::
+   **This feature is experimental.** The API for adding a workgraph as a task is subject to change in future releases. We welcome your feedback on its functionality.
+
 """
 
 

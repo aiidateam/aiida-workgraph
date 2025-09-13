@@ -86,9 +86,10 @@ print("Output sockets: ", task2.get_output_names())
 # The ``identifier`` is used to indicates the data type. The data
 # type tell the code how to display the port in the GUI, validate the data,
 # and serialize data into database.
-# We use ``workgraph.Any`` for any data type. For the moment, the data validation is
-# experimentally supported, and the GUI display is not implemented. Thus,
-# I suggest you to always ``workgraph.Any`` for the port.
+# We use ``workgraph.Any`` for any data type.
+#
+# .. warning::
+#   **The data validation feature is experimental.** The API is subject to change in future releases. We welcome your feedback on its functionality.
 #
 # For convenience, we also support using a list of strings as the output definition, which is equivalent to using ``workgraph.Any`` for each output socket.
 

@@ -1,6 +1,10 @@
 """
 Run ``async`` functions as tasks
 ================================
+
+.. warning::
+   **This feature is experimental.** The API for ``@task.awaitable`` is subject to change in future releases. We welcome your feedback on its functionality.
+
 """
 
 # %%

@@ -488,6 +488,8 @@ wg.generate_provenance_graph()
 # %%
 # ``Map`` zone
 # ============
+# .. warning::
+#   **This feature is experimental.** The API for ``Map`` zone is subject to change in future releases. We welcome your feedback on its functionality.
 #
 # The ``Map`` context manager works similarly to Python's built-in ``map`` function.
 # By accessing the ``item`` member of the ``Map`` context, we can pass each individual element (e.g. a dictionary entry) to tasks.
@@ -587,7 +589,10 @@ assert wg.outputs.result.value == 12
 # Continuing a workflow
 # =====================
 #
-# One of the key features of ``WorkGraph`` is its ability to continue previous workflows.
+# .. warning::
+#   **This feature is experimental.** The API is subject to change in future releases. We welcome your feedback on its functionality.
+#
+# One of the features of ``WorkGraph`` is its ability to continue previous workflows.
 # When a workgraph finishes its execution, it saves its state in the AiiDA process node.
 # This allows you to rebuild the workgraph from the process and add new tasks to continue the workflow.
 
