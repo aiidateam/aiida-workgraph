@@ -52,7 +52,7 @@ We have a ``docs/Makefile`` that runs sphinx-build to build the docs.
 
 
 Creating a new Sphinx source file with executable code
-======================================================
+------------------------------------------------------
 
 We use **sphinx-gallery** to integrate executable code into the documentation.
 For that we create a sphinx-gallery script (an extended Python file that can be

@@ -82,22 +82,6 @@ Sections
          :doc:`development/index`
             Development guide for AiiDA WorkGraph.
 
-      .. container:: descr
-
-         :doc:`gallery`
-            Gallery of workflows created using AiiDA WorkGraph.
-
-      .. container:: descr
-
-         :doc:`blog/index`
-            Blog posts related to AiiDA WorkGraph.
-
-
-      .. container:: descr
-
-         :doc:`faqs`
-            Frequently asked questions about AiiDA WorkGraph.
-
 
 
 .. toctree::
@@ -115,6 +99,3 @@ Sections
    concept/index
    gui/index
    development/index
-   gallery
-   blog/index
-   faqs
