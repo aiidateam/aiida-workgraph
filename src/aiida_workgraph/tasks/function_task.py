@@ -39,6 +39,7 @@ def build_callable_nodespec(
     add_inputs: Optional[SocketSpec | List[str]] = None,
     add_outputs: Optional[SocketSpec | List[str]] = None,
     error_handlers: Optional[Dict[str, ErrorHandlerSpec]] = None,
+    metadata: Optional[dict] = None,
 ) -> NodeSpec:
     """
     - infers function I/O
@@ -70,17 +71,20 @@ def build_callable_nodespec(
         func_out = merge_specs(func_out, add_outputs)
 
     # 4) metadata: keep a record of each contribution
-    meta = {
-        "node_type": node_type,
-        "non_function_inputs": list(
-            set((proc_in and proc_in.fields.keys()) or [])
-            | set((add_inputs and add_inputs.fields.keys()) or [])
-        ),
-        "non_function_outputs": list(
-            set((proc_out and proc_out.fields.keys()) or [])
-            | set((add_outputs and add_outputs.fields.keys()) or [])
-        ),
-    }
+    metadata = metadata or {}
+    metadata.update(
+        {
+            "node_type": node_type,
+            "non_function_inputs": list(
+                set((proc_in and proc_in.fields.keys()) or [])
+                | set((add_inputs and add_inputs.fields.keys()) or [])
+            ),
+            "non_function_outputs": list(
+                set((proc_out and proc_out.fields.keys()) or [])
+                | set((add_outputs and add_outputs.fields.keys()) or [])
+            ),
+        }
+    )
 
     return NodeSpec(
         identifier=identifier or obj.__name__,
@@ -90,5 +94,5 @@ def build_callable_nodespec(
         executor=RuntimeExecutor.from_callable(obj),
         error_handlers=error_handlers,
         base_class=base_class,
-        metadata=meta,
+        metadata=metadata,
     )
