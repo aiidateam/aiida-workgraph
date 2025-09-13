@@ -39,7 +39,7 @@ class GraphTask(SpecTask):
         depth = call_depth_from_node(engine_process.node)
         if depth >= max_depth:
             if depth >= max_depth:
-                raise RecursionError(
+                msg = (
                     f"Graph task '{self.name}' exceeded the recursion safeguard.\n"
                     f"- Current AiiDA process call depth (approx.): {depth}\n"
                     f"- Allowed maximum          :                  {max_depth}\n"
@@ -51,6 +51,8 @@ class GraphTask(SpecTask):
                     f"you can explicitly set a higher limit in your decorator, e.g.:\n"
                     f"    @task.graph(max_depth=200)\n"
                 )
+                engine_process.report(msg)
+                raise RecursionError(msg)
         wg = materialize_graph(
             executor,
             self._spec.inputs,
