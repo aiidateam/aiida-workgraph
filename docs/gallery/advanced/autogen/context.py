@@ -1,6 +1,6 @@
 """
 =========================================
-Use AiiDA context variables in WorkGraphs
+Use context variables in WorkGraphs
 =========================================
 """
 

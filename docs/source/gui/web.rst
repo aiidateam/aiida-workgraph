@@ -2,6 +2,10 @@
 WorkGraph web UI
 =================================
 
+.. warning::
+   **This feature is experimental.** The web app is under active development. We welcome your feedback on its functionality.
+
+
 The **web UI** provides an intuitive interface to **view and manage WorkGraphs**.
 This tutorial focuses on using the web UI to explore WorkGraphs.
 For full details on the `aiida-gui` package, refer to the `aiida-gui documentation <https://aiida-gui.readthedocs.io/en/latest/>`_.

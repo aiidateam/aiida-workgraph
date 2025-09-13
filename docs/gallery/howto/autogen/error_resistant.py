@@ -1,6 +1,11 @@
 """
 Write error-resistant workflows
 ===============================
+
+
+.. warning::
+   **This feature is experimental.** The API for ``error_handler`` is subject to change in future releases. We welcome your feedback on its functionality.
+
 """
 
 
