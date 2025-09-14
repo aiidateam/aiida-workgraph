@@ -10,6 +10,7 @@ from node_graph.executor import RuntimeExecutor
 from node_graph.socket_spec import SocketSpec, merge_specs
 from aiida_workgraph.socket_spec import from_aiida_process, namespace
 from aiida_workgraph.task import SpecTask, TaskHandle
+from aiida import orm
 
 
 class ShellJobTask(SpecTask):
@@ -60,6 +61,24 @@ class ShellJobTask(SpecTask):
             subset["parser"] = parser
 
         if subset:
+            if "command" in subset:
+                subset["command"] = (
+                    subset["command"].value
+                    if isinstance(subset["command"], orm.Str)
+                    else subset["command"]
+                )
+            if "resolve_command" in subset:
+                subset["resolve_command"] = (
+                    subset["resolve_command"].value
+                    if isinstance(subset["resolve_command"], orm.Bool)
+                    else subset["resolve_command"]
+                )
+            if "arguments" in subset:
+                subset["arguments"] = (
+                    subset["arguments"].get_list()
+                    if isinstance(subset["arguments"], orm.List)
+                    else subset["arguments"]
+                )
             prepared = prepare_shell_job_inputs(**subset)
             # drop original keys so they won't clash with launch kwargs
             for k in subset.keys():
