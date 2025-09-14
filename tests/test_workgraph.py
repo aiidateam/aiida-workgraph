@@ -77,6 +77,13 @@ def test_save_load(wg_task, decorated_add):
         wg2.tasks.add2.get_executor().callable == wg.tasks.add2.get_executor().callable
     )
     assert wg.tasks.add2.inputs.metadata._value == wg2.tasks.add2.inputs.metadata._value
+    # metadata is also loaded
+    assert (
+        wg2.tasks.add2.inputs.metadata.options.resources.value[
+            "num_mpiprocs_per_machine"
+        ]
+        == 2
+    )
     # TODO, the following code is not working
     # wg2.save()
     # assert wg2.tasks.add1.executor == decorated_add
