@@ -1,5 +1,4 @@
 from __future__ import annotations
-from node_graph.socket_spec import SocketSpec
 from node_graph.node_spec import NodeSpec
 from aiida_workgraph.task import SpecTask
 
@@ -74,21 +73,6 @@ def _build_subgraph_task_nodespec(
     name: str | None = None,
 ) -> NodeSpec:
     from node_graph.executor import SafeExecutor
-    from aiida_workgraph.orm.mapping import type_mapping
-
-    # mirror IO from the child graph
-    if graph._inputs is None:
-        in_spec = SocketSpec.from_namespace(
-            graph.graph_inputs.inputs, type_mapping=type_mapping
-        )
-    else:
-        in_spec = graph._inputs
-    if graph._outputs is None:
-        out_spec = SocketSpec.from_namespace(
-            graph.graph_outputs.inputs, type_mapping=type_mapping
-        )
-    else:
-        out_spec = graph._outputs
 
     meta = {
         "node_type": "SubGraph",
@@ -96,8 +80,8 @@ def _build_subgraph_task_nodespec(
 
     return NodeSpec(
         identifier=name or graph.name,
-        inputs=in_spec,
-        outputs=out_spec,
+        inputs=graph._inputs,
+        outputs=graph._outputs,
         executor=SafeExecutor.from_graph(graph),
         base_class=SubGraphTask,
         metadata=meta,

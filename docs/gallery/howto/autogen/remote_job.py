@@ -80,6 +80,8 @@ metadata = {
 #
 #    Uncomment the ``custom_scheduler_commands`` line to modify it for your environment.
 
+from typing import Annotated
+
 
 @task
 def multiply(x, y):
@@ -87,7 +89,9 @@ def multiply(x, y):
 
 
 @task.graph
-def RemoteAddLocalMultiply(x: int, y: int, computer: str, metadata: dict) -> int:
+def RemoteAddLocalMultiply(
+    x: int, y: int, computer: str, metadata: Annotated[dict, add.inputs.metadata]
+) -> int:
     the_sum = add(x=x, y=y, computer=computer, metadata=metadata).result
     return multiply(x=the_sum, y=4)  # this will run locally
 
