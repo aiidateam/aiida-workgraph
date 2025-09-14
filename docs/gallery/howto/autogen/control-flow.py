@@ -21,6 +21,10 @@ Control flow in WorkGraph
 # For this, we need to encapsulate the control flow logic using ``@task.graph``.
 
 from aiida_workgraph import task
+from aiida import load_profile
+
+
+load_profile()
 
 
 @task
@@ -108,7 +112,10 @@ def WhileLoop(n, m):
     return WhileLoop(n=n, m=m)
 
 
-WhileLoop.build(n=4, m=0).to_html()
+wg = WhileLoop.build(n=4, m=0)
+
+wg.to_html()
+
 
 # %%
 #
@@ -118,6 +125,41 @@ WhileLoop.build(n=4, m=0).to_html()
 # .. tip::
 #
 #    If you are using the AiiDA GUI, you can visualize each recursive layer by following down the ``WhileLoop`` tasks.
+#
+# Run the graph:
+
+wg.run()
+print(wg.outputs.result.value)
+
+# sphinx_gallery_start_ignore
+assert wg.outputs.result.value == 4
+# sphinx_gallery_end_ignore
+
+
+# %%
+# Limiting recursion with ``max_depth``
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#
+# Recursive graphs have a built-in safeguard: a maximum recursion depth. By default this is
+# ``100`` nested calls. If the limit is reached, the engine reports a message and raises
+# ``RecursionError``. Deep recursion is generally discouraged—prefer batching the iteration
+# inside a single task where feasible.
+#
+# You can **raise** the limit if you know your workflow needs more layers:
+#
+# .. code:: python
+#
+#    @task.graph(max_depth=200)
+#    def WhileLoop(n, m):
+#        ...
+#
+# You can also **lower** it deliberately to cap the maximum number of iterations. This is a
+# practical safety brake against runaway or unexpectedly long recursions:
+#
+# .. note::
+#
+#    The reported “call depth” is an *approximation* based on the AiiDA process tree, not the exact same call depth as the recursive call.
+#
 
 # %%
 # Summary
