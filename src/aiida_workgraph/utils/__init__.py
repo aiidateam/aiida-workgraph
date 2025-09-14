@@ -639,3 +639,12 @@ def get_process_summary(node: orm.ProcessNode | int, data: str = ["outputs"]) ->
         )
         result += f"\n{format_nested_links(nodes_output.nested(), headers=['Outputs', 'PK', 'Type'])}"
     return result
+
+
+def call_depth_from_node(node: str | int | orm.Node) -> int:
+    node = orm.load_node(node) if not isinstance(node, orm.Node) else node
+    depth = 0
+    while getattr(node, "caller", None) is not None:
+        depth += 1
+        node = node.caller
+    return depth
