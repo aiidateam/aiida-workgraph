@@ -89,14 +89,13 @@ def test_outputs_with_dot():
     assert "file.txt" not in job1.outputs
 
 
-@pytest.mark.usefixtures("started_daemon_client")
 def test_shell_graph_task():
     """Test the ShellJob inside a graph task.
     And the parser is also defined in the graph task."""
     from aiida.orm import Int
 
     @task.graph()
-    def add_multiply(x, y):
+    def add_multiply(x, y, command1: str, command2: str) -> Int:
         """Add two numbers and multiply the result by 2."""
 
         # define the parser function
@@ -107,7 +106,7 @@ def test_shell_graph_task():
 
         # echo x + y expression
         out1 = shelljob(
-            command="echo",
+            command=command1,
             arguments=["{x}", "+", "{y}"],
             nodes={
                 "x": x,
@@ -116,7 +115,7 @@ def test_shell_graph_task():
         )
         # bc command to calculate the expression
         out2 = shelljob(
-            command="bc",
+            command=command2,
             arguments=["{expression}"],
             nodes={"expression": out1.stdout},
             parser=parser,
@@ -124,8 +123,7 @@ def test_shell_graph_task():
         )
         return out2.result
 
-    with WorkGraph() as wg:
-        outputs = add_multiply(x=Int(2), y=Int(3))
-        # wg.submit(wait=True, timeout=60)
-        wg.run()
-        assert outputs.result.value.value == 5
+    wg = add_multiply.build(x=Int(2), y=Int(3), command1="echo", command2="bc")
+    wg.run()
+    # wg.submit(wait=True, timeout=60)
+    assert wg.outputs.result.value.value == 5
