@@ -1,28 +1,30 @@
-from aiida_workgraph import WorkGraph
+from aiida_workgraph import WorkGraph, namespace
 from typing import Callable
 from aiida import orm
 
 
-def test_inputs_outptus(wg_task: WorkGraph) -> None:
+def test_inputs_outptus() -> None:
     """Test the inputs and outputs of the WorkGraph."""
     wg = WorkGraph(name="test_inputs_outptus")
-    wg_task.inputs = {"x": 1, "y": 2}
-    wg_task.outputs.diff = wg_task.tasks.sumdiff1.outputs.diff
-    wg_task.outputs.sum = wg_task.tasks.sumdiff2.outputs.sum
-    task1 = wg.add_task(wg_task, name="add1")
-    assert len(task1.inputs) == 3
-    assert len(task1.outputs) == 4
-    assert "x" in task1.inputs
-    assert "y" in task1.inputs
-    assert "sum" in task1.outputs
+    sub_wg = WorkGraph(
+        name="sub_wg",
+        inputs=namespace(x=int, y=int),
+        outputs=namespace(sum=int, diff=int),
+    )
+    sub_wg_task = wg.add_task(sub_wg, name="sub_wg")
+    assert len(sub_wg_task.inputs) == 3
+    assert len(sub_wg_task.outputs) == 4
+    assert "x" in sub_wg_task.inputs
+    assert "y" in sub_wg_task.inputs
+    assert "sum" in sub_wg_task.outputs
 
 
 def test_inputs_outptus_auto_generate(wg_task: WorkGraph) -> None:
     """Test the inputs and outputs of the WorkGraph."""
     wg = WorkGraph(name="test_inputs_outptus")
     # this will generate the group inputs and outputs automatically
-    wg_task.generate_inputs()
-    wg_task.generate_outputs()
+    wg_task.expose_inputs()
+    wg_task.expose_outputs()
     task1 = wg.add_task(wg_task, name="add1")
     ninput = 0
     for sub_task in wg_task.tasks:

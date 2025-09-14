@@ -276,7 +276,9 @@ def test_calling_workgraph_in_context_manager():
     def add(x, y):
         return x + y
 
-    with WorkGraph(inputs=spec.namespace(x=Any, y=Any)) as wg1:
+    with WorkGraph(
+        inputs=spec.namespace(x=Any, y=Any), outputs=spec.namespace(sum=Any)
+    ) as wg1:
         add_outputs = add(x=wg1.inputs.x, y=wg1.inputs.y)  # add
         add1_outputs = add(x=add_outputs.result, y=1)
         wg1.outputs.sum = add1_outputs.result

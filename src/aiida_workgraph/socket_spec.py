@@ -62,6 +62,7 @@ class SpecInferAPI(BaseSpecInferAPI):
                 fields=fields,
                 meta=SocketSpecMeta(
                     required=required_here,
+                    is_metadata=getattr(port, "is_metadata", False),
                     call_role=("kwargs" if role == "input" else None),
                 ),
             )
@@ -82,6 +83,7 @@ class SpecInferAPI(BaseSpecInferAPI):
             identifier=ident,
             meta=SocketSpecMeta(
                 required=required_here,
+                is_metadata=getattr(port, "is_metadata", False),
                 call_role=("kwargs" if role == "input" else None),
             ),
         )
