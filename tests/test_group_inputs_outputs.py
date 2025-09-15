@@ -34,7 +34,7 @@ def test_load_from_db():
     from aiida_workgraph.tasks.builtins import GraphLevelTask
 
     wg = WorkGraph("test_load_from_db", inputs=spec.namespace(x=Any, y=Any, z=Any))
-    wg.inputs = {"x": 1, "y": 2}
+    wg.inputs = {"x": 1, "y": 2, "z": 1}
     wg.save()
     wg2 = WorkGraph.load(wg.pk)
     wg2.restart()
