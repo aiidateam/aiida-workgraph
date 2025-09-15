@@ -108,7 +108,16 @@ class WorkGraph(node_graph.NodeGraph):
                 continue
             missing_inputs.extend(self.find_missing_inputs(task.inputs))
         if missing_inputs:
-            raise ValueError(f"Missing required inputs: {missing_inputs}")
+            bullets = "\n".join(f"  • {p}" for p in sorted(missing_inputs))
+            raise ValueError(
+                "Missing required inputs:\n"
+                f"{bullets}\n\n"
+                "How to fix:\n"
+                "  1) Provide these values (at build time or by linking from upstream task outputs).\n"
+                "  2) If some are intentionally unused, exclude them from the namespace at the call site, e.g.:\n"
+                '     Annotated[dict, some_task.inputs, SocketSpecSelect(exclude=["pw.structure", ...])]\n\n'
+                "Note: exclude paths are relative to the task's input namespace (e.g. 'pw.structure')."
+            )
 
     def find_missing_inputs(self, socket: BaseSocket) -> List[str]:
         """Check if all required inputs are provided."""

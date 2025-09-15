@@ -60,7 +60,13 @@ def test_save_load(wg_task, decorated_add):
             },
         }
     }
-    wg.add_task(ArithmeticAddCalculation, name="add2", x=4, metadata=metadata)
+    wg.add_task(
+        ArithmeticAddCalculation,
+        name="add2",
+        x=4,
+        y=wg.tasks.add1.outputs.result,
+        metadata=metadata,
+    )
     wg.name = "test_save_load"
     wg.save()
     assert wg.process.process_state.value.upper() == "CREATED"

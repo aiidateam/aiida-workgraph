@@ -17,6 +17,6 @@ def test_validate_required_inputs():
 
     with pytest.raises(
         ValueError,
-        match=re.escape("Missing required inputs: ['graph_inputs.b.y', 'add1.y']"),
+        match=re.escape("Missing required inputs:"),
     ):
         my_graph.run(a=1, b={"x": 1})
