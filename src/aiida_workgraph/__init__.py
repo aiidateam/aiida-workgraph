@@ -9,7 +9,7 @@ from . import socket_spec as spec
 from .socket_spec import namespace, dynamic
 from .collection import group
 
-__version__ = "1.0.0b1"
+__version__ = "0.7.1"
 
 __all__ = [
     "WorkGraph",
