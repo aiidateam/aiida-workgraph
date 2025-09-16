@@ -164,7 +164,7 @@ wg.run(inputs=inputs)
 add_task = wg.tasks['add_task']
 print(f'Task finished OK? {add_task.process.is_finished_ok}')
 print(f'Final exit status: {add_task.process.exit_status}')
-print(f"Final result: {add_task.outputs['sum'].value}")
+print(f'Final result: {add_task.outputs["sum"].value}')
 
 # We can also visualize the process call graph to see the failure and restart.
 # The graph will show the first `ArithmeticAddCalculation` failing (exit code 410)

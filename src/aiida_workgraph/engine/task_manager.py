@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 from aiida_workgraph.task import Task
 from aiida_workgraph.utils import get_nested_dict
 from aiida.engine.processes.exit_code import ExitCode
@@ -121,10 +121,10 @@ class TaskManager:
             if ready:
                 task_to_run.append(task.name)
         #
-        self.process.report(f"tasks ready to run: {','.join(task_to_run)}")
+        self.process.report(f'tasks ready to run: {",".join(task_to_run)}')
         self.run_tasks(task_to_run)
 
-    def should_run_task(self, task: 'Task') -> bool:
+    def should_run_task(self, task: Task) -> bool:
         """Check if the task should run."""
         name = task.name
         # skip if the max number of awaitables is reached
@@ -137,7 +137,7 @@ class TaskManager:
             return False
         return True
 
-    def run_tasks(self, names: List[str], continue_workgraph: bool = True) -> None:
+    def run_tasks(self, names: list[str], continue_workgraph: bool = True) -> None:
         """Run tasks.
         Task type includes: Node, Data, CalcFunction, WorkFunction, CalcJob, WorkChain, GraphBuilder,
         WorkGraph, PythonJob, ShellJob, While, If, Zone, GetContext, SetContext, Normal.
@@ -375,12 +375,12 @@ class TaskManager:
 
     def get_inputs(
         self, name: str
-    ) -> Tuple[
-        List[Any],
-        Dict[str, Any],
-        Optional[List[Any]],
-        Optional[Dict[str, Any]],
-        Dict[str, Any],
+    ) -> tuple[
+        list[Any],
+        dict[str, Any],
+        list[Any] | None,
+        dict[str, Any] | None,
+        dict[str, Any],
     ]:
         """Get input based on the links."""
         from aiida_workgraph.utils import update_nested_dict_with_special_keys
@@ -442,7 +442,7 @@ class TaskManager:
             return not flag
         return flag
 
-    def get_all_children(self, name: str) -> List[str]:
+    def get_all_children(self, name: str) -> list[str]:
         """Find all children of the zone_task, and their children recursively"""
         child_tasks = []
         task = self.process.wg.tasks[name]
@@ -480,7 +480,7 @@ class TaskManager:
         self.ctx._task_results[new_name]['item'] = value
         self.state_manager.set_task_runtime_info(new_name, 'state', 'FINISHED')
 
-    def copy_task(self, name: str, prefix: str) -> 'Task':
+    def copy_task(self, name: str, prefix: str) -> Task:
         import uuid
 
         # keep track of the mapped tasks
@@ -502,8 +502,8 @@ class TaskManager:
 
     def _patch_cloned_tasks(
         self,
-        new_tasks: dict[str, 'Task'],
-        all_links: List[NodeLink],
+        new_tasks: dict[str, Task],
+        all_links: list[NodeLink],
     ):
         """
         For each newly mapped task, fix references (children, input_links, etc.)
@@ -544,7 +544,7 @@ class TaskManager:
             )
         return new_links
 
-    def _patch_connectivity(self, new_tasks: dict[str, 'Task']) -> None:
+    def _patch_connectivity(self, new_tasks: dict[str, Task]) -> None:
         """
         Update the global connectivity for newly created tasks.
         """

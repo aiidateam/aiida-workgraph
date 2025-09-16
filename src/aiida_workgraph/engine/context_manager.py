@@ -47,7 +47,7 @@ class ContextManager:
             if not isinstance(ctx, AttributeDict):
                 raise ValueError(
                     f'Can not update the context for key `{key}`: '
-                    f' found instance of `{type(ctx)}` at `{".".join(ctx_path[:index + 1])}`, expected AttributeDict'
+                    f' found instance of `{type(ctx)}` at `{".".join(ctx_path[: index + 1])}`, expected AttributeDict'
                 )
 
         return ctx, ctx_path[-1]

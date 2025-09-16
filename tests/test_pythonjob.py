@@ -225,9 +225,9 @@ def test_PythonJob_copy_files(fixture_localhost, python_executable_path):
     # define multiply task
     @task.pythonjob()
     def multiply(x_folder_name, y_folder_name):
-        with open(f'{x_folder_name}/result.txt', 'r') as f:
+        with open(f'{x_folder_name}/result.txt') as f:
             x = int(f.read())
-        with open(f'{y_folder_name}/result.txt', 'r') as f:
+        with open(f'{y_folder_name}/result.txt') as f:
             y = int(f.read())
         return x * y
 

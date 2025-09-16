@@ -1,5 +1,4 @@
 from __future__ import annotations
-from typing import Dict
 
 
 class TaskActionManager:
@@ -17,7 +16,7 @@ class TaskActionManager:
         self.logger = logger
         self.process = process
 
-    def apply_task_actions(self, msg: Dict) -> None:
+    def apply_task_actions(self, msg: dict) -> None:
         """
         Apply task actions to the workgraph based on user or external messages.
         :param msg: { "action": <str>, "tasks": <List[str]> }

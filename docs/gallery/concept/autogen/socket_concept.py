@@ -261,7 +261,7 @@ with WorkGraph('dynamic_namespace_example') as wg:
     # You can access the individual dynamic outputs
     print('\nIndividual dynamic outputs:')
     for i in range(4):
-        print(f"  n_{i}: {dynamic_outputs.squares[f'n_{i}'].value}")
+        print(f'  n_{i}: {dynamic_outputs.squares[f"n_{i}"].value}')
 
     print(f'\nSum of all dynamic outputs: {total.result.value}')
     assert total.result.value == 14

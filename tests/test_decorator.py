@@ -42,7 +42,7 @@ def test_decorators_args() -> None:
     )
     assert n.args_data['var_args'] is None
     assert n.args_data['var_kwargs'] == 'c'
-    assert set(n.get_output_names()) == set(['_outputs', '_wait'])
+    assert set(n.get_output_names()) == {'_outputs', '_wait'}
     assert isinstance(n.inputs.c, TaskSocketNamespace)
 
 
@@ -51,14 +51,14 @@ def test_decorators_calcfunction_args() -> None:
     def test(a, b=1, **c):
         print(a, b, c)
 
-    metadata_kwargs = set([f'{key}' for key in test._func.process_class.spec().inputs.ports['metadata'].ports.keys()])
+    metadata_kwargs = {f'{key}' for key in test._func.process_class.spec().inputs.ports['metadata'].ports.keys()}
     kwargs = set(test._func.process_class.spec().inputs.ports.keys())
     n = test._spec.to_node()
     assert n.args_data['args'] == []
     assert set(n.args_data['kwargs']) == set(kwargs)
     assert n.args_data['var_args'] is None
     assert n.args_data['var_kwargs'] == 'c'
-    assert set(n.get_output_names()) == set(['_outputs', '_wait'])
+    assert set(n.get_output_names()) == {'_outputs', '_wait'}
     assert isinstance(n.inputs.c, TaskSocketNamespace)
     assert set(n.inputs.metadata._get_keys()) == metadata_kwargs
 
@@ -117,9 +117,9 @@ def task_workfunction(request):
 
 
 def test_decorators_workfunction_args(task_workfunction) -> None:
-    metadata_kwargs = set(
-        [f'{key}' for key in task_workfunction._func.process_class.spec().inputs.ports['metadata'].ports.keys()]
-    )
+    metadata_kwargs = {
+        f'{key}' for key in task_workfunction._func.process_class.spec().inputs.ports['metadata'].ports.keys()
+    }
     kwargs = set(task_workfunction._func.process_class.spec().inputs.ports.keys())
     #
     n = task_workfunction._spec.to_node()
@@ -127,7 +127,7 @@ def test_decorators_workfunction_args(task_workfunction) -> None:
     assert set(n.args_data['kwargs']) == set(kwargs)
     assert n.args_data['var_args'] is None
     assert n.args_data['var_kwargs'] == 'c'
-    assert set(n.get_output_names()) == set(['_outputs', '_wait'])
+    assert set(n.get_output_names()) == {'_outputs', '_wait'}
     assert set(n.inputs.metadata._get_keys()) == metadata_kwargs
 
 
@@ -173,7 +173,7 @@ def test_decorators_graph_args(task_graph_task) -> None:
     assert n.args_data['kwargs'] == ['a', 'b']
     assert n.args_data['var_args'] is None
     assert n.args_data['var_kwargs'] == 'c'
-    assert set(n.get_output_names()) == set(['_outputs', '_wait'])
+    assert set(n.get_output_names()) == {'_outputs', '_wait'}
 
 
 def test_inputs_outputs_workchain() -> None:

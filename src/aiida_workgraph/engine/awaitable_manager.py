@@ -10,7 +10,7 @@ from aiida.engine.processes.workchains.awaitable import (
 )
 from aiida.orm import load_node
 from aiida.common import exceptions
-from typing import Any, List
+from typing import Any
 import logging
 
 
@@ -24,7 +24,7 @@ class AwaitableManager:
         self.ctx_manager = ctx_manager
         self.ctx = ctx_manager.ctx
         # awaitables that are persisted
-        self._awaitables: List[Awaitable] = _awaitables
+        self._awaitables: list[Awaitable] = _awaitables
         # awaitables that are not persisted, because they are not serializable
         # but don't worry, because we re-register them when loading the process
         self.not_persisted_awaitables = {}
@@ -76,7 +76,7 @@ class AwaitableManager:
     def update_process_status(self) -> None:
         """Set the process status with a message accounting the current sub processes that we are waiting for."""
         if self._awaitables:
-            status = f"Waiting for child processes: {', '.join([str(_.pk) for _ in self._awaitables])}"
+            status = f'Waiting for child processes: {", ".join([str(_.pk) for _ in self._awaitables])}'
             self.process.node.set_process_status(status)
         else:
             self.process.node.set_process_status(None)

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Callable, Dict, List, Optional, Type
+from typing import TYPE_CHECKING, Callable
 
 from node_graph.error_handler import ErrorHandlerSpec, normalize_error_handlers
 from node_graph.executor import RuntimeExecutor
@@ -22,16 +22,16 @@ def build_callable_nodespec(
     *,
     obj: Callable,
     node_type: str,
-    base_class: Type['Node'],
-    identifier: Optional[str] = None,
+    base_class: type[Node],
+    identifier: str | None = None,
     catalog: str = 'AIIDA',
-    in_spec: Optional[SocketSpec | List[str]] = None,
-    out_spec: Optional[SocketSpec | List[str]] = None,
-    process_cls: Optional[type] = None,  # e.g. PythonJob, PyFunction, or aiida.engine.Process
-    add_inputs: Optional[SocketSpec | List[str]] = None,
-    add_outputs: Optional[SocketSpec | List[str]] = None,
-    error_handlers: Optional[Dict[str, ErrorHandlerSpec]] = None,
-    metadata: Optional[dict] = None,
+    in_spec: SocketSpec | list[str] | None = None,
+    out_spec: SocketSpec | list[str] | None = None,
+    process_cls: type | None = None,  # e.g. PythonJob, PyFunction, or aiida.engine.Process
+    add_inputs: SocketSpec | list[str] | None = None,
+    add_outputs: SocketSpec | list[str] | None = None,
+    error_handlers: dict[str, ErrorHandlerSpec] | None = None,
+    metadata: dict | None = None,
 ) -> NodeSpec:
     """
     - infers function I/O

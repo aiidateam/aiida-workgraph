@@ -69,7 +69,7 @@ wg.run()
 print('\nResults:')
 lists = list(data.values())
 for i, sum_ in enumerate(wg.outputs.sums):
-    print(f"{lists[i]['x']} + {lists[i]['y']} = {sum_.value}")
+    print(f'{lists[i]["x"]} + {lists[i]["y"]} = {sum_.value}')
 
 # %%
 # Each addition was executed independently, yielding an AiiDA node for each result.

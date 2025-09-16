@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import replace
-from typing import Any, Dict, List, Optional, Union, Callable, Annotated
+from typing import Any, Callable, Annotated
 import inspect
 from aiida_shell import ShellJob
 from aiida_shell.launch import prepare_shell_job_inputs
@@ -25,7 +25,7 @@ class ShellJobTask(SpecTask):
     node_type = 'SHELLJOB'
     catalog = 'AIIDA'
 
-    def serialize_data(self, data: Dict[str, Any]) -> Dict[str, Any]:
+    def serialize_data(self, data: dict[str, Any]) -> dict[str, Any]:
         """Overwrite the serialize_data method to handle the parser function."""
         import inspect
 
@@ -103,9 +103,9 @@ class ShellJobTask(SpecTask):
 
 def _build_shelljob_nodespec(
     *,
-    identifier: Optional[str] = None,
-    outputs: Optional[SocketSpec | List[str]] = None,
-    parser_outputs: Optional[SocketSpec | List[str]] = None,
+    identifier: str | None = None,
+    outputs: SocketSpec | list[str] | None = None,
+    parser_outputs: SocketSpec | list[str] | None = None,
 ) -> NodeSpec:
     """Create a `NodeSpec` for a ShellJob, augmenting inputs/outputs as needed.
 
@@ -164,13 +164,13 @@ def _build_shelljob_nodespec(
 def shelljob(
     *,
     command: str,
-    arguments: Optional[List[str]] = None,
-    nodes: Optional[Dict[str, Any]] = None,
-    filenames: Optional[Dict[str, str]] = None,
-    outputs: Optional[List[Union[str, Dict[str, Any]]]] = None,
-    parser: Optional[Callable] = None,
-    parser_outputs: Optional[SocketSpec | List[str]] = None,
-    metadata: Optional[Dict[str, Any]] = None,
+    arguments: list[str] | None = None,
+    nodes: dict[str, Any] | None = None,
+    filenames: dict[str, str] | None = None,
+    outputs: list[str | dict[str, Any]] | None = None,
+    parser: Callable | None = None,
+    parser_outputs: SocketSpec | list[str] | None = None,
+    metadata: dict[str, Any] | None = None,
     resolve_command: bool = True,
 ):
     """Create a ShellJob node in the active WorkGraph and return its outputs handle.

@@ -1,6 +1,6 @@
 from __future__ import annotations
 from dataclasses import replace
-from typing import Any, Tuple
+from typing import Any
 from node_graph.socket_spec import (
     SocketSpecMeta,
     SocketSpecSelect,
@@ -98,7 +98,7 @@ class SpecInferAPI(BaseSpecInferAPI):
     @classmethod
     def from_aiida_process(
         cls, process_or_spec: type[Process] | Process | ProcessSpec
-    ) -> Tuple[SocketSpec, SocketSpec]:
+    ) -> tuple[SocketSpec, SocketSpec]:
         """Return (inputs_spec, outputs_spec) for an AiiDA Process or its ProcessSpec.
 
         Accepts:

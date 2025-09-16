@@ -1,5 +1,5 @@
 from __future__ import annotations
-from typing import Any, Dict, Optional, Callable, Annotated
+from typing import Any, Callable, Annotated
 from aiida import orm
 from aiida.common.extendeddicts import AttributeDict
 from aiida_pythonjob.data.serializer import all_serializers
@@ -25,7 +25,7 @@ class BaseSerializablePythonTask(SpecTask):
     Subclasses must implement their own `execute` method.
     """
 
-    def serialize_data(self, data: Dict[str, Any]) -> Dict[str, Any]:
+    def serialize_data(self, data: dict[str, Any]) -> dict[str, Any]:
         """
         Called during Task -> dict conversion. We walk over the input sockets
         and run our specialized Python serialization.
@@ -38,7 +38,7 @@ class BaseSerializablePythonTask(SpecTask):
         )
         data['inputs'].update(serialized_inputs)
 
-    def update_from_dict(self, data: Dict[str, Any], **kwargs) -> 'BaseSerializablePythonTask':
+    def update_from_dict(self, data: dict[str, Any], **kwargs) -> BaseSerializablePythonTask:
         """
         Called when reloading from a dict. Note, we do not run `_deserialize_python_data` here.
         Thus, the value of the socket will be AiiDA data nodes.
@@ -47,7 +47,7 @@ class BaseSerializablePythonTask(SpecTask):
         return self
 
     @classmethod
-    def _deserialize_python_data(cls, input_sockets: Dict[str, Any]) -> None:
+    def _deserialize_python_data(cls, input_sockets: dict[str, Any]) -> None:
         """
         Recursively walk over the sockets and convert AiiDA Data nodes
         back into raw Python objects, if needed.
@@ -60,7 +60,7 @@ class BaseSerializablePythonTask(SpecTask):
                     cls._deserialize_socket_data(socket)
 
     @classmethod
-    def _deserialize_socket_data(cls, socket: Dict[str, Any]) -> Any:
+    def _deserialize_socket_data(cls, socket: dict[str, Any]) -> Any:
         value = socket.get('property', {}).get('value')
         if isinstance(value, orm.Data):
             socket['property']['value'] = deserialize_to_raw_python_data(value)
@@ -228,10 +228,10 @@ class PyFunctionTask(BaseSerializablePythonTask):
 
 def _build_pythonjob_nodespec(
     obj: Callable,
-    identifier: Optional[str] = None,
-    in_spec: Optional[SocketSpec] | list = None,
-    out_spec: Optional[SocketSpec] | list = None,
-    error_handlers: Optional[Dict[str, ErrorHandlerSpec]] = None,
+    identifier: str | None = None,
+    in_spec: SocketSpec | None | list = None,
+    out_spec: SocketSpec | None | list = None,
+    error_handlers: dict[str, ErrorHandlerSpec] | None = None,
 ) -> NodeSpec:
     # allow list specs just for PythonJob (keep existing behavior)
     from aiida_workgraph.socket_spec import validate_socket_data
@@ -261,10 +261,10 @@ def _build_pythonjob_nodespec(
 
 def _build_pyfunction_nodespec(
     obj: Callable,
-    identifier: Optional[str] = None,
-    in_spec: Optional[SocketSpec] = None,
-    out_spec: Optional[SocketSpec] = None,
-    error_handlers: Optional[Dict[str, ErrorHandlerSpec]] = None,
+    identifier: str | None = None,
+    in_spec: SocketSpec | None = None,
+    out_spec: SocketSpec | None = None,
+    error_handlers: dict[str, ErrorHandlerSpec] | None = None,
 ) -> NodeSpec:
     return build_callable_nodespec(
         obj=obj,

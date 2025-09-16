@@ -39,9 +39,9 @@ def test_type_mapping(data_type, data, identifier) -> None:
     add_task = add()._node
     add_task.set_inputs({'x': data})
 
-    assert (
-        type_mapping.get(data_type, None) == identifier
-    ), f'Mismatch: Expected {identifier}, but got {type_mapping.get(data_type)}'
+    assert type_mapping.get(data_type, None) == identifier, (
+        f'Mismatch: Expected {identifier}, but got {type_mapping.get(data_type)}'
+    )
 
 
 def test_vector_socket() -> None:

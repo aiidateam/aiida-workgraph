@@ -1,5 +1,5 @@
 from __future__ import annotations
-from typing import Optional, Tuple, List, Any
+from typing import Any
 from aiida.orm.utils.serialize import serialize
 from aiida_workgraph.orm.utils import deserialize_safe
 from aiida.orm import ProcessNode, Data
@@ -58,7 +58,7 @@ class TaskStateManager:
         else:
             raise ValueError(f'Invalid key: {key}')
 
-    def set_tasks_state(self, tasks: List[str], value: str) -> None:
+    def set_tasks_state(self, tasks: list[str], value: str) -> None:
         """
         Set the state for a list of tasks (and their children) to `value`.
         Typically used for skip or reset tasks.
@@ -218,7 +218,7 @@ class TaskStateManager:
         """
         self.ctx._executed_tasks = [label for label in self.ctx._executed_tasks if label.split('.')[0] != name]
 
-    def is_task_ready_to_run(self, name: str) -> Tuple[bool, Optional[str]]:
+    def is_task_ready_to_run(self, name: str) -> tuple[bool, str | None]:
         """
         Check if the task is ready to run. We consider parent states, input tasks, etc.
         For tasks inside a ZONE or with a parent task, we require the parent

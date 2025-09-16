@@ -50,7 +50,7 @@ class WorkGraphEngine(Process, metaclass=Protect):
         self,
         inputs: dict | None = None,
         logger: logging.Logger | None = None,
-        runner: 'Runner' | None = None,
+        runner: Runner | None = None,
         enable_persistence: bool = True,
     ) -> None:
         """Construct a WorkGraph instance.
@@ -254,7 +254,7 @@ class WorkGraphEngine(Process, metaclass=Protect):
 
     def _build_process_label(self) -> str:
         """Use the workgraph name as the process label."""
-        return f"WorkGraph<{self.inputs[WorkGraphSpec.WORKGRAPH_DATA_KEY]['name']}>"
+        return f'WorkGraph<{self.inputs[WorkGraphSpec.WORKGRAPH_DATA_KEY]["name"]}>'
 
     def on_create(self) -> None:
         """Called when a Process is created."""

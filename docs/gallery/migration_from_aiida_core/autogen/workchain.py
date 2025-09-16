@@ -164,7 +164,7 @@ wg.to_html()
 # %%
 # Execute the WorkGraph and print the result.
 wg.run()
-print(f"The sum of even numbers up to {N} is: {wg.outputs['result'].value}")
+print(f'The sum of even numbers up to {N} is: {wg.outputs["result"].value}')
 
 
 # %%

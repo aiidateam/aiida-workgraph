@@ -11,7 +11,7 @@ from aiida_workgraph.utils.graph import (
     link_creation_hook,
     link_deletion_hook,
 )
-from typing import Any, Dict, List, Optional, Union
+from typing import Any
 from .registry import RegistryHub, registry_hub
 from node_graph.analysis import NodeGraphAnalysis
 from node_graph.config import BUILTIN_NODES
@@ -36,7 +36,7 @@ class WorkGraph(node_graph.NodeGraph):
         pk (int): The primary key of the process node.
     """
 
-    registry: Optional[RegistryHub] = registry_hub
+    registry: RegistryHub | None = registry_hub
     platform: str = 'aiida_workgraph'
     type_mapping: dict = type_mapping
     _socket_spec = SocketSpecAPI
@@ -44,9 +44,9 @@ class WorkGraph(node_graph.NodeGraph):
     def __init__(
         self,
         name: str = 'WorkGraph',
-        inputs: Optional[type | List[str]] = None,
-        outputs: Optional[type | List[str]] = None,
-        error_handlers: Optional[Dict[str, ErrorHandlerSpec]] = None,
+        inputs: type | list[str] | None = None,
+        outputs: type | list[str] | None = None,
+        error_handlers: dict[str, ErrorHandlerSpec] | None = None,
         **kwargs,
     ) -> None:
         """
@@ -73,7 +73,7 @@ class WorkGraph(node_graph.NodeGraph):
         """Add alias to `nodes` for WorkGraph"""
         return self.nodes
 
-    def to_engine_inputs(self, metadata: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    def to_engine_inputs(self, metadata: dict[str, Any] | None = None) -> dict[str, Any]:
         wgdata = self.to_dict(should_serialize=True)
         metadata = metadata or {}
         task_inputs = self.gather_task_inputs(wgdata['tasks'])
@@ -86,7 +86,7 @@ class WorkGraph(node_graph.NodeGraph):
         }
         return inputs
 
-    def gather_task_inputs(self, data: Dict[str, Any] = None) -> Dict[str, Any]:
+    def gather_task_inputs(self, data: dict[str, Any] = None) -> dict[str, Any]:
         """Gather the inputs of all tasks."""
         inputs = {}
         for name, task in data.items():
@@ -116,7 +116,7 @@ class WorkGraph(node_graph.NodeGraph):
                 "Note: exclude paths are relative to the task's input namespace (e.g. 'pw.structure')."
             )
 
-    def find_missing_inputs(self, socket: BaseSocket) -> List[str]:
+    def find_missing_inputs(self, socket: BaseSocket) -> list[str]:
         """Check if all required inputs are provided."""
         missing_inputs = []
         for sub_socket in socket:
@@ -138,8 +138,8 @@ class WorkGraph(node_graph.NodeGraph):
 
     def run(
         self,
-        inputs: Optional[Dict[str, Any]] = None,
-        metadata: Optional[Dict[str, Any]] = None,
+        inputs: dict[str, Any] | None = None,
+        metadata: dict[str, Any] | None = None,
     ) -> Any:
         """
         Run the AiiDA workgraph process and update the process status. The method uses AiiDA's engine to run
@@ -165,11 +165,11 @@ class WorkGraph(node_graph.NodeGraph):
 
     def submit(
         self,
-        inputs: Optional[Dict[str, Any]] = None,
+        inputs: dict[str, Any] | None = None,
         wait: bool = False,
         timeout: int = 600,
         interval: int = 5,
-        metadata: Optional[Dict[str, Any]] = None,
+        metadata: dict[str, Any] | None = None,
     ) -> aiida.orm.ProcessNode:
         """Submit the AiiDA workgraph process and optionally wait for it to finish.
         Args:
@@ -194,7 +194,7 @@ class WorkGraph(node_graph.NodeGraph):
             self.wait(timeout=timeout, interval=interval)
         return self.process
 
-    def save(self, metadata: Optional[Dict[str, Any]] = None) -> None:
+    def save(self, metadata: dict[str, Any] | None = None) -> None:
         """Save the udpated workgraph to the process
         This is only used for a running workgraph.
         Save the AiiDA workgraph process and update the process status.
@@ -218,7 +218,7 @@ class WorkGraph(node_graph.NodeGraph):
             self.save_to_base(inputs)
         self.update()
 
-    def save_to_base(self, wgdata: Dict[str, Any]) -> None:
+    def save_to_base(self, wgdata: dict[str, Any]) -> None:
         """Save new wgdata to attribute.
         It will first check the difference, and reset tasks if needed.
         """
@@ -239,7 +239,7 @@ class WorkGraph(node_graph.NodeGraph):
         connectivity = self.analyzer.build_connectivity()
         return connectivity
 
-    def to_dict(self, include_sockets: bool = False, should_serialize: bool = False) -> Dict[str, Any]:
+    def to_dict(self, include_sockets: bool = False, should_serialize: bool = False) -> dict[str, Any]:
         """Convert the workgraph to a dictionary."""
         from aiida.orm.utils.serialize import serialize
         from aiida_workgraph.utils import serialize_graph_level_data
@@ -346,14 +346,14 @@ class WorkGraph(node_graph.NodeGraph):
                     socket.value = get_nested_dict(self.process.outputs, socket._name, default=None)
 
     @property
-    def pk(self) -> Optional[int]:
+    def pk(self) -> int | None:
         return self.process.pk if self.process else None
 
-    def update_ctx(self, value: Dict[str, Any]) -> None:
+    def update_ctx(self, value: dict[str, Any]) -> None:
         self.ctx._set_socket_value(value, link_limit=100000)
 
     @classmethod
-    def from_dict(cls, wgdata: Dict[str, Any]) -> 'WorkGraph':
+    def from_dict(cls, wgdata: dict[str, Any]) -> WorkGraph:
         if 'tasks' in wgdata:
             wgdata['nodes'] = wgdata.pop('tasks')
         wg = super().from_dict(wgdata)
@@ -378,7 +378,7 @@ class WorkGraph(node_graph.NodeGraph):
         return wg
 
     @classmethod
-    def from_yaml(cls, filename: str = None, string: str = None) -> 'WorkGraph':
+    def from_yaml(cls, filename: str = None, string: str = None) -> WorkGraph:
         """Build WrokGraph from yaml file."""
         import yaml
 
@@ -390,7 +390,7 @@ class WorkGraph(node_graph.NodeGraph):
         # import jsonschema
 
         if filename:
-            with open(filename, 'r') as f:
+            with open(filename) as f:
                 wgdata = yaml.safe_load(f)
         elif string:
             wgdata = yaml.safe_load(string)
@@ -410,7 +410,7 @@ class WorkGraph(node_graph.NodeGraph):
         return nt
 
     @classmethod
-    def load(cls, pk: int | aiida.orm.ProcessNode) -> Optional['WorkGraph']:
+    def load(cls, pk: int | aiida.orm.ProcessNode) -> WorkGraph | None:
         """
         Load WorkGraph from the process node with the given primary key.
 
@@ -459,7 +459,7 @@ class WorkGraph(node_graph.NodeGraph):
     #     except Exception as e:
     #         print(f"Pause process failed: {e}")
 
-    def pause_tasks(self, tasks: List[str]) -> None:
+    def pause_tasks(self, tasks: list[str]) -> None:
         """Pause the given tasks."""
         from aiida_workgraph.utils.control import pause_tasks
 
@@ -471,7 +471,7 @@ class WorkGraph(node_graph.NodeGraph):
 
         return 'Send message to pause tasks.'
 
-    def play_tasks(self, tasks: List[str]) -> None:
+    def play_tasks(self, tasks: list[str]) -> None:
         """Play the given tasks"""
 
         from aiida_workgraph.utils.control import play_tasks
@@ -483,7 +483,7 @@ class WorkGraph(node_graph.NodeGraph):
             _, msg = play_tasks(self.process.pk, tasks)
         return 'Send message to play tasks.'
 
-    def kill_tasks(self, tasks: List[str]) -> None:
+    def kill_tasks(self, tasks: list[str]) -> None:
         """Kill the given tasks"""
 
         from aiida_workgraph.utils.control import kill_tasks
@@ -495,7 +495,7 @@ class WorkGraph(node_graph.NodeGraph):
             _, msg = kill_tasks(self.process.pk, tasks)
         return 'Send message to kill tasks.'
 
-    def reset_tasks(self, tasks: List[str]) -> None:
+    def reset_tasks(self, tasks: list[str]) -> None:
         from aiida_workgraph.utils.control import reset_tasks
 
         print(f'Reset tasks: {tasks}')
@@ -543,7 +543,7 @@ class WorkGraph(node_graph.NodeGraph):
             task.reset()
         self.state = 'PLANNED'
 
-    def extend(self, wg: 'WorkGraph', prefix: str = '') -> None:
+    def extend(self, wg: WorkGraph, prefix: str = '') -> None:
         """Append a workgraph to the current workgraph.
         prefix is used to add a prefix to the task names.
         """
@@ -564,13 +564,13 @@ class WorkGraph(node_graph.NodeGraph):
                 continue
             self.links._append(link)
 
-    def get_error_handlers(self) -> Dict[str, ErrorHandlerSpec]:
+    def get_error_handlers(self) -> dict[str, ErrorHandlerSpec]:
         """Get the error handlers."""
         return self._error_handlers
 
     def add_task(
         self,
-        identifier: Union[str, callable],
+        identifier: str | callable,
         name: str = None,
         include_builtins: bool = False,
         **kwargs,
@@ -611,7 +611,7 @@ class WorkGraph(node_graph.NodeGraph):
         self._version += 1
         return node
 
-    def to_widget_value(self) -> Dict[str, Any]:
+    def to_widget_value(self) -> dict[str, Any]:
         """Convert the workgraph to a dictionary that can be used by the widget."""
         from aiida_workgraph.utils import workgraph_to_short_json, wait_to_link
 
@@ -663,7 +663,7 @@ class WorkGraph(node_graph.NodeGraph):
         self._previous_graph = None
         return None
 
-    def __call__(self, inputs: Dict[str, Any] = None) -> Any:
+    def __call__(self, inputs: dict[str, Any] = None) -> Any:
         """Call the graph with inputs and return as a task.
 
         Used in context managers as a simple assignment.

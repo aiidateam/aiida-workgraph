@@ -11,7 +11,7 @@ if TYPE_CHECKING:
 
 
 __all__ = (
-    'build_subgraph_task_nodespec',
+    '_build_subgraph_task_nodespec',
     'SubGraphTask',
 )
 
@@ -82,8 +82,8 @@ class SubGraphTask(SpecTask):
         return process, state
 
 
-def build_subgraph_task_nodespec(
-    graph: 'WorkGraph',
+def _build_subgraph_task_nodespec(
+    graph: WorkGraph,
     name: str | None = None,
 ) -> NodeSpec:
     from node_graph.executor import SafeExecutor

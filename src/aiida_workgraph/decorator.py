@@ -1,5 +1,5 @@
 from __future__ import annotations
-from typing import Callable, Dict, Optional, Union
+from typing import Callable
 from aiida.engine import calcfunction, workfunction, CalcJob, WorkChain
 from aiida_workgraph.task import Task
 from .workgraph import WorkGraph
@@ -14,9 +14,9 @@ from node_graph.error_handler import ErrorHandlerSpec, normalize_error_handlers
 def _spec_for(
     obj,
     *,
-    identifier: Optional[str],
-    inputs: Optional[SocketSpec] = None,
-    outputs: Optional[SocketSpec] = None,
+    identifier: str | None,
+    inputs: SocketSpec | None = None,
+    outputs: SocketSpec | None = None,
 ) -> NodeSpec:
     from aiida_workgraph.socket_spec import from_aiida_process
     from aiida_workgraph.utils import inspect_aiida_component_type
@@ -56,8 +56,8 @@ def _spec_for(
 
 def build_task_from_callable(
     executor: Callable,
-    inputs: Optional[SocketSpec | list] = None,
-    outputs: Optional[SocketSpec | list] = None,
+    inputs: SocketSpec | list | None = None,
+    outputs: SocketSpec | list | None = None,
 ) -> Task:
     """Build task from a callable object.
     First, check if the executor is already a task.
@@ -128,10 +128,10 @@ class TaskDecoratorCollection:
     @staticmethod
     @nonfunctional_usage
     def decorator_task(
-        identifier: Optional[str] = None,
-        inputs: Optional[SocketSpec | list] = None,
-        outputs: Optional[SocketSpec | list] = None,
-        error_handlers: Optional[Dict[str, ErrorHandlerSpec]] = None,
+        identifier: str | None = None,
+        inputs: SocketSpec | list | None = None,
+        outputs: SocketSpec | list | None = None,
+        error_handlers: dict[str, ErrorHandlerSpec] | None = None,
         catalog: str = 'Others',
     ) -> Callable:
         """Generate a decorator that register a function as a task.
@@ -143,7 +143,7 @@ class TaskDecoratorCollection:
             outputs (list): task outputs
         """
 
-        def decorator(obj: Union[WorkGraph, type, callable]) -> TaskHandle:
+        def decorator(obj: WorkGraph | type | callable) -> TaskHandle:
             spec = _spec_for(obj, identifier=identifier, inputs=inputs, outputs=outputs)
             handlers = normalize_error_handlers(error_handlers)
             # allow catalog override
@@ -171,9 +171,9 @@ class TaskDecoratorCollection:
     @staticmethod
     @nonfunctional_usage
     def decorator_graph(
-        identifier: Optional[str] = None,
-        inputs: Optional[SocketSpec | list] = None,
-        outputs: Optional[SocketSpec | list] = None,
+        identifier: str | None = None,
+        inputs: SocketSpec | list | None = None,
+        outputs: SocketSpec | list | None = None,
         max_depth: int = 100,
     ) -> Callable:
         """Generate a decorator that register a function as a graph task.
@@ -204,9 +204,9 @@ class TaskDecoratorCollection:
     @staticmethod
     @nonfunctional_usage
     def calcfunction(
-        inputs: Optional[SocketSpec | list] = None,
-        outputs: Optional[SocketSpec | list] = None,
-        error_handlers: Optional[Dict[str, ErrorHandlerSpec]] = None,
+        inputs: SocketSpec | list | None = None,
+        outputs: SocketSpec | list | None = None,
+        error_handlers: dict[str, ErrorHandlerSpec] | None = None,
     ) -> Callable:
         def decorator(func) -> TaskHandle:
             func_decorated = calcfunction(func)
@@ -226,9 +226,9 @@ class TaskDecoratorCollection:
     @staticmethod
     @nonfunctional_usage
     def workfunction(
-        inputs: Optional[SocketSpec | list] = None,
-        outputs: Optional[SocketSpec | list] = None,
-        error_handlers: Optional[Dict[str, ErrorHandlerSpec]] = None,
+        inputs: SocketSpec | list | None = None,
+        outputs: SocketSpec | list | None = None,
+        error_handlers: dict[str, ErrorHandlerSpec] | None = None,
     ) -> Callable:
         def decorator(func) -> TaskHandle:
             func_decorated = workfunction(func)
@@ -248,9 +248,9 @@ class TaskDecoratorCollection:
     @staticmethod
     @nonfunctional_usage
     def pythonjob(
-        inputs: Optional[SocketSpec | list] = None,
-        outputs: Optional[SocketSpec | list] = None,
-        error_handlers: Optional[Dict[str, ErrorHandlerSpec]] = None,
+        inputs: SocketSpec | list | None = None,
+        outputs: SocketSpec | list | None = None,
+        error_handlers: dict[str, ErrorHandlerSpec] | None = None,
     ) -> Callable:
         def decorator(func) -> TaskHandle:
             from aiida_workgraph.tasks.pythonjob_tasks import _build_pythonjob_nodespec
@@ -270,9 +270,9 @@ class TaskDecoratorCollection:
     @staticmethod
     @nonfunctional_usage
     def awaitable(
-        inputs: Optional[SocketSpec | list] = None,
-        outputs: Optional[SocketSpec | list] = None,
-        error_handlers: Optional[Dict[str, ErrorHandlerSpec]] = None,
+        inputs: SocketSpec | list | None = None,
+        outputs: SocketSpec | list | None = None,
+        error_handlers: dict[str, ErrorHandlerSpec] | None = None,
     ) -> Callable:
         def decorator(func) -> TaskHandle:
             from aiida_workgraph.tasks.awaitable_tasks import (
@@ -295,9 +295,9 @@ class TaskDecoratorCollection:
     @staticmethod
     @nonfunctional_usage
     def monitor(
-        inputs: Optional[SocketSpec | list] = None,
-        outputs: Optional[SocketSpec | list] = None,
-        error_handlers: Optional[Dict[str, ErrorHandlerSpec]] = None,
+        inputs: SocketSpec | list | None = None,
+        outputs: SocketSpec | list | None = None,
+        error_handlers: dict[str, ErrorHandlerSpec] | None = None,
     ) -> Callable:
         def decorator(func) -> TaskHandle:
             from aiida_workgraph.tasks.awaitable_tasks import (

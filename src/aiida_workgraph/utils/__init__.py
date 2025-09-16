@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, Dict, Optional, Union, Callable, List
+from typing import Any, Callable
 from aiida.engine.processes import Process
 from aiida import orm
 from aiida.common.exceptions import NotExistent
@@ -37,7 +37,7 @@ def inspect_aiida_component_type(executor: Callable) -> str:
     return task_type
 
 
-def get_nested_dict(d: Dict, name: str, **kwargs) -> Any:
+def get_nested_dict(d: dict, name: str, **kwargs) -> Any:
     """Get the value from a nested dictionary.
     If default is provided, return the default value if the key is not found.
     Otherwise, raise ValueError.
@@ -77,7 +77,7 @@ def merge_dicts(dict1: Any, dict2: Any) -> Any:
     return dict1
 
 
-def update_nested_dict(base: Optional[Dict[str, Any]], key_path: str, value: Any) -> None:
+def update_nested_dict(base: dict[str, Any] | None, key_path: str, value: Any) -> None:
     """
     Update or create a nested dictionary structure based on a dotted key path.
 
@@ -126,7 +126,7 @@ def update_nested_dict(base: Optional[Dict[str, Any]], key_path: str, value: Any
     return base
 
 
-def update_nested_dict_with_special_keys(data: Dict[str, Any]) -> Dict[str, Any]:
+def update_nested_dict_with_special_keys(data: dict[str, Any]) -> dict[str, Any]:
     """Update the nested dictionary with special keys like "base.pw.parameters"."""
     # Remove None
 
@@ -176,7 +176,7 @@ def generate_provenance_graph(pk: int, output: str = None, width: str = '100%', 
     return g
 
 
-def get_dict_from_builder(builder: Any) -> Dict:
+def get_dict_from_builder(builder: Any) -> dict:
     """Transform builder to pure dict."""
     from aiida.engine.processes.builder import ProcessBuilderNamespace
 
@@ -186,7 +186,7 @@ def get_dict_from_builder(builder: Any) -> Dict:
         return builder
 
 
-def clean_pickled_task_executor(tdata: Dict[str, Any]) -> None:
+def clean_pickled_task_executor(tdata: dict[str, Any]) -> None:
     """Clean the pickled executor in the task data."""
     from node_graph.executor import RuntimeExecutor
     from aiida_workgraph.executors.builtins import UnavailableExecutor
@@ -206,7 +206,7 @@ def clean_pickled_task_executor(tdata: Dict[str, Any]) -> None:
             tdata['error_handlers'][name] = RuntimeExecutor.from_callable(UnavailableExecutor).to_dict()
 
 
-def save_workgraph_data(node: Union[int, orm.Node], inputs: Dict[str, Any]) -> None:
+def save_workgraph_data(node: int | orm.Node, inputs: dict[str, Any]) -> None:
     from aiida_workgraph.engine.workgraph import WorkGraphSpec
 
     inputs = shallow_copy_nested_dict(inputs)
@@ -234,8 +234,8 @@ def save_workgraph_data(node: Union[int, orm.Node], inputs: Dict[str, Any]) -> N
 
 
 def restore_workgraph_data_from_raw_inputs(
-    raw_inputs: Dict[str, Any],
-) -> Dict[str, Any]:
+    raw_inputs: dict[str, Any],
+) -> dict[str, Any]:
     """Restore the workgraph data from the raw inputs."""
     from aiida_workgraph.engine.workgraph import WorkGraphSpec
 
@@ -249,7 +249,7 @@ def restore_workgraph_data_from_raw_inputs(
     return wgdata
 
 
-def load_workgraph_data(node: Union[int, orm.Node]) -> Optional[Dict[str, Any]]:
+def load_workgraph_data(node: int | orm.Node) -> dict[str, Any] | None:
     """
     Get the workgraph data from the given process node.
     """
@@ -263,8 +263,7 @@ def load_workgraph_data(node: Union[int, orm.Node]) -> Optional[Dict[str, Any]]:
         task_inputs = deserialize_safe(node.task_inputs or '')
     except (yaml.constructor.ConstructorError, yaml.YAMLError):
         print(
-            'Info: could not deserialize inputs.'
-            'The workgraph is still loaded and you can inspect tasks and outputs. '
+            'Info: could not deserialize inputs.The workgraph is still loaded and you can inspect tasks and outputs. '
         )
         task_inputs = {}
 
@@ -274,7 +273,7 @@ def load_workgraph_data(node: Union[int, orm.Node]) -> Optional[Dict[str, Any]]:
     return wgdata
 
 
-def get_parent_workgraphs(pk: int) -> List[List[str, int]]:
+def get_parent_workgraphs(pk: int) -> list[list[str, int]]:
     """Get the list of parent workgraphs.
     Use aiida incoming links to find the parent workgraphs.
     the parent workgraph is the workgraph that has a link (type CALL_WORK) to the current workgraph.
@@ -290,9 +289,7 @@ def get_parent_workgraphs(pk: int) -> List[List[str, int]]:
     return parent_workgraphs
 
 
-def get_processes_latest(
-    pk: int, task_name: str = None, item_type: str = 'task'
-) -> Dict[str, Dict[str, Union[int, str]]]:
+def get_processes_latest(pk: int, task_name: str = None, item_type: str = 'task') -> dict[str, dict[str, int | str]]:
     """Get the latest info of all tasks from the process."""
     import aiida
     from aiida_workgraph.orm.workgraph import WorkGraphNode
@@ -404,7 +401,7 @@ def get_raw_value(identifier, value: Any) -> Any:
         return content
 
 
-def process_properties(task: Dict) -> Dict:
+def process_properties(task: dict) -> dict:
     """Extract raw values."""
     result = {}
     for name, prop in task.get('properties', {}).items():
@@ -429,8 +426,8 @@ def process_properties(task: Dict) -> Dict:
 
 
 def workgraph_to_short_json(
-    wgdata: Dict[str, Union[str, List, Dict]],
-) -> Dict[str, Union[str, Dict]]:
+    wgdata: dict[str, str | list | dict],
+) -> dict[str, str | dict]:
     """Export a workgraph to a rete js editor data."""
     from copy import deepcopy
 
@@ -488,7 +485,7 @@ def workgraph_to_short_json(
     return wgdata_short
 
 
-def serialize_input_values_recursively(inputs: Dict[str, Any], serializer: callable = None) -> None:
+def serialize_input_values_recursively(inputs: dict[str, Any], serializer: callable = None) -> None:
     """
     Serialize input values to a format suitable for storage or transmission.
 
@@ -505,7 +502,7 @@ def serialize_input_values_recursively(inputs: Dict[str, Any], serializer: calla
     return serializer(inputs)
 
 
-def wait_to_link(wgdata: Dict[str, Any]) -> None:
+def wait_to_link(wgdata: dict[str, Any]) -> None:
     """Convert wait attribute to link."""
     for name, task in wgdata['tasks'].items():
         for wait_task in task['wait']:
@@ -547,7 +544,7 @@ def make_json_serializable(data):
         return data
 
 
-def resolve_tagged_values(inputs: Dict[str, Any]) -> None:
+def resolve_tagged_values(inputs: dict[str, Any]) -> None:
     """Recursively resolve all TaggedValue either in a dictionary or a TaggedValue."""
     if isinstance(inputs, dict):
         for key, value in inputs.items():
@@ -558,10 +555,10 @@ def resolve_tagged_values(inputs: Dict[str, Any]) -> None:
 
 
 def serialize_graph_level_data(
-    input_socket: Dict[str, Any],
-    port_schema: SocketSpec | Dict[str, Any],
-    serializers: Optional[Dict[str, str]] = None,
-) -> Dict[str, Any]:
+    input_socket: dict[str, Any],
+    port_schema: SocketSpec | dict[str, Any],
+    serializers: dict[str, str] | None = None,
+) -> dict[str, Any]:
     """Recursively walk over the sockets and convert raw Python
     values to AiiDA Data nodes, if needed.
     """
@@ -590,7 +587,7 @@ def resolve_node_link_managers(data: Any) -> Any:
 
 def convert_node_link_manager_to_dict(
     node_link_manager: orm.NodeLinksManager,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Recursively convert a NodeLinksManager to a dictionary representation."""
     data = {}
     for name in node_link_manager._get_keys():
@@ -611,11 +608,11 @@ def get_process_summary(node: orm.ProcessNode | int, data: str = ['outputs']) ->
     result = ''
     if 'inputs' in data:
         nodes_input = node.base.links.get_incoming(link_type=(LinkType.INPUT_CALC, LinkType.INPUT_WORK))
-        result += f"\n{format_nested_links(nodes_input.nested(), headers=['Inputs', 'PK', 'Type'])}"
+        result += f'\n{format_nested_links(nodes_input.nested(), headers=["Inputs", "PK", "Type"])}'
 
     if 'outputs' in data:
         nodes_output = node.base.links.get_outgoing(link_type=(LinkType.CREATE, LinkType.RETURN))
-        result += f"\n{format_nested_links(nodes_output.nested(), headers=['Outputs', 'PK', 'Type'])}"
+        result += f'\n{format_nested_links(nodes_output.nested(), headers=["Outputs", "PK", "Type"])}'
     return result
 
 
