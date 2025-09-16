@@ -37,7 +37,6 @@ jobs:
     - name: Install additional dependencies
       run: |
         uv pip install pytest-xdist
-        playwright install
 
     - name: Install system dependencies
       run: sudo apt update && sudo apt install --no-install-recommends graphviz
