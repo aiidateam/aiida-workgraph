@@ -1,18 +1,17 @@
 """
-
-===============================
 Run calculations remotely
-===============================
+=========================
 
 """
 
 # %%
 # Introduction
-# ============
+# ------------
+#
 # There are three ways to run calculations remotely using AiiDA:
 #
-# - `CalcJob`: run a shell command (via dedicated AiiDA plugins to manage inputs, outputs) on a remote computer, please refer to `How to use aiida-core components inside WorkGraph <../../howto/autogen/interoperate_with_aiida_core.html>`_.
-# - `ShellJob`: run any shell command on a remote computer, please refer to the `Run shell commands as a task <../../howto/autogen/shelljob.html>`_.
+# - `CalcJob`: run a shell command (via dedicated AiiDA plugins to manage inputs, outputs) on a remote computer (see :doc:`/howto/autogen/interoperate_with_aiida_core`).
+# - `ShellJob`: run any shell command on a remote computer (see :doc:`/howto/autogen/shelljob`).
 # - `PythonJob`: run any Python function on a remote computer.
 #
 # In this tutorial, we introduce how to run `PythonJob` tasks inside a WorkGraph.
@@ -20,84 +19,97 @@ Run calculations remotely
 
 from aiida import load_profile
 
+from aiida_workgraph import task
+
 load_profile()
 
 # %%
-# PythonJob task
-# ========================
-# One can create a `PythonJob` task using the ``@task.pythonjob()`` decorator.
+# PythonJob
+# ---------
+#
+# One can create a `PythonJob` task using the ``@task.pythonjob`` decorator.
 # This allows you to define a Python function that can be executed as a job on a remote computer.
 
-from aiida_workgraph import WorkGraph, task
 
-
-# Decorator to define a pythonjob
-@task.pythonjob()
-def add(x, y):
+@task.pythonjob
+def add(x: int, y: int) -> int:
     return x + y
 
 
-with WorkGraph() as wg:
-    # Call the add task, specifying 'localhost' as the computer.
-    # Notice we pass 'computer="localhost"' even though it's not
-    # an argument to the 'add(x, y)' function directly.
-    outputs = add(x=1, y=2, computer="localhost")
-    wg.run()
+@task.graph
+def RemoteAdd(x: int, y: int, computer: str) -> int:
+    return add(x=x, y=y, computer=computer).result
 
-# Print out the result once the WorkGraph has finished executing.
-print("\nResult: ", outputs.result)
+
+wg = RemoteAdd.build(x=1, y=2, computer="localhost")
+wg.run()
+
+print("\nResult: ", wg.outputs.result.value)
 
 # %%
-# Understanding Inputs and Outputs
+# Understanding inputs and outputs
 # --------------------------------
-# When you apply the ``@task.pythonjob()`` decorator, your Python function (like ``add``) transforms into an AiiDA `PythonJob` task.
+#
+# When you apply the ``@task.pythonjob`` decorator, your Python function (like ``add``) transforms into an AiiDA `PythonJob` task.
 # This task requires and produces more than just your function's direct inputs and outputs:
 #
-# * **Inputs:** Besides your function's arguments (e.g., ``x``, ``y``), the task takes additional inputs like ``computer`` to manage its execution on a remote machine.
+# * **Inputs:** In addition to your function's arguments (e.g., ``x``, ``y``), the task takes additional inputs (e.g., ``computer``) to manage its execution on a remote machine.
 #
-# * **Outputs:** Beyond your function's return value (available as ``.result`` by default), the task provides comprehensive outputs, such as ``remote_folder`` (a reference to the job's directory on the remote computer).
+# * **Outputs:** In addition to your function's return value (available as ``.result`` by default), the task provides comprehensive outputs, such as ``remote_folder`` (a reference to the job's directory on the remote computer).
 
 # %%
 # Prepare Python environment on remote computer
-# -----------------------------------------------
+# ---------------------------------------------
+#
 # `PythonJob` requires that the Python version on the remote computer matches the one used on the localhost where AiiDA is running.
 # You can use `conda` to create a virtual environment with the same Python version, then activate the environment in the `metadata` of the `PythonJob` task.
 #
 # Here's an example demonstrating how to submit a `PythonJob` and chain it with another Python function within a `WorkGraph`.
 # We'll also show how to pass custom scheduler commands via metadata, though for this example, they will be empty.
-#
 
 
-# Uncomment the 'custom_scheduler_commands' line below and modify it to suit your environment.
 metadata = {
     "options": {
-        # 'custom_scheduler_commands' : 'module load anaconda\nconda activate py3.11\n',
+        # "custom_scheduler_commands" : "module load anaconda\nconda activate py3.11\n",
         "custom_scheduler_commands": "",  # Keeping it empty for this example
     }
 }
 
+# %%
+# .. note::
+#
+#    Uncomment the ``custom_scheduler_commands`` line to modify it for your environment.
 
-# This is a normal task. It will be executed locally within the WorkGraph.
-@task()
+from typing import Annotated
+
+
+@task
 def multiply(x, y):
     return x * y
 
 
-with WorkGraph(name="test_pythonjob") as wg:
-    # We pass the metadata to ensure any custom scheduler commands are applied.
-    outputs1 = add(x=2, y=3, computer="localhost", metadata=metadata)
-    # Add another task which will run locally
-    wg.outputs.result = multiply(x=outputs1.result, y=4).result
-    wg.run()
+@task.graph
+def RemoteAddLocalMultiply(
+    x: int, y: int, computer: str, metadata: Annotated[dict, add.inputs.metadata]
+) -> int:
+    the_sum = add(x=x, y=y, computer=computer, metadata=metadata).result
+    return multiply(x=the_sum, y=4)  # this will run locally
 
-# ------------------------- Print the output -------------------------
-print("\nResult {} \n\n".format(wg.outputs.result.value))
+
+wg = RemoteAddLocalMultiply.build(
+    x=2,
+    y=3,
+    computer="localhost",
+    metadata=metadata,
+)
+wg.run()
+
+print("\nResult:", wg.outputs.result.value)
 
 
 # %%
 # Conclusion
-# ===========
-# In this tutorial, we demonstrated the three ways to run calculations remotely using AiiDA:
-# `CalcJob`, `ShellJob`, and `PythonJob`. We focused on `PythonJob`, showing how to
-# define and execute Python functions as remote jobs,
-# including managing the remote Python environment via custom scheduler commands.
+# ----------
+#
+# In this tutorial, we briefly discussed the three ways to run calculations remotely using AiiDA: `CalcJob`, `ShellJob`, and `PythonJob`.
+# We demonstrated how to use `PythonJob` to define and execute Python functions as remote jobs, including managing the remote Python environment via custom scheduler commands.

@@ -1,6 +1,5 @@
 import pytest
 from aiida_workgraph import task, WorkGraph
-from aiida.orm import Int, StructureData
 from aiida.calculations.arithmetic.add import ArithmeticAddCalculation
 from typing import Callable, Any, Union
 from aiida.orm import WorkflowNode
@@ -75,7 +74,7 @@ def fixture_code(fixture_localhost):
 
 
 @pytest.fixture
-def wg_calcfunction() -> WorkGraph:
+def wg_task() -> WorkGraph:
     """A workgraph with calcfunction."""
 
     wg = WorkGraph(name="test_debug_math")
@@ -95,30 +94,6 @@ def wg_calcjob(add_code) -> WorkGraph:
     add1 = wg.add_task(ArithmeticAddCalculation, "add1", x=2, y=3, code=add_code)
     add2 = wg.add_task(ArithmeticAddCalculation, "add2", x=4, code=add_code)
     wg.add_link(add1.outputs.sum, add2.inputs["y"])
-    return wg
-
-
-@pytest.fixture
-def wg_workchain(add_code) -> WorkGraph:
-    """A workgraph with workchain."""
-    from aiida.workflows.arithmetic.multiply_add import MultiplyAddWorkChain
-
-    wg = WorkGraph(name="test_debug_math")
-    int1 = wg.add_task("workgraph.load_node", "int1", pk=Int(2).store().pk)
-    int2 = wg.add_task("workgraph.load_node", "int2", pk=Int(3).store().pk)
-    code1 = wg.add_task("workgraph.load_code", "code1", pk=add_code.pk)
-    multiply_add1 = wg.add_task(MultiplyAddWorkChain, "multiply_add1", x=Int(4).store())
-    multiply_add2 = wg.add_task(
-        MultiplyAddWorkChain,
-        "multiply_add2",
-        x=Int(2).store(),
-        y=Int(3).store(),
-    )
-    wg.add_link(code1.outputs[0], multiply_add1.inputs["code"])
-    wg.add_link(int1.outputs[0], multiply_add1.inputs["y"])
-    wg.add_link(int2.outputs[0], multiply_add1.inputs["z"])
-    wg.add_link(code1.outputs[0], multiply_add2.inputs["code"])
-    wg.add_link(multiply_add1.outputs[0], multiply_add2.inputs["z"])
     return wg
 
 
@@ -238,15 +213,6 @@ def decorated_namespace_sum_diff() -> Callable:
 
 
 @pytest.fixture
-def structure_si() -> StructureData:
-    from ase.build import bulk
-
-    si = bulk("Si")
-    structure_si = StructureData(ase=si)
-    return structure_si
-
-
-@pytest.fixture
 def wg_engine(decorated_add, add_code) -> WorkGraph:
     """Use to test the engine."""
     code = add_code
@@ -295,6 +261,8 @@ def create_workgraph_process_node():
                 "workgraph_data": {
                     "name": "test",
                     "state": "",
+                    "tasks": {},
+                    "links": [],
                 }
             }
         )

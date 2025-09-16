@@ -3,6 +3,7 @@ from dataclasses import replace
 from typing import Any, Tuple
 from node_graph.socket_spec import (
     SocketSpecMeta,
+    SocketSpecSelect,
     SocketSpec,
     BaseSocketSpecAPI,
     BaseSpecInferAPI,
@@ -12,6 +13,19 @@ from aiida.engine import Process
 from aiida.engine.processes.process_spec import ProcessSpec
 from plumpy.ports import Port, PortNamespace
 from .socket import TaskSocketNamespace
+
+
+__all__ = [
+    "SocketSpecAPI",
+    "SpecInferAPI",
+    "socket",
+    "namespace",
+    "dynamic",
+    "validate_socket_data",
+    "infer_specs_from_callable",
+    "from_aiida_process",
+    "SocketSpecSelect",
+]
 
 
 class SocketSpecAPI(BaseSocketSpecAPI):
@@ -62,6 +76,7 @@ class SpecInferAPI(BaseSpecInferAPI):
                 fields=fields,
                 meta=SocketSpecMeta(
                     required=required_here,
+                    is_metadata=getattr(port, "is_metadata", False),
                     call_role=("kwargs" if role == "input" else None),
                 ),
             )
@@ -82,6 +97,7 @@ class SpecInferAPI(BaseSpecInferAPI):
             identifier=ident,
             meta=SocketSpecMeta(
                 required=required_here,
+                is_metadata=getattr(port, "is_metadata", False),
                 call_role=("kwargs" if role == "input" else None),
             ),
         )
@@ -131,7 +147,6 @@ class SpecInferAPI(BaseSpecInferAPI):
 socket = SocketSpecAPI.socket
 namespace = SocketSpecAPI.namespace
 dynamic = SocketSpecAPI.dynamic
-expose = SocketSpecAPI.expose
 validate_socket_data = SocketSpecAPI.validate_socket_data
 infer_specs_from_callable = SpecInferAPI.infer_specs_from_callable
 from_aiida_process = SpecInferAPI.from_aiida_process

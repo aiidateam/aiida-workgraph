@@ -9,32 +9,27 @@ def test_to_dict():
     """Test the to_dict method.
     PythonJobTask override the `to_dict` method to serialize the raw
     data to AiiDA data."""
-    from ase import Atoms
-    from ase.build import bulk
     from aiida import orm
 
     @task.pythonjob()
-    def make_supercell(atoms: Atoms, dim: int = 2) -> Atoms:
-        """Scale the structure by the given scales."""
-        return atoms * (dim, dim, dim)
+    def repeat_data(data: list, dim: int = 2) -> list:
+        return data * dim
 
-    atoms = bulk("Si")
-    wg = WorkGraph("test_PythonJob_retrieve_files")
+    wg = WorkGraph("test_to_dict")
     # atoms will be converted to AtomsData automatically
     wg.add_task(
-        make_supercell,
-        atoms=atoms,
+        repeat_data,
+        data=[1, 2, 3],
         dim=2,
-        name="make_supercell_1",
     )
-    data = wg.tasks.make_supercell_1.to_dict()
+    data = wg.tasks.repeat_data.to_dict()
     assert not isinstance(
-        data["inputs"]["sockets"]["atoms"]["property"]["value"],
+        data["inputs"]["data"],
         orm.Data,
     )
-    data = wg.tasks.make_supercell_1.to_dict(should_serialize=True)
+    data = wg.tasks.repeat_data.to_dict(should_serialize=True)
     assert isinstance(
-        data["inputs"]["sockets"]["atoms"]["property"]["value"],
+        data["inputs"]["data"],
         orm.Data,
     )
 
@@ -123,7 +118,7 @@ def test_PythonJob_kwargs(fixture_localhost, python_executable_path):
         },
     )
     # data inside the kwargs should be serialized separately
-    wg.process.inputs.workgraph_data.tasks.add1.inputs.sockets.kwargs.sockets.m.property.value == 2
+    wg.process.inputs.tasks.add1.kwargs.m == 2
     assert wg.tasks.add1.outputs.result.value.value == 8
     # load the workgraph
     wg = WorkGraph.load(wg.pk)
@@ -326,7 +321,7 @@ def test_exit_code(fixture_localhost, python_executable_path):
         outputs=["sum"],
         error_handlers={
             "handle_negative_sum": {
-                "handler": handle_negative_sum,
+                "executor": handle_negative_sum,
                 "exit_codes": [410],
                 "max_retries": 5,
             }

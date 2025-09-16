@@ -185,6 +185,9 @@ wg.to_html()
 # %%
 # Mapping operations with `Map Zone` task
 # =========================================
+# .. warning::
+#   **This feature is experimental.** The API for ``Map`` zone is subject to change in future releases. We welcome your feedback on its functionality.
+#
 # The `Map` task in `aiida-workgraph` allows you to apply a function or a set of tasks to each item in a dictionary,
 # similar to Python's built-in `map()` function.
 # This is particularly useful for parallelizing operations over a dataset.

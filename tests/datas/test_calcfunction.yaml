@@ -8,21 +8,15 @@ tasks:
   - identifier: workgraph.aiida_int
     name: int1
     inputs:
-      value:
-        property:
-          value: 3
+      value: 3
   - identifier: workgraph.test_sum_diff
     name: sumdiff1
     inputs:
-      x:
-        property:
-          value: 2
+      x: 2
   - identifier: workgraph.test_sum_diff
     name: sumdiff2
     inputs:
-      x:
-        property:
-          value: 4
+      x: 4
 links:
   - to_node: sumdiff1
     from_node: int1

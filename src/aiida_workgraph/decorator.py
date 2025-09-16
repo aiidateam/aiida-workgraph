@@ -6,10 +6,9 @@ from .workgraph import WorkGraph
 import inspect
 from .task import TaskHandle
 from node_graph.node_spec import NodeSpec
-from node_graph.socket_spec import SocketSpec, set_default
+from node_graph.socket_spec import SocketSpec
 from aiida_workgraph.tasks.aiida import _build_aiida_function_nodespec
 from node_graph.error_handler import ErrorHandlerSpec, normalize_error_handlers
-from dataclasses import replace
 
 
 def _spec_for(
@@ -21,33 +20,7 @@ def _spec_for(
 ) -> NodeSpec:
     from aiida_workgraph.socket_spec import from_aiida_process
     from aiida_workgraph.utils import inspect_aiida_component_type
-    from node_graph.executor import NodeExecutor
-
-    # WorkGraph -> pack as a node
-    if isinstance(obj, WorkGraph):
-        from aiida_workgraph.tasks.factory.workgraph_task import SubGraphTask
-
-        # ensure group IO exists
-        if len(obj.inputs) == 0:
-            obj.generate_inputs()
-        if len(obj.outputs) == 0:
-            obj.generate_outputs()
-        in_spec = inputs or obj.graph_inputs_spec.inputs
-        out_spec = outputs or obj.graph_outputs_spec.inputs
-        exec_payload = {
-            "module_path": "aiida_workgraph.engine.workgraph",
-            "callable_name": "WorkGraphEngine",
-            "graph_data": obj.prepare_inputs()["workgraph_data"],
-        }
-        return NodeSpec(
-            identifier=identifier or obj.name,
-            catalog="AIIDA",
-            inputs=in_spec,
-            outputs=out_spec,
-            executor=NodeExecutor(**exec_payload),
-            base_class=SubGraphTask,
-            metadata={"node_type": "workgraph"},
-        )
+    from node_graph.executor import RuntimeExecutor
 
     # AiiDA process classes
     if inspect.isclass(obj) and issubclass(obj, (CalcJob, WorkChain)):
@@ -56,12 +29,14 @@ def _spec_for(
         in_spec, out_spec = from_aiida_process(obj)
         return NodeSpec(
             identifier=identifier or obj.__name__,
+            mode="decorator_build",
             catalog="AIIDA",
             inputs=in_spec,
             outputs=out_spec,
-            executor=NodeExecutor.from_callable(obj),
+            executor=RuntimeExecutor.from_callable(obj),
             base_class=AiiDAProcessTask,
             metadata={"node_type": inspect_aiida_component_type(obj)},
+            decorator_path="aiida_workgraph.decorator.task",
         )
 
     # AiiDA process functions (calcfunction/workfunction)
@@ -160,13 +135,10 @@ class TaskDecoratorCollection:
     @nonfunctional_usage
     def decorator_task(
         identifier: Optional[str] = None,
-        task_type: str = "Normal",
         inputs: Optional[SocketSpec | list] = None,
         outputs: Optional[SocketSpec | list] = None,
         error_handlers: Optional[Dict[str, ErrorHandlerSpec]] = None,
         catalog: str = "Others",
-        store_provenance: bool = True,
-        use_pickle: bool | None = None,
     ) -> Callable:
         """Generate a decorator that register a function as a task.
 
@@ -179,21 +151,21 @@ class TaskDecoratorCollection:
 
         def decorator(obj: Union[WorkGraph, type, callable]) -> TaskHandle:
             spec = _spec_for(obj, identifier=identifier, inputs=inputs, outputs=outputs)
-            if spec.metadata["node_type"] in ["PYFUNCTION", "PYTHONJOB"]:
-                new_inputs = set_default(spec.inputs, "metadata.use_pickle", use_pickle)
-            else:
-                new_inputs = spec.inputs
             handlers = normalize_error_handlers(error_handlers)
             # allow catalog override
             spec = NodeSpec(
                 identifier=spec.identifier,
+                mode=spec.mode,
                 catalog=catalog or spec.catalog,
-                inputs=new_inputs,
+                inputs=spec.inputs,
                 outputs=spec.outputs,
                 executor=spec.executor,
                 error_handlers=handlers,
                 metadata=spec.metadata,
                 base_class=spec.base_class,
+                base_class_path=spec.base_class_path,
+                decorator=spec.decorator,
+                decorator_path=spec.decorator_path,
                 version=spec.version,
             )
             handle = TaskHandle(spec)
@@ -208,7 +180,7 @@ class TaskDecoratorCollection:
         identifier: Optional[str] = None,
         inputs: Optional[SocketSpec | list] = None,
         outputs: Optional[SocketSpec | list] = None,
-        catalog: str = "Others",
+        max_depth: int = 100,
     ) -> Callable:
         """Generate a decorator that register a function as a graph task.
         Attributes:
@@ -222,7 +194,13 @@ class TaskDecoratorCollection:
             from aiida_workgraph.tasks.graph_task import _build_graph_task_nodespec
 
             handle = TaskHandle(
-                _build_graph_task_nodespec(func, in_spec=inputs, out_spec=outputs)
+                _build_graph_task_nodespec(
+                    func,
+                    identifier=identifier,
+                    in_spec=inputs,
+                    out_spec=outputs,
+                    max_depth=max_depth,
+                )
             )
             handle._func = func
             return handle
@@ -240,7 +218,10 @@ class TaskDecoratorCollection:
             func_decorated = calcfunction(func)
             handle = TaskHandle(
                 _build_aiida_function_nodespec(
-                    func_decorated, in_spec=inputs, out_spec=outputs
+                    func_decorated,
+                    in_spec=inputs,
+                    out_spec=outputs,
+                    error_handlers=error_handlers,
                 )
             )
             handle._func = func_decorated
@@ -259,7 +240,10 @@ class TaskDecoratorCollection:
             func_decorated = workfunction(func)
             handle = TaskHandle(
                 _build_aiida_function_nodespec(
-                    func_decorated, in_spec=inputs, out_spec=outputs
+                    func_decorated,
+                    in_spec=inputs,
+                    out_spec=outputs,
+                    error_handlers=error_handlers,
                 )
             )
             handle._func = func_decorated
@@ -273,7 +257,6 @@ class TaskDecoratorCollection:
         inputs: Optional[SocketSpec | list] = None,
         outputs: Optional[SocketSpec | list] = None,
         error_handlers: Optional[Dict[str, ErrorHandlerSpec]] = None,
-        use_pickle: bool | None = None,
     ) -> Callable:
         def decorator(func) -> TaskHandle:
             from aiida_workgraph.tasks.pythonjob_tasks import _build_pythonjob_nodespec
@@ -284,8 +267,6 @@ class TaskDecoratorCollection:
                 out_spec=outputs,
                 error_handlers=error_handlers,
             )
-            new_inputs = set_default(spec.inputs, "metadata.use_pickle", use_pickle)
-            spec = replace(spec, inputs=new_inputs)
             handle = TaskHandle(spec)
             handle._func = func
             return handle
@@ -297,6 +278,7 @@ class TaskDecoratorCollection:
     def awaitable(
         inputs: Optional[SocketSpec | list] = None,
         outputs: Optional[SocketSpec | list] = None,
+        error_handlers: Optional[Dict[str, ErrorHandlerSpec]] = None,
     ) -> Callable:
         def decorator(func) -> TaskHandle:
             from aiida_workgraph.tasks.awaitable_tasks import (
@@ -305,7 +287,10 @@ class TaskDecoratorCollection:
 
             handle = TaskHandle(
                 _build_awaitable_function_nodespec(
-                    func, in_spec=inputs, out_spec=outputs
+                    func,
+                    in_spec=inputs,
+                    out_spec=outputs,
+                    error_handlers=error_handlers,
                 )
             )
             handle._func = func
@@ -318,6 +303,7 @@ class TaskDecoratorCollection:
     def monitor(
         inputs: Optional[SocketSpec | list] = None,
         outputs: Optional[SocketSpec | list] = None,
+        error_handlers: Optional[Dict[str, ErrorHandlerSpec]] = None,
     ) -> Callable:
         def decorator(func) -> TaskHandle:
             from aiida_workgraph.tasks.awaitable_tasks import (
@@ -325,7 +311,12 @@ class TaskDecoratorCollection:
             )
 
             handle = TaskHandle(
-                _build_monitor_function_nodespec(func, in_spec=inputs, out_spec=outputs)
+                _build_monitor_function_nodespec(
+                    func,
+                    in_spec=inputs,
+                    out_spec=outputs,
+                    error_handlers=error_handlers,
+                )
             )
             handle._func = func
             return handle

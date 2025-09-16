@@ -1,18 +1,20 @@
 from __future__ import annotations
-from typing import Any, Dict, Optional, Callable
+from typing import Any, Dict, Optional, Callable, Annotated
 from aiida import orm
 from aiida.common.extendeddicts import AttributeDict
-from aiida_pythonjob.data.serializer import general_serializer, all_serializers
+from aiida_pythonjob.data.serializer import all_serializers
 from aiida_pythonjob.data.deserializer import deserialize_to_raw_python_data
 from aiida_workgraph.utils import create_and_pause_process
 from aiida.engine import run_get_node
 from aiida_pythonjob import pyfunction, PythonJob, PyFunction
+from aiida_pythonjob.utils import serialize_ports
 from aiida_workgraph.task import SpecTask
-from node_graph.socket_spec import SocketSpec
+from node_graph.socket_spec import SocketSpec, SocketSpecSelect, SocketSpecMeta
 from node_graph.node_spec import NodeSpec
 from aiida_workgraph.socket_spec import namespace
 from .function_task import build_callable_nodespec
 from node_graph.error_handler import ErrorHandlerSpec
+from node_graph.executor import RuntimeExecutor
 
 
 class BaseSerializablePythonTask(SpecTask):
@@ -28,16 +30,17 @@ class BaseSerializablePythonTask(SpecTask):
         Called during Task -> dict conversion. We walk over the input sockets
         and run our specialized Python serialization.
         """
-        non_function_inputs = self.non_function_inputs
-        use_pickle = self.inputs.metadata.use_pickle.value
-        for name, socket in data["inputs"]["sockets"].items():
-            # skip metadata etc
-            if name in non_function_inputs:
-                continue
-            if socket["identifier"] == "workgraph.namespace":
-                self._serialize_python_data(socket["sockets"], use_pickle=use_pickle)
-            else:
-                self._serialize_socket_data(socket, use_pickle=use_pickle)
+        function_inputs = {
+            key: data["inputs"][key]
+            for key in data["inputs"]
+            if key not in self.non_function_inputs
+        }
+        serialized_inputs = serialize_ports(
+            python_data=function_inputs,
+            port_schema=self._spec.inputs,
+            serializers=all_serializers,
+        )
+        data["inputs"].update(serialized_inputs)
 
     def update_from_dict(
         self, data: Dict[str, Any], **kwargs
@@ -48,21 +51,6 @@ class BaseSerializablePythonTask(SpecTask):
         """
         super().update_from_dict(data, **kwargs)
         return self
-
-    @classmethod
-    def _serialize_python_data(
-        cls, input_sockets: Dict[str, Any], use_pickle: bool | None = None
-    ) -> None:
-        """
-        Recursively walk over the sockets and convert raw Python
-        values to AiiDA Data nodes, if needed.
-        """
-        for socket in input_sockets.values():
-            if not socket["metadata"].get("extras", {}).get("is_pythonjob", False):
-                if socket["identifier"] == "workgraph.namespace":
-                    cls._serialize_python_data(socket["sockets"], use_pickle=use_pickle)
-                elif socket.get("property", {}).get("value") is not None:
-                    cls._serialize_socket_data(socket, use_pickle=use_pickle)
 
     @classmethod
     def _deserialize_python_data(cls, input_sockets: Dict[str, Any]) -> None:
@@ -78,17 +66,6 @@ class BaseSerializablePythonTask(SpecTask):
                     cls._deserialize_socket_data(socket)
 
     @classmethod
-    def _serialize_socket_data(
-        cls, socket: Dict[str, Any], use_pickle: bool | None = None
-    ) -> Any:
-        value = socket.get("property", {}).get("value")
-        if value is None or isinstance(value, orm.Data):
-            return  # Already stored or is None
-        socket["property"]["value"] = general_serializer(
-            value, serializers=all_serializers, use_pickle=use_pickle
-        )
-
-    @classmethod
     def _deserialize_socket_data(cls, socket: Dict[str, Any]) -> Any:
         value = socket.get("property", {}).get("value")
         if isinstance(value, orm.Data):
@@ -100,27 +77,13 @@ class BaseSerializablePythonTask(SpecTask):
         """
         raise NotImplementedError("Subclasses must implement `execute`.")
 
-    def get_origin_specs(
-        self, label: str = "function"
-    ) -> tuple[Optional[SocketSpec], Optional[SocketSpec]]:
-        block = self._spec.metadata.get("specs", {}).get(label, {})
-        in_d = block.get("inputs")
-        out_d = block.get("outputs")
-        return (
-            SocketSpec.from_dict(in_d) if in_d else None,
-            SocketSpec.from_dict(out_d) if out_d else None,
-        )
-
     @property
     def non_function_inputs(self):
-        process_in, _ = self.get_origin_specs(label="process")
-        additions_in, _ = self.get_origin_specs(label="additional")
-        keys = []
-        if process_in:
-            keys.extend(process_in.fields.keys())
-        if additions_in:
-            keys.extend(additions_in.fields.keys())
-        return keys
+        return self._spec.metadata.get("non_function_inputs", [])
+
+    @property
+    def non_function_outputs(self):
+        return self._spec.metadata.get("non_function_outputs", [])
 
 
 class PythonJobTask(BaseSerializablePythonTask):
@@ -135,7 +98,21 @@ class PythonJobTask(BaseSerializablePythonTask):
         """
         from aiida_pythonjob import prepare_pythonjob_inputs
 
-        inputs_spec, outputs_spec = self.get_origin_specs()
+        inputs_spec = namespace(
+            _=Annotated[
+                Any,
+                self._spec.inputs,
+                SocketSpecSelect(exclude=self.non_function_inputs),
+            ]
+        ).fields["_"]
+        outputs_spec = namespace(
+            _=Annotated[
+                Any,
+                self._spec.outputs,
+                SocketSpecSelect(exclude=self.non_function_outputs),
+            ]
+        ).fields["_"]
+
         # Pull out code, computer, etc
         computer = kwargs.pop("computer", "localhost")
         if isinstance(computer, orm.Str):
@@ -147,9 +124,8 @@ class PythonJobTask(BaseSerializablePythonTask):
         metadata.update({"call_link_label": self.name})
         # Prepare inputs (similar to the old 'prepare_for_python_task' method):
         function_inputs = kwargs.pop("function_inputs", {}) or {}
-        non_function_inputs = self.non_function_inputs
         for key in list(kwargs.keys()):
-            if key not in non_function_inputs:
+            if key not in self.non_function_inputs:
                 function_inputs[key] = kwargs.pop(key)
         # Handle var_kwargs
         if self.get_args_data()["var_kwargs"] is not None:
@@ -163,7 +139,8 @@ class PythonJobTask(BaseSerializablePythonTask):
                 else:
                     raise ValueError(f"Invalid var_kwargs type: {type(var_kwargs)}")
         # Resolve the actual function from the NodeExecutor
-        func = self.get_executor().executor
+        executor = RuntimeExecutor(**self.get_executor().to_dict())
+        func = executor.callable
         if hasattr(func, "_TaskCls") and hasattr(func, "_func"):
             func = func._func
 
@@ -216,7 +193,7 @@ class PyFunctionTask(BaseSerializablePythonTask):
         """
         from node_graph.node_spec import BaseHandle
 
-        executor = self.get_executor().executor
+        executor = RuntimeExecutor(**self.get_executor().to_dict()).callable
         # If it's a wrapped function, unwrap
         if isinstance(executor, BaseHandle) and hasattr(executor, "_func"):
             executor = executor._func
@@ -227,7 +204,21 @@ class PyFunctionTask(BaseSerializablePythonTask):
         kwargs = kwargs or {}
         kwargs.setdefault("metadata", {})
         kwargs["metadata"].update({"call_link_label": self.name})
-        inputs_spec, outputs_spec = self.get_origin_specs()
+        inputs_spec = namespace(
+            _=Annotated[
+                Any,
+                self._spec.inputs,
+                SocketSpecSelect(exclude=self.non_function_inputs),
+            ]
+        ).fields["_"]
+        outputs_spec = namespace(
+            _=Annotated[
+                Any,
+                self._spec.outputs,
+                SocketSpecSelect(exclude=self.non_function_outputs),
+            ]
+        ).fields["_"]
+
         kwargs["inputs_spec"] = inputs_spec
         kwargs["outputs_spec"] = outputs_spec
 
@@ -256,9 +247,9 @@ def _build_pythonjob_nodespec(
 
     # additions specific to PythonJob
     add_in = namespace(
-        computer=str,
-        command_info=dict,
-        register_pickle_by_value=bool,
+        computer=Annotated[str, SocketSpecMeta(required=False)],
+        command_info=Annotated[dict, SocketSpecMeta(required=False)],
+        register_pickle_by_value=Annotated[bool, SocketSpecMeta(required=False)],
     )
 
     return build_callable_nodespec(

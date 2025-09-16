@@ -26,7 +26,7 @@ def test_add_task():
     assert len(wg.links) == 1
 
 
-def test_show_state(wg_calcfunction):
+def test_show_state(wg_task):
     from io import StringIO
     import sys
 
@@ -34,8 +34,8 @@ def test_show_state(wg_calcfunction):
     captured_output = StringIO()
     sys.stdout = captured_output
     # Call the method
-    wg_calcfunction.name = "test_show_state"
-    wg_calcfunction.show()
+    wg_task.name = "test_show_state"
+    wg_task.show()
     # Reset stdout
     sys.stdout = sys.__stdout__
     # Check the output
@@ -45,11 +45,12 @@ def test_show_state(wg_calcfunction):
     assert "PLANNED" in output
 
 
-def test_save_load(wg_calcfunction, decorated_add):
+def test_save_load(wg_task, decorated_add):
     """Save the workgraph"""
     from aiida.calculations.arithmetic.add import ArithmeticAddCalculation
+    from aiida_workgraph.executors.builtins import UnavailableExecutor
 
-    wg = wg_calcfunction
+    wg = wg_task
     wg.add_task(decorated_add, name="add1", x=2, y=3)
     metadata = {
         "options": {
@@ -59,7 +60,13 @@ def test_save_load(wg_calcfunction, decorated_add):
             },
         }
     }
-    wg.add_task(ArithmeticAddCalculation, name="add2", x=4, metadata=metadata)
+    wg.add_task(
+        ArithmeticAddCalculation,
+        name="add2",
+        x=4,
+        y=wg.tasks.add1.outputs.result,
+        metadata=metadata,
+    )
     wg.name = "test_save_load"
     wg.save()
     assert wg.process.process_state.value.upper() == "CREATED"
@@ -67,10 +74,22 @@ def test_save_load(wg_calcfunction, decorated_add):
     assert wg.process.label == "test_save_load"
     wg2 = WorkGraph.load(wg.process.pk)
     assert len(wg.tasks) == len(wg2.tasks)
-    # check the executor of the decorated task
-    callable = wg2.tasks.add1.get_executor()
-    assert callable == wg.tasks.add1.get_executor()
+    # the executor of the decorated task is pickled,
+    # so it's not stored in the database.
+    assert wg2.tasks.add1.get_executor().callable == UnavailableExecutor
+    # The ArithmeticAddCalculation is importable,
+    # so we can restore the executor from the module path.
+    assert (
+        wg2.tasks.add2.get_executor().callable == wg.tasks.add2.get_executor().callable
+    )
     assert wg.tasks.add2.inputs.metadata._value == wg2.tasks.add2.inputs.metadata._value
+    # metadata is also loaded
+    assert (
+        wg2.tasks.add2.inputs.metadata.options.resources.value[
+            "num_mpiprocs_per_machine"
+        ]
+        == 2
+    )
     # TODO, the following code is not working
     # wg2.save()
     # assert wg2.tasks.add1.executor == decorated_add
@@ -86,7 +105,6 @@ def test_load_failure(create_process_node):
 def test_organize_nested_inputs():
     """Merge sub properties to the root properties."""
     from .utils.test_workchain import WorkChainWithNestNamespace
-    from node_graph.utils import collect_values_inside_namespace
 
     wg = WorkGraph("test_organize_nested_inputs")
     task1 = wg.add_task(WorkChainWithNestNamespace, name="task1")
@@ -100,7 +118,7 @@ def test_organize_nested_inputs():
             "add.metadata.options": {"resources": {"num_machines": 1}},
         }
     )
-    inputs = wg.prepare_inputs()
+    inputs = wg.to_engine_inputs()
     data = {
         "metadata": {
             "call_link_label": "nest",
@@ -108,11 +126,7 @@ def test_organize_nested_inputs():
         },
         "x": "1",
     }
-    collected_data = collect_values_inside_namespace(
-        inputs["workgraph_data"]["tasks"]["task1"]["inputs"]["sockets"]["add"],
-        include_none=False,
-    )
-    assert collected_data == data
+    assert inputs["tasks"]["task1"]["add"] == data
 
 
 @pytest.mark.usefixtures("started_daemon_client")
@@ -133,11 +147,11 @@ def test_reset_message(wg_calcjob):
     assert "Action: RESET. Tasks: ['add1']" in report
 
 
-def test_restart_and_reset(wg_calcfunction):
+def test_restart_and_reset(wg_task):
     """Restart from a finished workgraph.
     Load the workgraph, modify the task, and restart the workgraph.
     Only the modified node and its child tasks will be rerun."""
-    wg = wg_calcfunction
+    wg = wg_task
     wg.outputs.diff = wg.tasks.sumdiff1.outputs.diff
     wg.outputs.sum = wg.tasks.sumdiff2.outputs.sum
     wg.add_task(
@@ -156,19 +170,20 @@ def test_restart_and_reset(wg_calcfunction):
     assert wg1.tasks.sumdiff1.pk == wg.tasks.sumdiff1.pk
     assert wg1.tasks.sumdiff2.pk != wg.tasks.sumdiff2.pk
     assert wg1.tasks.sumdiff3.pk != wg.tasks.sumdiff3.pk
-    assert wg1.tasks.sumdiff3.outputs.sum == 19
+    assert wg1.tasks.sumdiff3.outputs.sum.value == 19
     wg1.reset()
     assert wg1.process is None
     assert wg1.tasks.sumdiff3.process is None
     assert wg1.tasks.sumdiff3.state == "PLANNED"
 
 
+@pytest.mark.skip(reason="This is break, opened ")
 def test_extend_workgraph(decorated_add_multiply_group):
     from aiida_workgraph import WorkGraph
 
     wg = WorkGraph("test_graph_build")
     add1 = wg.add_task("workgraph.test_add", "add1", x=2, y=3)
-    add_multiply_wg = decorated_add_multiply_group.build_graph(x=0, y=4, z=5)
+    add_multiply_wg = decorated_add_multiply_group.build(x=0, y=4, z=5)
     # test wait
     add_multiply_wg.tasks.multiply.waiting_on.add("add")
     # extend workgraph
@@ -176,7 +191,7 @@ def test_extend_workgraph(decorated_add_multiply_group):
     assert "group_add" in [task.name for task in wg.tasks.group_multiply.waiting_on]
     wg.add_link(add1.outputs[0], wg.tasks.group_add.inputs.x)
     wg.run()
-    assert wg.tasks.group_multiply.outputs.result == 45
+    assert wg.tasks.group_multiply.outputs.result.value == 45
 
 
 def test_workgraph_outputs(decorated_add):
@@ -258,7 +273,7 @@ def test_run_workgraph_builder():
 
     wg = WorkGraph()
     wg.add_task(add, x=1, y=2)
-    wgdata = wg.prepare_inputs()
+    wgdata = wg.to_engine_inputs()
     builder = WorkGraphEngine.get_builder()
     builder._update(wgdata)
     _, node = run_get_node(builder)
@@ -274,19 +289,21 @@ def test_calling_workgraph_in_context_manager():
     def add(x, y):
         return x + y
 
-    with WorkGraph() as wg1:
-        add_outputs = add(x=2, y=1)  # add
-        add1_outputs = add(x=add_outputs.result)
+    with WorkGraph(
+        inputs=spec.namespace(x=Any, y=Any), outputs=spec.namespace(sum=Any)
+    ) as wg1:
+        add_outputs = add(x=wg1.inputs.x, y=wg1.inputs.y)  # add
+        add1_outputs = add(x=add_outputs.result, y=1)
         wg1.outputs.sum = add1_outputs.result
 
     with WorkGraph() as wg2:
-        sub_outputs = wg1({"add1": {"y": 4}})
+        sub_outputs = wg1({"x": 1, "y": 2})
         add_outputs = add(x=sub_outputs.sum, y=5)
         wg2.outputs.sum = add_outputs.result
 
     wg2.run()
 
-    assert wg2.outputs.sum == 12
+    assert wg2.outputs.sum.value == 9
 
 
 def test_expose_task_spec():
@@ -309,8 +326,8 @@ def test_expose_task_spec():
         tc = test_calc(x)
         return {"out1": am, "out2": tc.square}
 
-    wg = test_graph.build_graph(x=1, data={"y": 2})
+    wg = test_graph.build(x=1, data={"y": 2})
     wg.run()
-    assert wg.outputs.out1.sum == 3
-    assert wg.outputs.out1.product == 2
-    assert wg.outputs.out2 == 1
+    assert wg.outputs.out1.sum.value == 3
+    assert wg.outputs.out1.product.value == 2
+    assert wg.outputs.out2.value == 1

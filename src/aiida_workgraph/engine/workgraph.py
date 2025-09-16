@@ -13,7 +13,6 @@ import kiwipy
 
 from aiida.common.extendeddicts import AttributeDict
 from aiida.common.lang import override
-from aiida import orm
 from aiida.orm import Node
 from aiida_workgraph.orm.workgraph import WorkGraphNode
 
@@ -81,15 +80,25 @@ class WorkGraphEngine(Process, metaclass=Protect):
     @classmethod
     def define(cls, spec: WorkGraphSpec) -> None:
         super().define(spec)
-        spec.input("input_file", valid_type=orm.SinglefileData, required=False)
+        spec.input_namespace(
+            "graph_inputs",
+            dynamic=True,
+            required=False,
+            help="Graph level inputs",
+        )
+        spec.input_namespace(
+            "tasks",
+            dynamic=True,
+            required=False,
+            help="Tasks inputs",
+        )
         spec.input_namespace(
             spec.WORKGRAPH_DATA_KEY,
             dynamic=True,
             required=False,
-            help="WorkGraph inputs",
+            help="WorkGraph data",
         )
         spec.exit_code(2, "ERROR_SUBPROCESS", message="A subprocess has failed.")
-
         spec.outputs.dynamic = True
         #
         spec.exit_code(
@@ -112,6 +121,10 @@ class WorkGraphEngine(Process, metaclass=Protect):
             "TASK_NON_ZERO_EXIT_STATUS",
             message="Some of the tasks exited with non-zero status.",
         )
+
+    def _setup_metadata(self, metadata: dict) -> None:  # type: ignore[override]
+        """Store common metadata on the ProcessNode and forward the rest."""
+        super()._setup_metadata(metadata)
 
     @property
     def ctx(self) -> AttributeDict:
@@ -264,34 +277,28 @@ class WorkGraphEngine(Process, metaclass=Protect):
 
     def _build_process_label(self) -> str:
         """Use the workgraph name as the process label."""
-        return f"WorkGraph<{self.inputs.workgraph_data['name']}>"
+        return f"WorkGraph<{self.inputs[WorkGraphSpec.WORKGRAPH_DATA_KEY]['name']}>"
 
     def on_create(self) -> None:
         """Called when a Process is created."""
-        from aiida_workgraph.utils.analysis import WorkGraphSaver
+        from aiida_workgraph.utils import save_workgraph_data
 
         super().on_create()
-        self.node.label = self._raw_inputs[WorkGraphSpec.WORKGRAPH_DATA_KEY]["name"]
-        saver = WorkGraphSaver(
-            self.node,
-            self._raw_inputs[WorkGraphSpec.WORKGRAPH_DATA_KEY],
-            restart_process=self._raw_inputs[WorkGraphSpec.WORKGRAPH_DATA_KEY].get(
-                "restart_process", None
-            ),
-        )
-        saver.save()
+        raw_inputs = dict(self.inputs)
+        self.node.label = raw_inputs[WorkGraphSpec.WORKGRAPH_DATA_KEY]["name"]
+        save_workgraph_data(self.node, raw_inputs)
 
     def setup(self) -> None:
         """Setup the variables in the context."""
         from aiida_workgraph import WorkGraph
-        from aiida_workgraph.utils import get_workgraph_data
+        from aiida_workgraph.utils import restore_workgraph_data_from_raw_inputs
 
         # track if the awaitable callback is added to the runner
         self.ctx._awaitable_actions = []
         self.ctx._new_data = {}
         self.ctx._executed_tasks = []
         # read the workgraph data
-        wgdata = get_workgraph_data(self.node, safe_load=False)
+        wgdata = restore_workgraph_data_from_raw_inputs(self.inputs)
         self.wg = WorkGraph.from_dict(wgdata)
         # store the workgraph data in the context, so that one can resume from checkpoint
         self.ctx._wgdata = wgdata

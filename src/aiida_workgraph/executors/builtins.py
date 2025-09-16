@@ -1,6 +1,12 @@
 from typing import Any
 
 
+def UnavailableExecutor(*args, **kwargs):
+    raise RuntimeError(
+        "This executor was defined dynamically and is not available from the database snapshot."
+    )
+
+
 def get_context(context: dict, key: str) -> Any:
     """Get the context value."""
     results = {"result": context._task_results["graph_ctx"].get(key)}

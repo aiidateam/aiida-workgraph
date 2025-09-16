@@ -1,5 +1,6 @@
 from __future__ import annotations
 import traceback
+from node_graph.error_handler import ErrorHandlerSpec
 
 
 class ErrorHandlerManager:
@@ -20,50 +21,43 @@ class ErrorHandlerManager:
         if not node or not node.exit_status:
             return
         # error_handlers from the task
-        error_handlers = self.process.node.task_error_handlers.get(task_name, {})
+        error_handlers = self.process.wg.tasks[task_name].get_error_handlers()
         for data in error_handlers.values():
-            if node.exit_status in data.get("exit_codes", []):
-                handler = data["handler"]
-                self.run_error_handler(handler, data, task_name)
+            if node.exit_status in data.exit_codes:
+                self.run_error_handler(data, task_name)
                 return
         # error_handlers from the workgraph
         for data in self.process.wg._error_handlers.values():
             if node.exit_code.status in data["tasks"].get(task_name, {}).get(
                 "exit_codes", []
             ):
-                handler = data["handler"]
-                metadata = data["tasks"][task_name]
-                self.run_error_handler(handler, metadata, task_name)
+                self.run_error_handler(data, task_name)
                 return
 
-    def run_error_handler(self, handler: dict, metadata: dict, task_name: str) -> None:
+    def run_error_handler(self, handler: ErrorHandlerSpec, task_name: str) -> None:
         """Run the error handler for a task."""
         from inspect import signature
-        from node_graph.executor import NodeExecutor
-        from aiida_workgraph.utils import remove_output_values
+        from node_graph.executor import RuntimeExecutor
 
-        handler = NodeExecutor(**handler).executor
-        handler_sig = signature(handler)
-        metadata.setdefault("retry", 0)
-        self.process.report(f"Run error handler: {handler.__name__}")
-        if metadata["retry"] < metadata["max_retries"]:
+        executor = RuntimeExecutor(**handler.executor.to_dict()).callable
+        executor_sig = signature(executor)
+        self.process.report(f"Run error handler: {executor.__name__}")
+        if handler.retry < handler.max_retries:
             task = self.process.task_manager.get_task(task_name)
             try:
                 # Run the error handler to update the inputs of the task
-                if "engine" in handler_sig.parameters:
-                    msg = handler(task, engine=self, **metadata.get("kwargs", {}))
+                if "engine" in executor_sig.parameters:
+                    msg = executor(task, engine=self, **(handler.kwargs or {}))
                 else:
-                    msg = handler(task, **metadata.get("kwargs", {}))
+                    msg = executor(task, **(handler.kwargs or {}))
                 # Reset the task to rerun it
                 self.process.task_manager.state_manager.reset_task(task.name)
                 # Save the updated task into self.ctx._wgdata
                 tdata = task.to_dict()
-                # Outputs is not needed, so remove outputs value to avoid serialization issues
-                remove_output_values(tdata["outputs"])
                 self.ctx._wgdata["tasks"][task.name] = tdata
                 if msg:
                     self.process.report(msg)
-                metadata["retry"] += 1
+                handler.retry += 1
             except Exception as e:
                 error_traceback = traceback.format_exc()  # Capture the full traceback
                 self.logger.error(

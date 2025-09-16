@@ -2,9 +2,9 @@ from aiida_workgraph import WorkGraph, task
 from aiida import orm
 
 
-def test_run(wg_calcfunction: WorkGraph) -> None:
+def test_run(wg_task: WorkGraph) -> None:
     """Run simple calcfunction."""
-    wg = wg_calcfunction
+    wg = wg_task
     wg.name = "test_run_calcfunction"
     wg.run()
     print("state: ", wg.state)

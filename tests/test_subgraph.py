@@ -1,35 +1,37 @@
-from aiida_workgraph import WorkGraph
+from aiida_workgraph import WorkGraph, namespace
 from typing import Callable
 from aiida import orm
 
 
-def test_inputs_outptus(wg_calcfunction: WorkGraph) -> None:
+def test_inputs_outptus() -> None:
     """Test the inputs and outputs of the WorkGraph."""
     wg = WorkGraph(name="test_inputs_outptus")
-    wg_calcfunction.inputs = {"x": 1, "y": 2}
-    wg_calcfunction.outputs.diff = wg_calcfunction.tasks.sumdiff1.outputs.diff
-    wg_calcfunction.outputs.sum = wg_calcfunction.tasks.sumdiff2.outputs.sum
-    task1 = wg.add_task(wg_calcfunction, name="add1")
-    assert len(task1.inputs) == 3
-    assert len(task1.outputs) == 4
-    assert "x" in task1.inputs
-    assert "y" in task1.inputs
-    assert "sum" in task1.outputs
+    sub_wg = WorkGraph(
+        name="sub_wg",
+        inputs=namespace(x=int, y=int),
+        outputs=namespace(sum=int, diff=int),
+    )
+    sub_wg_task = wg.add_task(sub_wg, name="sub_wg")
+    assert len(sub_wg_task.inputs) == 3
+    assert len(sub_wg_task.outputs) == 4
+    assert "x" in sub_wg_task.inputs
+    assert "y" in sub_wg_task.inputs
+    assert "sum" in sub_wg_task.outputs
 
 
-def test_inputs_outptus_auto_generate(wg_calcfunction: WorkGraph) -> None:
+def test_inputs_outptus_auto_generate(wg_task: WorkGraph) -> None:
     """Test the inputs and outputs of the WorkGraph."""
     wg = WorkGraph(name="test_inputs_outptus")
     # this will generate the group inputs and outputs automatically
-    wg_calcfunction.generate_inputs()
-    wg_calcfunction.generate_outputs()
-    task1 = wg.add_task(wg_calcfunction, name="add1")
+    wg_task.expose_inputs()
+    wg_task.expose_outputs()
+    task1 = wg.add_task(wg_task, name="add1")
     ninput = 0
-    for sub_task in wg_calcfunction.tasks:
+    for sub_task in wg_task.tasks:
         # remove _wait, but add the namespace
         ninput += len(sub_task.inputs) - 1 + 1
     noutput = 0
-    for sub_task in wg_calcfunction.tasks:
+    for sub_task in wg_task.tasks:
         noutput += len(sub_task.outputs) - 2 + 1
     assert len(task1.inputs) == 3
     assert len(task1.outputs) == 4

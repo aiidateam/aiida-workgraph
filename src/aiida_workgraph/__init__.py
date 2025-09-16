@@ -7,8 +7,9 @@ from .utils.flow_control import if_, while_, map_
 from .manager import get_current_graph, If, Map, While, Zone
 from . import socket_spec as spec
 from .socket_spec import namespace, dynamic
+from .collection import group
 
-__version__ = "0.6.0"
+__version__ = "0.7.1"
 
 __all__ = [
     "WorkGraph",
@@ -27,4 +28,5 @@ __all__ = [
     "spec",
     "namespace",
     "dynamic",
+    "group",
 ]

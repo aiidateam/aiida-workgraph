@@ -25,15 +25,14 @@ classifiers = [
 keywords = ["aiida", "workflows"]
 requires-python = ">=3.9"
 dependencies = [
-    "numpy~=1.21",
+    "numpy",
     "scipy",
-    "ase",
-    "node-graph>=0.3.3",
+    "node-graph==0.3.10",
     "node-graph-widget>=0.0.5",
     "aiida-core~=2.6",
     "cloudpickle",
     "aiida-shell~=0.8",
-    "aiida-pythonjob>=0.3.5",
+    "aiida-pythonjob==0.4.1",
     "jsonschema",
 ]
 
@@ -80,7 +79,6 @@ workgraph = "aiida_workgraph.cli.cmd_workgraph:workgraph"
 "workgraph.engine" = "aiida_workgraph.engine.workgraph:WorkGraphEngine"
 
 [project.entry-points."aiida.data"]
-"workgraph.pickled_data" = "aiida_workgraph.orm.pickled_data:PickledData"
 "workgraph.datetime.datetime" = "aiida_workgraph.orm.data:DateTimeData"
 
 [project.entry-points."aiida.node"]
