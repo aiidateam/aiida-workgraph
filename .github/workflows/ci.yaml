@@ -11,6 +11,12 @@ jobs:
         python-version: ['3.9', '3.12']
         aiida-core-version: ['2.6', '2.7']
 
+    services:
+      rabbitmq:
+        image: rabbitmq:latest
+        ports:
+        - 5672:5672
+
     steps:
     - uses: actions/checkout@v5
 
