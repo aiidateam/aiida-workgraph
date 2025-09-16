@@ -14,21 +14,30 @@ jobs:
     steps:
     - uses: actions/checkout@v5
 
-    - name: Install aiida-workgraph
-      uses: ./.github/actions/install-aiida-workgraph
+    - name: Set Up Python
+      uses: actions/setup-python@v5
       with:
         python-version: ${{ matrix.python-version }}
-        extras: widget,pre-commit,tests
-        from-lock: 'false'  # Use false to allow version override
+
+    - name: Set up uv
+      uses: astral-sh/setup-uv@v6
+      with:
+        version: 0.7.6
+        python-version: ${{ matrix.python-version }}
+        activate-environment: true
+
+    - name: Install aiida-workgraph in development mode
+      run: |
+        uv pip install -e .[widget,pre-commit,tests]
+        uv pip list
 
     - name: Override aiida-core version
       run: uv pip install aiida-core==${{ matrix.aiida-core-version }}
 
     - name: Install additional dependencies
       run: |
-        uv pip install pytest-xdist playwright
+        uv pip install pytest-xdist
         playwright install
-        uv pip list
 
     - name: Install system dependencies
       run: sudo apt update && sudo apt install --no-install-recommends graphviz
