@@ -8,23 +8,8 @@ jobs:
 
     strategy:
       matrix:
-        python-version: ['3.10', '3.12']
+        python-version: ['3.9', '3.12']
         aiida-core-version: ['2.6', '2.7']
-
-    services:
-      postgres:
-        image: postgres:12
-        env:
-          POSTGRES_HOST: 127.0.0.1
-          POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: postgres
-          POSTGRES_DB: postgres
-        ports:
-        - 5432:5432
-      rabbitmq:
-        image: rabbitmq:latest
-        ports:
-        - 5672:5672
 
     steps:
     - uses: actions/checkout@v5
@@ -57,10 +42,10 @@ jobs:
       run: pytest -n auto -v --cov --durations=0
 
     - name: Upload coverage reports to Codecov
-      if: matrix.python-version == '3.10' && github.repository == 'aiidateam/aiida-workgraph'
+      if: matrix.python-version == '3.9' && github.repository == 'aiidateam/aiida-workgraph'
       uses: codecov/codecov-action@v5
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
-        name: aiida-workgraph-py3.10
+        name: aiida-workgraph-py3.9
         files: ./coverage.xml
         fail_ci_if_error: false

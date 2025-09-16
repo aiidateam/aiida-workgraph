@@ -4,7 +4,6 @@ repos:
   hooks:
   - id: check-merge-conflict
   - id: check-yaml
-      # - id: double-quote-string-fixer
   - id: end-of-file-fixer
     exclude: &exclude_pre_commit_hooks >
       (?x)^(
@@ -15,11 +14,6 @@ repos:
   - id: trailing-whitespace
     exclude: *exclude_pre_commit_hooks
 
-- repo: https://github.com/asottile/pyupgrade
-  rev: v3.20.0
-  hooks:
-  - id: pyupgrade
-
 - repo: https://github.com/python-jsonschema/check-jsonschema
   rev: 0.33.3
   hooks:
@@ -29,7 +23,7 @@ repos:
   rev: v0.13.0
   hooks:
   - id: ruff-format
-    args: [--config=pyproject.toml]     # optional: respects your formatting settings
+    args: [--config=pyproject.toml]  #  respects formatting settings
   - id: ruff
     args: [--fix, --exit-non-zero-on-fix, --show-fixes]
 
@@ -49,7 +43,7 @@ repos:
 - repo: https://github.com/astral-sh/uv-pre-commit
   rev: 0.8.17
   hooks:
-      # Check and update the uv lockfile
+  # Check and update the uv lockfile
   - id: uv-lock
 
 - repo: local
@@ -68,24 +62,5 @@ repos:
         .github/.*|
         docs/.*|
         tests/.*|
-        src/aiida_workgraph/cli/.*|
-        src/aiida_workgraph/engine/.*|
-        src/aiida_workgraph/executors/.*|
-        src/aiida_workgraph/orm/.*|
-        src/aiida_workgraph/properties/.*|
-        src/aiida_workgraph/schemas/.*|
-        src/aiida_workgraph/sockets/.*|
-        src/aiida_workgraph/tasks/.*|
-        src/aiida_workgraph/utils/.*|
-        src/aiida_workgraph/__init__\.py|
-        src/aiida_workgraph/collection\.py|
-        src/aiida_workgraph/config\.py|
-        src/aiida_workgraph/decorator\.py|
-        src/aiida_workgraph/manager\.py|
-        src/aiida_workgraph/property\.py|
-        src/aiida_workgraph/registry\.py|
-        src/aiida_workgraph/socket\.py|
-        src/aiida_workgraph/socket_spec\.py|
-        src/aiida_workgraph/task\.py|
-        src/aiida_workgraph/workgraph\.py|
+        src/.*
       )$
