@@ -3,96 +3,94 @@ name: ci
 on: [push, pull_request]
 
 jobs:
+  pre-commit:
+    runs-on: ubuntu-latest
 
-    pre-commit:
+    steps:
+      - uses: actions/checkout@v2
 
-        runs-on: ubuntu-latest
+      - name: Cache Python dependencies
+        uses: actions/cache@v3
+        with:
+          path: ~/.cache/pip
+          key: pip-pre-commit-${{ hashFiles('**/setup.json') }}
+          restore-keys: pip-pre-commit-
 
-        steps:
-        -   uses: actions/checkout@v2
+      - name: Set up Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: "3.10"
 
-        -   name: Cache Python dependencies
-            uses: actions/cache@v3
-            with:
-                path: ~/.cache/pip
-                key: pip-pre-commit-${{ hashFiles('**/setup.json') }}
-                restore-keys:
-                    pip-pre-commit-
+      - name: Install Python dependencies
+        run: pip install -e .[widget,pre-commit,tests]
 
-        -   name: Set up Python
-            uses: actions/setup-python@v2
-            with:
-                python-version: '3.10'
+      - name: Run pre-commit
+        run: pre-commit run --all-files || ( git status --short ; git diff ; exit 1 )
 
-        -   name: Install Python dependencies
-            run: pip install -e .[widget,pre-commit,tests]
+  test:
+    runs-on: ubuntu-latest
 
-        -   name: Run pre-commit
-            run: pre-commit run --all-files || ( git status --short ; git diff ; exit 1 )
+    strategy:
+      matrix:
+        python-version: ["3.9", "3.11", "3.12"]
+        aiida-core-version: ["2.6", "2.7"]
 
-    test:
+    services:
+      postgres:
+        image: postgres:12
+        env:
+          POSTGRES_HOST: 127.0.0.1
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+      rabbitmq:
+        image: rabbitmq:latest
+        ports:
+          - 5672:5672
 
-        runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
 
-        strategy:
-            matrix:
-                python-version: ['3.9', '3.11', '3.12']
-                aiida-core-version: ['2.6', '2.7']
+      - name: Cache Python dependencies
+        uses: actions/cache@v3
+        with:
+          path: ~/.cache/pip
+          key: pip-${{ matrix.python-version }}-tests-${{ hashFiles('**/setup.json') }}
+          restore-keys: pip-${{ matrix.python-version }}-tests
 
-        services:
-            postgres:
-                image: postgres:12
-                env:
-                    POSTGRES_HOST: 127.0.0.1
-                    POSTGRES_USER: postgres
-                    POSTGRES_PASSWORD: postgres
-                    POSTGRES_DB: postgres
-                ports:
-                -   5432:5432
-            rabbitmq:
-                image: rabbitmq:latest
-                ports:
-                -   5672:5672
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v2
+        with:
+          python-version: ${{ matrix.python-version }}
 
-        steps:
-        -   uses: actions/checkout@v2
+      - name: Install Python dependencies
+        run: |
+          pip install -e .[widget,pre-commit,tests]
+          playwright install
+          pip list
 
-        -   name: Cache Python dependencies
-            uses: actions/cache@v3
-            with:
-                path: ~/.cache/pip
-                key: pip-${{ matrix.python-version }}-tests-${{ hashFiles('**/setup.json') }}
-                restore-keys:
-                    pip-${{ matrix.python-version }}-tests
+      - name: Install aiida-core
+        run: pip install aiida-core==${{ matrix.aiida-core-version }}
 
-        -   name: Set up Python ${{ matrix.python-version }}
-            uses: actions/setup-python@v2
-            with:
-                python-version: ${{ matrix.python-version }}
+      - name: Install system dependencies
+        run: sudo apt update && sudo apt install --no-install-recommends graphviz
 
-        -   name: Install Python dependencies
-            run: |
-                pip install -e .[widget,pre-commit,tests]
-                playwright install
-                pip list
+      - name: Create AiiDA profile
+        run: verdi setup -n --config .github/config/profile.yaml
 
-        -   name: Install aiida-core
-            run: pip install aiida-core==${{ matrix.aiida-core-version }}
+      - name: Run pytest
+        env:
+          AIIDA_WARN_v3: 1
+        run: |
+          pytest -v --durations=0 ${{ matrix.python-version == '3.9' && '--cov' || '' }}
 
-        -   name: Install system dependencies
-            run: sudo apt update && sudo apt install --no-install-recommends graphviz
-
-        -   name: Create AiiDA profile
-            run: verdi setup -n --config .github/config/profile.yaml
-
-        -   name: Run pytest
-            env:
-                AIIDA_WARN_v3: 1
-            run: |
-                pytest -v --cov --durations=0
-
-        -   name: Upload coverage reports to Codecov
-            uses: codecov/codecov-action@v4.0.1
-            with:
-                token: ${{ secrets.CODECOV_TOKEN }}
-                flags: python-${{ matrix.python-version }}
+      - name: Upload coverage reports to Codecov
+        if: matrix.python-version == '3.10' && github.repository == 'aiidateam/aiida-workgraph'
+        uses: codecov/codecov-action@v5
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          name: aiida-workgraph-py3.9
+          files: ./coverage.xml
+          fail_ci_if_error: false
