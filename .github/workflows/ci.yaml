@@ -32,7 +32,7 @@ jobs:
 
     strategy:
       matrix:
-        python-version: ["3.9", "3.11", "3.12"]
+        python-version: ["3.10", "3.12"]
         aiida-core-version: ["2.6", "2.7"]
 
     services:
@@ -92,6 +92,6 @@ jobs:
         uses: codecov/codecov-action@v5
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
-          name: aiida-workgraph-py3.9
+          name: aiida-workgraph-py3.10
           files: ./coverage.xml
           fail_ci_if_error: false
