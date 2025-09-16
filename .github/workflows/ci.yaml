@@ -84,7 +84,7 @@ jobs:
         env:
           AIIDA_WARN_v3: 1
         run: |
-          pytest -v --durations=0 ${{ matrix.python-version == '3.9' && '--cov' || '' }}
+          pytest -v --durations=0 ${{ matrix.python-version == '3.10' && '--cov' || '' }}
 
       - name: Upload coverage reports to Codecov
         if: matrix.python-version == '3.10' && github.repository == 'aiidateam/aiida-workgraph'
