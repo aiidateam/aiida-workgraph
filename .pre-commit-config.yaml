@@ -4,7 +4,7 @@ repos:
   hooks:
   - id: check-merge-conflict
   - id: check-yaml
-  # - id: double-quote-string-fixer
+      # - id: double-quote-string-fixer
   - id: end-of-file-fixer
     exclude: &exclude_pre_commit_hooks >
       (?x)^(
@@ -32,7 +32,7 @@ repos:
   rev: v0.8.6
   hooks:
   - id: ruff-format
-    args: [--config=pyproject.toml]       # optional: respects your formatting settings
+    args: [--config=pyproject.toml]     # optional: respects your formatting settings
   - id: ruff
     args: [--fix, --exit-non-zero-on-fix, --show-fixes]
 
@@ -74,61 +74,3 @@ repos:
         tests/.*|
         src/.*|  # Exclude everything for now, fix in follow-up PRs
       )$
-
-    # - id: generate-conda-environment
-    #   name: Update conda environment file
-    #   entry: python ./utils/dependency_management.py generate-environment-yml
-    #   language: system
-    #   pass_filenames: false
-    #   files: >-
-    #     (?x)^(
-    #       pyproject.toml|
-    #       utils/dependency_management.py|
-    #       environment.yml|
-    #     )$
-    #
-    # - id: validate-conda-environment
-    #   name: Validate environment.yml
-    #   entry: python ./utils/dependency_management.py validate-environment-yml
-    #   language: system
-    #   pass_filenames: false
-    #   files: >-
-    #     (?x)^(
-    #       pyproject.toml|
-    #       utils/dependency_management.py|
-    #       environment.yml|
-    #     )$
-    #
-    # - id: verdi-autodocs
-    #   name: Automatically generating verdi docs
-    #   entry: python ./utils/validate_consistency.py verdi-autodocs
-    #   language: system
-    #   pass_filenames: false
-    #   files: >-
-    #     (?x)^(
-    #       src/aiida/cmdline/commands/.*|
-    #       src/aiida/cmdline/params/.*|
-    #       src/aiida/cmdline/params/types/.*|
-    #       utils/validate_consistency.py|
-    #     )$
-
-# WG below
-# repos:
-# -   repo: https://github.com/pre-commit/pre-commit-hooks
-#     rev: v3.2.0
-#     hooks:
-#     -   id: check-yaml
-#     -   id: end-of-file-fixer
-#         exclude: \.svg$
-#     -   id: trailing-whitespace
-# -   repo: https://github.com/pycqa/flake8
-#     rev: '6.0.0'
-#     hooks:
-#     -   id: flake8
-#         args: ['--max-line-length=121', '--ignore=F821, F722, E203, W503']
-#         exclude: ^docs/gallery/
-#
-# -   repo: https://github.com/psf/black
-#     rev: 22.3.0
-#     hooks:
-#     -   id: black
