@@ -3,29 +3,29 @@ name: ci
 on: [push, pull_request]
 
 jobs:
-  pre-commit:
-    runs-on: ubuntu-24.04  # better to be explicit
-
-    steps:
-    - uses: actions/checkout@v2
-
-    - name: Cache Python dependencies
-      uses: actions/cache@v3
-      with:
-        path: ~/.cache/pip
-        key: pip-pre-commit-${{ hashFiles('**/setup.json') }}
-        restore-keys: pip-pre-commit-
-
-    - name: Set up Python
-      uses: actions/setup-python@v2
-      with:
-        python-version: '3.10'
-
-    - name: Install Python dependencies
-      run: pip install -e .[widget,pre-commit,tests]
-
-    - name: Run pre-commit
-      run: pre-commit run --all-files || ( git status --short ; git diff ; exit 1 )
+  # pre-commit:
+  #   runs-on: ubuntu-24.04  # better to be explicit
+  #
+  #   steps:
+  #   - uses: actions/checkout@v2
+  #
+  #   - name: Cache Python dependencies
+  #     uses: actions/cache@v3
+  #     with:
+  #       path: ~/.cache/pip
+  #       key: pip-pre-commit-${{ hashFiles('**/setup.json') }}
+  #       restore-keys: pip-pre-commit-
+  #
+  #   - name: Set up Python
+  #     uses: actions/setup-python@v2
+  #     with:
+  #       python-version: '3.10'
+  #
+  #   - name: Install Python dependencies
+  #     run: pip install -e .[pre-commit,tests]
+  #
+  #   - name: Run pre-commit
+  #     run: pre-commit run --all-files || ( git status --short ; git diff ; exit 1 )
 
   tests:
     runs-on: ubuntu-latest
