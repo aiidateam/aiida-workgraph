@@ -129,6 +129,7 @@ wg.generate_provenance_graph()
 # %%
 # We can see that even though we passed the inputs as a single dictionary, they were serialized as two separate ``Int`` nodes, ``x`` and ``y``, before being passed to the task.
 #
+# .. _dynamic_namespaces:
 # Dynamic namespaces
 # ~~~~~~~~~~~~~~~~~~
 #
