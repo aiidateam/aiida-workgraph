@@ -16,6 +16,7 @@ from .registry import RegistryHub, registry_hub
 from node_graph.analysis import NodeGraphAnalysis
 from node_graph.config import BUILTIN_NODES
 from node_graph.collection import NodeCollection
+from node_graph.socket import BaseSocket, NodeSocketNamespace
 from aiida_workgraph.orm.mapping import type_mapping
 from aiida_workgraph.socket_spec import SocketSpecAPI
 from node_graph.error_handler import ErrorHandlerSpec
@@ -96,10 +97,52 @@ class WorkGraph(node_graph.NodeGraph):
         return inputs
 
     def check_before_run(self) -> bool:
+        self.check_required_inputs()
+        self.check_modified_tasks()
+
+    def check_required_inputs(self) -> None:
+        """Check if all required inputs are provided."""
+        missing_inputs = self.find_missing_inputs(self.inputs)
+        for task in self.tasks:
+            if task.name in BUILTIN_NODES:
+                continue
+            missing_inputs.extend(self.find_missing_inputs(task.inputs))
+        if missing_inputs:
+            bullets = "\n".join(f"  • {p}" for p in sorted(missing_inputs))
+            raise ValueError(
+                "Missing required inputs:\n"
+                f"{bullets}\n\n"
+                "How to fix:\n"
+                "  1) Provide these values (at build time or by linking from upstream task outputs).\n"
+                "  2) If some are intentionally unused, exclude them from the namespace at the call site, e.g.:\n"
+                '     Annotated[dict, some_task.inputs, SocketSpecSelect(exclude=["pw.structure", ...])]\n\n'
+                "Note: exclude paths are relative to the task's input namespace (e.g. 'pw.structure')."
+            )
+
+    def find_missing_inputs(self, socket: BaseSocket) -> List[str]:
+        """Check if all required inputs are provided."""
+        missing_inputs = []
+        for sub_socket in socket:
+            if isinstance(sub_socket, NodeSocketNamespace):
+                missing_inputs.extend(self.find_missing_inputs(sub_socket))
+            else:
+                if (
+                    sub_socket._metadata.required
+                    and sub_socket.value is None
+                    and len(sub_socket._links) == 0
+                ):
+                    missing_inputs.append(
+                        f"{sub_socket._node.name}.{sub_socket._scoped_name}"
+                    )
+        return missing_inputs
+
+    def check_modified_tasks(self) -> None:
+        """Check if there are modified tasks compared to the existing process.
+        If there are modified tasks, reset them and their descendants to be re-run.
+        """
         existing_process = self._load_existing_process()
         if existing_process:
             diffs = self.analyzer.compare_graphs(existing_process, self)
-            print("diffs:", diffs)
             self.reset_tasks(diffs["modified_nodes"])
 
     def run(

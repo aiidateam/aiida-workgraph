@@ -1,5 +1,5 @@
 from __future__ import annotations
-from typing import Any, Dict, Optional, Callable
+from typing import Any, Dict, Optional, Callable, Annotated
 from aiida import orm
 from aiida.common.extendeddicts import AttributeDict
 from aiida_pythonjob.data.serializer import all_serializers
@@ -9,7 +9,7 @@ from aiida.engine import run_get_node
 from aiida_pythonjob import pyfunction, PythonJob, PyFunction
 from aiida_pythonjob.utils import serialize_ports
 from aiida_workgraph.task import SpecTask
-from node_graph.socket_spec import SocketSpec
+from node_graph.socket_spec import SocketSpec, SocketSpecSelect, SocketSpecMeta
 from node_graph.node_spec import NodeSpec
 from aiida_workgraph.socket_spec import namespace
 from .function_task import build_callable_nodespec
@@ -98,8 +98,20 @@ class PythonJobTask(BaseSerializablePythonTask):
         """
         from aiida_pythonjob import prepare_pythonjob_inputs
 
-        inputs_spec = self._spec.inputs.exclude(*self.non_function_inputs)
-        outputs_spec = self._spec.outputs.exclude(*self.non_function_outputs)
+        inputs_spec = namespace(
+            _=Annotated[
+                Any,
+                self._spec.inputs,
+                SocketSpecSelect(exclude=self.non_function_inputs),
+            ]
+        ).fields["_"]
+        outputs_spec = namespace(
+            _=Annotated[
+                Any,
+                self._spec.outputs,
+                SocketSpecSelect(exclude=self.non_function_outputs),
+            ]
+        ).fields["_"]
 
         # Pull out code, computer, etc
         computer = kwargs.pop("computer", "localhost")
@@ -192,8 +204,20 @@ class PyFunctionTask(BaseSerializablePythonTask):
         kwargs = kwargs or {}
         kwargs.setdefault("metadata", {})
         kwargs["metadata"].update({"call_link_label": self.name})
-        inputs_spec = self._spec.inputs.exclude(*self.non_function_inputs)
-        outputs_spec = self._spec.outputs.exclude(*self.non_function_outputs)
+        inputs_spec = namespace(
+            _=Annotated[
+                Any,
+                self._spec.inputs,
+                SocketSpecSelect(exclude=self.non_function_inputs),
+            ]
+        ).fields["_"]
+        outputs_spec = namespace(
+            _=Annotated[
+                Any,
+                self._spec.outputs,
+                SocketSpecSelect(exclude=self.non_function_outputs),
+            ]
+        ).fields["_"]
 
         kwargs["inputs_spec"] = inputs_spec
         kwargs["outputs_spec"] = outputs_spec
@@ -223,9 +247,9 @@ def _build_pythonjob_nodespec(
 
     # additions specific to PythonJob
     add_in = namespace(
-        computer=str,
-        command_info=dict,
-        register_pickle_by_value=bool,
+        computer=Annotated[str, SocketSpecMeta(required=False)],
+        command_info=Annotated[dict, SocketSpecMeta(required=False)],
+        register_pickle_by_value=Annotated[bool, SocketSpecMeta(required=False)],
     )
 
     return build_callable_nodespec(
