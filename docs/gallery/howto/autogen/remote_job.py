@@ -41,10 +41,10 @@ def RemoteAdd(x: int, y: int, computer: str) -> int:
     return add(x=x, y=y, computer=computer).result
 
 
-wg = RemoteAdd.build(x=1, y=2, computer="localhost")
+wg = RemoteAdd.build(x=1, y=2, computer='localhost')
 wg.run()
 
-print("\nResult: ", wg.outputs.result.value)
+print('\nResult: ', wg.outputs.result.value)
 
 # %%
 # Understanding inputs and outputs
@@ -69,9 +69,9 @@ print("\nResult: ", wg.outputs.result.value)
 
 
 metadata = {
-    "options": {
+    'options': {
         # "custom_scheduler_commands" : "module load anaconda\nconda activate py3.11\n",
-        "custom_scheduler_commands": "",  # Keeping it empty for this example
+        'custom_scheduler_commands': '',  # Keeping it empty for this example
     }
 }
 
@@ -89,9 +89,7 @@ def multiply(x, y):
 
 
 @task.graph
-def RemoteAddLocalMultiply(
-    x: int, y: int, computer: str, metadata: Annotated[dict, add.inputs.metadata]
-) -> int:
+def RemoteAddLocalMultiply(x: int, y: int, computer: str, metadata: Annotated[dict, add.inputs.metadata]) -> int:
     the_sum = add(x=x, y=y, computer=computer, metadata=metadata).result
     return multiply(x=the_sum, y=4)  # this will run locally
 
@@ -99,12 +97,12 @@ def RemoteAddLocalMultiply(
 wg = RemoteAddLocalMultiply.build(
     x=2,
     y=3,
-    computer="localhost",
+    computer='localhost',
     metadata=metadata,
 )
 wg.run()
 
-print("\nResult:", wg.outputs.result.value)
+print('\nResult:', wg.outputs.result.value)
 
 
 # %%

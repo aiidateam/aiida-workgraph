@@ -36,4 +36,4 @@ def deserialize_safe(serialized: str) -> Any:
 
 def test_codecov_function():
     """Simple function to test codecov integration."""
-    return "codecov is working"
+    return 'codecov is working'

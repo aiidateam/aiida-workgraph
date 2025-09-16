@@ -9,24 +9,24 @@ from . import socket_spec as spec
 from .socket_spec import namespace, dynamic
 from .collection import group
 
-__version__ = "0.7.1"
+__version__ = '0.7.1'
 
 __all__ = [
-    "WorkGraph",
-    "Task",
-    "task",
-    "if_",
-    "while_",
-    "map_",
-    "get_current_graph",
-    "Zone",
-    "If",
-    "Map",
-    "While",
-    "TaskPool",
-    "shelljob",
-    "spec",
-    "namespace",
-    "dynamic",
-    "group",
+    'WorkGraph',
+    'Task',
+    'task',
+    'if_',
+    'while_',
+    'map_',
+    'get_current_graph',
+    'Zone',
+    'If',
+    'Map',
+    'While',
+    'TaskPool',
+    'shelljob',
+    'spec',
+    'namespace',
+    'dynamic',
+    'group',
 ]

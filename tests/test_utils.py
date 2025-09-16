@@ -7,17 +7,17 @@ def test_get_or_create_code(fixture_localhost):
 
     # create a new code
     code1 = get_or_create_code(
-        computer="localhost",
-        code_label="test_code",
-        code_path="/bin/bash",
+        computer='localhost',
+        code_label='test_code',
+        code_path='/bin/bash',
         prepend_text='echo "Hello, World!"',
     )
     assert isinstance(code1, Code)
     # use already created code
     code2 = get_or_create_code(
-        computer="localhost",
-        code_label="test_code",
-        code_path="/bin/bash",
+        computer='localhost',
+        code_label='test_code',
+        code_path='/bin/bash',
         prepend_text='echo "Hello, World!"',
     )
     assert code1.uuid == code2.uuid
@@ -30,8 +30,8 @@ def test_get_parent_workgraphs():
     wn1 = orm.WorkflowNode()
     wn2 = orm.WorkflowNode()
     wn3 = orm.WorkflowNode()
-    wn3.base.links.add_incoming(wn2, link_type=LinkType.CALL_WORK, link_label="link")
-    wn2.base.links.add_incoming(wn1, link_type=LinkType.CALL_WORK, link_label="link")
+    wn3.base.links.add_incoming(wn2, link_type=LinkType.CALL_WORK, link_label='link')
+    wn2.base.links.add_incoming(wn1, link_type=LinkType.CALL_WORK, link_label='link')
     wn1.store()
     wn2.store()
     wn3.store()
@@ -51,7 +51,7 @@ def test_generate_provenance_graph():
     graph = generate_provenance_graph(wn1.pk)
     assert isinstance(graph, IFrame)
     # check file html/node_graph_{pk}.html is created
-    assert os.path.isfile(f"html/node_graph_{wn1.pk}.html")
+    assert os.path.isfile(f'html/node_graph_{wn1.pk}.html')
 
 
 def test_codecov_integration():

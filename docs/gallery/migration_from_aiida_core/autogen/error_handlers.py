@@ -28,18 +28,17 @@ from aiida import orm
 from aiida.engine import while_
 from aiida.engine import process_handler, ProcessHandlerReport
 
-ArithmeticAddCalculation = CalculationFactory("core.arithmetic.add")
+ArithmeticAddCalculation = CalculationFactory('core.arithmetic.add')
 
 
 class ArithmeticAddBaseWorkChain(BaseRestartWorkChain):
-
     _process_class = ArithmeticAddCalculation
 
     @classmethod
     def define(cls, spec):
         """Define the process specification."""
         super().define(spec)
-        spec.expose_inputs(ArithmeticAddCalculation, namespace="add")
+        spec.expose_inputs(ArithmeticAddCalculation, namespace='add')
         spec.expose_outputs(ArithmeticAddCalculation)
         spec.outline(
             cls.setup,
@@ -57,7 +56,7 @@ class ArithmeticAddBaseWorkChain(BaseRestartWorkChain):
         internal loop.
         """
         super().setup()
-        self.ctx.inputs = self.exposed_inputs(ArithmeticAddCalculation, "add")
+        self.ctx.inputs = self.exposed_inputs(ArithmeticAddCalculation, 'add')
 
     @process_handler
     def handle_negative_sum(self, node):
@@ -69,12 +68,9 @@ class ArithmeticAddBaseWorkChain(BaseRestartWorkChain):
         :return: optional :class:`~aiida.engine.processes.workchains.utils.ProcessHandlerReport` instance to signal
             that a problem was detected and potentially handled.
         """
-        if (
-            node.exit_status
-            == ArithmeticAddCalculation.exit_codes.ERROR_NEGATIVE_NUMBER.status
-        ):
-            self.ctx.inputs["x"] = orm.Int(abs(node.inputs.x.value))
-            self.ctx.inputs["y"] = orm.Int(abs(node.inputs.y.value))
+        if node.exit_status == ArithmeticAddCalculation.exit_codes.ERROR_NEGATIVE_NUMBER.status:
+            self.ctx.inputs['x'] = orm.Int(abs(node.inputs.x.value))
+            self.ctx.inputs['y'] = orm.Int(abs(node.inputs.y.value))
             return ProcessHandlerReport()
 
 
@@ -107,12 +103,10 @@ def handle_negative_sum(task: Task):
     """
     from aiida.orm import Int
 
-    print(f"Executing error handler for task: {task.name}")
+    print(f'Executing error handler for task: {task.name}')
     # Modify the inputs of the failed task for the next retry.
-    task.set_inputs(
-        {"x": Int(abs(task.inputs["x"].value)), "y": Int(abs(task.inputs["y"].value))}
-    )
-    msg = "Run error handler: handle_negative_sum."
+    task.set_inputs({'x': Int(abs(task.inputs['x'].value)), 'y': Int(abs(task.inputs['y'].value))})
+    msg = 'Run error handler: handle_negative_sum.'
     return msg
 
 
@@ -123,20 +117,18 @@ def handle_negative_sum(task: Task):
 # register our `handle_negative_sum` function as its error handler.
 
 # 1. Create a new WorkGraph
-wg = WorkGraph("error_handling_graph")
+wg = WorkGraph('error_handling_graph')
 
 # 2. Add the calculation task
-task1 = wg.add_task(ArithmeticAddCalculation, name="add_task")
+task1 = wg.add_task(ArithmeticAddCalculation, name='add_task')
 
 # 3. Register the error handler for the task
 task1.add_error_handler(
     {
-        "handle_negative_sum": {
-            "executor": handle_negative_sum,
-            "exit_codes": [
-                ArithmeticAddCalculation.exit_codes.ERROR_NEGATIVE_NUMBER.status
-            ],
-            "max_retries": 3,
+        'handle_negative_sum': {
+            'executor': handle_negative_sum,
+            'exit_codes': [ArithmeticAddCalculation.exit_codes.ERROR_NEGATIVE_NUMBER.status],
+            'max_retries': 3,
         }
     }
 )
@@ -149,16 +141,16 @@ load_profile()
 
 # Define the inputs that will cause the calculation to fail initially.
 inputs = {
-    "add_task": {
-        "code": load_code("add@localhost"),
-        "x": Int(1),
-        "y": Int(-6),  # This will result in a negative sum, triggering the error.
+    'add_task': {
+        'code': load_code('add@localhost'),
+        'x': Int(1),
+        'y': Int(-6),  # This will result in a negative sum, triggering the error.
     },
 }
 
 # Submit the WorkGraph and wait for it to complete.
 # The error handler will be executed automatically by the engine.
-print("Submitting WorkGraph that is expected to fail and be corrected...")
+print('Submitting WorkGraph that is expected to fail and be corrected...')
 wg.run(inputs=inputs)
 
 
@@ -169,15 +161,15 @@ wg.run(inputs=inputs)
 # to confirm that the error was handled and the calculation eventually
 # succeeded.
 
-add_task = wg.tasks["add_task"]
-print(f"Task finished OK? {add_task.process.is_finished_ok}")
-print(f"Final exit status: {add_task.process.exit_status}")
+add_task = wg.tasks['add_task']
+print(f'Task finished OK? {add_task.process.is_finished_ok}')
+print(f'Final exit status: {add_task.process.exit_status}')
 print(f"Final result: {add_task.outputs['sum'].value}")
 
 # We can also visualize the process call graph to see the failure and restart.
 # The graph will show the first `ArithmeticAddCalculation` failing (exit code 410)
 # and a second, corrected one finishing successfully (exit code 0).
-print("\n--- Process Call Graph ---")
+print('\n--- Process Call Graph ---')
 print(format_call_graph(wg.process))
 
 

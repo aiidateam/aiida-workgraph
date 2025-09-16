@@ -1,41 +1,33 @@
 from __future__ import annotations
-from typing import Callable, List, Optional, Type, Dict
+
+from typing import TYPE_CHECKING, Callable, Dict, List, Optional, Type
+
+from node_graph.error_handler import ErrorHandlerSpec, normalize_error_handlers
+from node_graph.executor import RuntimeExecutor
+from node_graph.node_spec import NodeSpec
+from node_graph.socket_spec import SocketSpec, merge_specs
+
 from aiida_workgraph.socket_spec import (
     from_aiida_process,
     infer_specs_from_callable,
 )
-from node_graph.socket_spec import SocketSpec, merge_specs
-from node_graph.node_spec import NodeSpec
-from node_graph.executor import RuntimeExecutor
-from node_graph.error_handler import ErrorHandlerSpec, normalize_error_handlers
 
+if TYPE_CHECKING:
+    from node_graph import Node
 
-def _record_specs_block(
-    title: str, in_spec: SocketSpec | None, out_spec: SocketSpec | None
-) -> dict:
-    """Serialize specs into a metadata block (omit when None)."""
-    if in_spec is None and out_spec is None:
-        return {}
-    block = {}
-    if in_spec is not None:
-        block["inputs"] = in_spec.to_dict()
-    if out_spec is not None:
-        block["outputs"] = out_spec.to_dict()
-    return {title: block}
+__all__ = ('build_callable_nodespec',)
 
 
 def build_callable_nodespec(
     *,
     obj: Callable,
     node_type: str,
-    base_class: Type["Node"],
+    base_class: Type['Node'],
     identifier: Optional[str] = None,
-    catalog: str = "AIIDA",
+    catalog: str = 'AIIDA',
     in_spec: Optional[SocketSpec | List[str]] = None,
     out_spec: Optional[SocketSpec | List[str]] = None,
-    process_cls: Optional[
-        type
-    ] = None,  # e.g. PythonJob, PyFunction, or aiida.engine.Process
+    process_cls: Optional[type] = None,  # e.g. PythonJob, PyFunction, or aiida.engine.Process
     add_inputs: Optional[SocketSpec | List[str]] = None,
     add_outputs: Optional[SocketSpec | List[str]] = None,
     error_handlers: Optional[Dict[str, ErrorHandlerSpec]] = None,
@@ -74,12 +66,11 @@ def build_callable_nodespec(
     metadata = metadata or {}
     metadata.update(
         {
-            "node_type": node_type,
-            "non_function_inputs": list(
-                set((proc_in and proc_in.fields.keys()) or [])
-                | set((add_inputs and add_inputs.fields.keys()) or [])
+            'node_type': node_type,
+            'non_function_inputs': list(
+                set((proc_in and proc_in.fields.keys()) or []) | set((add_inputs and add_inputs.fields.keys()) or [])
             ),
-            "non_function_outputs": list(
+            'non_function_outputs': list(
                 set((proc_out and proc_out.fields.keys()) or [])
                 | set((add_outputs and add_outputs.fields.keys()) or [])
             ),

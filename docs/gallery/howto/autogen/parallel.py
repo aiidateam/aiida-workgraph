@@ -54,19 +54,19 @@ def ParallelAdd(
     sums = {}
     for i, list_i in enumerate(data.values()):
         x, y = list_i.values()
-        sums[f"sum_{i}"] = add(x=x, y=y).result
-    return {"sums": sums}
+        sums[f'sum_{i}'] = add(x=x, y=y).result
+    return {'sums': sums}
 
 
 # %%
 # Let's run it with some sample data.
 
-data = {f"list_{i}": {"x": i, "y": i} for i in range(1, 5)}
+data = {f'list_{i}': {'x': i, 'y': i} for i in range(1, 5)}
 
 wg = ParallelAdd.build(data)
 wg.run()
 
-print("\nResults:")
+print('\nResults:')
 lists = list(data.values())
 for i, sum_ in enumerate(wg.outputs.sums):
     print(f"{lists[i]['x']} + {lists[i]['y']} = {sum_.value}")
@@ -119,7 +119,7 @@ def ParallelAddAggregate(
 wg = ParallelAddAggregate.build(data)
 wg.run()
 
-print("\nResult:", wg.outputs.result.value)
+print('\nResult:', wg.outputs.result.value)
 
 # (1+1) + (2+2) + (3+3) + (4+4) = 20
 assert wg.outputs.result.value == 20

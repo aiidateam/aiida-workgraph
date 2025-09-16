@@ -60,7 +60,7 @@ def add_more(x, y, z):
 @task.graph
 def AiiDAComponentsWorkflow():
     calcjob_sum = task(ArithmeticAddCalculation)(
-        code=orm.load_code("add@localhost"),
+        code=orm.load_code('add@localhost'),
         x=1,
         y=2,
     ).sum  # `ArithmeticAddCalculation` explicitly defines a 'sum' output
@@ -71,7 +71,7 @@ def AiiDAComponentsWorkflow():
     ).result  # `calcfunction` implicitly defines a 'result' output
 
     workchain_result = task(MultiplyAddWorkChain)(
-        code=orm.load_code("add@localhost"),
+        code=orm.load_code('add@localhost'),
         x=calcfunction_sum,
         y=2,
         z=3,
@@ -133,13 +133,13 @@ class TestWorkChain(WorkChain):
     @classmethod
     def define(cls, spec):
         super().define(spec)
-        spec.input_namespace("workgraph", dynamic=True)
+        spec.input_namespace('workgraph', dynamic=True)
         spec.outline(
             cls.run_workgraph,
             cls.results,
         )
-        spec.output("sum")
-        spec.output("product")
+        spec.output('sum')
+        spec.output('product')
 
     def run_workgraph(self):
         from aiida_workgraph.engine.workgraph import WorkGraphEngine
@@ -148,8 +148,8 @@ class TestWorkChain(WorkChain):
         self.to_context(workgraph_process=process)
 
     def results(self):
-        self.out("sum", self.ctx.workgraph_process.outputs.sum)
-        self.out("product", self.ctx.workgraph_process.outputs.product)
+        self.out('sum', self.ctx.workgraph_process.outputs.sum)
+        self.out('product', self.ctx.workgraph_process.outputs.product)
 
 
 # %%
@@ -163,7 +163,7 @@ class TestWorkChain(WorkChain):
 
 
 @task
-def add(x, y):
+def add(x, y):  # noqa: F811
     return x + y
 
 
@@ -176,7 +176,7 @@ def multiply(x, y):
 def IntegratedAddMultiply() -> t.Annotated[dict, namespace(sum=int, product=int)]:
     the_sum = add(1, 2).result
     the_product = multiply(the_sum, 3).result
-    return {"sum": the_sum, "product": the_product}
+    return {'sum': the_sum, 'product': the_product}
 
 
 wg = IntegratedAddMultiply.build()
@@ -186,7 +186,7 @@ wg = IntegratedAddMultiply.build()
 
 from aiida.engine import run_get_node
 
-inputs = {"workgraph": wg.to_engine_inputs(metadata={"call_link_label": "workgraph"})}
+inputs = {'workgraph': wg.to_engine_inputs(metadata={'call_link_label': 'workgraph'})}
 result, node = run_get_node(TestWorkChain, **inputs)
 
 # %%
@@ -204,9 +204,9 @@ result, node = run_get_node(TestWorkChain, **inputs)
 # Let's check the outputs of our ``WorkChain``:
 
 
-print("Results:")
-print("  Sum:    ", result["sum"])
-print("  Product:", result["product"])
+print('Results:')
+print('  Sum:    ', result['sum'])
+print('  Product:', result['product'])
 
 # %%
 # And finally, we can have a look at the provenance graph:

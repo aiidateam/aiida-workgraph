@@ -39,13 +39,13 @@ load_profile()
 #
 # Let's have a look how to use each of them:
 
-wg1 = WorkGraph(name="context_1")
+wg1 = WorkGraph(name='context_1')
 
 # 1. Setting the ``ctx`` attribute of the WorkGraph directly, on initialization
-wg1.ctx = {"x": Int(2), "data.y": Int(3)}
+wg1.ctx = {'x': Int(2), 'data.y': Int(3)}
 
 # 2. Using the ``update_ctx`` method
-wg2 = WorkGraph(name="context_2")
+wg2 = WorkGraph(name='context_2')
 
 
 @task.calcfunction()
@@ -53,17 +53,15 @@ def add(x, y):
     return x + y
 
 
-add1 = wg2.add_task(add, "add1", x=2, y=3)
+add1 = wg2.add_task(add, 'add1', x=2, y=3)
 
 # set result of add1 to ctx.sum
-wg2.update_ctx({"sum": add1.outputs.result})
+wg2.update_ctx({'sum': add1.outputs.result})
 
 # 3. Using the ``workgraph.set_context`` task to set either a task result (socket) or a resolved value to the ctx
-wg3 = WorkGraph(name="context_3")
-add1 = wg3.add_task(add, "add1", x=2, y=3)
-wg3.add_task(
-    "workgraph.set_context", name="set_ctx1", key="sum", value=add1.outputs.result
-)
+wg3 = WorkGraph(name='context_3')
+add1 = wg3.add_task(add, 'add1', x=2, y=3)
+wg3.add_task('workgraph.set_context', name='set_ctx1', key='sum', value=add1.outputs.result)
 
 # %%
 # Nested context keys
@@ -71,12 +69,12 @@ wg3.add_task(
 # To organize the context data in a hierarchical structure, the keys may contain dots ``.``` that create nesting
 # Here is an example, to group the results of multipl add tasks to `ctx.sum`:
 
-wg = WorkGraph(name="ctx_nested")
-add1 = wg.add_task(add, "add1", x=1, y=2)
-add2 = wg.add_task(add, "add2", x=3, y=4)
+wg = WorkGraph(name='ctx_nested')
+add1 = wg.add_task(add, 'add1', x=1, y=2)
+add2 = wg.add_task(add, 'add2', x=3, y=4)
 
-wg.update_ctx({"sum.add1": add1.outputs.result})
-wg.update_ctx({"sum.add2": add2.outputs.result})
+wg.update_ctx({'sum.add1': add1.outputs.result})
+wg.update_ctx({'sum.add2': add2.outputs.result})
 
 # Or, alternatively:
 # wg.update_ctx({
@@ -98,7 +96,7 @@ print(wg.ctx.sum)
 #
 # 1. One can use elements from the ``wg.ctx.x``, directly, e.g., as inputs for other tasks
 #
-add2 = wg1.add_task(add, "add2", x=wg1.ctx.x, y=3)
+add2 = wg1.add_task(add, 'add2', x=wg1.ctx.x, y=3)
 
 # 2. Similarly, nested context keys can be accessed, such as ``wg2.ctx.sum.add1``
 print(wg.ctx.sum.add1)
@@ -106,7 +104,7 @@ print(wg.ctx.sum.add1)
 
 # 3. One can use the `get_context` task to get the data from ctx. **This task will be shown in the GUI**
 #
-wg3.add_task("workgraph.get_context", name="get_ctx1", key="sum.add1")
+wg3.add_task('workgraph.get_context', name='get_ctx1', key='sum.add1')
 
 wg.show()
 wg.to_html()
@@ -120,7 +118,7 @@ def internal_add(x, y):
 
 
 # Usage in a main WorkGraph
-wg_main = WorkGraph("main")
+wg_main = WorkGraph('main')
 builder_task = wg_main.add_task(internal_add, x=10, y=20)
 final_task = wg_main.add_task(add, x=builder_task.outputs.result, y=100)
 
@@ -143,25 +141,23 @@ final_task = wg_main.add_task(add, x=builder_task.outputs.result, y=100)
 
 # %%
 
-wg = WorkGraph(name="context_gui_demo")
+wg = WorkGraph(name='context_gui_demo')
 
 # Set initial context values
-wg.ctx = {"x": 2, "multiplier": 10}
+wg.ctx = {'x': 2, 'multiplier': 10}
 
 # Use context tasks - these appear as nodes in the GUI
-get_x = wg.add_task("workgraph.get_context", name="get_x", key="x")
-get_multiplier = wg.add_task(
-    "workgraph.get_context", name="get_multiplier", key="multiplier"
-)
+get_x = wg.add_task('workgraph.get_context', name='get_x', key='x')
+get_multiplier = wg.add_task('workgraph.get_context', name='get_multiplier', key='multiplier')
 
 # Perform calculation using context values
-add1 = wg.add_task(add, "add1", x=get_x.outputs.result, y=get_multiplier.outputs.result)
+add1 = wg.add_task(add, 'add1', x=get_x.outputs.result, y=get_multiplier.outputs.result)
 
 # Store result back to context - also appears in GUI
 wg.add_task(
-    "workgraph.set_context",
-    name="store_result",
-    key="final_result",
+    'workgraph.set_context',
+    name='store_result',
+    key='final_result',
     value=add1.outputs.result,
 )
 
@@ -176,8 +172,8 @@ wg.show()
 
 # %%
 wg.run()
-print("State of WorkGraph         : {}".format(wg.state))
-print("Result of add1            : {}".format(wg.tasks.add1.outputs.result.value))
+print(f'State of WorkGraph         : {wg.state}')
+print(f'Result of add1            : {wg.tasks.add1.outputs.result.value}')
 
 # %%
 

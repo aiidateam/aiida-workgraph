@@ -1,4 +1,3 @@
----
 name: pre-commit
 
 on:
@@ -28,4 +27,3 @@ jobs:
 
     - name: Run pre-commit
       run: pre-commit run --all-files || ( git status --short ; git diff ; exit 1 )
-

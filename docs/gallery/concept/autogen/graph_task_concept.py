@@ -38,7 +38,7 @@ Graph Task
 # addition workflow by simply calling the function.
 
 from aiida_workgraph import task, WorkGraph, If
-from aiida import orm, load_profile
+from aiida import load_profile
 
 load_profile()
 
@@ -70,7 +70,7 @@ def my_workflow(x, y):
 # A user can now easily create and run the workflow:
 wg = my_workflow.build(x=1, y=2)
 wg.run()
-print("Workflow outputs:", wg.outputs.result)
+print('Workflow outputs:', wg.outputs.result)
 
 
 # %%
@@ -115,13 +115,8 @@ print("Workflow outputs:", wg.outputs.result)
 
 
 @task
-def multiply(x, y):
-    return x * y
-
-
-@task
 def sum_diff(x, y):
-    return {"sum": x + y, "diff": x - y}
+    return {'sum': x + y, 'diff': x - y}
 
 
 @task.graph
@@ -131,20 +126,20 @@ def add_multiply_if(data_node, y):
     value within the input data_node.
     """
     # Plain Python logic using the value of an AiiDA node
-    if data_node.value["sum"] + 1 > 0:
-        outputs = add(x=data_node.value["sum"] + 1, y=y)
+    if data_node.value['sum'] + 1 > 0:
+        outputs = add(x=data_node.value['sum'] + 1, y=y)
     else:
-        outputs = multiply(x=data_node.value["diff"] + 1, y=y)
+        outputs = multiply(x=data_node.value['diff'] + 1, y=y)
     return outputs.result
 
 
 # --- Main workflow construction ---
-with WorkGraph("GraphBuilderExample") as wg:
+with WorkGraph('GraphBuilderExample') as wg:
     outputs1 = sum_diff(x=1, y=1)
     # The add_multiply_if task will build and run its inner graph at execution time
     outputs2 = add_multiply_if(data_node=outputs1.result, y=2)
     wg.run()
-    print("outputs2:", outputs2.result)
+    print('outputs2:', outputs2.result)
 
 
 # %%
@@ -180,9 +175,9 @@ def extract_value(data, key):
 
 
 # --- Main workflow construction ---
-with WorkGraph("ContextManagerExample") as wg:
+with WorkGraph('ContextManagerExample') as wg:
     result = sum_diff(x=1, y=1).result
-    sum_val = extract_value(data=result, key="sum").result
+    sum_val = extract_value(data=result, key='sum').result
     condition_val = add(sum_val, 1).result
 
     with If(condition_val > 0):
@@ -191,12 +186,12 @@ with WorkGraph("ContextManagerExample") as wg:
         wg.ctx.final_result = add(x=data_to_use, y=2).result
     with If(condition_val <= 0):
         # This branch is also defined in the graph, using Else is idiomatic
-        diff_val = extract_value(data=result, key="diff").result
+        diff_val = extract_value(data=result, key='diff').result
         data_to_use = add(diff_val, 1).result
         wg.ctx.final_result = multiply(x=data_to_use, y=2).result
     wg.outputs.final_result = wg.ctx.final_result
     wg.run()
-    print("Final result:", wg.outputs.final_result)
+    print('Final result:', wg.outputs.final_result)
 
 
 # %%
@@ -303,9 +298,9 @@ def my_conditional_workflow(control_value, y):
 
 
 # Example of using it within another workflow
-with WorkGraph("RobustBuilderExample") as wg:
+with WorkGraph('RobustBuilderExample') as wg:
     result = add(x=-10, y=5).result  # Result will be -5
     # The my_conditional_workflow will be executed with an AiiDA Int node
     result = my_conditional_workflow(control_value=result, y=10).result
     wg.run()
-    print("Final result:", result)
+    print('Final result:', result)

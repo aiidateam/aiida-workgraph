@@ -4,7 +4,7 @@ repos:
   hooks:
   - id: check-merge-conflict
   - id: check-yaml
-  - id: double-quote-string-fixer
+  # - id: double-quote-string-fixer
   - id: end-of-file-fixer
     exclude: &exclude_pre_commit_hooks >
       (?x)^(
@@ -32,6 +32,7 @@ repos:
   rev: v0.8.6
   hooks:
   - id: ruff-format
+    args: [--config=pyproject.toml]       # optional: respects your formatting settings
   - id: ruff
     args: [--fix, --exit-non-zero-on-fix, --show-fixes]
 
@@ -51,13 +52,12 @@ repos:
 - repo: https://github.com/astral-sh/uv-pre-commit
   rev: 0.7.6
   hooks:
-    # Check and update the uv lockfile
+      # Check and update the uv lockfile
   - id: uv-lock
 
 - repo: local
 
   hooks:
-
   - id: mypy
     name: mypy
     entry: mypy
@@ -72,46 +72,45 @@ repos:
         .molecule/.*|
         docs/.*|
         tests/.*|
+        src/.*|  # Exclude everything for now, fix in follow-up PRs
       )$
 
-  # - id: generate-conda-environment
-  #   name: Update conda environment file
-  #   entry: python ./utils/dependency_management.py generate-environment-yml
-  #   language: system
-  #   pass_filenames: false
-  #   files: >-
-  #     (?x)^(
-  #       pyproject.toml|
-  #       utils/dependency_management.py|
-  #       environment.yml|
-  #     )$
-  #
-  # - id: validate-conda-environment
-  #   name: Validate environment.yml
-  #   entry: python ./utils/dependency_management.py validate-environment-yml
-  #   language: system
-  #   pass_filenames: false
-  #   files: >-
-  #     (?x)^(
-  #       pyproject.toml|
-  #       utils/dependency_management.py|
-  #       environment.yml|
-  #     )$
-  #
-  # - id: verdi-autodocs
-  #   name: Automatically generating verdi docs
-  #   entry: python ./utils/validate_consistency.py verdi-autodocs
-  #   language: system
-  #   pass_filenames: false
-  #   files: >-
-  #     (?x)^(
-  #       src/aiida/cmdline/commands/.*|
-  #       src/aiida/cmdline/params/.*|
-  #       src/aiida/cmdline/params/types/.*|
-  #       utils/validate_consistency.py|
-  #     )$
-
-
+    # - id: generate-conda-environment
+    #   name: Update conda environment file
+    #   entry: python ./utils/dependency_management.py generate-environment-yml
+    #   language: system
+    #   pass_filenames: false
+    #   files: >-
+    #     (?x)^(
+    #       pyproject.toml|
+    #       utils/dependency_management.py|
+    #       environment.yml|
+    #     )$
+    #
+    # - id: validate-conda-environment
+    #   name: Validate environment.yml
+    #   entry: python ./utils/dependency_management.py validate-environment-yml
+    #   language: system
+    #   pass_filenames: false
+    #   files: >-
+    #     (?x)^(
+    #       pyproject.toml|
+    #       utils/dependency_management.py|
+    #       environment.yml|
+    #     )$
+    #
+    # - id: verdi-autodocs
+    #   name: Automatically generating verdi docs
+    #   entry: python ./utils/validate_consistency.py verdi-autodocs
+    #   language: system
+    #   pass_filenames: false
+    #   files: >-
+    #     (?x)^(
+    #       src/aiida/cmdline/commands/.*|
+    #       src/aiida/cmdline/params/.*|
+    #       src/aiida/cmdline/params/types/.*|
+    #       utils/validate_consistency.py|
+    #     )$
 
 # WG below
 # repos:

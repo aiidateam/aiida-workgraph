@@ -58,7 +58,7 @@ def calculate_energy(atoms: Atoms) -> float:
 
     atoms.calc = EMT()
     atoms.get_potential_energy()
-    return atoms.calc.results["energy"]
+    return atoms.calc.results['energy']
 
 
 @task
@@ -83,8 +83,8 @@ def atomization_energy_workflow(molecule_obj: Atoms, atom_obj: Atoms) -> float:
 
 # %%
 # First, we create the input structures for a nitrogen atom and molecule using ASE.
-atom = Atoms("N")
-mol = molecule("N2")
+atom = Atoms('N')
+mol = molecule('N2')
 
 # %%
 # Next, build the workgraph, but doesn't run it.
@@ -103,7 +103,7 @@ wg.to_html()
 # %%
 # Now, execute the workgraph, which runs the tasks in the correct sequence.
 wg.run()
-print(f"Atomization energy for N2: {wg.outputs.result.value.value:.4f} eV")
+print(f'Atomization energy for N2: {wg.outputs.result.value.value:.4f} eV')
 
 # %%
 # Visualize the Provenance Graph
@@ -143,17 +143,15 @@ def relax_structure(atoms: Atoms) -> Atoms:
 
 
 @task
-def create_strained_structures(
-    atoms: Atoms, scales: list
-) -> spec.namespace(scaled_structures=spec.dynamic(Atoms)):
+def create_strained_structures(atoms: Atoms, scales: list) -> spec.namespace(scaled_structures=spec.dynamic(Atoms)):
     """Generate a series of strained structures from a list of scaling factors."""
     scaled_structures = {}
     for i, scale in enumerate(scales):
         strained_atoms = atoms.copy()
         strained_atoms.set_cell(atoms.get_cell() * scale, scale_atoms=True)
         # Each structure gets a unique key, like "strain_0", "strain_1", etc.
-        scaled_structures[f"strain_{i}"] = strained_atoms
-    return {"scaled_structures": scaled_structures}
+        scaled_structures[f'strain_{i}'] = strained_atoms
+    return {'scaled_structures': scaled_structures}
 
 
 # %%
@@ -169,8 +167,8 @@ def calculate_energy_and_volume(atoms: Atoms) -> dict:
     atoms.calc = EMT()
     atoms.get_potential_energy()
     return {
-        "energy": atoms.calc.results["energy"],
-        "volume": atoms.get_volume(),
+        'energy': atoms.calc.results['energy'],
+        'volume': atoms.get_volume(),
     }
 
 
@@ -186,7 +184,7 @@ def calc_all_structures(
         results[key] = calculate_energy_and_volume(atoms).result
 
     # The returned dictionary's key "results" must match the name in the `outputs` decorator.
-    return {"results": results}
+    return {'results': results}
 
 
 @task
@@ -196,15 +194,15 @@ def fit_eos_model(**data) -> dict:
     from ase.units import kJ
 
     # Unpack the energies and volumes from the input data dictionary
-    volumes_list = [value["volume"] for value in data.values()]
-    energies_list = [value["energy"] for value in data.values()]
+    volumes_list = [value['volume'] for value in data.values()]
+    energies_list = [value['energy'] for value in data.values()]
 
     eos = EquationOfState(volumes_list, energies_list)
     v0, e0, B = eos.fit()
 
     # The bulk modulus B is converted from eV/Å³ to GPa.
     B_GPa = B / kJ * 1.0e24
-    return {"v0_A^3": v0, "e0_eV": e0, "B_GPa": B_GPa}
+    return {'v0_A^3': v0, 'e0_eV': e0, 'B_GPa': B_GPa}
 
 
 @task.graph()
@@ -239,9 +237,9 @@ def eos_workflow(atoms: Atoms, scales: list) -> dict:
 # Build and Run the EOS Workflow
 # ------------------------------
 # We first define the input crystal structure (fcc Copper) and the list of strains.
-from ase.build import bulk
+from ase.build import bulk  # noqa: E402
 
-cu = bulk("Cu", "fcc", a=3.6)
+cu = bulk('Cu', 'fcc', a=3.6)
 scales = [0.95, 0.98, 1.0, 1.02, 1.05]
 
 # %%
@@ -257,7 +255,7 @@ wg.run()
 # %%
 # The result is an AiiDA Dict node. We access its content via the `.value` attribute.
 eos_result = wg.outputs.result.value
-print("Equation of state results for Cu: ", eos_result.get_dict())
+print('Equation of state results for Cu: ', eos_result.get_dict())
 
 # %%
 # Visualize the EOS Provenance Graph

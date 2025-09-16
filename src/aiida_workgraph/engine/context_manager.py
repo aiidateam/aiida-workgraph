@@ -7,7 +7,7 @@ import logging
 class ContextManager:
     """Manages the context for the WorkGraphEngine."""
 
-    _CONTEXT = "CONTEXT"
+    _CONTEXT = 'CONTEXT'
 
     def __init__(self, _context, process, logger: logging.Logger):
         self.process = process
@@ -27,15 +27,13 @@ class ContextManager:
         :param key: A key into the context, where words before a dot are interpreted as a key for a sub-dictionary
         """
         ctx = self.ctx
-        ctx_path = key.split(".")
+        ctx_path = key.split('.')
 
         for index, path in enumerate(ctx_path[:-1]):
             try:
                 ctx = ctx[path]
             except KeyError:  # see below why this is the only exception we have to catch here
-                ctx[
-                    path
-                ] = AttributeDict()  # create the sub-dict and update the context
+                ctx[path] = AttributeDict()  # create the sub-dict and update the context
                 ctx = ctx[path]
                 continue
 
@@ -45,9 +43,10 @@ class ContextManager:
             #   (subclasses of AttributeDict) but after resolution of an Awaitable this will be the value itself
             # * assumption: a resolved value is never a plain AttributeDict, on the other hand if a resolved Awaitable
             #   would be an AttributeDict we can append things to it since the order of tasks is maintained.
-            if type(ctx) != AttributeDict:  # pylint: disable=C0123
+            # PRCOMMENT: Verify if this modification keeps behavior as intended
+            if not isinstance(ctx, AttributeDict):
                 raise ValueError(
-                    f"Can not update the context for key `{key}`: "
+                    f'Can not update the context for key `{key}`: '
                     f' found instance of `{type(ctx)}` at `{".".join(ctx_path[:index + 1])}`, expected AttributeDict'
                 )
 
