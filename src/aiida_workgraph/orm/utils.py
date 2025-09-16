@@ -31,5 +31,9 @@ AiiDASafeLoader.add_constructor(_GROUP_TAG, group_constructor)
 
 
 def deserialize_safe(serialized: str) -> Any:
-
     return yaml.load(serialized, Loader=AiiDASafeLoader)
+
+
+def test_codecov_function():
+    """Simple function to test codecov integration."""
+    return "codecov is working"

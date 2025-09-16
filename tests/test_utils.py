@@ -41,7 +41,6 @@ def test_get_parent_workgraphs():
 
 
 def test_generate_provenance_graph():
-
     from IPython.display import IFrame
     from aiida_workgraph.utils import generate_provenance_graph
     import os
@@ -53,3 +52,8 @@ def test_generate_provenance_graph():
     assert isinstance(graph, IFrame)
     # check file html/node_graph_{pk}.html is created
     assert os.path.isfile(f"html/node_graph_{wn1.pk}.html")
+
+
+def test_codecov_integration():
+    """Test to verify codecov is tracking coverage."""
+    assert True  # Simple test that will be covered
