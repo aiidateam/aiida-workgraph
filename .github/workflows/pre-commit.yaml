@@ -31,8 +31,8 @@ jobs:
         python-version: '3.10'
         activate-environment: true
 
-    - name: Install aiida-workgraph in development mode
-      run: uv pip install -e .[pre-commit]
+    - name: Install dependencies from uv lock
+      run: uv sync --locked --extra pre-commit
 
     - name: Run pre-commit
       # run: pre-commit run --all-files || ( git status --short ; git diff ; exit 1 )

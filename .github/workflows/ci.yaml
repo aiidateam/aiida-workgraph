@@ -28,21 +28,20 @@ jobs:
     - name: Set up uv
       uses: astral-sh/setup-uv@v6
       with:
-        version: 0.7.6
+        version: 0.8.17
         python-version: ${{ matrix.python-version }}
         activate-environment: true
 
-    - name: Install aiida-workgraph in development mode
+    - name: Install dependencies from uv lock
       run: |
-        uv pip install -e .[widget,pre-commit,tests]
-        uv pip list
+        uv sync --locked --extra widget --extra pre-commit --extra tests
+        uv list
 
     - name: Override aiida-core version
       run: uv pip install aiida-core==${{ matrix.aiida-core-version }}
 
-    - name: Install additional dependencies
-      run: |
-        uv pip install pytest-xdist
+    - name: Install playwright browsers
+      run: playwright install
 
     - name: Install system dependencies
       run: sudo apt update && sudo apt install --no-install-recommends graphviz
