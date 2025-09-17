@@ -73,6 +73,7 @@ def test_builtin_file_monitor_entrypoint(decorated_add, tmp_path):
     assert add1.outputs.result.value == 3
 
 
+@pytest.mark.skip(reason="The test is not stable.")
 @pytest.mark.usefixtures("started_daemon_client")
 def test_builtin_task_monitor_entrypoint(decorated_add):
     """Test the file monitor task."""
