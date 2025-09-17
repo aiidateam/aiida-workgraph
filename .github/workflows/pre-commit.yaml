@@ -19,13 +19,20 @@ jobs:
     steps:
     - uses: actions/checkout@v5
 
-    - name: Install python dependencies
-      uses: ./.github/actions/install-aiida-workgraph
+    - name: Set Up Python
+      uses: actions/setup-python@v5
       with:
         python-version: '3.10'
-        from-lock: 'true'
-    - name: Clear pre-commit cache
-      run: pre-commit clean
+
+    - name: Set up uv
+      uses: astral-sh/setup-uv@v6
+      with:
+        version: 0.8.17
+        python-version: '3.10'
+        activate-environment: true
+
+    - name: Install aiida-workgraph in development mode
+      run: uv pip install -e .[pre-commit]
 
     - name: Run pre-commit
       # run: pre-commit run --all-files || ( git status --short ; git diff ; exit 1 )
