@@ -35,7 +35,7 @@ jobs:
     - name: Install dependencies from uv lock
       run: |
         uv sync --locked --extra pre-commit --extra tests
-        uv list
+        uv pip list
 
     - name: Override aiida-core version
       run: uv pip install aiida-core==${{ matrix.aiida-core-version }}
