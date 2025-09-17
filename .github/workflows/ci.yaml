@@ -34,7 +34,7 @@ jobs:
 
     - name: Install dependencies from uv lock
       run: |
-        uv sync --locked --extra widget --extra pre-commit --extra tests
+        uv sync --locked --extra pre-commit --extra tests
         uv list
 
     - name: Override aiida-core version
