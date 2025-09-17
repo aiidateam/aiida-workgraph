@@ -1,16 +1,20 @@
 import pytest
 import sys
 import logging
+import os
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
 
 
 def main():
-    """...to be added..."""
+    """Run pytest with Playwright in non-headless mode."""
     pytest_args = [
         "tests/test_map.py::test_map_instruction",
         "-sv",  # Show output and verbose mode
     ]
+
+    # Set the Playwright headless mode to 'no'
+    os.environ["PYTEST_PLAYWRIGHT_HEADLESS"] = "no"
 
     logging.info(f"Running tests with arguments: {pytest_args}")
 
