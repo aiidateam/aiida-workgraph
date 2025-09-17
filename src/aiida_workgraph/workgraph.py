@@ -17,7 +17,7 @@ from node_graph.analysis import NodeGraphAnalysis
 from node_graph.config import BUILTIN_NODES
 from node_graph.collection import NodeCollection
 from node_graph.socket import BaseSocket, NodeSocketNamespace
-from aiida_workgraph.orm.mapping import type_mapping
+from aiida_workgraph.registry import type_mapping
 from aiida_workgraph.socket_spec import SocketSpecAPI
 from node_graph.error_handler import ErrorHandlerSpec
 

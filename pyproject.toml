@@ -139,6 +139,9 @@ workgraph = "aiida_workgraph.cli.cmd_workgraph:workgraph"
 [project.entry-points."aiida_workgraph.type_mapping"]
 "workgraph.builtins_mapping" = "aiida_workgraph.orm.mapping:builtins_type_mapping"
 
+[project.entry-points."aiida_workgraph.type_promotion"]
+"workgraph.builtins_mapping" = "aiida_workgraph.orm.mapping:TYPE_PROMOTIONS"
+
 [tool.flit.sdist]
 exclude = ["docs/", "tests/"]
 

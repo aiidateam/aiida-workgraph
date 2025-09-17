@@ -26,7 +26,7 @@ def test_type_mapping(data_type, data, identifier) -> None:
     """Test the mapping of data types to socket types."""
 
     # Ensure mapping are up-to-date
-    from aiida_workgraph.orm.mapping import type_mapping
+    from aiida_workgraph.registry import type_mapping
 
     assert (
         identifier in type_mapping.values()
