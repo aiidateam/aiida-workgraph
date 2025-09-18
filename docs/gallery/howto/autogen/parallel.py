@@ -36,7 +36,7 @@ def generate_numbers(
 
 
 # %%
-# The Scatter Operation
+# Scatter
 # ---------------------
 #
 # The "scatter" phase involves creating and running multiple independent tasks. We can achieve this by simply iterating over our inputs within a `WorkGraph` and creating a task for each item.
@@ -113,7 +113,7 @@ wg.to_html()
 wg.generate_provenance_graph()
 
 # %%
-# The Gather Operation
+# Gather
 # --------------------
 #
 # The "gather" phase involves collecting the results from the parallel tasks and performing a final operation.
@@ -122,7 +122,7 @@ wg.generate_provenance_graph()
 
 
 @task
-def aggregate_sum(data: t.Annotated[dict, dynamic(int)]) -> int:
+def gather_and_sum(data: t.Annotated[dict, dynamic(int)]) -> int:
     """Sums the values of a dictionary of integers."""
     return sum(data.values())
 
@@ -130,7 +130,7 @@ def aggregate_sum(data: t.Annotated[dict, dynamic(int)]) -> int:
 # %%
 # We create a new `WorkGraph` that orchestrates the full scatter-gather pattern.
 # It first calls our `generate_numbers` and `ParallelSquare` graphs (scatter),
-# and then feeds the collected outputs into the `aggregate_sum` task (gather).
+# and then feeds the collected outputs into the `gather_and_sum` task (gather).
 
 
 @task.graph
@@ -141,7 +141,7 @@ def ScatterGatherSquare(n: int) -> int:
     # Scatter phase
     squares = ParallelSquare(data=data).squares
     # Gather phase
-    return aggregate_sum(data=squares).result
+    return gather_and_sum(data=squares).result
 
 
 wg = ScatterGatherSquare.build(4)

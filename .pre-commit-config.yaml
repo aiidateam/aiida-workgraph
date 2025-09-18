@@ -1,19 +1,66 @@
 repos:
--   repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v3.2.0
-    hooks:
-    -   id: check-yaml
-    -   id: end-of-file-fixer
-        exclude: \.svg$
-    -   id: trailing-whitespace
--   repo: https://github.com/pycqa/flake8
-    rev: '6.0.0'
-    hooks:
-    -   id: flake8
-        args: ['--max-line-length=121', '--ignore=F821, F722, E203, W503']
-        exclude: ^docs/gallery/
+- repo: https://github.com/pre-commit/pre-commit-hooks
+  rev: v6.0.0
+  hooks:
+  - id: check-merge-conflict
+  - id: check-yaml
+  - id: end-of-file-fixer
+    exclude: &exclude_pre_commit_hooks >
+      (?x)^(
+        tests/.*(?<!\.py)$|
+      )$
+  - id: mixed-line-ending
+    args: [--fix=lf]
+  - id: trailing-whitespace
+    exclude: *exclude_pre_commit_hooks
 
--   repo: https://github.com/psf/black
-    rev: 22.3.0
-    hooks:
-    -   id: black
+- repo: https://github.com/python-jsonschema/check-jsonschema
+  rev: 0.33.3
+  hooks:
+  - id: check-github-workflows
+
+# - repo: https://github.com/astral-sh/ruff-pre-commit
+#   rev: v0.13.0
+#   hooks:
+#   - id: ruff-format
+#     args: [--config=pyproject.toml]  #  respects formatting settings
+#   - id: ruff
+#     args: [--fix, --exit-non-zero-on-fix, --show-fixes]
+
+# - repo: https://github.com/macisamuele/language-formatters-pre-commit-hooks
+#   rev: v2.15.0
+#   hooks:
+#   - id: pretty-format-toml
+#     args: [--autofix]
+#   - id: pretty-format-yaml
+#     args: [--autofix]
+#     exclude: >-
+#       (?x)^(
+#         tests/.*|
+#         environment.yml|
+#       )$
+
+- repo: https://github.com/astral-sh/uv-pre-commit
+  rev: 0.8.17
+  hooks:
+  # Check and update the uv lockfile
+  - id: uv-lock
+
+- repo: local
+
+  hooks:
+  - id: mypy
+    name: mypy
+    entry: mypy
+    args: [--config-file=pyproject.toml, --pretty]
+    language: python
+    types: [python]
+    require_serial: true
+    pass_filenames: true
+    exclude: >-
+      (?x)^(
+        .github/.*|
+        docs/.*|
+        tests/.*|
+        src/.*
+      )$
