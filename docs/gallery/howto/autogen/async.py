@@ -1,6 +1,10 @@
 """
 Run ``async`` functions as tasks
 ================================
+
+.. warning::
+   **This feature is experimental.** The API for ``@task.awaitable`` is subject to change in future releases. We welcome your feedback on its functionality.
+
 """
 
 # %%
@@ -50,7 +54,7 @@ def AwaitableSum(x, y):
     return multiply(async_sum, sync_sum).result
 
 
-wg = AwaitableSum.build_graph(1, 2)
+wg = AwaitableSum.build(1, 2)
 wg.run()
 
 

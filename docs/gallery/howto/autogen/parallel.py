@@ -1,158 +1,159 @@
 """
-=====================
-Run tasks in parallel
-=====================
+Run tasks in parallel (Scatter-Gather)
+=====================================
 """
 
 # %%
 # Introduction
-# ============
-# Once you have developed a correct and functioning workflow, the next step is often to scale it up for large datasets.
-# This typically involves applying the same workflow to many independent data points.
-# In this how-to, we show how to run the workflow in parallel for each data point to improve performance and scalability.
+# ------------
+#
+# A common pattern in scientific workflows is "scatter-gather," where a collection of inputs is processed in parallel (the "scatter" phase), and the results are then collected for a final processing step (the "gather" phase). This is a powerful way to parallelize work *within* a single, larger workflow.
+#
+# For example, applying a squaring operation `x²` to each number in a list `[x₁, x₂, ..., xₙ]`. Each squaring operation can be performed independently of the others.
+#
+# This how-to demonstrates how to implement the scatter-gather pattern to leverage this feature.
 
-# %%
-# Setting up the AiiDA environment
-# --------------------------------
-
+import typing as t
 from aiida import load_profile
+from aiida_workgraph import namespace, task, dynamic
 
 load_profile()
 
-from aiida_workgraph.utils import generate_node_graph
-from aiida_workgraph import WorkGraph, task, spec
 
 # %%
-# Perfectly parallelizable problem
-# ================================
-# A perfectly parallelizable problem can be broken down into smaller, independent subproblems that require no shared resources.
-# For example, consider an addition operation ``x + y`` applied element-wise to two lists: ``[x₁, ..., xₙ]`` and ``[y₁, ..., yₙ]``.
-# Each individual addition can be performed independently of the others.
-# ``WorkGraph`` automatically parallelizes task execution when there are no data dependencies between tasks (for more details on this concept, refer to `WorkGraph Engine <../../concept/autogen/engine>`_).
-# We will take advanatge of this concept and create three different show three different ways how one can parallelize the add operation over the list with ``WorkGraph``.
-#
-# .. note::
-#
-#     In practice, a simple element-wise addition like this would typically be parallelized at a lower level, such as using NumPy vectorization or multithreading.
-#     However, we use it here for illustrative purposes.
-#     The concepts demonstrated in this guide can be applied to any workflow that is perfectly parallelizable.
-
-
-# %%
-# Conventional for-loop
+# Scatter
 # ---------------------
+#
+# The "scatter" phase involves creating and running multiple independent tasks. We can achieve this by simply iterating over our inputs within a `WorkGraph` and creating a task for each item.
+#
+# Let's define a simple task to square a number.
 
 
 @task
-def add(x, y):
-    return x + y
+def square(x: int) -> int:
+    """Square an integer."""
+    return x * x
+
+# %%
+# Define a helper task that generates a dictionary of numbers.
+# This will serve as input to the scatter phase.
+
+@task
+def generate_numbers(
+    n: int,
+) -> t.Annotated[dict[str, int], namespace(data=dynamic(int))]:
+    """Generate a dictionary of numbers from 1 to n."""
+    return {"data": {f"number_{i+1}": i + 1 for i in range(n)}}
 
 
-len_list = 4
-x_list = list(range(len_list))
-y_list = list(range(len_list))
-sums = []
+# %%
+# At first glance, one might try to write the scatter logic directly as follows:
+#
+# .. code:: python
+#
+#     data = generate_numbers(n=n).data
+#     squares = {}
+#     # Since these tasks have no dependencies on each other, they run in parallel.
+#     for key, value in data.items():
+#         squares[key] = square(x=value).result
+#
+# However, **this will not work as expected**.
+#
+# The reason is that ``data`` is not immediately available when constructing the graph.
+# Instead, ``generate_numbers(n=n).data`` is a *future output*, a placeholder that will only be resolved at runtime.
+#
+# To correctly handle this, we must wrap the loop inside another task graph. This ensures that the graph engine knows how to schedule and parallelize the tasks.
 
-wg = WorkGraph("parallel_for_loop")
-for i in range(len_list):
-    add_task = wg.add_task(add, x=x_list[i], y=y_list[i])
-    sums.append(add_task.outputs.result)
 
+@task.graph
+def ParallelSquare(
+    data: t.Annotated[dict[str, int], dynamic(int)],
+) -> t.Annotated[dict, namespace(squares=dynamic(int))]:
+    """Applies the square task to each number in the input data in parallel."""
+    squares = {}
+    for key, value in data.items():
+        squares[key] = square(x=value).result
+    return {"squares": squares}
+
+
+# %%
+# .. tip::
+#
+#     - **Parallelization**: In `WorkGraph`, tasks without data dependencies between them are automatically scheduled to run in parallel.
+#     - **Dynamic inputs/outputs**: Our use of dynamic type annotations, such as `dynamic(int)`, allows AiiDA to create a distinct node for each input and output in the collection, which is essential for data provenance tracking. For more details, please refer to the section on :ref:`Dynamic namespaces <dynamic_namespaces>`.
+#
+
+# %%
+# Let's run it with some sample data.
+
+data = {f"number_{i}": i for i in range(1, 5)}
+
+wg = ParallelSquare.build(data)
 wg.run()
-print("Result:", sums)
-# (1+1) + (2+2) + (3+3) = 12
-assert sum(sum_socket.value for sum_socket in sums) == 12
+
+print("\nResults:")
+for i, result_node in enumerate(wg.outputs.squares):
+    original_value = list(data.values())[i]
+    print(f"{original_value}² = {result_node.value}")
 
 # %%
 # Workflow view
-# ~~~~~~~~~~~~~
+# """""""""""""
+
 wg.to_html()
 
 # %%
 # Provenance graph
-# ~~~~~~~~~~~~~~~~
-generate_node_graph(wg.pk)
+# """"""""""""""""
+
+wg.generate_provenance_graph()
 
 # %%
-# Graph builder
-# -------------
-# We continue with creating the same task for the graph builder.
-# We will perform the for loop within the graph builder task.
+# Gather
+# --------------------
 #
-# .. note::
+# The "gather" phase involves collecting the results from the parallel tasks and performing a final operation.
 #
-#     We pack the two lists into a dictionary to pass the data to a task, because ``aiida-core`` supports dynamically sized data structures only through dictionaries.
-#     While lists are supported to some extent, their usage is limited to primitive types.
-
-from typing import Any, Annotated
+# We will now extend the workflow by adding a task that sums the results from the `square` tasks.
 
 
-@task.graph(outputs=spec.namespace(result=spec.dynamic(Any)))
-def parallel_add_workflow(data) -> dict:
-    result = {}
-    for i, item in enumerate(data.values()):
-        outputs = add(x=item["x"], y=item["y"])
-        result[f"sum_{i}"] = outputs.result
-    return {"result": result}
-
-
-len_list = 4
-data = {f"list_{i}": {"x": i, "y": i} for i in range(len_list)}
-
-wg = WorkGraph("parallel_graph_task")
-wg.add_task(parallel_add_workflow, data=data)
-wg.outputs.result = wg.tasks.parallel_add_workflow.outputs.result
-wg.run()
-print("Result:")
-for socket in wg.outputs.result:
-    print(socket._name, socket.value)
-# (1+1) + (2+2) + (3+3) = 12
-assert sum(wg.outputs.result._value.values()) == 12
-
-# %%
-# Workflow view
-# ~~~~~~~~~~~~~
-wg.to_html()
-
-# %%
-# Provenance graph
-# ~~~~~~~~~~~~~~~~
-generate_node_graph(wg.pk)
-
-
-# %%
-# Gather results
-# ==============
-# We now extend the workflow by adding a task that sums the intermediate results.
-# This step is commonly known as a gather, aggregate, or reduce operation.
-# It is often used to automatically analyze or summarize the output of the parallel computations.
-
-
-# %%
-# Graph builder
-# -------------
-# We will extend it the whole workflow only by the ``aggregate_sum`` task
 @task
-def aggregate_sum(data: Annotated[dict, spec.dynamic(Any)]):
+def gather_and_sum(data: t.Annotated[dict, dynamic(int)]) -> int:
+    """Sums the values of a dictionary of integers."""
     return sum(data.values())
 
 
-@task.graph(outputs=spec.namespace(result=spec.dynamic(Any)))
-def parallel_add_workflow(data) -> dict:
-    result = {}
-    for i, item in enumerate(data.values()):
-        outputs = add(x=item["x"], y=item["y"])
-        result[f"sum_{i}"] = outputs.result
-    return {"result": result}
+# %%
+# We create a new `WorkGraph` that orchestrates the full scatter-gather pattern.
+# It first calls our `generate_numbers` and `ParallelSquare` graphs (scatter),
+# and then feeds the collected outputs into the `gather_and_sum` task (gather).
 
 
-len_list = 4
-data = {f"list_{i}": {"x": i, "y": i} for i in range(len_list)}
+@task.graph
+def ScatterGatherSquare(n: int) -> int:
+    """A full scatter-gather workflow to generate numbers, square them in parallel, and sum the results."""
+    # Generate inputs
+    data = generate_numbers(n=n).data
+    # Scatter phase
+    squares = ParallelSquare(data=data).squares
+    # Gather phase
+    return gather_and_sum(data=squares).result
 
-wg = WorkGraph("parallel_graph_task")
-wg.add_task(parallel_add_workflow, data=data)
-wg.add_task(aggregate_sum, data=wg.tasks.parallel_add_workflow.outputs.result)
-wg.outputs.result = wg.tasks.aggregate_sum.outputs.result
+
+wg = ScatterGatherSquare.build(4)
 wg.run()
-print("Result:", wg.outputs.result.value)
-assert wg.outputs.result == 12
+
+print("\nAggregated Result:", wg.outputs.result.value)
+
+assert wg.outputs.result.value == 30
+
+# %%
+# Conclusion
+# ----------
+#
+# In this how-to, we demonstrated how to implement the powerful scatter-gather pattern using `WorkGraph`.
+#
+# - The **scatter** phase is achieved by creating multiple independent tasks within a graph, which the engine automatically runs in parallel.
+# - The **gather** phase collects the results from the parallel tasks for a final processing step.
+# - We also highlighted an important concept: **future outputs**. When a value is the output of another task, it cannot be used in a Python loop directly at graph-construction time. Instead, the loop must be wrapped in another task graph.
+#

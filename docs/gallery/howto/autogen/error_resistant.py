@@ -1,6 +1,11 @@
 """
 Write error-resistant workflows
 ===============================
+
+
+.. warning::
+   **This feature is experimental.** The API for ``error_handler`` is subject to change in future releases. We welcome your feedback on its functionality.
+
 """
 
 
@@ -102,12 +107,16 @@ def handle_negative_sum(task: Task):
 
 
 wg = WorkGraph("handling_error_negative_number")
-wg.add_task(ArithmeticAddCalculation, name="add", x=1, y=-6, code=bash_code)
+task1 = wg.add_task(ArithmeticAddCalculation, name="add", x=1, y=-6, code=bash_code)
 # Adding error handler logic
-wg.add_error_handler(
-    handle_negative_sum,
-    name="handle_negative_sum",
-    tasks={"add": {"exit_codes": [410], "max_retries": 5}},
+task1.add_error_handler(
+    {
+        "handle_negative_sum": {
+            "executor": handle_negative_sum,
+            "exit_codes": [410],
+            "max_retries": 5,
+        }
+    }
 )
 
 wg.run()
@@ -142,19 +151,19 @@ def handle_negative_sum(task: Task, increment: int = 1):
 
 
 wg = WorkGraph("handling_error_negative_number")
-wg.add_task(ArithmeticAddCalculation, name="add", x=1, y=-6, code=bash_code)
+task1 = wg.add_task(ArithmeticAddCalculation, name="add", x=1, y=-6, code=bash_code)
 # Adding error handler logic
-wg.add_error_handler(
-    handle_negative_sum,
-    name="handle_negative_sum",
-    tasks={
-        "add": {
+task1.add_error_handler(
+    {
+        "handle_negative_sum": {
+            "executor": handle_negative_sum,
             "exit_codes": [410],
-            "max_retries": 5,  # Note that retrying 5 times results in executing 6 times
+            "max_retries": 5,
             "kwargs": {"increment": 1},
         }
-    },
+    }
 )
+
 
 wg.run()
 print("Task finished OK?:", wg.tasks.add.process.is_finished_ok)
@@ -179,7 +188,7 @@ print(format_call_graph(orm.load_node(wg.pk)))
 
 # reset workgraph to start from the beginning
 wg.reset()
-wg.error_handlers["handle_negative_sum"]["tasks"]["add"]["kwargs"]["increment"] = 3
+wg.tasks.add.error_handlers["handle_negative_sum"].kwargs["increment"] = 3
 wg.run()
 
 

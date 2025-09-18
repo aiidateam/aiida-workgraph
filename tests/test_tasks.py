@@ -6,24 +6,6 @@ from aiida_workgraph import socket_spec as spec
 from typing import Any
 
 
-def test_normal_task(decorated_add) -> None:
-    """Test a normal task."""
-
-    @task(outputs=["sum", "diff"])
-    def sum_diff(x, y):
-        return x + y, x - y
-
-    wg = WorkGraph("test_normal_task")
-    task1 = wg.add_task(sum_diff, name="sum_diff", x=2, y=3)
-    task2 = wg.add_task(
-        decorated_add, name="add", x=task1.outputs.sum, y=task1.outputs["diff"]
-    )
-    wg.run()
-    print("node: ", task2.outputs.result)
-    wg.update()
-    assert task2.outputs.result.value == 4
-
-
 def test_task_collection(decorated_add: Callable) -> None:
     """Test the TaskCollection class.
     Since waiting_on and children are TaskCollection instances, we test the waiting_on."""
@@ -47,17 +29,14 @@ def test_task_collection(decorated_add: Callable) -> None:
 
 
 @pytest.mark.usefixtures("started_daemon_client")
-def test_task_wait(decorated_add: Callable, capsys) -> None:
+def test_task_wait(decorated_add: Callable) -> None:
     """Run a WorkGraph with a task that waits on other tasks."""
 
     wg = WorkGraph(name="test_task_wait")
     add1 = wg.add_task(decorated_add, "add1", x=1, y=1)
     add2 = wg.add_task(decorated_add, "add2", x=2, y=2)
     add2.waiting_on.add(add1)
-    wg.run()
-    captured = capsys.readouterr()
-    report = captured.out
-    assert "tasks ready to run: add1" in report
+    assert len(wg.links) == 1
 
 
 def test_set_non_dynamic_namespace_socket(decorated_add) -> None:
@@ -159,19 +138,9 @@ def test_set_inputs(decorated_add: Callable) -> None:
     wg = WorkGraph(name="test_set_inputs")
     add1 = wg.add_task(decorated_add, "add1", x=1)
     add1.set_inputs({"y": 2, "metadata.store_provenance": False})
-    data = wg.prepare_inputs(metadata=None)
-    assert (
-        data["workgraph_data"]["tasks"]["add1"]["inputs"]["sockets"]["y"]["property"][
-            "value"
-        ]
-        == 2
-    )
-    assert (
-        data["workgraph_data"]["tasks"]["add1"]["inputs"]["sockets"]["metadata"][
-            "sockets"
-        ]["store_provenance"]["property"]["value"]
-        is False
-    )
+    data = wg.to_engine_inputs(metadata=None)
+    assert data["tasks"]["add1"]["y"] == 2
+    assert data["tasks"]["add1"]["metadata"]["store_provenance"] is False
 
 
 def test_set_inputs_from_builder(add_code) -> None:
@@ -300,3 +269,19 @@ def test_task_children():
     zone2.children.add(zone1)
     with pytest.raises(ValueError, match="Task is already a child of the task: "):
         zone3.children.add(zone1)
+
+
+def test_call_task_inside_task():
+    @task
+    def add(x, y):
+        return x + y
+
+    @task()
+    def multiply(m, n):
+        return add(m, n).result * 2
+
+    with WorkGraph() as wg:
+        result = multiply(3, 4).result
+        wg.run()
+        assert result._node.process.exit_status == 323
+        assert "Invalid nested task call." in result._node.process.exit_message

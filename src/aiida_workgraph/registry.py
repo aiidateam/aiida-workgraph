@@ -6,5 +6,8 @@ registry_hub = RegistryHub.from_prefix(
     socket_group="aiida_workgraph.socket",
     property_group="aiida_workgraph.property",
     type_mapping_group="aiida_workgraph.type_mapping",
+    type_promotion_group="aiida_workgraph.type_promotion",
     identifier_prefix="workgraph",
 )
+
+type_mapping = registry_hub.type_mapping

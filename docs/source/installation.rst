@@ -5,33 +5,33 @@ Installation
 .. _installation:requirements:
 
 Requirements
-============
+____________
 
-To work with ``aiida-workgraph``, you should have:
+To work with ``aiida-workgraph``, you'll need:
 
-* installed ``aiida-core``
-* configured an AiiDA profile.
+* ``aiida-core`` (can also be installed directly with ``aiida-workgraph`` as it is a dependency)
+* a working AiiDA profile (e.g., using AiiDA's ``verdi presto``)
 
-Please refer to the `documentation <https://aiida.readthedocs.io/projects/aiida-core/en/latest/intro/get_started.html>`_ of ``aiida-core`` for detailed instructions.
+Please refer to the `documentation <https://aiida.readthedocs.io/projects/aiida-core/en/latest/intro/get_started.html>`_ of ``aiida-core`` for detailed instructions on AiiDA profile creation.
 
 
 .. _installation:installation:
 
-Installation
-============
-
+Using pip
+_________
 
 The recommended method of installation is to use the Python package manager |pip|_:
 
 .. code-block:: console
 
     $ pip install aiida-workgraph
-    $ # install web ui package if you want to use the web ui
-    $ pip install aiida-workgraph-web-ui
 
-This will install the latest stable version that was released to PyPI.
+This will install the latest stable version that was released to `PyPI <https://pypi.org/project/aiida-workgraph>`_ (including all required dependencies).
 
-To install the package from source, first clone the repository and then install using |pip|_:
+From source
+___________
+
+To install the package from source, first clone the `repository <https://github.com/aiidateam/aiida-workgraph>`_ from GitHub and then install using |pip|_:
 
 .. code-block:: console
 
@@ -39,14 +39,27 @@ To install the package from source, first clone the repository and then install 
     $ cd aiida-workgraph
     $ pip install -e .
 
-The ``-e`` flag will install the package in editable mode, meaning that changes to the source code will be automatically picked up.
-To install the web app you need to in addition build the JavaScript packages:
+.. note::
+   The ``-e`` flag will install the package in editable mode, meaning that changes to the source code will be automatically picked up.
+   Without this flag, the package is installed as a regular copy, and you would need to reinstall it each time you make changes to the source code.
+
+.. _installation:gui:
+
+GUI
+___
+
+In addition to the main ``aiida-workgraph`` Python package, we also provide a graphical user interface (GUI), which can be installed as follows:
 
 .. code-block:: console
 
-    $ cd aiida-workgraph
-    $ pip install -e .
+    $ pip install aiida-gui-workgraph
 
+.. warning::
+   **Experimental Feature**
+
+   The GUI is still an experimental feature and under active development.
+   Changes may be applied in future versions.
+   Use with caution in production environments.
 
 .. |pip| replace:: ``pip``
 .. _pip: https://pip.pypa.io/en/stable/

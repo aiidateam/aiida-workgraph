@@ -44,9 +44,10 @@ def test_task_update_ctx(decorated_add: Callable) -> None:
     wg = WorkGraph(name="test_node_set_ctx")
     add1 = wg.add_task(decorated_add, "add1", x=Float(2).store(), y=Float(3).store())
     with pytest.raises(
-        AttributeError, match="TaskSocketNamespace: add1.outputs has no attribute"
+        AttributeError,
+        match="TaskSocketNamespace: 'add1.outputs' has no sub-socket 'abc'",
     ):
-        wg.update_ctx({"sum": add1.outputs.resul})
+        wg.update_ctx({"sum": add1.outputs.abc})
     wg.update_ctx({"sum": add1.outputs.result})
     add2 = wg.add_task(decorated_add, "add2", x=add1.outputs[0], y=wg.ctx.sum)
     wg.run()

@@ -1,15 +1,16 @@
 from __future__ import annotations
 
 from dataclasses import replace
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional, Union, Callable, Annotated
 import inspect
 from aiida_shell import ShellJob
 from aiida_shell.launch import prepare_shell_job_inputs
 from node_graph.node_spec import NodeSpec
-from node_graph.executor import NodeExecutor
-from node_graph.socket_spec import SocketSpec, merge_specs
+from node_graph.executor import RuntimeExecutor
+from node_graph.socket_spec import SocketSpec, merge_specs, SocketSpecMeta
 from aiida_workgraph.socket_spec import from_aiida_process, namespace
 from aiida_workgraph.task import SpecTask, TaskHandle
+from aiida import orm
 
 
 class ShellJobTask(SpecTask):
@@ -28,10 +29,12 @@ class ShellJobTask(SpecTask):
         """Overwrite the serialize_data method to handle the parser function."""
         import inspect
 
-        prop = data["inputs"]["sockets"]["parser"]["property"]
-        if prop["value"] is not None:
-            if inspect.isfunction(prop["value"]):
-                prop["value"] = NodeExecutor.from_callable(prop["value"]).to_dict()
+        parser = data["inputs"].get("parser")
+        if parser is not None:
+            if inspect.isfunction(parser):
+                data["inputs"]["parser"] = RuntimeExecutor.from_callable(
+                    parser
+                ).to_dict()
 
     def execute(self, engine_process, args=None, kwargs=None, var_kwargs=None):
         """Submit/launch the AiiDA ShellJob.
@@ -52,12 +55,30 @@ class ShellJobTask(SpecTask):
 
         parser = subset.get("parser", None)
         if isinstance(parser, dict) and {"module_path", "callable_name"} <= set(parser):
-            # already a NodeExecutor dict -> build executor instance
-            subset["parser"] = NodeExecutor(**parser).executor
+            # already a Executor dict -> build executor instance
+            subset["parser"] = RuntimeExecutor(**parser).callable
         elif inspect.isfunction(parser):
-            subset["parser"] = NodeExecutor.from_callable(parser).executor
+            subset["parser"] = parser
 
         if subset:
+            if "command" in subset:
+                subset["command"] = (
+                    subset["command"].value
+                    if isinstance(subset["command"], orm.Str)
+                    else subset["command"]
+                )
+            if "resolve_command" in subset:
+                subset["resolve_command"] = (
+                    subset["resolve_command"].value
+                    if isinstance(subset["resolve_command"], orm.Bool)
+                    else subset["resolve_command"]
+                )
+            if "arguments" in subset:
+                subset["arguments"] = (
+                    subset["arguments"].get_list()
+                    if isinstance(subset["arguments"], orm.List)
+                    else subset["arguments"]
+                )
             prepared = prepare_shell_job_inputs(**subset)
             # drop original keys so they won't clash with launch kwargs
             for k in subset.keys():
@@ -106,9 +127,16 @@ def _build_shelljob_nodespec(
     parser_outputs = validate_socket_data(parser_outputs)
 
     in_spec, out_spec = from_aiida_process(ShellJob)
+    # the code socket is not required in the task
+    # as we can build it from the command input
+    code_spec = in_spec.fields["code"]
+    patched_code = replace(code_spec, meta=replace(code_spec.meta, required=False))
+    in_spec = replace(in_spec, fields={**in_spec.fields, "code": patched_code})
 
     # Add additional inputs
-    additions_in = namespace(command=Any, resolve_command=bool)
+    additions_in = namespace(
+        command=Any, resolve_command=Annotated[bool, SocketSpecMeta(required=False)]
+    )
     in_spec = merge_specs(in_spec, additions_in)
 
     # Ensure stdout/stderr outputs
@@ -122,13 +150,13 @@ def _build_shelljob_nodespec(
             ShellParser.format_link_label(key): value
             for key, value in outputs.fields.items()
         }
-        replace(outputs, fields=fields)
+        outputs = replace(outputs, fields=fields)
         out_spec = merge_specs(out_spec, outputs)
 
     if parser_outputs:
         out_spec = merge_specs(out_spec, parser_outputs)
 
-    exec_payload = NodeExecutor.from_callable(ShellJob)
+    exec_payload = RuntimeExecutor.from_callable(ShellJob)
 
     return NodeSpec(
         identifier=identifier or "ShellJob",
@@ -151,7 +179,7 @@ def shelljob(
     nodes: Optional[Dict[str, Any]] = None,
     filenames: Optional[Dict[str, str]] = None,
     outputs: Optional[List[Union[str, Dict[str, Any]]]] = None,
-    parser: Optional[SocketSpec | List[str]] = None,
+    parser: Optional[Callable] = None,
     parser_outputs: Optional[SocketSpec | List[str]] = None,
     metadata: Optional[Dict[str, Any]] = None,
     resolve_command: bool = True,

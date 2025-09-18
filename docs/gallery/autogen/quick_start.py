@@ -107,7 +107,7 @@ def AddMultiply(x, y, z):
 #
 #    If you are following along in a Jupyter notebook, replace ``wg.to_html()`` with ``wg``.
 
-wg = AddMultiply.build_graph(x=2, y=3, z=4)
+wg = AddMultiply.build(x=2, y=3, z=4)
 wg.to_html()
 
 # %%
@@ -146,9 +146,7 @@ print("Result of multiplication:", wg.tasks.multiply.outputs.result.value)
 #
 # Let's have a look at the full data provenance of our executed workflow:
 
-from aiida_workgraph.utils import generate_node_graph
-
-generate_node_graph(wg.pk)
+wg.generate_provenance_graph()
 
 # %%
 # Summary

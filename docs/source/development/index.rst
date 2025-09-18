@@ -7,11 +7,6 @@ This section contains information for developers.
 
 .. toctree::
    :maxdepth: 1
-   :caption: Other Contents:
+   :caption: Contents:
 
-   custom_task
-   data_serialization
-   test
-   python_task
-   engine
-   map_task
+   contributing

@@ -1,7 +1,7 @@
 import pytest
 from aiida_workgraph import WorkGraph, task
 from aiida_workgraph.socket import TaskSocketNamespace
-from typing import Callable, Any
+from typing import Callable, Any, Annotated
 from aiida_workgraph.manager import get_current_graph, set_current_graph
 from aiida_workgraph import socket_spec as spec
 
@@ -10,12 +10,17 @@ def test_custom_outputs():
     """Test custom outputs."""
 
     @task
-    def add_multiply(x, y) -> spec.namespace(sum=Any, product=Any):
+    def add_multiply(x, y) -> Annotated[dict, spec.namespace(sum=Any, product=Any)]:
         return {"sum": x + y, "product": x * y}
 
-    n = add_multiply._spec.to_node()
-    assert "sum" in n.outputs
-    assert "product" in n.outputs
+    @task.graph(outputs=add_multiply.outputs)
+    def test_graph(x, y):
+        return add_multiply(x, y)
+
+    wg = test_graph.build(1, 2)
+    wg.run()
+    assert wg.outputs.sum.value == 3
+    assert wg.outputs.product.value == 2
 
 
 def test_decorators_args() -> None:
@@ -87,7 +92,6 @@ def task_function(request):
 def test_decorators_task_args(task_function):
 
     n = task_function._spec.to_node()
-    tdata = n.to_dict()
     assert n.args_data["args"] == []
     assert set(n.args_data["kwargs"]) == {
         "metadata",
@@ -99,7 +103,6 @@ def test_decorators_task_args(task_function):
     }
     assert n.args_data["var_args"] is None
     assert n.args_data["var_kwargs"] == "c"
-    assert set(tdata["outputs"]["sockets"].keys()) == set(["_outputs", "_wait"])
 
 
 @pytest.fixture(params=["decorator_factory", "decorator"])
@@ -263,31 +266,3 @@ def test_set_current_graph():
     g2 = WorkGraph()
     set_current_graph(g2)
     assert get_current_graph() == g2
-
-
-def test_use_pickle():
-    # non-jsonable data
-    class Data:
-        def __init__(self, value):
-            self.value = value
-
-    # without pickle, should raise error
-    @task()
-    def add(x, y):
-        return x + y.value
-
-    with pytest.raises(
-        ValueError, match="Cannot serialize type=Data. No suitable method found"
-    ):
-        with WorkGraph() as wg:
-            wg.outputs.result = add(3, Data(4)).result
-            wg.run()
-
-    # now use pickle
-    @task(use_pickle=True)
-    def add(x, y):
-        return x + y.value
-
-    with WorkGraph() as wg:
-        wg.outputs.result = add(3, Data(4)).result
-        wg.run()

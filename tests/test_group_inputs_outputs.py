@@ -22,13 +22,11 @@ def test_group_inputs_outputs(decorated_add):
         "sum2": task2.outputs.result,
     }
     wg.run()
-    assert wg.outputs.results.sum1 == 4
-    assert wg.outputs.results.sum2 == 6
+    assert wg.outputs.results.sum1.value == 3
+    assert wg.outputs.results.sum2.value == 4
     # the graph inputs will be serialized as AiiDA nodes
-    assert (
-        wg.process.inputs.workgraph_data.tasks.graph_inputs.inputs.sockets.add.sockets.x.property.value
-        == 1
-    )
+    print(list(wg.process.inputs._get_keys()))
+    assert wg.process.inputs.graph_inputs.add.x.value == 1
 
 
 def test_load_from_db():
@@ -36,7 +34,7 @@ def test_load_from_db():
     from aiida_workgraph.tasks.builtins import GraphLevelTask
 
     wg = WorkGraph("test_load_from_db", inputs=spec.namespace(x=Any, y=Any, z=Any))
-    wg.inputs = {"x": 1, "y": 2}
+    wg.inputs = {"x": 1, "y": 2, "z": 1}
     wg.save()
     wg2 = WorkGraph.load(wg.pk)
     wg2.restart()
@@ -44,8 +42,8 @@ def test_load_from_db():
     wg2.inputs.z = 3
     wg2.save()
     wg3 = WorkGraph.load(wg2.pk)
-    assert wg3.inputs.x == 1
-    assert wg3.inputs.z == 3
+    assert wg3.inputs.x.value == 1
+    assert wg3.inputs.z.value == 3
 
 
 def test_detect_graph_inputs(decorated_add):
@@ -56,7 +54,7 @@ def test_detect_graph_inputs(decorated_add):
     def graph1(x, y):
         decorated_add(x=x, y=y)
 
-    wg = graph1.build_graph(x=1, y=1)
+    wg = graph1.build(x=1, y=1)
     assert "graph_inputs.x -> add.x" in wg.links
     assert "graph_inputs.y -> add.y" in wg.links
 

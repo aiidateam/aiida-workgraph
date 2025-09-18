@@ -86,9 +86,10 @@ print("Output sockets: ", task2.get_output_names())
 # The ``identifier`` is used to indicates the data type. The data
 # type tell the code how to display the port in the GUI, validate the data,
 # and serialize data into database.
-# We use ``workgraph.Any`` for any data type. For the moment, the data validation is
-# experimentally supported, and the GUI display is not implemented. Thus,
-# I suggest you to always ``workgraph.Any`` for the port.
+# We use ``workgraph.Any`` for any data type.
+#
+# .. warning::
+#   **The data validation feature is experimental.** The API is subject to change in future releases. We welcome your feedback on its functionality.
 #
 # For convenience, we also support using a list of strings as the output definition, which is equivalent to using ``workgraph.Any`` for each output socket.
 
@@ -231,7 +232,7 @@ def generate_squares(n: int) -> spec.namespace(squares=spec.dynamic(int)):
 #     graph, allowing you to trace the history and reuse of every single result.
 #
 # 2.  **Database integrity**: It avoids serializing large, complex Python objects
-#     into a single, opaque file (like a pickle file, which is disabled by default in AiiDA).
+#     into a single, opaque file.
 #     Instead, each result is a native, queryable entry in the AiiDA database.
 #
 # To consume these dynamic outputs, we can create a task that accepts an arbitrary

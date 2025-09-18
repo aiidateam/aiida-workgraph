@@ -1,7 +1,7 @@
 from typing import Any, Dict
 from aiida_workgraph.task import Task, ChildTaskSet, SpecTask
 from node_graph.nodes.builtins import _GraphIOSharedMixin
-from node_graph import NodeExecutor
+from node_graph import RuntimeExecutor
 
 
 class GraphLevelTask(_GraphIOSharedMixin, SpecTask):
@@ -144,7 +144,7 @@ class MapItem(Task):
     def get_executor(self):
         from aiida_workgraph.executors.builtins import get_item
 
-        return NodeExecutor.from_callable(get_item)
+        return RuntimeExecutor.from_callable(get_item)
 
 
 class GatherItem(Task):
@@ -191,7 +191,7 @@ class SetContext(Task):
     def get_executor(self):
         from aiida_workgraph.executors.builtins import update_ctx
 
-        return NodeExecutor.from_callable(update_ctx)
+        return RuntimeExecutor.from_callable(update_ctx)
 
 
 class GetContext(Task):
@@ -216,7 +216,7 @@ class GetContext(Task):
     def get_executor(self):
         from aiida_workgraph.executors.builtins import get_context
 
-        return NodeExecutor.from_callable(get_context)
+        return RuntimeExecutor.from_callable(get_context)
 
 
 class AiiDAInt(Task):
@@ -236,7 +236,7 @@ class AiiDAInt(Task):
     def get_executor(self):
         from aiida import orm
 
-        return NodeExecutor.from_callable(orm.Int)
+        return RuntimeExecutor.from_callable(orm.Int)
 
 
 class AiiDAFloat(Task):
@@ -258,7 +258,7 @@ class AiiDAFloat(Task):
     def get_executor(self):
         from aiida import orm
 
-        return NodeExecutor.from_callable(orm.Float)
+        return RuntimeExecutor.from_callable(orm.Float)
 
 
 class AiiDAString(Task):
@@ -280,7 +280,7 @@ class AiiDAString(Task):
     def get_executor(self):
         from aiida import orm
 
-        return NodeExecutor.from_callable(orm.Str)
+        return RuntimeExecutor.from_callable(orm.Str)
 
 
 class AiiDAList(Task):
@@ -302,7 +302,7 @@ class AiiDAList(Task):
     def get_executor(self):
         from aiida import orm
 
-        return NodeExecutor.from_callable(orm.List)
+        return RuntimeExecutor.from_callable(orm.List)
 
 
 class AiiDADict(Task):
@@ -324,7 +324,7 @@ class AiiDADict(Task):
     def get_executor(self):
         from aiida import orm
 
-        return NodeExecutor.from_callable(orm.Dict)
+        return RuntimeExecutor.from_callable(orm.Dict)
 
 
 class AiiDANode(Task):
@@ -354,7 +354,7 @@ class AiiDANode(Task):
     def get_executor(self):
         from aiida import orm
 
-        return NodeExecutor.from_callable(orm.load_node)
+        return RuntimeExecutor.from_callable(orm.load_node)
 
 
 class AiiDACode(Task):
@@ -381,7 +381,7 @@ class AiiDACode(Task):
     def get_executor(self):
         from aiida import orm
 
-        return NodeExecutor.from_callable(orm.load_code)
+        return RuntimeExecutor.from_callable(orm.load_code)
 
 
 class Select(Task):
@@ -407,4 +407,4 @@ class Select(Task):
     def get_executor(self):
         from aiida_workgraph.executors.builtins import select
 
-        return NodeExecutor.from_callable(select)
+        return RuntimeExecutor.from_callable(select)

@@ -1,10 +1,10 @@
 from IPython.display import IFrame
 
 
-def test_workgraph_widget(wg_calcfunction, decorated_add):
+def test_workgraph_widget(wg_task, decorated_add):
     """Save the workgraph"""
 
-    wg = wg_calcfunction
+    wg = wg_task
     wg.name = "test_workgraph_widget"
     wg.add_task(decorated_add, "add1", x=1, y=3)
     wg.tasks["sumdiff2"].waiting_on.add(wg.tasks["sumdiff2"])
@@ -23,13 +23,13 @@ def test_workgraph_widget(wg_calcfunction, decorated_add):
     data = wg._repr_mimebundle_()
 
 
-def test_workgraph_task(wg_calcfunction):
+def test_workgraph_task(wg_task):
     """Save the workgraph"""
-    wg = wg_calcfunction
+    wg = wg_task
     value = wg.tasks["sumdiff2"].to_widget_value()
     assert len(value["nodes"]) == 1
-    # all the inputs are optional, so no inputs are shown
-    assert len(value["nodes"]["sumdiff2"]["inputs"]) == 0
+    # there is a function_data input for PyFunction
+    assert len(value["nodes"]["sumdiff2"]["inputs"]) == 1
     assert len(value["links"]) == 0
     # to html
     data = wg.tasks["sumdiff2"].to_html()

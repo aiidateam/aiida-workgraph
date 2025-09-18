@@ -141,3 +141,4 @@ tests/work
 /tests/**/*html
 .vscode
 # html
+html/

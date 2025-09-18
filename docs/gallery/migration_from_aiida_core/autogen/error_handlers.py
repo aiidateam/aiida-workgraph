@@ -126,20 +126,19 @@ def handle_negative_sum(task: Task):
 wg = WorkGraph("error_handling_graph")
 
 # 2. Add the calculation task
-wg.add_task(ArithmeticAddCalculation, name="add_task")
+task1 = wg.add_task(ArithmeticAddCalculation, name="add_task")
 
 # 3. Register the error handler for the task
-wg.add_error_handler(
-    handle_negative_sum,
-    name="handle_negative_sum",
-    tasks={
-        "add_task": {
+task1.add_error_handler(
+    {
+        "handle_negative_sum": {
+            "executor": handle_negative_sum,
             "exit_codes": [
                 ArithmeticAddCalculation.exit_codes.ERROR_NEGATIVE_NUMBER.status
             ],
             "max_retries": 3,
         }
-    },
+    }
 )
 
 # ------------------------- Submit the calculation -------------------

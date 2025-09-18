@@ -7,7 +7,7 @@ from node_graph.socket import (
 )
 
 from aiida_workgraph.property import TaskProperty
-from aiida_workgraph.orm.mapping import type_mapping
+from aiida_workgraph.registry import type_mapping
 
 
 class TaskSocket(NodeSocket):

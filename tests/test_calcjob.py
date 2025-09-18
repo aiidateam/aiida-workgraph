@@ -1,5 +1,5 @@
-import pytest
-from aiida_workgraph import WorkGraph, task
+from aiida_workgraph import task
+from typing import Annotated
 
 
 def test_create_task_from_calcJob(add_code) -> None:
@@ -7,17 +7,27 @@ def test_create_task_from_calcJob(add_code) -> None:
     from aiida.calculations.arithmetic.add import ArithmeticAddCalculation
 
     AddTask = task()(ArithmeticAddCalculation)
-    with WorkGraph() as wg:
-        outputs1 = AddTask(x=2, y=3, code=add_code)
-        outputs2 = AddTask(x=outputs1.sum, y=3, code=add_code)
-        wg.run()
-    assert outputs2.sum.value == 8
+    metadata = {
+        "options": {
+            "resources": {
+                "num_machines": 1,
+                "num_mpiprocs_per_machine": 2,
+            },
+        }
+    }
 
+    @task.graph
+    def test_calcjob(
+        inputs: Annotated[dict, AddTask.inputs]
+    ) -> Annotated[dict, AddTask.outputs]:
+        return AddTask(
+            x=inputs["x"], y=inputs["y"], code=inputs["code"], metadata=metadata
+        )
 
-@pytest.mark.usefixtures("started_daemon_client")
-def test_submit(wg_calcjob: WorkGraph) -> None:
-    """Submit simple calcjob."""
-    wg = wg_calcjob
-    wg.name = "test_submit_calcjob"
-    wg.submit(wait=True)
-    assert wg.tasks.add2.outputs.sum.value == 9
+    _, wg = test_calcjob.run_get_graph(
+        {"x": 2, "y": 3, "code": add_code, "metadata": metadata}
+    )
+
+    assert wg.outputs.sum.value == 5
+    assert wg.tasks[-1]._spec.mode == "decorator_build"
+    assert wg.tasks[-1].get_executor().callable == ArithmeticAddCalculation
