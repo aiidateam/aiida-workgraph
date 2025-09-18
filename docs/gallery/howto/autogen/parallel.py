@@ -19,21 +19,6 @@ from aiida_workgraph import namespace, task, dynamic
 
 load_profile()
 
-# %%
-# Number generation
-# -----------------
-#
-# Let's begin with a helper task that generates a dictionary of numbers.
-# This will serve as input to the scatter phase.
-
-
-@task
-def generate_numbers(
-    n: int,
-) -> t.Annotated[dict[str, int], namespace(data=dynamic(int))]:
-    """Generate a dictionary of numbers from 1 to n."""
-    return {"data": {f"number_{i+1}": i + 1 for i in range(n)}}
-
 
 # %%
 # Scatter
@@ -48,6 +33,17 @@ def generate_numbers(
 def square(x: int) -> int:
     """Square an integer."""
     return x * x
+
+# %%
+# Define a helper task that generates a dictionary of numbers.
+# This will serve as input to the scatter phase.
+
+@task
+def generate_numbers(
+    n: int,
+) -> t.Annotated[dict[str, int], namespace(data=dynamic(int))]:
+    """Generate a dictionary of numbers from 1 to n."""
+    return {"data": {f"number_{i+1}": i + 1 for i in range(n)}}
 
 
 # %%
