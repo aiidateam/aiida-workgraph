@@ -60,11 +60,12 @@ docs = [
     "sphinx-autobuild",
     "click~=8.1.0",
 ]
-pre-commit = ["pre-commit~=2.2", "pylint~=2.17.4"]
+pre-commit = ["pre-commit~=4.3"]
 tests = [
     'pgtest~=1.3',
     "pytest~=7.0",
     "pytest-cov~=2.7,<2.11",
+    "pytest-xdist~=3.8",
     "playwright",
     "httpx",
 ]
@@ -139,8 +140,19 @@ workgraph = "aiida_workgraph.cli.cmd_workgraph:workgraph"
 [project.entry-points."aiida_workgraph.type_mapping"]
 "workgraph.builtins_mapping" = "aiida_workgraph.orm.mapping:builtins_type_mapping"
 
+[project.entry-points."aiida_workgraph.type_promotion"]
+"workgraph.builtins_mapping" = "aiida_workgraph.orm.mapping:TYPE_PROMOTIONS"
+
 [tool.flit.sdist]
 exclude = ["docs/", "tests/"]
 
-[tool.pylint.format]
-max-line-length = 120
+[tool.ruff]
+line-length = 120
+
+[tool.ruff.format]
+indent-style = "space"
+quote-style = "single"
+
+[tool.ruff.lint.per-file-ignores]
+"docs/gallery/*/autogen/*.py" = ["E402"]
+"docs/gallery/autogen/*.py" = ["E402"]

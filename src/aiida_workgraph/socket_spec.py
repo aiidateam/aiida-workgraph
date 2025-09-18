@@ -10,7 +10,7 @@ from node_graph.socket_spec import (
     select,
     meta,
 )
-from aiida_workgraph.orm.mapping import type_mapping
+from aiida_workgraph.registry import type_mapping
 from aiida.engine import Process
 from aiida.engine.processes.process_spec import ProcessSpec
 from plumpy.ports import Port, PortNamespace

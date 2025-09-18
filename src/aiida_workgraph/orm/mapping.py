@@ -1,5 +1,4 @@
 from aiida import orm
-import importlib.metadata
 from typing import Any
 
 builtins_type_mapping = {
@@ -22,28 +21,8 @@ builtins_type_mapping = {
     Any: "workgraph.any",
 }
 
-
-# Load additional mapping from entry points
-def load_custom_type_mapping():
-    """Loads custom type mapping from plugins."""
-    type_mapping = {}
-
-    entry_points = importlib.metadata.entry_points()
-
-    if hasattr(entry_points, "select"):  # Python 3.10+
-        group_entries = entry_points.select(group="aiida_workgraph.type_mapping")
-    else:  # Python 3.9 and earlier
-        group_entries = entry_points.get("aiida_workgraph.type_mapping", [])
-
-    for entry_point in group_entries:
-        try:
-            # Load the function or dict and merge with default mapping
-            custom_mapping = entry_point.load()
-            if isinstance(custom_mapping, dict):
-                type_mapping.update(custom_mapping)
-        except Exception as e:
-            print(f"Failed to load type mapping from {entry_point.name}: {e}")
-    return type_mapping
-
-
-type_mapping = load_custom_type_mapping()
+TYPE_PROMOTIONS: set[tuple[str, str]] = {
+    ("workgraph.bool", "workgraph.int"),
+    ("workgraph.bool", "workgraph.float"),
+    ("workgraph.int", "workgraph.float"),
+}

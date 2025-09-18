@@ -8,7 +8,7 @@ Introduction
 We'll explore two key examples that highlight the flexibility of AiiDA-WorkGraph:
 
 1.  **Atomization energy**: A simple, linear workflow to calculate the atomization energy of a diatomic molecule.
-2.  **Equation of state (EOS)**: A more advanced workflow for bulk structure that showcases how to handle loops and dynamic inputs/outputs, a common pattern in dynamic workflows.
+2.  **Equation of state (EOS)**: A more advanced workflow for bulk structure that showcases how to handle ``if`` condition, parallel execution, and dynamic inputs/outputs, a common pattern in dynamic workflows.
 
 """
 
@@ -45,6 +45,8 @@ load_profile()
 #
 #    We're using the ASE EMT (Effective Medium Theory) calculator because it's exceptionally fast and perfect for demonstrations.
 #    You can easily swap it with any other ASE-compatible calculator, like Quantum ESPRESSO, VASP, or GPAW, for your research.
+#    For realistic simulations, especially with DFT codes, you would typically run these calculations on a remote computer.
+#    For more details on running calculations remotely, please refer to the section on :ref:`Run calculations remotely <remote_calculations>`.
 #
 from aiida_workgraph import task, spec
 from ase import Atoms
@@ -122,7 +124,7 @@ wg.generate_provenance_graph()
 # Now for a more complex and practical example: calculating the Equation of State (EOS) for a bulk material.
 # The process involves several steps:
 #
-# 1.  **Relax** the initial atomic structure to its lowest-energy state.
+# 1.  **Relax**(optional) the initial atomic structure to its lowest-energy state.
 # 2.  **Strain** the relaxed structure by applying a series of scaling factors.
 # 3.  **Calculate** the total energy and volume for each strained structure.
 # 4.  **Fit** the resulting energy-volume data to an EOS model to find properties like the equilibrium volume and bulk modulus.
@@ -131,6 +133,7 @@ wg.generate_provenance_graph()
 
 from ase.calculators.emt import EMT
 from ase.optimize import BFGS
+from typing import Annotated
 
 
 @task
@@ -142,10 +145,18 @@ def relax_structure(atoms: Atoms) -> Atoms:
     return atoms
 
 
+# %%
+# .. note::
+#
+#   If you want to run the ``relax_structure`` task on a remote computer, you can use the ``@task.pythonjob`` decorator.
+#   Please refer to the section on :ref:`Run calculations remotely <remote_calculations>`.
+#
+
+
 @task
 def create_strained_structures(
     atoms: Atoms, scales: list
-) -> spec.namespace(scaled_structures=spec.dynamic(Atoms)):
+) -> Annotated[dict, spec.namespace(scaled_structures=spec.dynamic(Atoms))]:
     """Generate a series of strained structures from a list of scaling factors."""
     scaled_structures = {}
     for i, scale in enumerate(scales):
@@ -176,8 +187,8 @@ def calculate_energy_and_volume(atoms: Atoms) -> dict:
 
 @task.graph
 def calc_all_structures(
-    **scaled_structures,
-) -> spec.namespace(results=spec.dynamic(dict)):
+    scaled_structures: Annotated[dict, spec.dynamic(Atoms)]
+) -> Annotated[dict, spec.namespace(results=spec.dynamic(dict))]:
     """Sub-workflow to calculate energy and volume for all strained structures in parallel."""
     results = {}
     for key, atoms in scaled_structures.items():
@@ -190,7 +201,7 @@ def calc_all_structures(
 
 
 @task
-def fit_eos_model(**data) -> dict:
+def fit_eos_model(data: Annotated[dict, spec.dynamic(dict)]) -> dict:
     """Fit Energy-Volume data to a Birch-Murnaghan Equation of State."""
     from ase.eos import EquationOfState
     from ase.units import kJ
@@ -208,32 +219,14 @@ def fit_eos_model(**data) -> dict:
 
 
 @task.graph()
-def eos_workflow(atoms: Atoms, scales: list) -> dict:
+def eos_workflow(atoms: Atoms, scales: list, run_relax: bool = True) -> dict:
     """The complete EOS workflow graph."""
-    relaxed_atoms = relax_structure(atoms=atoms).result
-    strained = create_strained_structures(atoms=relaxed_atoms, scales=scales)
+    if run_relax:
+        atoms = relax_structure(atoms=atoms).result
+    strained = create_strained_structures(atoms=atoms, scales=scales)
     emt_outputs = calc_all_structures(scaled_structures=strained.scaled_structures)
     return fit_eos_model(data=emt_outputs.results).result
 
-
-# %%
-#
-# .. important::
-#
-#    When linking task outputs to a keyword argument of the task, you **must** explicitly name the input argument, e.g.:
-#
-#    .. code-block:: python
-#
-#        calc_all_structures(scaled_structures=strained.scaled_structures)
-#
-#    rather than using argument unpacking like:
-#
-#    .. code-block:: python
-#
-#        calc_all_structures(**strained.scaled_structures)
-#
-#    For further details, please refer to the section on :ref:`Dynamic Namespaces <dynamic_namespaces>`.
-#
 
 # %%
 # Build and Run the EOS Workflow
@@ -277,7 +270,7 @@ wg.generate_provenance_graph()
 #
 # -   Transform any Python function into a robust, provenance-tracked task with the ``@task`` decorator.
 # -   Compose tasks into complete workflows using ``@task.graph``, from simple linear chains to complex graphs.
-# -   Manage advanced patterns like loops and parallel execution using **dynamic namespaces**.
+# -   Manage advanced patterns like ``if`` condition, parallel execution, and **dynamic namespaces**.
 # -   Build, execute, and visualize both the workflow plan and its final, rich **provenance graph**.
 #
 # These powerful concepts are the foundation for building sophisticated, automated, and fully reproducible simulation pipelines for your own research projects. Happy computing! 🚀
