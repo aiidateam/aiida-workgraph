@@ -5,6 +5,7 @@ Run calculations remotely
 """
 
 # %%
+# .. _remote_calculations:
 # Introduction
 # ------------
 #
