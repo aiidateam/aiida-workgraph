@@ -316,12 +316,12 @@ wg.generate_provenance_graph()
 # %%
 # Note how the outputs of the various tasks are exposed (linked) to the graph, making accessible via the graph node.
 #
-# Reshaping specifications with ``SocketSpecSelect``
+# Reshaping specifications with ``select``
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #
 # Often, you'll want to reuse parts of a specification while modifying it.
 # For example, you might want to exclude a field that is provided by another source or rename fields for clarity.
-# This can be done declaratively using ``SocketSpecSelect``.
+# This can be done declaratively using ``select``.
 #
 # The main parameters are:
 #
@@ -332,12 +332,12 @@ wg.generate_provenance_graph()
 #
 # .. Important::
 #
-#     To apply a ``SocketSpecSelect``, you must place it in the metadata list of ``t.Annotated[<type>, ...]`` alongside the specification you are modifying.
+#     To apply a ``select``, you must place it in the metadata list of ``t.Annotated[<type>, ...]`` alongside the specification you are modifying.
 #
 # Let's see an example where we build a graph that runs a task twice. We want a shared ``structure`` input at the graph level,
 # so we must *exclude* it from the nested input specifications for each task call.
 
-from aiida_workgraph.socket_spec import SocketSpecMeta, SocketSpecSelect
+from aiida_workgraph.socket_spec import meta, select
 
 
 @task
@@ -363,10 +363,10 @@ def UseExclude(
         dict,
         namespace(
             consume_complex1=t.Annotated[
-                consume_complex.inputs, SocketSpecSelect(exclude="data.pw.structure")
+                dict, consume_complex.inputs, select(exclude="data.pw.structure")
             ],
             consume_complex2=t.Annotated[
-                consume_complex.inputs, SocketSpecSelect(exclude="data.pw.structure")
+                dict, consume_complex.inputs, select(exclude="data.pw.structure")
             ],
         ),
     ],
@@ -401,13 +401,13 @@ wg.to_html()
 # Modifying specification metadata
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #
-# You can also set namespace-level metadata declaratively using ``SocketSpecMeta``, for example,
+# You can also set namespace-level metadata declaratively using ``meta``, for example,
 # to mark a reused specification as optional.
 #
-# - ``SocketSpecMeta(required=False)``: Makes the input optional.
-# - ``SocketSpecMeta(is_metadata=True)``: Marks the input as metadata-only.
+# - ``meta(required=False)``: Makes the input optional.
+# - ``meta(is_metadata=True)``: Marks the input as metadata-only.
 #
-# It is attached alongside ``SocketSpecSelect`` in the same ``Annotated`` metadata list.
+# It is attached alongside ``select`` in the same ``Annotated`` metadata list.
 
 
 @task.graph
@@ -415,7 +415,7 @@ def UseMeta(
     data: t.Annotated[
         dict,
         consume_complex.inputs,  # Reuse the original spec
-        SocketSpecMeta(required=False),  # Make the entire 'data' input optional
+        meta(required=False),  # Make the entire 'data' input optional
     ]
 ):
     if data:
@@ -435,7 +435,7 @@ def UseMeta(
 # - Annotate inputs to specify input structures.
 # - Employ ``dynamic`` for tasks with a variable number of outputs.
 # - Reuse ``.inputs`` and ``.outputs`` specifications at the graph level to build modular and robust workflows.
-# - Use ``SocketSpecSelect`` inside ``Annotated`` to reshape reused specifications (e.g., ``include``/``exclude`` with dotted paths, ``rename``, `prefix`).
-# - Use ``SocketSpecMeta`` to modify metadata of a specification, such as making it optional.
+# - Use ``select`` inside ``Annotated`` to reshape reused specifications (e.g., ``include``/``exclude`` with dotted paths, ``rename``, `prefix`).
+# - Use ``meta`` to modify metadata of a specification, such as making it optional.
 #
 # These tools are fundamental to building reproducible and verifiable scientific workflows with complete data provenance.
