@@ -7,6 +7,8 @@ from node_graph.socket_spec import (
     SocketSpec,
     BaseSocketSpecAPI,
     BaseSpecInferAPI,
+    select,
+    meta,
 )
 from aiida_workgraph.registry import type_mapping
 from aiida.engine import Process
@@ -25,6 +27,8 @@ __all__ = [
     "infer_specs_from_callable",
     "from_aiida_process",
     "SocketSpecSelect",
+    "select",
+    "meta",
 ]
 
 
