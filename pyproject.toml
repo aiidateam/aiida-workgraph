@@ -27,7 +27,7 @@ requires-python = ">=3.9"
 dependencies = [
     "numpy",
     "scipy",
-    "node-graph==0.3.10",
+    "node-graph==0.3.11",
     "node-graph-widget>=0.0.5",
     "aiida-core~=2.6",
     "cloudpickle",
@@ -139,6 +139,9 @@ workgraph = "aiida_workgraph.cli.cmd_workgraph:workgraph"
 
 [project.entry-points."aiida_workgraph.type_mapping"]
 "workgraph.builtins_mapping" = "aiida_workgraph.orm.mapping:builtins_type_mapping"
+
+[project.entry-points."aiida_workgraph.type_promotion"]
+"workgraph.builtins_mapping" = "aiida_workgraph.orm.mapping:TYPE_PROMOTIONS"
 
 [tool.flit.sdist]
 exclude = ["docs/", "tests/"]
