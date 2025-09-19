@@ -15,7 +15,7 @@ async def monitor(function, interval, timeout, *args, **kwargs):
         if result:
             break
         if time.time() - start_time > timeout:
-            raise TimeoutError(f"Timeout reached for monitor function {function}")
+            raise TimeoutError(f'Timeout reached for monitor function {function}')
         await asyncio.sleep(interval)
 
 
@@ -38,9 +38,7 @@ def monitor_time(time: t.Union[str, datetime.datetime]):
         try:
             time = datetime.datetime.fromisoformat(time)
         except ValueError as err:
-            raise ValueError(
-                f"Invalid time format: {time}. Expected ISO format."
-            ) from err
+            raise ValueError(f'Invalid time format: {time}. Expected ISO format.') from err
 
     return datetime.datetime.now() > time
 
@@ -61,15 +59,13 @@ def monitor_task(task_name: str, workgraph_pk: int = None, workgraph_name: str =
         builder = orm.QueryBuilder()
         builder.append(
             WorkGraphEngine,
-            filters={
-                "attributes.process_label": {"==": f"WorkGraph<{workgraph_name}>"}
-            },
-            tag="process",
+            filters={'attributes.process_label': {'==': f'WorkGraph<{workgraph_name}>'}},
+            tag='process',
         )
         if builder.count() == 0:
             return False
-    print("Found workgraph")
+    print('Found workgraph')
     node = builder.first()[0]
-    state = node.task_states.get(task_name, "")
-    print(f"Task state: {state}")
-    return state in ["FINISHED", "FAILED", "SKIPPED"]
+    state = node.task_states.get(task_name, '')
+    print(f'Task state: {state}')
+    return state in ['FINISHED', 'FAILED', 'SKIPPED']

@@ -19,7 +19,7 @@ def test_while_and_if(decorated_add):
 
     N = 5
     with WorkGraph() as wg:
-        wg.ctx = {"n": 1, "total": 0}
+        wg.ctx = {'n': 1, 'total': 0}
         with While(wg.ctx.n < N):
             with If(wg.ctx.n % 2 == 0):
                 outputs = decorated_add(x=wg.ctx.total, y=wg.ctx.n)
@@ -38,7 +38,7 @@ def test_map(decorated_add):
     @task(outputs=spec.namespace(result=spec.dynamic(Any)))
     def generate_list(N):
         """Generate a list of N items."""
-        return {"result": {f"item_{i}": i for i in range(1, N + 1)}}
+        return {'result': {f'item_{i}': i for i in range(1, N + 1)}}
 
     @task()
     def sum_values(**items):

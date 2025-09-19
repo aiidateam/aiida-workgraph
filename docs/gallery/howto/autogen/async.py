@@ -16,7 +16,7 @@ Run ``async`` functions as tasks
 # sphinx_gallery_start_ignore
 from aiida_workgraph.utils.logging import set_aiida_loglevel
 
-set_aiida_loglevel("REPORT")
+set_aiida_loglevel('REPORT')
 # sphinx_gallery_end_ignore
 
 import asyncio
@@ -80,5 +80,5 @@ wg.run()
 # In this section, we've explored the ``awaitable`` decorator for integrating asynchronous functions within tasks.
 
 # sphinx_gallery_start_ignore
-set_aiida_loglevel("ERROR")
+set_aiida_loglevel('ERROR')
 # sphinx_gallery_end_ignore

@@ -30,21 +30,15 @@ class BaseSerializablePythonTask(SpecTask):
         Called during Task -> dict conversion. We walk over the input sockets
         and run our specialized Python serialization.
         """
-        function_inputs = {
-            key: data["inputs"][key]
-            for key in data["inputs"]
-            if key not in self.non_function_inputs
-        }
+        function_inputs = {key: data['inputs'][key] for key in data['inputs'] if key not in self.non_function_inputs}
         serialized_inputs = serialize_ports(
             python_data=function_inputs,
             port_schema=self._spec.inputs,
             serializers=all_serializers,
         )
-        data["inputs"].update(serialized_inputs)
+        data['inputs'].update(serialized_inputs)
 
-    def update_from_dict(
-        self, data: Dict[str, Any], **kwargs
-    ) -> "BaseSerializablePythonTask":
+    def update_from_dict(self, data: Dict[str, Any], **kwargs) -> 'BaseSerializablePythonTask':
         """
         Called when reloading from a dict. Note, we do not run `_deserialize_python_data` here.
         Thus, the value of the socket will be AiiDA data nodes.
@@ -59,37 +53,37 @@ class BaseSerializablePythonTask(SpecTask):
         back into raw Python objects, if needed.
         """
         for socket in input_sockets.values():
-            if not socket["metadata"].get("extras", {}).get("is_pythonjob", False):
-                if socket["identifier"] == "workgraph.namespace":
-                    cls._deserialize_python_data(socket["sockets"])
+            if not socket['metadata'].get('extras', {}).get('is_pythonjob', False):
+                if socket['identifier'] == 'workgraph.namespace':
+                    cls._deserialize_python_data(socket['sockets'])
                 else:
                     cls._deserialize_socket_data(socket)
 
     @classmethod
     def _deserialize_socket_data(cls, socket: Dict[str, Any]) -> Any:
-        value = socket.get("property", {}).get("value")
+        value = socket.get('property', {}).get('value')
         if isinstance(value, orm.Data):
-            socket["property"]["value"] = deserialize_to_raw_python_data(value)
+            socket['property']['value'] = deserialize_to_raw_python_data(value)
 
     def execute(self, *args, **kwargs):
         """
         Subclasses must override.
         """
-        raise NotImplementedError("Subclasses must implement `execute`.")
+        raise NotImplementedError('Subclasses must implement `execute`.')
 
     @property
     def non_function_inputs(self):
-        return self._spec.metadata.get("non_function_inputs", [])
+        return self._spec.metadata.get('non_function_inputs', [])
 
     @property
     def non_function_outputs(self):
-        return self._spec.metadata.get("non_function_outputs", [])
+        return self._spec.metadata.get('non_function_outputs', [])
 
 
 class PythonJobTask(BaseSerializablePythonTask):
     """PythonJob Task."""
 
-    identifier = "workgraph.pythonjob"
+    identifier = 'workgraph.pythonjob'
 
     def execute(self, engine_process, args=None, kwargs=None, var_kwargs=None):
         """
@@ -104,32 +98,32 @@ class PythonJobTask(BaseSerializablePythonTask):
                 self._spec.inputs,
                 SocketSpecSelect(exclude=self.non_function_inputs),
             ]
-        ).fields["_"]
+        ).fields['_']
         outputs_spec = namespace(
             _=Annotated[
                 Any,
                 self._spec.outputs,
                 SocketSpecSelect(exclude=self.non_function_outputs),
             ]
-        ).fields["_"]
+        ).fields['_']
 
         # Pull out code, computer, etc
-        computer = kwargs.pop("computer", "localhost")
+        computer = kwargs.pop('computer', 'localhost')
         if isinstance(computer, orm.Str):
             computer = computer.value
-        command_info = kwargs.pop("command_info", {})
-        register_pickle_by_value = kwargs.pop("register_pickle_by_value", False)
-        upload_files = kwargs.pop("upload_files", {})
-        metadata = kwargs.pop("metadata", {})
-        metadata.update({"call_link_label": self.name})
+        command_info = kwargs.pop('command_info', {})
+        register_pickle_by_value = kwargs.pop('register_pickle_by_value', False)
+        upload_files = kwargs.pop('upload_files', {})
+        metadata = kwargs.pop('metadata', {})
+        metadata.update({'call_link_label': self.name})
         # Prepare inputs (similar to the old 'prepare_for_python_task' method):
-        function_inputs = kwargs.pop("function_inputs", {}) or {}
+        function_inputs = kwargs.pop('function_inputs', {}) or {}
         for key in list(kwargs.keys()):
             if key not in self.non_function_inputs:
                 function_inputs[key] = kwargs.pop(key)
         # Handle var_kwargs
-        if self.get_args_data()["var_kwargs"] is not None:
-            var_key = self.get_args_data()["var_kwargs"]
+        if self.get_args_data()['var_kwargs'] is not None:
+            var_key = self.get_args_data()['var_kwargs']
             function_inputs.pop(var_key, None)
             if var_kwargs:
                 if isinstance(var_kwargs, (dict, AttributeDict)):
@@ -137,14 +131,14 @@ class PythonJobTask(BaseSerializablePythonTask):
                 elif isinstance(var_kwargs, orm.Data):
                     function_inputs.update(var_kwargs.value)
                 else:
-                    raise ValueError(f"Invalid var_kwargs type: {type(var_kwargs)}")
+                    raise ValueError(f'Invalid var_kwargs type: {type(var_kwargs)}')
         # Resolve the actual function from the NodeExecutor
         executor = RuntimeExecutor(**self.get_executor().to_dict())
         func = executor.callable
-        if hasattr(func, "_TaskCls") and hasattr(func, "_func"):
+        if hasattr(func, '_TaskCls') and hasattr(func, '_func'):
             func = func._func
 
-        if hasattr(func, "is_process_function"):
+        if hasattr(func, 'is_process_function'):
             func = func.func
 
         # Prepare the final inputs for PythonJob
@@ -153,30 +147,30 @@ class PythonJobTask(BaseSerializablePythonTask):
             function_inputs=function_inputs,
             inputs_spec=inputs_spec,
             outputs_spec=outputs_spec,
-            code=kwargs.pop("code", None),
+            code=kwargs.pop('code', None),
             command_info=command_info,
             computer=computer,
             metadata=metadata,
             upload_files=upload_files,
-            process_label=f"PythonJob<{self.name}>",
+            process_label=f'PythonJob<{self.name}>',
             register_pickle_by_value=register_pickle_by_value,
             **kwargs,
         )
 
         # If we want to pause
-        if self.action == "PAUSE":
-            engine_process.report(f"Task {self.name} is created and paused.")
+        if self.action == 'PAUSE':
+            engine_process.report(f'Task {self.name} is created and paused.')
             process = create_and_pause_process(
                 engine_process.runner,
                 PythonJob,
                 inputs,
-                state_msg="Paused through WorkGraph",
+                state_msg='Paused through WorkGraph',
             )
-            state = "CREATED"
+            state = 'CREATED'
             process = process.node
         else:
             process = engine_process.submit(PythonJob, **inputs)
-            state = "RUNNING"
+            state = 'RUNNING'
 
         process.label = self.name
         return process, state
@@ -185,7 +179,7 @@ class PythonJobTask(BaseSerializablePythonTask):
 class PyFunctionTask(BaseSerializablePythonTask):
     """PyFunction Task."""
 
-    identifier = "workgraph.pyfunction"
+    identifier = 'workgraph.pyfunction'
 
     def execute(self, args=None, kwargs=None, var_kwargs=None):
         """
@@ -195,32 +189,32 @@ class PyFunctionTask(BaseSerializablePythonTask):
 
         executor = RuntimeExecutor(**self.get_executor().to_dict()).callable
         # If it's a wrapped function, unwrap
-        if isinstance(executor, BaseHandle) and hasattr(executor, "_func"):
+        if isinstance(executor, BaseHandle) and hasattr(executor, '_func'):
             executor = executor._func
         # Make sure it's process_function-decorated
-        if not hasattr(executor, "is_process_function"):
+        if not hasattr(executor, 'is_process_function'):
             executor = pyfunction()(executor)
 
         kwargs = kwargs or {}
-        kwargs.setdefault("metadata", {})
-        kwargs["metadata"].update({"call_link_label": self.name})
+        kwargs.setdefault('metadata', {})
+        kwargs['metadata'].update({'call_link_label': self.name})
         inputs_spec = namespace(
             _=Annotated[
                 Any,
                 self._spec.inputs,
                 SocketSpecSelect(exclude=self.non_function_inputs),
             ]
-        ).fields["_"]
+        ).fields['_']
         outputs_spec = namespace(
             _=Annotated[
                 Any,
                 self._spec.outputs,
                 SocketSpecSelect(exclude=self.non_function_outputs),
             ]
-        ).fields["_"]
+        ).fields['_']
 
-        kwargs["inputs_spec"] = inputs_spec
-        kwargs["outputs_spec"] = outputs_spec
+        kwargs['inputs_spec'] = inputs_spec
+        kwargs['outputs_spec'] = outputs_spec
 
         # If we have var_kwargs, pass them in
         if var_kwargs is None:
@@ -229,7 +223,7 @@ class PyFunctionTask(BaseSerializablePythonTask):
             _, process = run_get_node(executor, **kwargs, **var_kwargs)
 
         process.label = self.name
-        return process, "FINISHED"
+        return process, 'FINISHED'
 
 
 def _build_pythonjob_nodespec(
@@ -254,7 +248,7 @@ def _build_pythonjob_nodespec(
 
     return build_callable_nodespec(
         obj=obj,
-        node_type="PYTHONJOB",
+        node_type='PYTHONJOB',
         base_class=PythonJobTask,
         identifier=identifier,
         process_cls=PythonJob,
@@ -274,7 +268,7 @@ def _build_pyfunction_nodespec(
 ) -> NodeSpec:
     return build_callable_nodespec(
         obj=obj,
-        node_type="PYFUNCTION",
+        node_type='PYFUNCTION',
         base_class=PyFunctionTask,
         identifier=identifier,
         process_cls=PyFunction,

@@ -60,9 +60,7 @@ def AddMultiply(x, y, z):
 from aiida_workgraph import WorkGraph, spec
 from typing import Any
 
-with WorkGraph(
-    "AddMultiplyContextManager", inputs=spec.namespace(x=Any, y=Any, z=Any)
-) as wg:
+with WorkGraph('AddMultiplyContextManager', inputs=spec.namespace(x=Any, y=Any, z=Any)) as wg:
     the_sum = add(
         x=wg.inputs.x,
         y=wg.inputs.y,
@@ -119,16 +117,12 @@ wg.to_html()
 # For example, consider the following workflow:
 
 with WorkGraph(
-    "AddThreeMultiplyContextManager",
+    'AddThreeMultiplyContextManager',
     inputs=spec.namespace(
-        add=spec.namespace(
-            first=spec.namespace(x=Any, y=Any), second=spec.namespace(x=Any, y=Any)
-        ),
+        add=spec.namespace(first=spec.namespace(x=Any, y=Any), second=spec.namespace(x=Any, y=Any)),
         multiply=spec.namespace(factor=Any),
     ),
-    outputs=spec.namespace(
-        sums=spec.namespace(first=Any, second=Any, third=Any), product=Any
-    ),
+    outputs=spec.namespace(sums=spec.namespace(first=Any, second=Any, third=Any), product=Any),
 ) as wg:
     first_sum = add(
         x=wg.inputs.add.first.x,
@@ -151,12 +145,12 @@ with WorkGraph(
     ).result
 
     wg.outputs = {
-        "sums": {
-            "first": first_sum,
-            "second": second_sum,
-            "third": third_sum,
+        'sums': {
+            'first': first_sum,
+            'second': second_sum,
+            'third': third_sum,
         },
-        "product": product,
+        'product': product,
     }
 
 # %%
@@ -167,28 +161,28 @@ with WorkGraph(
 
 wg.run(
     inputs={
-        "add": {
-            "first": {
-                "x": 1,
-                "y": 2,
+        'add': {
+            'first': {
+                'x': 1,
+                'y': 2,
             },
-            "second": {
-                "x": 3,
-                "y": 4,
+            'second': {
+                'x': 3,
+                'y': 4,
             },
         },
-        "multiply": {
-            "factor": 5,
+        'multiply': {
+            'factor': 5,
         },
     },
 )
 
-print("\nResults:")
-print("  Sums:")
-print("    First:", wg.outputs.sums.first.value)
-print("    Second:", wg.outputs.sums.second.value)
-print("    Third:", wg.outputs.sums.third.value)
-print("  Product:", wg.outputs.product.value)
+print('\nResults:')
+print('  Sums:')
+print('    First:', wg.outputs.sums.first.value)
+print('    Second:', wg.outputs.sums.second.value)
+print('    Third:', wg.outputs.sums.third.value)
+print('  Product:', wg.outputs.product.value)
 
 # %%
 # Let's see what this looks like visually.
@@ -241,9 +235,7 @@ def generate_random_number(minimum, maximum):
 
 
 def generate_add_multiply_workgraph():
-    with WorkGraph(
-        inputs=spec.namespace(x=Any, y=Any, z=Any), outputs=spec.namespace(result=Any)
-    ) as wg:
+    with WorkGraph(inputs=spec.namespace(x=Any, y=Any, z=Any), outputs=spec.namespace(result=Any)) as wg:
         the_sum = add(
             x=wg.inputs.x,
             y=wg.inputs.y,
@@ -259,7 +251,7 @@ def generate_add_multiply_workgraph():
 
 
 with WorkGraph(
-    "AddMultiplyComposed",
+    'AddMultiplyComposed',
     inputs=spec.namespace(min=Any, max=Any, x=Any, y=Any),
     outputs=spec.namespace(result=Any),
 ) as wg:
@@ -272,9 +264,9 @@ with WorkGraph(
 
     wg.outputs.result = nested_wg(
         inputs={
-            "x": wg.inputs.x,
-            "y": wg.inputs.y,
-            "z": random_number,
+            'x': wg.inputs.x,
+            'y': wg.inputs.y,
+            'z': random_number,
         }
     ).result
 
@@ -335,7 +327,7 @@ wg.to_html()
 from aiida_workgraph import Zone
 
 
-with WorkGraph("zone_example") as wg:
+with WorkGraph('zone_example') as wg:
     task0_outputs = add(x=1, y=1)
 
     # This Zone will only start after task1 is finished,
@@ -366,7 +358,7 @@ from aiida_workgraph import If
 from aiida_workgraph.collection import group
 
 
-with WorkGraph("AddMultiplyIf") as wg:
+with WorkGraph('AddMultiplyIf') as wg:
     first_sum = add(x=1, y=1).result
 
     with If(first_sum < 0):
@@ -383,7 +375,7 @@ with WorkGraph("AddMultiplyIf") as wg:
 
 wg.run()
 
-print(f"Result: {wg.outputs.result.value}")
+print(f'Result: {wg.outputs.result.value}')
 assert wg.outputs.result.value == 7
 
 # %%
@@ -438,7 +430,7 @@ wg.generate_provenance_graph()
 from aiida_workgraph import While
 
 
-with WorkGraph("AddMultiplyWhile") as wg:
+with WorkGraph('AddMultiplyWhile') as wg:
     n = add(x=1, y=1).result
     wg.ctx.n = n
 
@@ -453,7 +445,7 @@ with WorkGraph("AddMultiplyWhile") as wg:
 
 wg.run()
 
-print(f"Result: {wg.outputs.result.value}")
+print(f'Result: {wg.outputs.result.value}')
 # 2 -> While(3, 6 -> 7, 14) -> 15
 assert wg.outputs.result.value == 15
 
@@ -509,7 +501,7 @@ wg.generate_provenance_graph()
 
 
 len_list = 4
-data = {f"data_{i}": {"x": i, "y": i} for i in range(len_list)}
+data = {f'data_{i}': {'x': i, 'y': i} for i in range(len_list)}
 
 
 @task
@@ -528,18 +520,18 @@ def get_value(data, key):
 from aiida_workgraph import Map
 
 
-with WorkGraph("AddMap") as wg:
+with WorkGraph('AddMap') as wg:
     with Map(data) as map_zone:
         wg.outputs.result = add(
-            x=get_value(map_zone.item, "x").result,
-            y=get_value(map_zone.item, "y").result,
+            x=get_value(map_zone.item, 'x').result,
+            y=get_value(map_zone.item, 'y').result,
         ).result
 
 wg.run()
 
-print("\nResults:")
+print('\nResults:')
 for i, item in enumerate(wg.outputs.result.value.values()):
-    print(f"  Item {i}: {item}")
+    print(f'  Item {i}: {item}')
 # (1+1) + (2+2) + (3+3) = 12
 assert sum(wg.outputs.result.value.values()) == 12
 
@@ -573,17 +565,17 @@ def aggregate_sum(data):
     return sum(data.values())
 
 
-with WorkGraph("AddAggregate") as wg:
+with WorkGraph('AddAggregate') as wg:
     with Map(data) as map_zone:
         added_numbers = add(
-            x=get_value(map_zone.item, "x").result,
-            y=get_value(map_zone.item, "y").result,
+            x=get_value(map_zone.item, 'x').result,
+            y=get_value(map_zone.item, 'y').result,
         ).result
     wg.outputs.result = aggregate_sum(added_numbers).result
 
 wg.run()
 
-print("\nResult:", wg.outputs.result.value)
+print('\nResult:', wg.outputs.result.value)
 assert wg.outputs.result.value == 12
 
 
@@ -606,7 +598,7 @@ assert wg.outputs.result.value == 12
 #
 # Let's run an add-multiply workflow with a hardcoded multiplication factor:
 
-with WorkGraph("AddMultiplyToBeContinued", inputs=spec.namespace(x=Any, y=Any)) as wg1:
+with WorkGraph('AddMultiplyToBeContinued', inputs=spec.namespace(x=Any, y=Any)) as wg1:
     the_sum = add(
         x=wg1.inputs.x,
         y=wg1.inputs.y,
@@ -618,35 +610,35 @@ with WorkGraph("AddMultiplyToBeContinued", inputs=spec.namespace(x=Any, y=Any)) 
     ).result
 
     wg1.outputs = {
-        "sum": the_sum,
-        "product": the_product,
+        'sum': the_sum,
+        'product': the_product,
     }
 
 wg1.run(
     inputs={
-        "x": 1,
-        "y": 2,
+        'x': 1,
+        'y': 2,
     },
 )
 
-print("\nResults:")
-print(f"  Sum: {wg1.outputs.sum.value}")
-print(f"  Product: {wg1.outputs.product.value}")
+print('\nResults:')
+print(f'  Sum: {wg1.outputs.sum.value}')
+print(f'  Product: {wg1.outputs.product.value}')
 
 # %%
 # Suppose we now want to rerun it with a different multiplication factor.
 # Let's see how that's done:
 
 with WorkGraph.load(wg1.pk) as wg2:
-    wg2.name = "AddMultiplyModified"
+    wg2.name = 'AddMultiplyModified'
     wg2.restart()
     wg2.tasks.multiply.inputs.y = 4
 
 wg2.run()
 
-print("\nResults:")
-print(f"  Sum: {wg2.outputs.sum.value}")
-print(f"  Product: {wg2.outputs.product.value}")
+print('\nResults:')
+print(f'  Sum: {wg2.outputs.sum.value}')
+print(f'  Product: {wg2.outputs.product.value}')
 
 # %%
 # Note that the sum has not changed (the ``value``, but more importantly, the ``pk``, as it is the same node).
@@ -660,12 +652,10 @@ print(f"  Product: {wg2.outputs.product.value}")
 from node_graph.socket_spec import add_spec_field, SocketSpec
 
 with WorkGraph.load(wg2.pk) as wg3:
-    wg3.name = "AddMultiplyContinued"
-    wg3.add_input("workgraph.any", name="z")  # introduce a new input socket
+    wg3.name = 'AddMultiplyContinued'
+    wg3.add_input('workgraph.any', name='z')  # introduce a new input socket
     # also need to update the inputs spec
-    wg3._inputs = add_spec_field(
-        wg3._inputs, "z", SocketSpec(identifier="workgraph.any")
-    )
+    wg3._inputs = add_spec_field(wg3._inputs, 'z', SocketSpec(identifier='workgraph.any'))
     wg3.restart()
     new_sum = add(
         x=wg3.tasks.multiply.outputs.result,
@@ -676,10 +666,10 @@ with WorkGraph.load(wg2.pk) as wg3:
 wg3.to_html()
 
 # %%
-print(f"State of WorkGraph : {wg3.state}")
-print(f"State of add       : {wg3.tasks.add.state}")
-print(f"State of multiply  : {wg3.tasks.multiply.state}")
-print(f"State of new add   : {wg3.tasks.add1.state}")
+print(f'State of WorkGraph : {wg3.state}')
+print(f'State of add       : {wg3.tasks.add.state}')
+print(f'State of multiply  : {wg3.tasks.multiply.state}')
+print(f'State of new add   : {wg3.tasks.add1.state}')
 
 # %%
 # Note the ``PLANNED`` new addition task. Let's run it.
@@ -687,14 +677,14 @@ print(f"State of new add   : {wg3.tasks.add1.state}")
 
 wg3.run(
     inputs={
-        "z": 5,
+        'z': 5,
     },
 )
 
-print("\nResults:")
-print(f"  Sum: {wg3.outputs.sum.value}")
-print(f"  Product: {wg3.outputs.product.value}")
-print(f"  New sum: {wg3.outputs.new_sum.value}")
+print('\nResults:')
+print(f'  Sum: {wg3.outputs.sum.value}')
+print(f'  Product: {wg3.outputs.product.value}')
+print(f'  New sum: {wg3.outputs.new_sum.value}')
 
 # %%
 # Again, note that the previous data nodes are the same.

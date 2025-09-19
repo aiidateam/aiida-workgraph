@@ -8,34 +8,34 @@ class WorkGraphQueryBuilder:
 
     # This tuple serves to mark compound projections that cannot explicitly be projected in the QueryBuilder, but will
     # have to be manually projected from composing its individual projection constituents
-    _compound_projections = ("state",)
+    _compound_projections = ('state',)
     _default_projections = (
-        "pk",
-        "ctime",
-        "process_label",
-        "state",
-        "process_status",
+        'pk',
+        'ctime',
+        'process_label',
+        'state',
+        'process_status',
     )
     _valid_projections = (
-        "pk",
-        "uuid",
-        "ctime",
-        "mtime",
-        "state",
-        "process_state",
-        "process_status",
-        "exit_status",
-        "exit_message",
-        "sealed",
-        "process_label",
-        "label",
-        "description",
-        "node_type",
-        "paused",
-        "process_type",
-        "job_state",
-        "scheduler_state",
-        "exception",
+        'pk',
+        'uuid',
+        'ctime',
+        'mtime',
+        'state',
+        'process_state',
+        'process_status',
+        'exit_status',
+        'exit_message',
+        'sealed',
+        'process_label',
+        'label',
+        'description',
+        'node_type',
+        'paused',
+        'process_type',
+        'job_state',
+        'scheduler_state',
+        'exception',
     )
 
     def __init__(self, mapper=None):
@@ -80,24 +80,24 @@ class WorkGraphQueryBuilder:
         # pylint: disable=too-many-arguments
         from aiida.engine import ProcessState
 
-        exit_status_attribute = self.mapper.get_attribute("exit_status")
-        process_label_attribute = self.mapper.get_attribute("process_label")
-        process_state_attribute = self.mapper.get_attribute("process_state")
-        paused_attribute = self.mapper.get_attribute("paused")
+        exit_status_attribute = self.mapper.get_attribute('exit_status')
+        process_label_attribute = self.mapper.get_attribute('process_label')
+        process_state_attribute = self.mapper.get_attribute('process_state')
+        paused_attribute = self.mapper.get_attribute('paused')
 
         filters = {}
 
         if node_types is not None:
-            filters["or"] = []
+            filters['or'] = []
             for node_class in node_types:
-                filters["or"].append({"type": node_class.class_node_type})
+                filters['or'].append({'type': node_class.class_node_type})
 
         if process_state and not all_entries:
-            filters[process_state_attribute] = {"in": process_state}
+            filters[process_state_attribute] = {'in': process_state}
 
         if process_label is not None:
-            if "%" in process_label or "_" in process_label:
-                filters[process_label_attribute] = {"like": process_label}
+            if '%' in process_label or '_' in process_label:
+                filters[process_label_attribute] = {'like': process_label}
             else:
                 filters[process_label_attribute] = process_label
 
@@ -105,12 +105,12 @@ class WorkGraphQueryBuilder:
             filters[paused_attribute] = True
 
         if failed:
-            filters[process_state_attribute] = {"==": ProcessState.FINISHED.value}
-            filters[exit_status_attribute] = {">": 0}
+            filters[process_state_attribute] = {'==': ProcessState.FINISHED.value}
+            filters[exit_status_attribute] = {'>': 0}
 
         if exit_status is not None:
-            filters[process_state_attribute] = {"==": ProcessState.FINISHED.value}
-            filters[exit_status_attribute] = {"==": exit_status}
+            filters[process_state_attribute] = {'==': ProcessState.FINISHED.value}
+            filters[exit_status_attribute] = {'==': exit_status}
 
         return filters
 
@@ -151,25 +151,19 @@ class WorkGraphQueryBuilder:
             filters = {}
 
         if past_days is not None:
-            filters["ctime"] = {
-                ">": timezone.now() - datetime.timedelta(days=past_days)
-            }
+            filters['ctime'] = {'>': timezone.now() - datetime.timedelta(days=past_days)}
 
         builder = orm.QueryBuilder()
-        builder.append(
-            WorkGraphEngine, filters=filters, project=unique_projections, tag="process"
-        )
+        builder.append(WorkGraphEngine, filters=filters, project=unique_projections, tag='process')
 
         if relationships is not None:
             for tag, entity in relationships.items():
-                builder.append(
-                    cls=type(entity), filters={"id": entity.pk}, **{tag: "process"}
-                )
+                builder.append(cls=type(entity), filters={'id': entity.pk}, **{tag: 'process'})
 
         if order_by is not None:
-            builder.order_by({"process": order_by})
+            builder.order_by({'process': order_by})
         else:
-            builder.order_by({"process": {"ctime": "desc"}})
+            builder.order_by({'process': {'ctime': 'desc'}})
 
         if limit is not None:
             builder.limit(limit)
@@ -182,10 +176,7 @@ class WorkGraphQueryBuilder:
         result = [header]
 
         for query_result in query_set:
-            result_row = [
-                self.mapper.format(projection, query_result["process"])
-                for projection in projections
-            ]
+            result_row = [self.mapper.format(projection, query_result['process']) for projection in projections]
             result.append(result_row)
 
         return result

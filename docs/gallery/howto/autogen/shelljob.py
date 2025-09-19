@@ -33,13 +33,13 @@ load_profile()
 
 @task.graph
 def ShellDate() -> t.Annotated[dict, dynamic(t.Any)]:
-    return shelljob(command="date")
+    return shelljob(command='date')
 
 
 wg = ShellDate.build()
 wg.run()
 
-print("\nResult: ", wg.outputs.stdout.value.get_content())
+print('\nResult: ', wg.outputs.stdout.value.get_content())
 
 # %%
 # .. note::
@@ -54,12 +54,12 @@ print("\nResult: ", wg.outputs.stdout.value.get_content())
 
 
 created, mock_remote_computer = orm.Computer.collection.get_or_create(
-    label="my-remote-computer",
-    description="A mock remote computer",
-    hostname="my-remote-computer",
-    workdir="/tmp/aiida",
-    transport_type="core.ssh",
-    scheduler_type="core.direct",
+    label='my-remote-computer',
+    description='A mock remote computer',
+    hostname='my-remote-computer',
+    workdir='/tmp/aiida',
+    transport_type='core.ssh',
+    scheduler_type='core.direct',
 )
 if created:
     mock_remote_computer.store()
@@ -71,8 +71,8 @@ if created:
 @task.graph
 def RemoteShellDate(computer: str) -> t.Annotated[dict, dynamic(t.Any)]:
     return shelljob(
-        command="date",
-        metadata={"computer": orm.load_computer(computer)},
+        command='date',
+        metadata={'computer': orm.load_computer(computer)},
     )
 
 
@@ -82,9 +82,9 @@ def RemoteShellDate(computer: str) -> t.Annotated[dict, dynamic(t.Any)]:
 
 
 mock_remote_code = get_or_create_code(
-    code_label="remote-date",
-    computer="my-remote-computer",
-    code_path="/usr/bin/date",
+    code_label='remote-date',
+    computer='my-remote-computer',
+    code_path='/usr/bin/date',
 )
 
 # %%
@@ -105,13 +105,13 @@ def RemoteShellDateWithCode(code: str) -> t.Annotated[dict, dynamic(t.Any)]:
 
 @task.graph
 def ShellDateWithArguments() -> t.Annotated[dict, dynamic(t.Any)]:
-    return shelljob(command="date", arguments=["--iso-8601"])
+    return shelljob(command='date', arguments=['--iso-8601'])
 
 
 wg = ShellDateWithArguments.build()
 wg.run()
 
-print("\nResult: ", wg.outputs.stdout.value.get_content())
+print('\nResult: ', wg.outputs.stdout.value.get_content())
 
 # %%
 # File arguments
@@ -125,11 +125,11 @@ print("\nResult: ", wg.outputs.stdout.value.get_content())
 @task.graph
 def ShellCatWithFileArguments() -> t.Annotated[dict, dynamic(t.Any)]:
     return shelljob(
-        command="cat",
-        arguments=["{file_a}", "{file_b}"],
+        command='cat',
+        arguments=['{file_a}', '{file_b}'],
         nodes={
-            "file_a": orm.SinglefileData.from_string("string a"),
-            "file_b": orm.SinglefileData.from_string("string b"),
+            'file_a': orm.SinglefileData.from_string('string a'),
+            'file_b': orm.SinglefileData.from_string('string b'),
         },
     )
 
@@ -137,7 +137,7 @@ def ShellCatWithFileArguments() -> t.Annotated[dict, dynamic(t.Any)]:
 wg = ShellCatWithFileArguments.build()
 wg.run()
 
-print("\nResult: ", wg.outputs.stdout.value.get_content())
+print('\nResult: ', wg.outputs.stdout.value.get_content())
 
 # %%
 # An example workflow: ``(x + y) * z``
@@ -149,24 +149,24 @@ print("\nResult: ", wg.outputs.stdout.value.get_content())
 
 
 def parser(dirpath):
-    return {"result": orm.Int((dirpath / "stdout").read_text().strip())}
+    return {'result': orm.Int((dirpath / 'stdout').read_text().strip())}
 
 
 @task.graph
 def ShellAddMultiply(x: int, y: int, z: int) -> int:
     the_sum = shelljob(
-        command="expr",
-        arguments=["{x}", "+", "{y}"],
-        nodes={"x": x, "y": y},
+        command='expr',
+        arguments=['{x}', '+', '{y}'],
+        nodes={'x': x, 'y': y},
         parser=parser,
-        parser_outputs=["result"],
+        parser_outputs=['result'],
     ).result
     the_product = shelljob(
-        command="expr",
-        arguments=["{x}", "*", "{y}"],
-        nodes={"x": the_sum, "y": z},
+        command='expr',
+        arguments=['{x}', '*', '{y}'],
+        nodes={'x': the_sum, 'y': z},
         parser=parser,
-        parser_outputs=["result"],
+        parser_outputs=['result'],
     ).result
     return the_product
 
@@ -179,8 +179,8 @@ wg.to_html()
 
 wg.run()
 
-print("State` of WorkGraph    : {}".format(wg.state))
-print("Result                : {}".format(wg.outputs.result.value))
+print('State` of WorkGraph    : {}'.format(wg.state))
+print('Result                : {}'.format(wg.outputs.result.value))
 assert wg.outputs.result.value == 20
 
 

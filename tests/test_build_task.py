@@ -11,8 +11,8 @@ def test_calcjob():
     assert isinstance(ArithmeticAddTask, TaskHandle)
     # use the class directly
     wg = WorkGraph()
-    add1 = wg.add_task(ArithmeticAddCalculation, name="add1")
-    assert add1.name == "add1"
+    add1 = wg.add_task(ArithmeticAddCalculation, name='add1')
+    assert add1.name == 'add1'
 
 
 def test_workchain():
@@ -34,24 +34,24 @@ def test_calcfunction():
     @calcfunction
     def add_minus(x, y):
         """Calculate the square root of a number."""
-        return {"sum": x + y, "difference": x - y}
+        return {'sum': x + y, 'difference': x - y}
 
     # build from callable
     AddTask = task(add)
     assert isinstance(AddTask, TaskHandle)
     # define outputs explicitly
-    AddTask = task(outputs=["sum", "difference"])(add_minus)
+    AddTask = task(outputs=['sum', 'difference'])(add_minus)
     assert isinstance(AddTask, TaskHandle)
-    assert "sum" in AddTask()._node.get_output_names()
+    assert 'sum' in AddTask()._node.get_output_names()
     # use the class directly
     wg = WorkGraph()
-    add1 = wg.add_task(add, name="add1")
-    assert "result" in add1.get_output_names()
-    assert add1.name == "add1"
+    add1 = wg.add_task(add, name='add1')
+    assert 'result' in add1.get_output_names()
+    assert add1.name == 'add1'
 
-    AddTask_outputs_list = task(outputs=["sum", "difference"])(add_minus)
+    AddTask_outputs_list = task(outputs=['sum', 'difference'])(add_minus)
     assert isinstance(AddTask_outputs_list, TaskHandle)
-    assert "sum" in AddTask_outputs_list()._node.get_output_names()
+    assert 'sum' in AddTask_outputs_list()._node.get_output_names()
 
 
 def test_function():

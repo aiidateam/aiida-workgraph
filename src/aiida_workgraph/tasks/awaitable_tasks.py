@@ -12,13 +12,12 @@ from node_graph.error_handler import ErrorHandlerSpec
 class AwaitableFunctionTask(SpecTask):
     """Awaitable task with function as executor."""
 
-    identifier = "workgraph.awaitable_function"
-    name = "awaitable"
-    node_type = "awaitable"
-    catalog = "Control"
+    identifier = 'workgraph.awaitable_function'
+    name = 'awaitable'
+    node_type = 'awaitable'
+    catalog = 'Control'
 
     def execute(self, engine_process, args=None, kwargs=None, var_kwargs=None):
-
         executor = RuntimeExecutor(**self.get_executor().to_dict()).callable
         if var_kwargs is None:
             awaitable_target = asyncio.ensure_future(
@@ -30,29 +29,29 @@ class AwaitableFunctionTask(SpecTask):
                 executor(*args, **kwargs, **var_kwargs),
                 loop=engine_process.loop,
             )
-        return awaitable_target, "FINISHED"
+        return awaitable_target, 'FINISHED'
 
 
 class MonitorFunctionTask(SpecTask):
     """Monitor task with function as executor."""
 
-    identifier = "workgraph.monitor_function"
-    name = "monitor"
-    node_type = "monitor"
-    catalog = "Control"
+    identifier = 'workgraph.monitor_function'
+    name = 'monitor'
+    node_type = 'monitor'
+    catalog = 'Control'
 
     def execute(self, engine_process, args=None, kwargs=None, var_kwargs=None):
         from aiida_workgraph.tasks.monitors import monitor
 
         executor = RuntimeExecutor(**self.get_executor().to_dict()).callable
         # get the raw function without the decorator
-        if hasattr(executor, "_func"):
+        if hasattr(executor, '_func'):
             executor = executor._func
         # add function and interval to the args
         args = [
             executor,
-            kwargs.pop("interval", 1),
-            kwargs.pop("timeout", 3600),
+            kwargs.pop('interval', 1),
+            kwargs.pop('timeout', 3600),
             *args,
         ]
 
@@ -66,7 +65,7 @@ class MonitorFunctionTask(SpecTask):
                 monitor(*args, **kwargs, **var_kwargs),
                 loop=engine_process.loop,
             )
-        return awaitable_target, "FINISHED"
+        return awaitable_target, 'FINISHED'
 
 
 def _build_awaitable_function_nodespec(
@@ -76,10 +75,9 @@ def _build_awaitable_function_nodespec(
     out_spec: Optional[SocketSpec] = None,
     error_handlers: Optional[Dict[str, ErrorHandlerSpec]] = None,
 ) -> NodeSpec:
-
     return build_callable_nodespec(
         obj=obj,
-        node_type="AWAITABLE",
+        node_type='AWAITABLE',
         base_class=AwaitableFunctionTask,
         identifier=identifier,
         process_cls=None,
@@ -105,7 +103,7 @@ def _build_monitor_function_nodespec(
 
     return build_callable_nodespec(
         obj=obj,
-        node_type="MONITOR",
+        node_type='MONITOR',
         base_class=MonitorFunctionTask,
         identifier=identifier,
         process_cls=None,

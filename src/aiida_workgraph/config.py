@@ -5,34 +5,34 @@ from aiida.orm.nodes.process.calculation.calcfunction import CalcFunctionNode
 from aiida.orm.nodes.process.workflow.workfunction import WorkFunctionNode
 from aiida.engine import CalcJob, WorkChain
 
-WORKGRAPH_EXTRA_KEY = "_workgraph"
-WORKGRAPH_SHORT_EXTRA_KEY = "_workgraph_short"
+WORKGRAPH_EXTRA_KEY = '_workgraph'
+WORKGRAPH_SHORT_EXTRA_KEY = '_workgraph_short'
 
 task_types = {
-    CalcFunctionNode: "CALCFUNCTION",
-    WorkFunctionNode: "WORKFUNCTION",
-    CalcJob: "CALCJOB",
-    WorkChain: "WORKCHAIN",
+    CalcFunctionNode: 'CALCFUNCTION',
+    WorkFunctionNode: 'WORKFUNCTION',
+    CalcJob: 'CALCJOB',
+    WorkChain: 'WORKCHAIN',
 }
 
 builtin_inputs = {
-    "_wait": {
-        "link_limit": 1e6,
-        "metadata": {"arg_type": "none", "builtin_socket": True},
+    '_wait': {
+        'link_limit': 1e6,
+        'metadata': {'arg_type': 'none', 'builtin_socket': True},
     }
 }
 builtin_outputs = {
-    "_wait": {"metadata": {"arg_type": "none", "builtin_socket": True}},
-    "_outputs": {"metadata": {"arg_type": "none", "builtin_socket": True}},
+    '_wait': {'metadata': {'arg_type': 'none', 'builtin_socket': True}},
+    '_outputs': {'metadata': {'arg_type': 'none', 'builtin_socket': True}},
 }
 
 
 def load_config() -> dict:
     """Load the configuration from the config file."""
     config = get_config()
-    config_file_path = Path(config.dirpath) / "workgraph.json"
+    config_file_path = Path(config.dirpath) / 'workgraph.json'
     try:
-        with config_file_path.open("r") as f:
+        with config_file_path.open('r') as f:
             config = json.load(f)
     except FileNotFoundError:
         config = {}
