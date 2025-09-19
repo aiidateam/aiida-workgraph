@@ -50,16 +50,19 @@ load_profile()
 @task
 def add_multiply1(x, y):
     """Return a dictionary, which will be stored as a single Dict node."""
-    return {"sum": x + y, "product": x * y}
+    return {'sum': x + y, 'product': x * y}
 
 
 @task
 def add_multiply2(
     x: int,
     y: int,
-) -> t.Annotated[dict, namespace(sum=int, product=int),]:
+) -> t.Annotated[
+    dict,
+    namespace(sum=int, product=int),
+]:
     """Return a dictionary, but its elements are stored as separate Int nodes."""
-    return {"sum": x + y, "product": x * y}
+    return {'sum': x + y, 'product': x * y}
 
 
 @task.graph
@@ -100,14 +103,17 @@ def add_multiply3(
         dict,
         namespace(x=int, y=int),
     ],
-) -> t.Annotated[dict, namespace(sum=int, product=int),]:
+) -> t.Annotated[
+    dict,
+    namespace(sum=int, product=int),
+]:
     """Take a dictionary as input but treat 'x' and 'y' as separate nodes."""
-    return {"sum": data["x"] + data["y"], "product": data["x"] * data["y"]}
+    return {'sum': data['x'] + data['y'], 'product': data['x'] * data['y']}
 
 
 @task.graph
 def AddMultiplyInputs(x: int, y: int):
-    add_multiply3(data={"x": x, "y": y})
+    add_multiply3(data={'x': x, 'y': y})
 
 
 wg = AddMultiplyInputs.build(x=1, y=2)
@@ -142,9 +148,12 @@ wg.generate_provenance_graph()
 @task
 def generate_square_numbers(
     n: int,
-) -> t.Annotated[dict, dynamic(t.Any),]:
+) -> t.Annotated[
+    dict,
+    dynamic(t.Any),
+]:
     """Generate a dict of square numbers. The number of outputs depends on 'n'."""
-    return {f"square_{i}": i**2 for i in range(n)}
+    return {f'square_{i}': i**2 for i in range(n)}
 
 
 @task.graph
@@ -175,9 +184,12 @@ wg.generate_provenance_graph()
 def generate_nested_dict(
     x: int,
     y: int,
-) -> t.Annotated[dict, namespace(sum=int, nested=namespace(diff=int, product=int)),]:
+) -> t.Annotated[
+    dict,
+    namespace(sum=int, nested=namespace(diff=int, product=int)),
+]:
     """Returns a nested dictionary with a corresponding nested namespace."""
-    return {"sum": x + y, "nested": {"diff": x - y, "product": x * y}}
+    return {'sum': x + y, 'nested': {'diff': x - y, 'product': x * y}}
 
 
 @task.graph
@@ -203,9 +215,12 @@ print(get_process_summary(wg.tasks[-1].pk))
 @task
 def generate_dynamic_nested_dict(
     n: int,
-) -> t.Annotated[dict, dynamic(namespace(square=int, cube=int)),]:
+) -> t.Annotated[
+    dict,
+    dynamic(namespace(square=int, cube=int)),
+]:
     """Generate a nested dict of square and cube numbers from 0 to n."""
-    return {f"data_{i}": {"square": i**2, "cube": i**3} for i in range(n)}
+    return {f'data_{i}': {'square': i**2, 'cube': i**3} for i in range(n)}
 
 
 @task.graph
@@ -242,9 +257,12 @@ def add_multiply(
         dict,
         namespace(x=int, y=int),
     ],
-) -> t.Annotated[dict, namespace(sum=int, product=int),]:
+) -> t.Annotated[
+    dict,
+    namespace(sum=int, product=int),
+]:
     """A reusable task with well-defined I/O specifications."""
-    return {"sum": data["x"] + data["y"], "product": data["x"] * data["y"]}
+    return {'sum': data['x'] + data['y'], 'product': data['x'] * data['y']}
 
 
 @task.graph
@@ -269,18 +287,18 @@ def AddMultiplyFinal(
     square_numbers = generate_square_numbers(n)
 
     # Unpack nested inputs and pass them to the respective tasks
-    out1 = add_multiply(data=data["add_multiply1"]["data"])
-    out2 = add_multiply(data=data["add_multiply2"]["data"])
+    out1 = add_multiply(data=data['add_multiply1']['data'])
+    out2 = add_multiply(data=data['add_multiply2']['data'])
 
     # Gather task outputs into the graph-level output structure
-    return {"square": square_numbers, "add_multiply1": out1, "add_multiply2": out2}
+    return {'square': square_numbers, 'add_multiply1': out1, 'add_multiply2': out2}
 
 
 wg = AddMultiplyFinal.build(
     n=3,
     data={
-        "add_multiply1": {"data": {"x": 1, "y": 2}},
-        "add_multiply2": {"data": {"x": 3, "y": 4}},
+        'add_multiply1': {'data': {'x': 1, 'y': 2}},
+        'add_multiply2': {'data': {'x': 3, 'y': 4}},
     },
 )
 wg.to_html()
@@ -349,9 +367,9 @@ def consume_complex(
             pw=namespace(structure=int, kpoints=int, parameters=int),
             metadata=dict,
         ),
-    ]
+    ],
 ) -> dict:
-    return {"seen": list(sorted(data.keys()))}
+    return {'seen': list(sorted(data.keys()))}
 
 
 # Exclude a nested field (drop data.pw.structure)
@@ -363,34 +381,26 @@ def UseExclude(
     inputs: t.Annotated[
         dict,
         namespace(
-            consume_complex1=t.Annotated[
-                dict, consume_complex.inputs, select(exclude="data.pw.structure")
-            ],
-            consume_complex2=t.Annotated[
-                dict, consume_complex.inputs, select(exclude="data.pw.structure")
-            ],
+            consume_complex1=t.Annotated[dict, consume_complex.inputs, select(exclude='data.pw.structure')],
+            consume_complex2=t.Annotated[dict, consume_complex.inputs, select(exclude='data.pw.structure')],
         ),
     ],
 ):
     # Manually add the shared 'structure' to each task's inputs
-    consume_complex_input1 = inputs["consume_complex1"]
-    consume_complex_input1["data"]["pw"]["structure"] = structure
+    consume_complex_input1 = inputs['consume_complex1']
+    consume_complex_input1['data']['pw']['structure'] = structure
     consume_complex(**consume_complex_input1)
 
-    consume_complex_input2 = inputs["consume_complex2"]
-    consume_complex_input2["data"]["pw"]["structure"] = structure
+    consume_complex_input2 = inputs['consume_complex2']
+    consume_complex_input2['data']['pw']['structure'] = structure
     consume_complex(**consume_complex_input2)
 
 
 wg = UseExclude.build(
     structure=1,
     inputs={
-        "consume_complex1": {
-            "data": {"pw": {"kpoints": 2, "parameters": 3}, "metadata": {}}
-        },
-        "consume_complex2": {
-            "data": {"pw": {"kpoints": 4, "parameters": 5}, "metadata": {}}
-        },
+        'consume_complex1': {'data': {'pw': {'kpoints': 2, 'parameters': 3}, 'metadata': {}}},
+        'consume_complex2': {'data': {'pw': {'kpoints': 4, 'parameters': 5}, 'metadata': {}}},
     },
 )
 wg.to_html()
@@ -417,7 +427,7 @@ def UseMeta(
         dict,
         consume_complex.inputs,  # Reuse the original spec
         meta(required=False),  # Make the entire 'data' input optional
-    ]
+    ],
 ):
     if data:
         return consume_complex(data=data)

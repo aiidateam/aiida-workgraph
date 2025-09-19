@@ -17,6 +17,7 @@ Decorate any Python function using the ``task`` decorator.
 from aiida_workgraph import task
 from aiida import orm
 
+
 # define add task
 @task  # this is equivalent to passing no arguments @task()
 def add(x, y):
@@ -45,8 +46,8 @@ add()._node.to_html()
 #
 
 add1 = add()._node
-print("Inputs:", add1.get_input_names())
-print("Outputs:", add1.get_output_names())
+print('Inputs:', add1.get_input_names())
+print('Outputs:', add1.get_output_names())
 
 
 ######################################################################
@@ -62,8 +63,8 @@ print("Outputs:", add1.get_output_names())
 from aiida_workgraph import WorkGraph
 
 wg = WorkGraph()
-add1 = wg.add_task(add, name="add1")
-multiply1 = wg.add_task(multiply, name="multiply1")
+add1 = wg.add_task(add, name='add1')
+multiply1 = wg.add_task(multiply, name='multiply1')
 wg.add_link(add1.outputs.result, multiply1.inputs.x)
 
 
@@ -81,13 +82,14 @@ from scipy.linalg import norm
 NormTask = task()(norm)
 
 wg = WorkGraph()
-norm_task = wg.add_task(NormTask, name="norm1")
+norm_task = wg.add_task(NormTask, name='norm1')
 norm_task.to_html()
 
 
 ######################################################################
 # The inputs of the task are automatically generated. However, one need to define the outputs explicitly if there are more than one output.
 #
+
 
 # Define a function with multiple outputs
 def calculate_stats(data):
@@ -101,12 +103,12 @@ def calculate_stats(data):
     return mean_val, std_val
 
 
-NormTask = task(outputs=["mean", "std"])(calculate_stats)
+NormTask = task(outputs=['mean', 'std'])(calculate_stats)
 wg = WorkGraph()
-norm_task = wg.add_task(NormTask, name="calculate_stats")
+norm_task = wg.add_task(NormTask, name='calculate_stats')
 
-print("Inputs: ", norm_task.inputs)
-print("Outputs: ", norm_task.outputs)
+print('Inputs: ', norm_task.inputs)
+print('Outputs: ', norm_task.outputs)
 
 
 ######################################################################
@@ -120,7 +122,7 @@ print("Outputs: ", norm_task.outputs)
 from aiida.calculations.arithmetic.add import ArithmeticAddCalculation
 
 wg = WorkGraph()
-add1 = wg.add_task(ArithmeticAddCalculation, name="add1")
+add1 = wg.add_task(ArithmeticAddCalculation, name='add1')
 
 
 ######################################################################
@@ -134,23 +136,22 @@ from aiida_workgraph.task import Task
 
 
 class MyAdd(Task):
-
-    identifier: str = "MyAdd"
-    name = "MyAdd"
-    node_type = "calcfunction"
-    catalog = "Test"
+    identifier: str = 'MyAdd'
+    name = 'MyAdd'
+    node_type = 'calcfunction'
+    catalog = 'Test'
 
     _executor = {
-        "module_path": "aiida_workgraph.executors.test",
-        "callable_name": "add",
+        'module_path': 'aiida_workgraph.executors.test',
+        'callable_name': 'add',
     }
 
     def update_sockets(self):
         self.inputs._clear()
         self.outputs._clear()
-        inp = self.add_input("workgraph.Any", "x")
-        inp = self.add_input("workgraph.Any", "y")
-        self.add_output("workgraph.Any", "sum")
+        _ = self.add_input('workgraph.Any', 'x')
+        _ = self.add_input('workgraph.Any', 'y')
+        self.add_output('workgraph.Any', 'sum')
 
 
 ######################################################################
@@ -160,7 +161,7 @@ class MyAdd(Task):
 from aiida_workgraph import WorkGraph
 
 wg = WorkGraph()
-add1_task = wg.add_task(MyAdd, name="add1")
+add1_task = wg.add_task(MyAdd, name='add1')
 
 
 ######################################################################

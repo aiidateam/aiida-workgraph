@@ -29,33 +29,29 @@ def _spec_for(
         in_spec, out_spec = from_aiida_process(obj)
         return NodeSpec(
             identifier=identifier or obj.__name__,
-            mode="decorator_build",
-            catalog="AIIDA",
+            mode='decorator_build',
+            catalog='AIIDA',
             inputs=in_spec,
             outputs=out_spec,
             executor=RuntimeExecutor.from_callable(obj),
             base_class=AiiDAProcessTask,
-            metadata={"node_type": inspect_aiida_component_type(obj)},
-            decorator_path="aiida_workgraph.decorator.task",
+            metadata={'node_type': inspect_aiida_component_type(obj)},
+            decorator_path='aiida_workgraph.decorator.task',
         )
 
     # AiiDA process functions (calcfunction/workfunction)
-    if callable(obj) and getattr(obj, "node_class", False):
+    if callable(obj) and getattr(obj, 'node_class', False):
         from aiida_workgraph.tasks.aiida import _build_aiida_function_nodespec
 
-        return _build_aiida_function_nodespec(
-            obj, identifier=identifier, in_spec=inputs, out_spec=outputs
-        )
+        return _build_aiida_function_nodespec(obj, identifier=identifier, in_spec=inputs, out_spec=outputs)
 
     # Plain Python function -> PyFunction
     if callable(obj):
         from aiida_workgraph.tasks.pythonjob_tasks import _build_pyfunction_nodespec
 
-        return _build_pyfunction_nodespec(
-            obj, identifier=identifier, in_spec=inputs, out_spec=outputs
-        )
+        return _build_pyfunction_nodespec(obj, identifier=identifier, in_spec=inputs, out_spec=outputs)
 
-    raise ValueError(f"Unsupported object for @task: {obj!r}")
+    raise ValueError(f'Unsupported object for @task: {obj!r}')
 
 
 def build_task_from_callable(
@@ -73,7 +69,7 @@ def build_task_from_callable(
 
     # if it is already a task, return it
     if (
-        hasattr(executor, "_TaskCls")
+        hasattr(executor, '_TaskCls')
         and inspect.isclass(executor._TaskCls)
         and issubclass(executor._TaskCls, Task)
         or inspect.isclass(executor)
@@ -82,18 +78,16 @@ def build_task_from_callable(
         return executor
     if inspect.isfunction(executor):
         # calcfunction and workfunction
-        if getattr(executor, "node_class", False):
+        if getattr(executor, 'node_class', False):
             return task(inputs=inputs, outputs=outputs)(executor)
         else:
             return task(inputs=inputs, outputs=outputs)(executor)
     else:
         if issubclass(executor, CalcJob) or issubclass(executor, WorkChain):
             if inputs is not None or outputs is not None:
-                raise ValueError(
-                    "Can not override inputs or outputs of an AiiDA process classes."
-                )
+                raise ValueError('Can not override inputs or outputs of an AiiDA process classes.')
             return task()(executor)
-    raise ValueError(f"The executor {executor} is not supported.")
+    raise ValueError(f'The executor {executor} is not supported.')
 
 
 def nonfunctional_usage(callable: Callable):
@@ -138,7 +132,7 @@ class TaskDecoratorCollection:
         inputs: Optional[SocketSpec | list] = None,
         outputs: Optional[SocketSpec | list] = None,
         error_handlers: Optional[Dict[str, ErrorHandlerSpec]] = None,
-        catalog: str = "Others",
+        catalog: str = 'Others',
     ) -> Callable:
         """Generate a decorator that register a function as a task.
 

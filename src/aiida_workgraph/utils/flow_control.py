@@ -1,7 +1,7 @@
 from aiida_workgraph.socket import TaskSocket
 from aiida_workgraph.tasks.task_pool import TaskPool
 
-DEFAULT_MAP_PLACEHOLDER = "map_input"
+DEFAULT_MAP_PLACEHOLDER = 'map_input'
 
 
 class BaseFlowBlock:
@@ -14,12 +14,10 @@ class BaseFlowBlock:
         # Subclasses can define their own identifier (e.g. "workgraph.if_zone" or "workgraph.while_zone")
         # for now, just do a dummy:
         existing = [
-            task
-            for task in self.wg.tasks
-            if hasattr(task, "identifier") and task.identifier == self._task_identifier
+            task for task in self.wg.tasks if hasattr(task, 'identifier') and task.identifier == self._task_identifier
         ]
         index = len(existing) + 1
-        return f"{prefix}_{index}"
+        return f'{prefix}_{index}'
 
     @property
     def _task_identifier(self):
@@ -31,13 +29,13 @@ class BaseFlowBlock:
 
 
 class If_(BaseFlowBlock):
-    _task_identifier = "workgraph.if_zone"
+    _task_identifier = 'workgraph.if_zone'
 
     def __init__(self, condition: TaskSocket):
         super().__init__(condition)
         self.true_zone = self.wg.add_task(
             TaskPool.workgraph.if_zone,
-            name=self._generate_name("if_true"),
+            name=self._generate_name('if_true'),
             conditions=self.condition,
         )
         self.false_zone = None
@@ -49,7 +47,7 @@ class If_(BaseFlowBlock):
     def else_(self, *tasks):
         self.false_zone = self.wg.add_task(
             TaskPool.workgraph.if_zone,
-            name=self._generate_name("if_false"),
+            name=self._generate_name('if_false'),
             conditions=self.condition,
             invert_condition=True,
         )
@@ -58,13 +56,13 @@ class If_(BaseFlowBlock):
 
 
 class While_(BaseFlowBlock):
-    _task_identifier = "workgraph.while_zone"
+    _task_identifier = 'workgraph.while_zone'
 
     def __init__(self, condition: TaskSocket, max_iterations: int = 10000):
         super().__init__(condition)
         self.zone = self.wg.add_task(
             TaskPool.workgraph.while_zone,
-            name=self._generate_name("while"),
+            name=self._generate_name('while'),
             conditions=self.condition,
             max_iterations=max_iterations,
         )
@@ -75,13 +73,13 @@ class While_(BaseFlowBlock):
 
 
 class Map_(BaseFlowBlock):
-    _task_identifier = "workgraph.map_zone"
+    _task_identifier = 'workgraph.map_zone'
 
     def __init__(self, source: TaskSocket, placeholder: str = DEFAULT_MAP_PLACEHOLDER):
         super().__init__(source)
         self.zone = self.wg.add_task(
             TaskPool.workgraph.map_zone,
-            name=self._generate_name("map"),
+            name=self._generate_name('map'),
             source=self.condition,
             placeholder=placeholder,
         )

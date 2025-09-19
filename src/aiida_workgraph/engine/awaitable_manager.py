@@ -17,9 +17,7 @@ import logging
 class AwaitableManager:
     """Handles awaitable objects and their resolutions."""
 
-    def __init__(
-        self, _awaitables, runner, logger: logging.Logger, process, ctx_manager
-    ):
+    def __init__(self, _awaitables, runner, logger: logging.Logger, process, ctx_manager):
         self.runner = runner
         self.logger = logger
         self.process = process
@@ -44,7 +42,7 @@ class AwaitableManager:
         if awaitable.action == AwaitableAction.ASSIGN:
             ctx[key] = awaitable
         else:
-            raise AssertionError(f"Unsupported awaitable action: {awaitable.action}")
+            raise AssertionError(f'Unsupported awaitable action: {awaitable.action}')
 
         self._awaitables.append(
             awaitable
@@ -64,7 +62,7 @@ class AwaitableManager:
         if awaitable.action == AwaitableAction.ASSIGN:
             ctx[key] = value
         else:
-            raise AssertionError(f"Unsupported awaitable action: {awaitable.action}")
+            raise AssertionError(f'Unsupported awaitable action: {awaitable.action}')
 
         awaitable.resolved = True
         # remove awaitabble from the list, and use the same list reference
@@ -78,7 +76,7 @@ class AwaitableManager:
     def update_process_status(self) -> None:
         """Set the process status with a message accounting the current sub processes that we are waiting for."""
         if self._awaitables:
-            status = f"Waiting for child processes: {', '.join([str(_.pk) for _ in self._awaitables])}"
+            status = f'Waiting for child processes: {", ".join([str(_.pk) for _ in self._awaitables])}'
             self.process.node.set_process_status(status)
         else:
             self.process.node.set_process_status(None)
@@ -95,12 +93,10 @@ class AwaitableManager:
             if awaitable.pk in self.ctx._awaitable_actions:
                 continue
             if awaitable.target == AwaitableTarget.PROCESS:
-                callback = functools.partial(
-                    self.process.call_soon, self.on_awaitable_finished, awaitable
-                )
+                callback = functools.partial(self.process.call_soon, self.on_awaitable_finished, awaitable)
                 self.runner.call_on_process_finish(awaitable.pk, callback)
                 self.ctx._awaitable_actions.append(awaitable.pk)
-            elif awaitable.target == "asyncio.tasks.Task":
+            elif awaitable.target == 'asyncio.tasks.Task':
                 # this is a awaitable task, the callback function is already set
                 self.ctx._awaitable_actions.append(awaitable.pk)
             else:
@@ -114,63 +110,48 @@ class AwaitableManager:
 
         :param awaitable: an Awaitable instance
         """
-        self.logger.debug(f"Awaitable {awaitable.key} finished.")
+        self.logger.debug(f'Awaitable {awaitable.key} finished.')
 
         if isinstance(awaitable.pk, int):
             self.logger.info(
-                "received callback that awaitable with key {} and pk {} has terminated".format(
+                'received callback that awaitable with key {} and pk {} has terminated'.format(
                     awaitable.key, awaitable.pk
                 )
             )
             try:
                 node = load_node(awaitable.pk)
             except (exceptions.MultipleObjectsError, exceptions.NotExistent):
-                raise ValueError(
-                    f"provided pk<{awaitable.pk}> could not be resolved to a valid Node instance"
-                )
+                raise ValueError(f'provided pk<{awaitable.pk}> could not be resolved to a valid Node instance')
 
             if awaitable.outputs:
-                value = {
-                    entry.link_label: entry.node
-                    for entry in node.base.links.get_outgoing()
-                }
+                value = {entry.link_label: entry.node for entry in node.base.links.get_outgoing()}
             else:
                 value = node  # type: ignore
         else:
             # In this case, the pk and key are the same.
-            self.logger.info(
-                "received callback that awaitable {} has terminated".format(
-                    awaitable.key
-                )
-            )
+            self.logger.info('received callback that awaitable {} has terminated'.format(awaitable.key))
             try:
                 # if awaitable is cancelled, the result is None
                 if awaitable.cancelled():
-                    self.process.task_manager.state_manager.set_task_runtime_info(
-                        awaitable.key, "state", "KILLED"
-                    )
+                    self.process.task_manager.state_manager.set_task_runtime_info(awaitable.key, 'state', 'KILLED')
                     # set child tasks state to SKIPPED
                     self.process.task_manager.state_manager.set_tasks_state(
-                        self.process.wg.connectivity["child_node"][awaitable.key],
-                        "SKIPPED",
+                        self.process.wg.connectivity['child_node'][awaitable.key],
+                        'SKIPPED',
                     )
-                    self.process.report(f"Task: {awaitable.key} cancelled.")
+                    self.process.report(f'Task: {awaitable.key} cancelled.')
                 else:
                     results = awaitable.result()
-                    self.process.task_manager.state_manager.update_normal_task_state(
-                        awaitable.key, results
-                    )
+                    self.process.task_manager.state_manager.update_normal_task_state(awaitable.key, results)
             except Exception as e:
-                self.logger.error(f"Error in awaitable {awaitable.key}: {e}")
-                self.process.task_manager.state_manager.set_task_runtime_info(
-                    awaitable.key, "state", "FAILED"
-                )
+                self.logger.error(f'Error in awaitable {awaitable.key}: {e}')
+                self.process.task_manager.state_manager.set_task_runtime_info(awaitable.key, 'state', 'FAILED')
                 # set child tasks state to SKIPPED
                 self.process.task_manager.state_manager.set_tasks_state(
-                    self.process.wg.connectivity["child_node"][awaitable.key],
-                    "SKIPPED",
+                    self.process.wg.connectivity['child_node'][awaitable.key],
+                    'SKIPPED',
                 )
-                self.process.report(f"Task: {awaitable.key} failed: {e}")
+                self.process.report(f'Task: {awaitable.key} failed: {e}')
                 self.process.error_handler_manager.run_error_handlers(awaitable.key)
             value = None
 
@@ -186,16 +167,14 @@ class AwaitableManager:
         except Exception as e:
             print(e)
 
-    def construct_awaitable_function(
-        self, name: str, awaitable_target: Awaitable
-    ) -> None:
+    def construct_awaitable_function(self, name: str, awaitable_target: Awaitable) -> None:
         """Construct the awaitable function."""
         awaitable = Awaitable(
             **{
-                "pk": name,
-                "action": AwaitableAction.ASSIGN,
-                "target": "asyncio.tasks.Task",
-                "outputs": False,
+                'pk': name,
+                'action': AwaitableAction.ASSIGN,
+                'target': 'asyncio.tasks.Task',
+                'outputs': False,
             }
         )
         awaitable_target.key = name

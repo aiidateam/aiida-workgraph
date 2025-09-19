@@ -14,8 +14,8 @@ def task_creation_hook(self: NodeCollection, task: Any) -> None:
     if self.parent.widget is not None:
         self.parent.widget.send(
             {
-                "type": "add_task",
-                "data": {"label": task.name, "inputs": [], "outputs": []},
+                'type': 'add_task',
+                'data': {'label': task.name, 'inputs': [], 'outputs': []},
             }
         )
 
@@ -35,7 +35,7 @@ def task_deletion_hook(self: NodeCollection, task: Any) -> None:
             link_index.append(index)
     del self.parent.links[link_index]
     if self.widget is not None:
-        self.parent.widget.send({"type": "delete_node", "data": {"name": task.name}})
+        self.parent.widget.send({'type': 'delete_node', 'data': {'name': task.name}})
 
 
 def link_creation_hook(self: NodeCollection, link: Any) -> None:
@@ -49,12 +49,12 @@ def link_creation_hook(self: NodeCollection, link: Any) -> None:
     if self.parent.widget is not None:
         self.parent.widget.send(
             {
-                "type": "add_link",
-                "data": {
-                    "from_node": link.from_node.name,
-                    "from_socket": link.from_socket._name,
-                    "to_node": link.to_node.name,
-                    "to_socket": link.to_socket._name,
+                'type': 'add_link',
+                'data': {
+                    'from_node': link.from_node.name,
+                    'from_socket': link.from_socket._name,
+                    'to_node': link.to_node.name,
+                    'to_socket': link.to_socket._name,
                 },
             }
         )
@@ -71,12 +71,12 @@ def link_deletion_hook(self: NodeCollection, link: Any) -> None:
     if self.parent.widget is not None:
         self.parent.widget.send(
             {
-                "type": "delete_link",
-                "data": {
-                    "from_node": link.from_node.name,
-                    "from_socket": link.from_socket._name,
-                    "to_node": link.to_node.name,
-                    "to_socket": link.to_socket._name,
+                'type': 'delete_link',
+                'data': {
+                    'from_node': link.from_node.name,
+                    'from_socket': link.from_socket._name,
+                    'to_node': link.to_node.name,
+                    'to_socket': link.to_socket._name,
                 },
             }
         )

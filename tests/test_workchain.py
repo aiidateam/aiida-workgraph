@@ -11,8 +11,8 @@ def test_build_workchain_inputs_outputs():
     ninput = len(inputs.ports) + 1
     assert len(node.inputs) == ninput
     assert len(node.outputs) == 3
-    assert node._spec.mode == "decorator_build"
-    assert node._spec.decorator_path == "aiida_workgraph.decorator.task"
+    assert node._spec.mode == 'decorator_build'
+    assert node._spec.decorator_path == 'aiida_workgraph.decorator.task'
 
 
 def test_build_workchain(add_code):
@@ -20,10 +20,10 @@ def test_build_workchain(add_code):
     from aiida.orm import Int
     from aiida_workgraph import WorkGraph
 
-    wg = WorkGraph(name="test_debug_math")
+    wg = WorkGraph(name='test_debug_math')
     wg.add_task(
         MultiplyAddWorkChain,
-        "multiply_add1",
+        'multiply_add1',
         x=Int(4),
         y=Int(2),
         z=Int(3),

@@ -1,4 +1,5 @@
 """AiiDA workflow components: WorkGraph."""
+
 from __future__ import annotations
 
 import collections.abc
@@ -29,27 +30,27 @@ from node_graph.config import BUILTIN_NODES
 if t.TYPE_CHECKING:
     from aiida.engine.runners import Runner  # pylint: disable=unused-import
 
-__all__ = "WorkGraph"
+__all__ = 'WorkGraph'
 
 
 class WorkGraphSpec(WorkChainSpec):
-    WORKGRAPH_DATA_KEY = "workgraph_data"
+    WORKGRAPH_DATA_KEY = 'workgraph_data'
 
 
-@auto_persist("_awaitables")
+@auto_persist('_awaitables')
 class WorkGraphEngine(Process, metaclass=Protect):
     """The `WorkGraph` class is used to construct workflows in AiiDA."""
 
     # used to create a process node that represents what happened in this process.
     _node_class = WorkGraphNode
     _spec_class = WorkGraphSpec
-    _CONTEXT = "CONTEXT"
+    _CONTEXT = 'CONTEXT'
 
     def __init__(
         self,
         inputs: dict | None = None,
         logger: logging.Logger | None = None,
-        runner: "Runner" | None = None,
+        runner: 'Runner' | None = None,
         enable_persistence: bool = True,
     ) -> None:
         """Construct a WorkGraph instance.
@@ -64,62 +65,52 @@ class WorkGraphEngine(Process, metaclass=Protect):
         super().__init__(inputs, logger, runner, enable_persistence=enable_persistence)
         self._awaitables: list[Awaitable] = []
         self._context = AttributeDict()
-        self.ctx_manager = ContextManager(
-            self._context, process=self, logger=self.logger
-        )
-        self.awaitable_manager = AwaitableManager(
-            self._awaitables, self.runner, self.logger, self, self.ctx_manager
-        )
-        self.task_manager = TaskManager(
-            self.ctx_manager, self.logger, self.runner, self, self.awaitable_manager
-        )
-        self.error_handler_manager = ErrorHandlerManager(
-            self, self.ctx_manager, self.logger
-        )
+        self.ctx_manager = ContextManager(self._context, process=self, logger=self.logger)
+        self.awaitable_manager = AwaitableManager(self._awaitables, self.runner, self.logger, self, self.ctx_manager)
+        self.task_manager = TaskManager(self.ctx_manager, self.logger, self.runner, self, self.awaitable_manager)
+        self.error_handler_manager = ErrorHandlerManager(self, self.ctx_manager, self.logger)
 
     @classmethod
     def define(cls, spec: WorkGraphSpec) -> None:
         super().define(spec)
         spec.input_namespace(
-            "graph_inputs",
+            'graph_inputs',
             dynamic=True,
             required=False,
-            help="Graph level inputs",
+            help='Graph level inputs',
         )
         spec.input_namespace(
-            "tasks",
+            'tasks',
             dynamic=True,
             required=False,
-            help="Tasks inputs",
+            help='Tasks inputs',
         )
         spec.input_namespace(
             spec.WORKGRAPH_DATA_KEY,
             dynamic=True,
             required=False,
-            help="WorkGraph data",
+            help='WorkGraph data',
         )
-        spec.exit_code(2, "ERROR_SUBPROCESS", message="A subprocess has failed.")
+        spec.exit_code(2, 'ERROR_SUBPROCESS', message='A subprocess has failed.')
         spec.outputs.dynamic = True
         #
-        spec.exit_code(
-            201, "UNKNOWN_MESSAGE_TYPE", message="The message type is unknown."
-        )
-        spec.exit_code(202, "UNKNOWN_TASK_TYPE", message="The task type is unknown.")
+        spec.exit_code(201, 'UNKNOWN_MESSAGE_TYPE', message='The message type is unknown.')
+        spec.exit_code(202, 'UNKNOWN_TASK_TYPE', message='The task type is unknown.')
         #
         spec.exit_code(
             301,
-            "OUTPUS_NOT_MATCH_RESULTS",
-            message="The outputs of the process do not match the results.",
+            'OUTPUS_NOT_MATCH_RESULTS',
+            message='The outputs of the process do not match the results.',
         )
         spec.exit_code(
             302,
-            "TASK_FAILED",
-            message="Some of the tasks failed.",
+            'TASK_FAILED',
+            message='Some of the tasks failed.',
         )
         spec.exit_code(
             303,
-            "TASK_NON_ZERO_EXIT_STATUS",
-            message="Some of the tasks exited with non-zero status.",
+            'TASK_NON_ZERO_EXIT_STATUS',
+            message='Some of the tasks exited with non-zero status.',
         )
 
     def _setup_metadata(self, metadata: dict) -> None:  # type: ignore[override]
@@ -132,9 +123,7 @@ class WorkGraphEngine(Process, metaclass=Protect):
         return self._context
 
     @override
-    def save_instance_state(
-        self, out_state: t.Dict[str, t.Any], save_context: t.Any
-    ) -> None:
+    def save_instance_state(self, out_state: t.Dict[str, t.Any], save_context: t.Any) -> None:
         """Save instance state.
 
         :param out_state: state to save in
@@ -148,9 +137,7 @@ class WorkGraphEngine(Process, metaclass=Protect):
         out_state[self._CONTEXT] = self.ctx
 
     @override
-    def load_instance_state(
-        self, saved_state: t.Dict[str, t.Any], load_context: t.Any
-    ) -> None:
+    def load_instance_state(self, saved_state: t.Dict[str, t.Any], load_context: t.Any) -> None:
         from aiida.orm.utils.log import create_logger_adapter
         from aiida_workgraph import WorkGraph
 
@@ -159,38 +146,28 @@ class WorkGraphEngine(Process, metaclass=Protect):
         self._context = saved_state[self._CONTEXT]
         # Load the WorkGraph
         # if `_wgdata` does not exist, which means this is the first time the process is run
-        if "_wgdata" in self.ctx:
+        if '_wgdata' in self.ctx:
             self.wg = WorkGraph.from_dict(self.ctx._wgdata)
         # TODO: avoid hardcoding the logger
-        self.node._logger = logging.getLogger(
-            "aiida.orm.nodes.process.workflow.workchain.WorkChainNode"
-        )
+        self.node._logger = logging.getLogger('aiida.orm.nodes.process.workflow.workchain.WorkChainNode')
         # First time the property is called after the node is stored, create the logger adapter
         self.node._logger_adapter = create_logger_adapter(self.node._logger, self.node)
         self.set_logger(self.node._logger_adapter)
         # TODO I don't know why we need to reinitialize the context, awaitables, and task_manager
         # Need to initialize the context, awaitables, and task_manager
-        self.ctx_manager = ContextManager(
-            self._context, process=self, logger=self.logger
-        )
-        self.awaitable_manager = AwaitableManager(
-            self._awaitables, self.runner, self.logger, self, self.ctx_manager
-        )
-        self.task_manager = TaskManager(
-            self.ctx_manager, self.logger, self.runner, self, self.awaitable_manager
-        )
-        self.error_handler_manager = ErrorHandlerManager(
-            self, self.ctx_manager, self.logger
-        )
+        self.ctx_manager = ContextManager(self._context, process=self, logger=self.logger)
+        self.awaitable_manager = AwaitableManager(self._awaitables, self.runner, self.logger, self, self.ctx_manager)
+        self.task_manager = TaskManager(self.ctx_manager, self.logger, self.runner, self, self.awaitable_manager)
+        self.error_handler_manager = ErrorHandlerManager(self, self.ctx_manager, self.logger)
         # "_awaitables" is auto persisted.
         if self._awaitables:
             # For the "ascyncio.tasks.Task" awaitable, because there are only in-memory,
             # we need to reset the tasks and so that they can be re-run again.
             should_resume = False
             for awaitable in self._awaitables:
-                if awaitable.target == "asyncio.tasks.Task":
+                if awaitable.target == 'asyncio.tasks.Task':
                     self.awaitable_manager.resolve_awaitable(awaitable, None)
-                    self.report(f"reset awaitable task: {awaitable.key}")
+                    self.report(f'reset awaitable task: {awaitable.key}')
                     self.task_manager.reset_task(awaitable.key)
                     should_resume = True
             if should_resume:
@@ -232,7 +209,7 @@ class WorkGraphEngine(Process, metaclass=Protect):
                 return self.finalize()
 
         if self._awaitables:
-            return Wait(self._do_step, "Waiting before next step")
+            return Wait(self._do_step, 'Waiting before next step')
 
         return Continue(self._do_step)
 
@@ -263,7 +240,7 @@ class WorkGraphEngine(Process, metaclass=Protect):
             self._store_nodes(self.ctx)
         except Exception:  # pylint: disable=broad-except
             # An uncaught exception here will have bizarre and disastrous consequences
-            self.logger.exception("exception in _store_nodes called in on_exiting")
+            self.logger.exception('exception in _store_nodes called in on_exiting')
 
     @Protect.final
     def on_wait(self, awaitables: t.Sequence[t.Awaitable]):
@@ -271,13 +248,13 @@ class WorkGraphEngine(Process, metaclass=Protect):
         super().on_wait(awaitables)
         if self._awaitables:
             self.awaitable_manager.action_awaitables()
-            self.report("Process status: {}".format(self.node.process_status))
+            self.report('Process status: {}'.format(self.node.process_status))
         else:
             self.call_soon(self.resume)
 
     def _build_process_label(self) -> str:
         """Use the workgraph name as the process label."""
-        return f"WorkGraph<{self.inputs[WorkGraphSpec.WORKGRAPH_DATA_KEY]['name']}>"
+        return f'WorkGraph<{self.inputs[WorkGraphSpec.WORKGRAPH_DATA_KEY]["name"]}>'
 
     def on_create(self) -> None:
         """Called when a Process is created."""
@@ -285,7 +262,7 @@ class WorkGraphEngine(Process, metaclass=Protect):
 
         super().on_create()
         raw_inputs = dict(self.inputs)
-        self.node.label = raw_inputs[WorkGraphSpec.WORKGRAPH_DATA_KEY]["name"]
+        self.node.label = raw_inputs[WorkGraphSpec.WORKGRAPH_DATA_KEY]['name']
         save_workgraph_data(self.node, raw_inputs)
 
     def setup(self) -> None:
@@ -306,27 +283,22 @@ class WorkGraphEngine(Process, metaclass=Protect):
         self.ctx._task_results = {}
         # create a builtin `_context` task with its results as the context variables
         self.ctx._task_results = {
-            "graph_ctx": self.wg.ctx._value,
-            "graph_inputs": self.wg.inputs._value,
-            "graph_outputs": self.wg.outputs._value,
+            'graph_ctx': self.wg.ctx._value,
+            'graph_inputs': self.wg.inputs._value,
+            'graph_outputs': self.wg.outputs._value,
         }
         self.task_manager.set_task_results()
         # set meta-tasks state
         for task_name in BUILTIN_NODES:
-            self.task_manager.state_manager.set_task_runtime_info(
-                task_name, "state", "FINISHED"
-            )
+            self.task_manager.state_manager.set_task_runtime_info(task_name, 'state', 'FINISHED')
 
     def apply_action(self, msg: dict) -> None:
-
-        if msg["catalog"] == "task":
+        if msg['catalog'] == 'task':
             self.task_manager.action_manager.apply_task_actions(msg)
         else:
-            self.report(f"Unknow message type {msg}")
+            self.report(f'Unknow message type {msg}')
 
-    def message_receive(
-        self, _comm: kiwipy.Communicator, msg: t.Dict[str, t.Any]
-    ) -> t.Any:
+    def message_receive(self, _comm: kiwipy.Communicator, msg: t.Dict[str, t.Any]) -> t.Any:
         """
         Coroutine called when the process receives a message from the communicator
 
@@ -346,22 +318,18 @@ class WorkGraphEngine(Process, metaclass=Protect):
         if intent == process_comms.Intent.PLAY:
             return self._schedule_rpc(self.play)
         if intent == process_comms.Intent.PAUSE:
-            return self._schedule_rpc(
-                self.pause, msg=msg.get(process_comms.MESSAGE_KEY, None)
-            )
+            return self._schedule_rpc(self.pause, msg=msg.get(process_comms.MESSAGE_KEY, None))
         if intent == process_comms.Intent.KILL:
-            return self._schedule_rpc(
-                self.kill, msg=msg.get(process_comms.MESSAGE_KEY, None)
-            )
+            return self._schedule_rpc(self.kill, msg=msg.get(process_comms.MESSAGE_KEY, None))
         if intent == process_comms.Intent.STATUS:
             status_info: t.Dict[str, t.Any] = {}
             self.get_status_info(status_info)
             return status_info
-        if intent == "custom":
+        if intent == 'custom':
             return self._schedule_rpc(self.apply_action, msg=msg)
 
         # Didn't match any known intents
-        raise RuntimeError("Unknown intent")
+        raise RuntimeError('Unknown intent')
 
     def finalize(self) -> t.Optional[ExitCode]:
         """Finalize the workgraph.
@@ -370,20 +338,13 @@ class WorkGraphEngine(Process, metaclass=Protect):
         from aiida_workgraph.utils import resolve_node_link_managers
 
         # in case we expose the ctx and inputs as outputs directly
-        self.task_manager.state_manager.update_meta_tasks("graph_ctx")
-        self.task_manager.state_manager.update_meta_tasks("graph_inputs")
-        self.out_many(
-            resolve_node_link_managers(self.ctx._task_results["graph_outputs"])
-        )
+        self.task_manager.state_manager.update_meta_tasks('graph_ctx')
+        self.task_manager.state_manager.update_meta_tasks('graph_inputs')
+        self.out_many(resolve_node_link_managers(self.ctx._task_results['graph_outputs']))
         # output the new data
         if self.ctx._new_data:
-            self.out("new_data", self.ctx._new_data)
-        self.report("Finalize workgraph.")
+            self.out('new_data', self.ctx._new_data)
+        self.report('Finalize workgraph.')
         for task in self.wg.tasks:
-            if (
-                self.task_manager.state_manager.get_task_runtime_info(
-                    task.name, "state"
-                )
-                == "FAILED"
-            ):
+            if self.task_manager.state_manager.get_task_runtime_info(task.name, 'state') == 'FAILED':
                 return self.exit_codes.TASK_FAILED

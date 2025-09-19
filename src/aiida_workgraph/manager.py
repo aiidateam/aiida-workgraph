@@ -6,11 +6,12 @@ Note pitfalls:
     - difficulty testing in isolation
     - etc.
 """
+
 from contextlib import contextmanager
 from aiida_workgraph.socket import TaskSocket
 from aiida_workgraph.tasks.task_pool import TaskPool
 
-DEFAULT_MAP_PLACEHOLDER = "map_input"
+DEFAULT_MAP_PLACEHOLDER = 'map_input'
 
 
 class CurrentGraphManager:
@@ -98,7 +99,7 @@ def Zone():
         TaskPool.workgraph.zone,
     )
 
-    old_zone = getattr(wg, "_active_zone", None)
+    old_zone = getattr(wg, '_active_zone', None)
     if old_zone:
         old_zone.children.add(zone_task)
     wg._active_zone = zone_task
@@ -126,7 +127,7 @@ def If(condition_socket: TaskSocket, invert_condition: bool = False):
         invert_condition=invert_condition,
     )
 
-    old_zone = getattr(wg, "_active_zone", None)
+    old_zone = getattr(wg, '_active_zone', None)
     if old_zone:
         old_zone.children.add(zone_task)
     wg._active_zone = zone_task
@@ -154,7 +155,7 @@ def While(condition_socket: TaskSocket, max_iterations: int = 10000):
         max_iterations=max_iterations,
     )
 
-    old_zone = getattr(wg, "_active_zone", None)
+    old_zone = getattr(wg, '_active_zone', None)
     if old_zone:
         old_zone.children.add(zone_task)
     wg._active_zone = zone_task
@@ -181,7 +182,7 @@ def Map(source_socket: TaskSocket, placeholder: str = DEFAULT_MAP_PLACEHOLDER):
         source=source_socket,
     )
 
-    old_zone = getattr(wg, "_active_zone", None)
+    old_zone = getattr(wg, '_active_zone', None)
     if old_zone:
         old_zone.children.add(zone_task)
     wg._active_zone = zone_task

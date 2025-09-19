@@ -34,15 +34,13 @@ load_profile()
 
 
 try:
-    bash_code = orm.load_code(
-        "bash@localhost"
-    )  # The computer label can also be omitted here
+    bash_code = orm.load_code('bash@localhost')  # The computer label can also be omitted here
 except NotExistent:
     bash_code = orm.InstalledCode(
-        label="bash",
-        computer=orm.load_computer("localhost"),
-        filepath_executable="/bin/bash",
-        default_calc_job_plugin="core.arithmetic.add",
+        label='bash',
+        computer=orm.load_computer('localhost'),
+        filepath_executable='/bin/bash',
+        default_calc_job_plugin='core.arithmetic.add',
     ).store()
 
 
@@ -72,14 +70,14 @@ print(ArithmeticAddCalculation.exit_codes.ERROR_NEGATIVE_NUMBER)
 # We will run a calculation that exits with this error.
 #
 
-wg = WorkGraph("error_negative_number")
-wg.add_task(ArithmeticAddCalculation, name="add", x=1, y=-6, code=bash_code)
+wg = WorkGraph('error_negative_number')
+wg.add_task(ArithmeticAddCalculation, name='add', x=1, y=-6, code=bash_code)
 
 
 wg.run()
-print("Task finished OK?:", wg.tasks.add.process.is_finished_ok)
-print("Exit code        :", wg.tasks.add.process.exit_code)
-print("Exit Message:    :", wg.tasks.add.process.exit_message)
+print('Task finished OK?:', wg.tasks.add.process.is_finished_ok)
+print('Exit code        :', wg.tasks.add.process.exit_code)
+print('Exit Message:    :', wg.tasks.add.process.exit_message)
 
 
 ######################################################################
@@ -103,26 +101,26 @@ def handle_negative_sum(task: Task):
     Simply make the inputs positive by taking the absolute value.
     """
     # modify task inputs
-    task.set_inputs({"x": abs(task.inputs.x.value), "y": abs(task.inputs.y.value)})
+    task.set_inputs({'x': abs(task.inputs.x.value), 'y': abs(task.inputs.y.value)})
 
 
-wg = WorkGraph("handling_error_negative_number")
-task1 = wg.add_task(ArithmeticAddCalculation, name="add", x=1, y=-6, code=bash_code)
+wg = WorkGraph('handling_error_negative_number')
+task1 = wg.add_task(ArithmeticAddCalculation, name='add', x=1, y=-6, code=bash_code)
 # Adding error handler logic
 task1.add_error_handler(
     {
-        "handle_negative_sum": {
-            "executor": handle_negative_sum,
-            "exit_codes": [410],
-            "max_retries": 5,
+        'handle_negative_sum': {
+            'executor': handle_negative_sum,
+            'exit_codes': [410],
+            'max_retries': 5,
         }
     }
 )
 
 wg.run()
-print("Task finished OK?:", wg.tasks.add.process.is_finished_ok)
-print("Exit code        :", wg.tasks.add.process.exit_code)
-print("Exit Message:    :", wg.tasks.add.process.exit_message)
+print('Task finished OK?:', wg.tasks.add.process.is_finished_ok)
+print('Exit code        :', wg.tasks.add.process.exit_code)
+print('Exit Message:    :', wg.tasks.add.process.exit_message)
 
 ######################################################################
 #
@@ -145,30 +143,28 @@ def handle_negative_sum(task: Task, increment: int = 1):
     Simply add an increment to the inputs.
     """
     # modify task inputs
-    task.set_inputs(
-        {"x": task.inputs.x.value + increment, "y": task.inputs.y.value + increment}
-    )
+    task.set_inputs({'x': task.inputs.x.value + increment, 'y': task.inputs.y.value + increment})
 
 
-wg = WorkGraph("handling_error_negative_number")
-task1 = wg.add_task(ArithmeticAddCalculation, name="add", x=1, y=-6, code=bash_code)
+wg = WorkGraph('handling_error_negative_number')
+task1 = wg.add_task(ArithmeticAddCalculation, name='add', x=1, y=-6, code=bash_code)
 # Adding error handler logic
 task1.add_error_handler(
     {
-        "handle_negative_sum": {
-            "executor": handle_negative_sum,
-            "exit_codes": [410],
-            "max_retries": 5,
-            "kwargs": {"increment": 1},
+        'handle_negative_sum': {
+            'executor': handle_negative_sum,
+            'exit_codes': [410],
+            'max_retries': 5,
+            'kwargs': {'increment': 1},
         }
     }
 )
 
 
 wg.run()
-print("Task finished OK?:", wg.tasks.add.process.is_finished_ok)
-print("Exit code        :", wg.tasks.add.process.exit_code)
-print("Exit Message:    :", wg.tasks.add.process.exit_message)
+print('Task finished OK?:', wg.tasks.add.process.is_finished_ok)
+print('Exit code        :', wg.tasks.add.process.exit_code)
+print('Exit Message:    :', wg.tasks.add.process.exit_message)
 
 ######################################################################
 #
@@ -188,7 +184,7 @@ print(format_call_graph(orm.load_node(wg.pk)))
 
 # reset workgraph to start from the beginning
 wg.reset()
-wg.tasks.add.error_handlers["handle_negative_sum"].kwargs["increment"] = 3
+wg.tasks.add.error_handlers['handle_negative_sum'].kwargs['increment'] = 3
 wg.run()
 
 

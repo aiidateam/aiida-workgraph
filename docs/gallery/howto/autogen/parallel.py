@@ -34,16 +34,18 @@ def square(x: int) -> int:
     """Square an integer."""
     return x * x
 
+
 # %%
 # Define a helper task that generates a dictionary of numbers.
 # This will serve as input to the scatter phase.
+
 
 @task
 def generate_numbers(
     n: int,
 ) -> t.Annotated[dict[str, int], namespace(data=dynamic(int))]:
     """Generate a dictionary of numbers from 1 to n."""
-    return {"data": {f"number_{i+1}": i + 1 for i in range(n)}}
+    return {'data': {f'number_{i + 1}': i + 1 for i in range(n)}}
 
 
 # %%
@@ -73,7 +75,7 @@ def ParallelSquare(
     squares = {}
     for key, value in data.items():
         squares[key] = square(x=value).result
-    return {"squares": squares}
+    return {'squares': squares}
 
 
 # %%
@@ -86,15 +88,15 @@ def ParallelSquare(
 # %%
 # Let's run it with some sample data.
 
-data = {f"number_{i}": i for i in range(1, 5)}
+data = {f'number_{i}': i for i in range(1, 5)}
 
 wg = ParallelSquare.build(data)
 wg.run()
 
-print("\nResults:")
+print('\nResults:')
 for i, result_node in enumerate(wg.outputs.squares):
     original_value = list(data.values())[i]
-    print(f"{original_value}² = {result_node.value}")
+    print(f'{original_value}² = {result_node.value}')
 
 # %%
 # Workflow view
@@ -143,7 +145,7 @@ def ScatterGatherSquare(n: int) -> int:
 wg = ScatterGatherSquare.build(4)
 wg.run()
 
-print("\nAggregated Result:", wg.outputs.result.value)
+print('\nAggregated Result:', wg.outputs.result.value)
 
 assert wg.outputs.result.value == 30
 

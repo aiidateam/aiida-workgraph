@@ -37,13 +37,13 @@ class WorkGraph(node_graph.NodeGraph):
     """
 
     registry: Optional[RegistryHub] = registry_hub
-    platform: str = "aiida_workgraph"
+    platform: str = 'aiida_workgraph'
     type_mapping: dict = type_mapping
     _socket_spec = SocketSpecAPI
 
     def __init__(
         self,
-        name: str = "WorkGraph",
+        name: str = 'WorkGraph',
         inputs: Optional[type | List[str]] = None,
         outputs: Optional[type | List[str]] = None,
         error_handlers: Optional[Dict[str, ErrorHandlerSpec]] = None,
@@ -73,19 +73,16 @@ class WorkGraph(node_graph.NodeGraph):
         """Add alias to `nodes` for WorkGraph"""
         return self.nodes
 
-    def to_engine_inputs(
-        self, metadata: Optional[Dict[str, Any]] = None
-    ) -> Dict[str, Any]:
-
+    def to_engine_inputs(self, metadata: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         wgdata = self.to_dict(should_serialize=True)
         metadata = metadata or {}
-        task_inputs = self.gather_task_inputs(wgdata["tasks"])
-        graph_inputs = task_inputs.pop("graph_inputs", {})
+        task_inputs = self.gather_task_inputs(wgdata['tasks'])
+        graph_inputs = task_inputs.pop('graph_inputs', {})
         inputs = {
-            "metadata": metadata,
-            "workgraph_data": wgdata,
-            "tasks": task_inputs,
-            "graph_inputs": graph_inputs,
+            'metadata': metadata,
+            'workgraph_data': wgdata,
+            'tasks': task_inputs,
+            'graph_inputs': graph_inputs,
         }
         return inputs
 
@@ -93,7 +90,7 @@ class WorkGraph(node_graph.NodeGraph):
         """Gather the inputs of all tasks."""
         inputs = {}
         for name, task in data.items():
-            inputs[name] = task.pop("inputs", {})
+            inputs[name] = task.pop('inputs', {})
         return inputs
 
     def check_before_run(self) -> bool:
@@ -108,13 +105,13 @@ class WorkGraph(node_graph.NodeGraph):
                 continue
             missing_inputs.extend(self.find_missing_inputs(task.inputs))
         if missing_inputs:
-            bullets = "\n".join(f"  • {p}" for p in sorted(missing_inputs))
+            bullets = '\n'.join(f'  • {p}' for p in sorted(missing_inputs))
             raise ValueError(
-                "Missing required inputs:\n"
-                f"{bullets}\n\n"
-                "How to fix:\n"
-                "  1) Provide these values (at build time or by linking from upstream task outputs).\n"
-                "  2) If some are intentionally unused, exclude them from the namespace at the call site, e.g.:\n"
+                'Missing required inputs:\n'
+                f'{bullets}\n\n'
+                'How to fix:\n'
+                '  1) Provide these values (at build time or by linking from upstream task outputs).\n'
+                '  2) If some are intentionally unused, exclude them from the namespace at the call site, e.g.:\n'
                 '     Annotated[dict, some_task.inputs, SocketSpecSelect(exclude=["pw.structure", ...])]\n\n'
                 "Note: exclude paths are relative to the task's input namespace (e.g. 'pw.structure')."
             )
@@ -126,14 +123,8 @@ class WorkGraph(node_graph.NodeGraph):
             if isinstance(sub_socket, NodeSocketNamespace):
                 missing_inputs.extend(self.find_missing_inputs(sub_socket))
             else:
-                if (
-                    sub_socket._metadata.required
-                    and sub_socket.value is None
-                    and len(sub_socket._links) == 0
-                ):
-                    missing_inputs.append(
-                        f"{sub_socket._node.name}.{sub_socket._scoped_name}"
-                    )
+                if sub_socket._metadata.required and sub_socket.value is None and len(sub_socket._links) == 0:
+                    missing_inputs.append(f'{sub_socket._node.name}.{sub_socket._scoped_name}')
         return missing_inputs
 
     def check_modified_tasks(self) -> None:
@@ -143,7 +134,7 @@ class WorkGraph(node_graph.NodeGraph):
         existing_process = self._load_existing_process()
         if existing_process:
             diffs = self.analyzer.compare_graphs(existing_process, self)
-            self.reset_tasks(diffs["modified_nodes"])
+            self.reset_tasks(diffs['modified_nodes'])
 
     def run(
         self,
@@ -163,7 +154,7 @@ class WorkGraph(node_graph.NodeGraph):
         # One can not run again if the process is alreay created. otherwise, a new process node will
         # be created again.
         if self.process is not None:
-            print("Your workgraph is already created. Please use the submit() method.")
+            print('Your workgraph is already created. Please use the submit() method.')
             return
         self.check_before_run()
         inputs = self.to_engine_inputs(metadata=metadata)
@@ -194,8 +185,8 @@ class WorkGraph(node_graph.NodeGraph):
 
         # save the workgraph to the process node
         self.save(metadata=metadata)
-        if self.process.process_state.value.upper() not in ["CREATED"]:
-            raise ValueError(f"Process {self.process.pk} has already been submitted.")
+        if self.process.process_state.value.upper() not in ['CREATED']:
+            raise ValueError(f'Process {self.process.pk} has already been submitted.')
         self.continue_process()
         # as long as we submit the process, it is a new submission, we should set restart_process to None
         self.restart_process = None
@@ -222,7 +213,7 @@ class WorkGraph(node_graph.NodeGraph):
             self.process = process_inited.node
             self.process_inited = process_inited
             process_inited.close()
-            print(f"WorkGraph process created, PK: {self.process.pk}")
+            print(f'WorkGraph process created, PK: {self.process.pk}')
         else:
             self.save_to_base(inputs)
         self.update()
@@ -248,38 +239,30 @@ class WorkGraph(node_graph.NodeGraph):
         connectivity = self.analyzer.build_connectivity()
         return connectivity
 
-    def to_dict(
-        self, include_sockets: bool = False, should_serialize: bool = False
-    ) -> Dict[str, Any]:
+    def to_dict(self, include_sockets: bool = False, should_serialize: bool = False) -> Dict[str, Any]:
         """Convert the workgraph to a dictionary."""
         from aiida.orm.utils.serialize import serialize
         from aiida_workgraph.utils import serialize_graph_level_data
         from aiida_pythonjob.data.serializer import all_serializers
 
-        wgdata = super().to_dict(
-            include_sockets=include_sockets, should_serialize=should_serialize
-        )
+        wgdata = super().to_dict(include_sockets=include_sockets, should_serialize=should_serialize)
         wgdata.update(
             {
-                "restart_process": self.restart_process.pk
-                if self.restart_process
-                else None,
-                "max_iteration": self.max_iteration,
-                "max_number_jobs": self.max_number_jobs,
+                'restart_process': self.restart_process.pk if self.restart_process else None,
+                'max_iteration': self.max_iteration,
+                'max_number_jobs': self.max_number_jobs,
             }
         )
         # save error handlers
-        wgdata["error_handlers"] = {
-            name: eh.to_dict() for name, eh in self.get_error_handlers().items()
-        }
-        wgdata["tasks"] = wgdata.pop("nodes")
-        wgdata["connectivity"] = self.build_connectivity()
-        wgdata["process"] = serialize(self.process) if self.process else serialize(None)
-        wgdata["metadata"]["pk"] = self.process.pk if self.process else None
+        wgdata['error_handlers'] = {name: eh.to_dict() for name, eh in self.get_error_handlers().items()}
+        wgdata['tasks'] = wgdata.pop('nodes')
+        wgdata['connectivity'] = self.build_connectivity()
+        wgdata['process'] = serialize(self.process) if self.process else serialize(None)
+        wgdata['metadata']['pk'] = self.process.pk if self.process else None
         if should_serialize:
             # serialize the graph-level tasks
-            wgdata["tasks"]["graph_inputs"]["inputs"] = serialize_graph_level_data(
-                wgdata["tasks"]["graph_inputs"]["inputs"], self._inputs, all_serializers
+            wgdata['tasks']['graph_inputs']['inputs'] = serialize_graph_level_data(
+                wgdata['tasks']['graph_inputs']['inputs'], self._inputs, all_serializers
             )
 
         return wgdata
@@ -297,12 +280,12 @@ class WorkGraph(node_graph.NodeGraph):
             TimeoutError: If the process does not finish within the given timeout.
         """
         terminating_states = (
-            "KILLED",
-            "PAUSED",
-            "FINISHED",
-            "FAILED",
-            "CANCELLED",
-            "EXCEPTED",
+            'KILLED',
+            'PAUSED',
+            'FINISHED',
+            'FAILED',
+            'CANCELLED',
+            'EXCEPTED',
         )
         start = time.time()
         self.update()
@@ -321,14 +304,14 @@ class WorkGraph(node_graph.NodeGraph):
                 finished = self.state in terminating_states
 
             if finished:
-                print(f"Process {self.process.pk} finished with state: {self.state}")
+                print(f'Process {self.process.pk} finished with state: {self.state}')
                 return
 
             time.sleep(interval)
 
             if time.time() - start > timeout:
                 raise TimeoutError(
-                    f"Timeout reached after {timeout} seconds while waiting for the WorkGraph: {self.process.pk}. "
+                    f'Timeout reached after {timeout} seconds while waiting for the WorkGraph: {self.process.pk}. '
                 )
 
     def update(self) -> None:
@@ -351,20 +334,16 @@ class WorkGraph(node_graph.NodeGraph):
             self.tasks[name].update_state(data)
 
         if self.widget is not None:
-            states = {name: data["state"] for name, data in processes_data.items()}
+            states = {name: data['state'] for name, data in processes_data.items()}
             self.widget.states = states
 
         if self.process.is_finished_ok:
             # update the output sockets
             for socket in self.outputs:
-                if socket._identifier == "workgraph.namespace":
-                    socket._value = get_nested_dict(
-                        self.process.outputs, socket._name, default=None
-                    )
+                if socket._identifier == 'workgraph.namespace':
+                    socket._value = get_nested_dict(self.process.outputs, socket._name, default=None)
                 else:
-                    socket.value = get_nested_dict(
-                        self.process.outputs, socket._name, default=None
-                    )
+                    socket.value = get_nested_dict(self.process.outputs, socket._name, default=None)
 
     @property
     def pk(self) -> Optional[int]:
@@ -374,34 +353,32 @@ class WorkGraph(node_graph.NodeGraph):
         self.ctx._set_socket_value(value, link_limit=100000)
 
     @classmethod
-    def from_dict(cls, wgdata: Dict[str, Any]) -> "WorkGraph":
-
-        if "tasks" in wgdata:
-            wgdata["nodes"] = wgdata.pop("tasks")
+    def from_dict(cls, wgdata: Dict[str, Any]) -> 'WorkGraph':
+        if 'tasks' in wgdata:
+            wgdata['nodes'] = wgdata.pop('tasks')
         wg = super().from_dict(wgdata)
         for key in [
-            "max_iteration",
-            "max_number_jobs",
-            "connectivity",
+            'max_iteration',
+            'max_number_jobs',
+            'connectivity',
         ]:
             if key in wgdata:
                 setattr(wg, key, wgdata[key])
-        if "error_handlers" in wgdata:
+        if 'error_handlers' in wgdata:
             wg._error_handlers = {
-                name: ErrorHandlerSpec.from_dict(eh)
-                for name, eh in wgdata.get("error_handlers", {}).items()
+                name: ErrorHandlerSpec.from_dict(eh) for name, eh in wgdata.get('error_handlers', {}).items()
             }
         # for zone tasks, add their children
         for task in wg.tasks:
-            if hasattr(task, "children"):
-                task.children.add(wgdata["nodes"][task.name].get("children", []))
+            if hasattr(task, 'children'):
+                task.children.add(wgdata['nodes'][task.name].get('children', []))
         # reinstate the tasks
-        wgdata["tasks"] = wgdata.pop("nodes")
+        wgdata['tasks'] = wgdata.pop('nodes')
 
         return wg
 
     @classmethod
-    def from_yaml(cls, filename: str = None, string: str = None) -> "WorkGraph":
+    def from_yaml(cls, filename: str = None, string: str = None) -> 'WorkGraph':
         """Build WrokGraph from yaml file."""
         import yaml
 
@@ -413,15 +390,15 @@ class WorkGraph(node_graph.NodeGraph):
         # import jsonschema
 
         if filename:
-            with open(filename, "r") as f:
+            with open(filename, 'r') as f:
                 wgdata = yaml.safe_load(f)
         elif string:
             wgdata = yaml.safe_load(string)
         else:
-            raise Exception("Please specific a filename or yaml string.")
-        wgdata["nodes"] = wgdata.pop("tasks")
+            raise Exception('Please specific a filename or yaml string.')
+        wgdata['nodes'] = wgdata.pop('tasks')
         wgdata = yaml_to_dict(wgdata)
-        wgdata["tasks"] = wgdata.pop("nodes")
+        wgdata['tasks'] = wgdata.pop('nodes')
         # serialized_data = make_json_serializable(wgdata)
         # with importlib.resources.open_text(
         #     "aiida_workgraph.schemas", "aiida_workgraph.schema.json"
@@ -433,7 +410,7 @@ class WorkGraph(node_graph.NodeGraph):
         return nt
 
     @classmethod
-    def load(cls, pk: int | aiida.orm.ProcessNode) -> Optional["WorkGraph"]:
+    def load(cls, pk: int | aiida.orm.ProcessNode) -> Optional['WorkGraph']:
         """
         Load WorkGraph from the process node with the given primary key.
 
@@ -448,11 +425,9 @@ class WorkGraph(node_graph.NodeGraph):
         elif isinstance(pk, aiida.orm.ProcessNode):
             process = pk
         else:
-            raise ValueError(
-                f"Invalid pk type: {type(pk)}, requires int or ProcessNode."
-            )
+            raise ValueError(f'Invalid pk type: {type(pk)}, requires int or ProcessNode.')
         if not isinstance(process, WorkGraphNode):
-            raise ValueError(f"Process {pk} is not a WorkGraph")
+            raise ValueError(f'Process {pk} is not a WorkGraph')
         wgdata = load_workgraph_data(process)
         wg = cls.from_dict(wgdata)
         wg.process = process
@@ -469,12 +444,12 @@ class WorkGraph(node_graph.NodeGraph):
         self.update()
         for task in self.tasks:
             table.append([task.name, task.pk, task.state])
-        print("-" * 80)
-        print("WorkGraph: {}, PK: {}, State: {}".format(self.name, self.pk, self.state))
-        print("-" * 80)
-        print("Tasks:")
-        print(tabulate(table, headers=["Name", "PK", "State"]))
-        print("-" * 80)
+        print('-' * 80)
+        print('WorkGraph: {}, PK: {}, State: {}'.format(self.name, self.pk, self.state))
+        print('-' * 80)
+        print('Tasks:')
+        print(tabulate(table, headers=['Name', 'PK', 'State']))
+        print('-' * 80)
 
     # def pause(self) -> None:
     #     """Pause the workgraph."""
@@ -490,11 +465,11 @@ class WorkGraph(node_graph.NodeGraph):
 
         if self.process is None:
             for name in tasks:
-                self.tasks[name].action = "PAUSE"
+                self.tasks[name].action = 'PAUSE'
         else:
             _, msg = pause_tasks(self.process.pk, tasks)
 
-        return "Send message to pause tasks."
+        return 'Send message to pause tasks.'
 
     def play_tasks(self, tasks: List[str]) -> None:
         """Play the given tasks"""
@@ -503,10 +478,10 @@ class WorkGraph(node_graph.NodeGraph):
 
         if self.process is None:
             for name in tasks:
-                self.tasks[name].action = ""
+                self.tasks[name].action = ''
         else:
             _, msg = play_tasks(self.process.pk, tasks)
-        return "Send message to play tasks."
+        return 'Send message to play tasks.'
 
     def kill_tasks(self, tasks: List[str]) -> None:
         """Kill the given tasks"""
@@ -515,27 +490,27 @@ class WorkGraph(node_graph.NodeGraph):
 
         if self.process is None:
             for name in tasks:
-                self.tasks[name].action = "KILL"
+                self.tasks[name].action = 'KILL'
         else:
             _, msg = kill_tasks(self.process.pk, tasks)
-        return "Send message to kill tasks."
+        return 'Send message to kill tasks.'
 
     def reset_tasks(self, tasks: List[str]) -> None:
         from aiida_workgraph.utils.control import reset_tasks
 
-        print(f"Reset tasks: {tasks}")
+        print(f'Reset tasks: {tasks}')
 
         if self.process is None:
             for name in tasks:
-                self.tasks[name].state = "PLANNED"
+                self.tasks[name].state = 'PLANNED'
                 self.tasks[name].process = None
                 child_tasks = self.analyzer.get_all_descendants(self.tasks[name])
                 for name in child_tasks:
-                    self.tasks[name].state = "PLANNED"
+                    self.tasks[name].state = 'PLANNED'
                     self.tasks[name].process = None
         else:
             _, msg = reset_tasks(self.process.pk, tasks)
-        return "Send message to reset tasks."
+        return 'Send message to reset tasks.'
 
     def continue_process(self):
         """Continue a saved process by sending the task to RabbitMA.
@@ -548,19 +523,17 @@ class WorkGraph(node_graph.NodeGraph):
     def play(self):
         import os
 
-        os.system("verdi process play {}".format(self.process.pk))
+        os.system('verdi process play {}'.format(self.process.pk))
 
     def restart(self):
         """Create a restart submission."""
         if self.process is None:
-            raise ValueError(
-                "No process found. One can not restart from a non-existing process."
-            )
+            raise ValueError('No process found. One can not restart from a non-existing process.')
         # save the current process node as restart_process
         # so that the WorkGraphSaver can compare the difference, and reset the modified tasks
         self.restart_process = self.process
         self.process = None
-        self.state = "PLANNED"
+        self.state = 'PLANNED'
 
     def reset(self) -> None:
         """Reset the workgraph to create a new submission."""
@@ -568,9 +541,9 @@ class WorkGraph(node_graph.NodeGraph):
         self.process = None
         for task in self.tasks:
             task.reset()
-        self.state = "PLANNED"
+        self.state = 'PLANNED'
 
-    def extend(self, wg: "WorkGraph", prefix: str = "") -> None:
+    def extend(self, wg: 'WorkGraph', prefix: str = '') -> None:
         """Append a workgraph to the current workgraph.
         prefix is used to add a prefix to the task names.
         """
@@ -586,10 +559,7 @@ class WorkGraph(node_graph.NodeGraph):
         # links
         for link in wg.links:
             # skip the links that are from or to built-in tasks
-            if (
-                link.from_node.name in BUILTIN_NODES
-                or link.to_node.name in BUILTIN_NODES
-            ):
+            if link.from_node.name in BUILTIN_NODES or link.to_node.name in BUILTIN_NODES:
                 link.unmount()
                 continue
             self.links._append(link)
@@ -618,7 +588,7 @@ class WorkGraph(node_graph.NodeGraph):
         from node_graph.node_spec import NodeSpec
 
         if name in BUILTIN_NODES and not include_builtins:
-            raise ValueError(f"Task name {name} can not be used, it is reserved.")
+            raise ValueError(f'Task name {name} can not be used, it is reserved.')
 
         if isinstance(identifier, str):
             identifier = self.NodePool[identifier.lower()].load()
@@ -630,14 +600,12 @@ class WorkGraph(node_graph.NodeGraph):
         # todo
         elif identifier is shelljob:
             spec = _build_shelljob_nodespec(
-                outputs=kwargs.get("outputs"),
-                parser_outputs=kwargs.pop("parser_outputs", None),
+                outputs=kwargs.get('outputs'),
+                parser_outputs=kwargs.pop('parser_outputs', None),
             )
             identifier = TaskHandle(spec)
         # build the task on the fly if the identifier is a callable
-        elif callable(identifier) and not isinstance(
-            identifier, (NodeSpec, TaskHandle, Task)
-        ):
+        elif callable(identifier) and not isinstance(identifier, (NodeSpec, TaskHandle, Task)):
             identifier = build_task_from_callable(identifier)
         node = self.tasks._new(identifier, name, **kwargs)
         self._version += 1
@@ -655,7 +623,7 @@ class WorkGraph(node_graph.NodeGraph):
     def _repr_mimebundle_(self, *args, **kwargs):
         # if ipywdigets > 8.0.0, use _repr_mimebundle_ instead of _ipython_display_
         self.widget.value = self.to_widget_value()
-        if hasattr(self.widget, "_repr_mimebundle_"):
+        if hasattr(self.widget, '_repr_mimebundle_'):
             return self.widget._repr_mimebundle_(*args, **kwargs)
         else:
             return self.widget._ipython_display_(*args, **kwargs)
@@ -670,9 +638,7 @@ class WorkGraph(node_graph.NodeGraph):
         from aiida_workgraph.utils import generate_provenance_graph
 
         if self.process is None:
-            raise ValueError(
-                "No process found. Please run or submit the workgraph first."
-            )
+            raise ValueError('No process found. Please run or submit the workgraph first.')
         return generate_provenance_graph(self.process.pk)
 
     def __repr__(self) -> str:

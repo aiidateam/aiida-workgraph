@@ -5,8 +5,8 @@ from node_graph.collection import (
 from typing import Any, Callable, Optional, Union
 
 __all__ = [
-    "WorkGraphPropertyCollection",
-    "group",
+    'WorkGraphPropertyCollection',
+    'group',
 ]
 
 

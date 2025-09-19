@@ -31,5 +31,4 @@ AiiDASafeLoader.add_constructor(_GROUP_TAG, group_constructor)
 
 
 def deserialize_safe(serialized: str) -> Any:
-
     return yaml.load(serialized, Loader=AiiDASafeLoader)
