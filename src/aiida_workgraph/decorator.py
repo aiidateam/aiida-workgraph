@@ -269,31 +269,6 @@ class TaskDecoratorCollection:
 
     @staticmethod
     @nonfunctional_usage
-    def awaitable(
-        inputs: Optional[SocketSpec | list] = None,
-        outputs: Optional[SocketSpec | list] = None,
-        error_handlers: Optional[Dict[str, ErrorHandlerSpec]] = None,
-    ) -> Callable:
-        def decorator(func) -> TaskHandle:
-            from aiida_workgraph.tasks.awaitable_tasks import (
-                _build_awaitable_function_nodespec,
-            )
-
-            handle = TaskHandle(
-                _build_awaitable_function_nodespec(
-                    func,
-                    in_spec=inputs,
-                    out_spec=outputs,
-                    error_handlers=error_handlers,
-                )
-            )
-            handle._func = func
-            return handle
-
-        return decorator
-
-    @staticmethod
-    @nonfunctional_usage
     def monitor(
         inputs: Optional[SocketSpec | list] = None,
         outputs: Optional[SocketSpec | list] = None,

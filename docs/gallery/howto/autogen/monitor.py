@@ -88,7 +88,8 @@ import asyncio
 from aiida_workgraph.collection import group
 
 
-@task.awaitable
+# Create a file asynchronously, so it does not block the event loop
+@task
 async def sleep_create_file(filepath, content):
     await asyncio.sleep(5)
     with open(filepath, 'w') as f:

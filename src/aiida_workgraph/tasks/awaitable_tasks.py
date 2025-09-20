@@ -9,29 +9,6 @@ from node_graph.executor import RuntimeExecutor
 from node_graph.error_handler import ErrorHandlerSpec
 
 
-class AwaitableFunctionTask(SpecTask):
-    """Awaitable task with function as executor."""
-
-    identifier = 'workgraph.awaitable_function'
-    name = 'awaitable'
-    node_type = 'awaitable'
-    catalog = 'Control'
-
-    def execute(self, engine_process, args=None, kwargs=None, var_kwargs=None):
-        executor = RuntimeExecutor(**self.get_executor().to_dict()).callable
-        if var_kwargs is None:
-            awaitable_target = asyncio.ensure_future(
-                executor(*args, **kwargs),
-                loop=engine_process.loop,
-            )
-        else:
-            awaitable_target = asyncio.ensure_future(
-                executor(*args, **kwargs, **var_kwargs),
-                loop=engine_process.loop,
-            )
-        return awaitable_target, 'FINISHED'
-
-
 class MonitorFunctionTask(SpecTask):
     """Monitor task with function as executor."""
 
@@ -66,25 +43,6 @@ class MonitorFunctionTask(SpecTask):
                 loop=engine_process.loop,
             )
         return awaitable_target, 'FINISHED'
-
-
-def _build_awaitable_function_nodespec(
-    obj: Callable,
-    identifier: Optional[str] = None,
-    in_spec: Optional[SocketSpec] = None,
-    out_spec: Optional[SocketSpec] = None,
-    error_handlers: Optional[Dict[str, ErrorHandlerSpec]] = None,
-) -> NodeSpec:
-    return build_callable_nodespec(
-        obj=obj,
-        node_type='AWAITABLE',
-        base_class=AwaitableFunctionTask,
-        identifier=identifier,
-        process_cls=None,
-        in_spec=in_spec,
-        out_spec=out_spec,
-        error_handlers=error_handlers,
-    )
 
 
 def _build_monitor_function_nodespec(

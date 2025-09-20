@@ -182,7 +182,7 @@ class TaskManager:
                 self.execute_zone_task(task)
             elif task_type == 'MAP':
                 self.execute_map_task(task, inputs['kwargs'])
-            elif task_type in ['AWAITABLE', 'MONITOR']:
+            elif task_type in ['MONITOR']:
                 self.execute_awaitable_task(task, **inputs)
             elif task_type == 'NORMAL':
                 self.execute_normal_task(

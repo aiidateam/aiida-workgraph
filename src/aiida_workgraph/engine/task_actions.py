@@ -66,7 +66,7 @@ class TaskActionManager:
         if state == 'RUNNING':
             task = self.process.wg.tasks[name]
             node_type = task.node_type.upper()
-            if node_type in ['AWAITABLE', 'MONITOR']:
+            if node_type in ['MONITOR']:
                 awaitable_manager = self.state_manager.awaitable_manager
                 awaitable_target = awaitable_manager.not_persisted_awaitables.get(name)
                 if awaitable_target:
