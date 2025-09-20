@@ -39,9 +39,6 @@ requires-python = ">=3.9"
 [project.entry-points."aiida.cmdline"]
 "workgraph" = "aiida_workgraph.cli.cmd_workgraph:workgraph"
 
-[project.entry-points."aiida.data"]
-"workgraph.datetime.datetime" = "aiida_workgraph.orm.data:DateTimeData"
-
 [project.entry-points."aiida.node"]
 "process.workflow.workgraph" = "aiida_workgraph.orm.workgraph:WorkGraphNode"
 
