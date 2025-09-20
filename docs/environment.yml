@@ -3,5 +3,5 @@ channels:
 - conda-forge
 - defaults
 dependencies:
-- aiida-core~=2.6.3
+- graphviz
 - aiida-core.services

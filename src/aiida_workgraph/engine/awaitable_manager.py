@@ -96,9 +96,6 @@ class AwaitableManager:
                 callback = functools.partial(self.process.call_soon, self.on_awaitable_finished, awaitable)
                 self.runner.call_on_process_finish(awaitable.pk, callback)
                 self.ctx._awaitable_actions.append(awaitable.pk)
-            elif awaitable.target == 'asyncio.tasks.Task':
-                # this is a awaitable task, the callback function is already set
-                self.ctx._awaitable_actions.append(awaitable.pk)
             else:
                 assert f"invalid awaitable target '{awaitable.target}'"
 
@@ -112,48 +109,17 @@ class AwaitableManager:
         """
         self.logger.debug(f'Awaitable {awaitable.key} finished.')
 
-        if isinstance(awaitable.pk, int):
-            self.logger.info(
-                'received callback that awaitable with key {} and pk {} has terminated'.format(
-                    awaitable.key, awaitable.pk
-                )
-            )
-            try:
-                node = load_node(awaitable.pk)
-            except (exceptions.MultipleObjectsError, exceptions.NotExistent):
-                raise ValueError(f'provided pk<{awaitable.pk}> could not be resolved to a valid Node instance')
-
-            if awaitable.outputs:
-                value = {entry.link_label: entry.node for entry in node.base.links.get_outgoing()}
-            else:
-                value = node  # type: ignore
+        self.logger.info(
+            'received callback that awaitable with key {} and pk {} has terminated'.format(awaitable.key, awaitable.pk)
+        )
+        try:
+            node = load_node(awaitable.pk)
+        except (exceptions.MultipleObjectsError, exceptions.NotExistent):
+            raise ValueError(f'provided pk<{awaitable.pk}> could not be resolved to a valid Node instance')
+        if awaitable.outputs:
+            value = {entry.link_label: entry.node for entry in node.base.links.get_outgoing()}
         else:
-            # In this case, the pk and key are the same.
-            self.logger.info('received callback that awaitable {} has terminated'.format(awaitable.key))
-            try:
-                # if awaitable is cancelled, the result is None
-                if awaitable.cancelled():
-                    self.process.task_manager.state_manager.set_task_runtime_info(awaitable.key, 'state', 'KILLED')
-                    # set child tasks state to SKIPPED
-                    self.process.task_manager.state_manager.set_tasks_state(
-                        self.process.wg.connectivity['child_node'][awaitable.key],
-                        'SKIPPED',
-                    )
-                    self.process.report(f'Task: {awaitable.key} cancelled.')
-                else:
-                    results = awaitable.result()
-                    self.process.task_manager.state_manager.update_normal_task_state(awaitable.key, results)
-            except Exception as e:
-                self.logger.error(f'Error in awaitable {awaitable.key}: {e}')
-                self.process.task_manager.state_manager.set_task_runtime_info(awaitable.key, 'state', 'FAILED')
-                # set child tasks state to SKIPPED
-                self.process.task_manager.state_manager.set_tasks_state(
-                    self.process.wg.connectivity['child_node'][awaitable.key],
-                    'SKIPPED',
-                )
-                self.process.report(f'Task: {awaitable.key} failed: {e}')
-                self.process.error_handler_manager.run_error_handlers(awaitable.key)
-            value = None
+            value = node  # type: ignore
 
         self.resolve_awaitable(awaitable, value)
 
@@ -166,22 +132,6 @@ class AwaitableManager:
             self.process.resume()
         except Exception as e:
             print(e)
-
-    def construct_awaitable_function(self, name: str, awaitable_target: Awaitable) -> None:
-        """Construct the awaitable function."""
-        awaitable = Awaitable(
-            **{
-                'pk': name,
-                'action': AwaitableAction.ASSIGN,
-                'target': 'asyncio.tasks.Task',
-                'outputs': False,
-            }
-        )
-        awaitable_target.key = name
-        awaitable_target.pk = name
-        awaitable_target.action = AwaitableAction.ASSIGN
-        awaitable_target.add_done_callback(self.on_awaitable_finished)
-        return awaitable
 
     def to_context(self, **kwargs: Awaitable | ProcessNode) -> None:
         """Add a dictionary of awaitables to the context.

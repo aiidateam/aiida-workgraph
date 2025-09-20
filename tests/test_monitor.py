@@ -1,29 +1,25 @@
 import asyncio
 import datetime
-import time
-
+from aiida_pythonjob import MonitorPyFunction
 import pytest
-from aiida.cmdline.utils.common import get_workchain_report
-
 from aiida_workgraph import WorkGraph, task
 from aiida_workgraph.tasks.monitors import monitor_time
 
 
-@pytest.mark.skip(reason='The test is not stable.')
 def test_monitor_decorator():
     wg = WorkGraph(name='test_monitor_decorator')
-    wg.add_task(
+    t = datetime.datetime.now() + datetime.timedelta(seconds=5)
+    monitor1 = wg.add_task(
         monitor_time,
         'time_monitor1',
-        time=datetime.datetime.now() + datetime.timedelta(seconds=5),
+        time=t,
     )
     wg.run()
-    report = get_workchain_report(wg.process, 'REPORT')
-    assert 'Waiting for child processes: time_monitor1' in report
     assert wg.process.is_finished_ok is True
+    assert monitor1.node.is_finished_ok is True
+    assert (monitor1.node.mtime - monitor1.node.ctime) >= datetime.timedelta(seconds=5)
 
 
-@pytest.mark.skip(reason='The test is not stable.')
 def test_monitor_timeout_and_interval():
     with WorkGraph() as wg:
         monitor_time(
@@ -32,12 +28,12 @@ def test_monitor_timeout_and_interval():
             timeout=5,
         )
         wg.run()
-        report = get_workchain_report(wg.process, 'REPORT')
-        assert 'Timeout reached for monitor' in report
-        assert wg.process.is_finished_ok is False
+        node = wg.tasks[-1].node
+        assert not node.is_finished_ok
+        assert node.exit_status == MonitorPyFunction.exit_codes.ERROR_TIMEOUT.status
 
 
-def test_builtin_time_monitor_entrypoint(decorated_add):
+def test_builtin_time_monitor_entrypoint():
     """Test the time monitor task."""
     wg = WorkGraph(name='test_time_monitor')
     monitor1 = wg.add_task(
@@ -48,11 +44,10 @@ def test_builtin_time_monitor_entrypoint(decorated_add):
     assert monitor1.get_executor().callable == monitor_time
 
 
-@pytest.mark.skip(reason='The test is not stable.')
-def test_builtin_file_monitor_entrypoint(decorated_add, tmp_path):
+def test_builtin_file_monitor_entrypoint(tmp_path):
     """Test the file monitor task."""
 
-    @task.awaitable()
+    @task
     async def create_test_file(filepath='/tmp/test_file_monitor.txt', t=2):
         await asyncio.sleep(t)
         with open(filepath, 'w') as f:
@@ -60,18 +55,15 @@ def test_builtin_file_monitor_entrypoint(decorated_add, tmp_path):
 
     monitor_file_path = str(tmp_path / 'test_file_monitor.txt')
 
+    t = 2
     wg = WorkGraph(name='test_file_monitor')
+    wg.add_task(create_test_file, 'create_test_file1', filepath=monitor_file_path, t=t)
     monitor1 = wg.add_task('workgraph.monitor_file', name='monitor1', filepath=monitor_file_path)
-    wg.add_task(create_test_file, 'create_test_file1', filepath=monitor_file_path)
-    add1 = wg.add_task(decorated_add, 'add1', x=1, y=2)
-    add1.waiting_on.add(monitor1)
     wg.run()
-    report = get_workchain_report(wg.process, 'REPORT')
-    assert 'Waiting for child processes: monitor1' in report
-    assert add1.outputs.result.value == 3
+    assert wg.process.is_finished_ok is True
+    assert (monitor1.node.mtime - monitor1.node.ctime) >= datetime.timedelta(seconds=t)
 
 
-@pytest.mark.skip(reason='The test is not stable.')
 @pytest.mark.usefixtures('started_daemon_client')
 def test_builtin_task_monitor_entrypoint(decorated_add):
     """Test the file monitor task."""
@@ -93,7 +85,6 @@ def test_builtin_task_monitor_entrypoint(decorated_add):
     assert wg2.tasks.add1.node.ctime > wg1.tasks.add1.node.ctime
 
 
-@pytest.mark.skip(reason='The test is not stable.')
 @pytest.mark.usefixtures('started_daemon_client')
 def test_builtin_task_monitor_entrypoint_timeout(decorated_add):
     """Test the monitor task with a timeout."""
@@ -104,17 +95,14 @@ def test_builtin_task_monitor_entrypoint_timeout(decorated_add):
         timeout=2,
         filepath='/tmp/test_file_monitor.txt',
     )
-    add1 = wg.add_task(decorated_add, 'add1', x=1, y=2)
-    monitor1 >> add1
     wg.run()
-    report = get_workchain_report(wg.process, 'REPORT')
-    assert 'Timeout reached for monitor function' in report
-    assert monitor1.state == 'FAILED'
-    assert add1.state == 'SKIPPED'
+    node = monitor1.node
+    assert not node.is_finished_ok
+    assert node.exit_status == MonitorPyFunction.exit_codes.ERROR_TIMEOUT.status
 
 
 @pytest.mark.usefixtures('started_daemon_client')
-def test_task_monitor_kill(decorated_add):
+def test_task_monitor_kill():
     """Test killing a monitor task."""
     wg = WorkGraph(name='test_monitor_kill')
     monitor1 = wg.add_task(
@@ -123,14 +111,8 @@ def test_task_monitor_kill(decorated_add):
         timeout=30,
         filepath='/tmp/test_file_monitor.txt',
     )
-    add1 = wg.add_task(decorated_add, 'add1', x=1, y=2)
-    monitor1 >> add1
     wg.submit()
-    time.sleep(5)
     wg.wait(tasks={'monitor1': ['RUNNING']})
     wg.kill_tasks(['monitor1'])
     wg.wait()
-    report = get_workchain_report(wg.process, 'REPORT')
-    assert 'Task monitor1 was KILLED' in report
-    assert monitor1.state == 'KILLED'
-    assert add1.state == 'SKIPPED'
+    assert monitor1.node.is_killed

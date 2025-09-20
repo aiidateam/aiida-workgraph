@@ -50,7 +50,28 @@ import datetime
 
 @task.monitor
 def monitor_time(time: datetime.datetime):
-    return datetime.datetime.now() > time.value
+    return datetime.datetime.now() > time
+
+
+# %%
+# .. note::
+#
+#    The monitor task can also be implemented using asynchronous function.
+#    For more details, please refer to the section on :ref:`Run async functions as tasks <async_function>`.
+#    For example, the above monitor task can be implemented as:
+#
+#    .. code:: python
+#
+#        @task
+#        async def monitor_time_async(time: datetime.datetime, interval=1, timeout=None):
+#            start = datetime.datetime.now()
+#            while True:
+#                if datetime.datetime.now() > time:
+#                    break
+#                await asyncio.sleep(interval)
+#                if timeout is not None and datetime.datetime.now() - start > timeout:
+#                    raise TimeoutError(f'Timeout after {timeout} seconds')
+#
 
 
 @task
@@ -88,7 +109,8 @@ import asyncio
 from aiida_workgraph.collection import group
 
 
-@task.awaitable
+# Create a file asynchronously, so it does not block the event loop
+@task
 async def sleep_create_file(filepath, content):
     await asyncio.sleep(5)
     with open(filepath, 'w') as f:
@@ -153,13 +175,7 @@ wg.run()
 #
 # .. code:: console
 #
-#    workgraph task kill <workgraph_pk> <task_name>
-#
-# For example:
-#
-# .. code:: console
-#
-#    workgraph task kill 119974 monitor1
+#    verdi process kill <pk>
 #
 # A killed task will has the status ``KILLED`` and the following task will not be executed.
 #

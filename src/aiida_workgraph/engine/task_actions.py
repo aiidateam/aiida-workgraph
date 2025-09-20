@@ -58,23 +58,6 @@ class TaskActionManager:
         self.process.report(f'Task {name} action: SKIP.')
 
     def kill_task(self, name: str) -> None:
+        """KILL a running task.
+        This is not needed for task with AiiDA process, because one can kill the AiiDA process directly.
         """
-        KILL a running task. Typically used for AWAITABLE or MONITOR tasks
-        to cancel the underlying async future.
-        """
-        state = self.state_manager.get_task_runtime_info(name, 'state')
-        if state == 'RUNNING':
-            task = self.process.wg.tasks[name]
-            node_type = task.node_type.upper()
-            if node_type in ['AWAITABLE', 'MONITOR']:
-                awaitable_manager = self.state_manager.awaitable_manager
-                awaitable_target = awaitable_manager.not_persisted_awaitables.get(name)
-                if awaitable_target:
-                    try:
-                        awaitable_target.cancel()
-                        self.state_manager.set_task_runtime_info(name, 'state', 'KILLED')
-                        self.process.report(f'Task {name} was KILLED.')
-                    except Exception as e:
-                        self.logger.error(f'Error in killing task {name}: {e}')
-                else:
-                    self.logger.warning(f'No active awaitable found for task {name}.')
