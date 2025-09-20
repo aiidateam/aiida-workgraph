@@ -161,18 +161,6 @@ class WorkGraphEngine(Process, metaclass=Protect):
         self.error_handler_manager = ErrorHandlerManager(self, self.ctx_manager, self.logger)
         # "_awaitables" is auto persisted.
         if self._awaitables:
-            # For the "ascyncio.tasks.Task" awaitable, because there are only in-memory,
-            # we need to reset the tasks and so that they can be re-run again.
-            should_resume = False
-            for awaitable in self._awaitables:
-                if awaitable.target == 'asyncio.tasks.Task':
-                    self.awaitable_manager.resolve_awaitable(awaitable, None)
-                    self.report(f'reset awaitable task: {awaitable.key}')
-                    self.task_manager.reset_task(awaitable.key)
-                    should_resume = True
-            if should_resume:
-                self.awaitable_manager.update_process_status()
-                self.resume()
             # For other awaitables, because they exist in the db, we only need to re-register the callbacks
             self.ctx._awaitable_actions = []
             self.awaitable_manager.action_awaitables()

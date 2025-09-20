@@ -6,8 +6,10 @@ from aiida_workgraph.utils import get_nested_dict
 from aiida.engine.processes.exit_code import ExitCode
 from .task_state import TaskStateManager
 from .task_actions import TaskActionManager
+from .awaitable_manager import AwaitableManager
 import traceback
 from node_graph.link import NodeLink
+from aiida.engine.processes import Process
 
 MAX_NUMBER_AWAITABLES_MSG = 'The maximum number of subprocesses has been reached: {}. Cannot launch the job: {}.'
 
@@ -24,7 +26,7 @@ process_task_types = [
 class TaskManager:
     """Manages task execution, state updates, and error handling."""
 
-    def __init__(self, ctx_manager, logger, runner, process, awaitable_manager):
+    def __init__(self, ctx_manager, logger, runner, process: Process, awaitable_manager: AwaitableManager):
         """
         :param ctx_manager: The object managing the 'ctx' dictionary.
         :param logger: A logger instance.
@@ -172,6 +174,7 @@ class TaskManager:
                 'PYTHONJOB',
                 'SUBGRAPH',
                 'GRAPH',
+                'MONITOR',
             ]:
                 self.execute_process_task(task, **inputs)
             elif task_type == 'WHILE':
@@ -182,8 +185,6 @@ class TaskManager:
                 self.execute_zone_task(task)
             elif task_type == 'MAP':
                 self.execute_map_task(task, inputs['kwargs'])
-            elif task_type in ['MONITOR']:
-                self.execute_awaitable_task(task, **inputs)
             elif task_type == 'NORMAL':
                 self.execute_normal_task(
                     task,
@@ -304,17 +305,6 @@ class TaskManager:
         self.state_manager.set_task_runtime_info(name, 'map_info', map_info)
 
         self.continue_workgraph()
-
-    def execute_awaitable_task(self, task, args=None, kwargs=None, var_kwargs=None):
-        name = task.name
-        for key in task.args_data['args']:
-            kwargs.pop(key, None)
-        awaitable_target, _ = task.execute(self.process, args, kwargs, var_kwargs)
-        awaitable = self.awaitable_manager.construct_awaitable_function(name, awaitable_target)
-        self.state_manager.set_task_runtime_info(name, 'state', 'RUNNING')
-        # save the awaitable to the temp, so that we can kill it if needed
-        self.awaitable_manager.not_persisted_awaitables[name] = awaitable_target
-        self.awaitable_manager.to_context(**{name: awaitable})
 
     def execute_normal_task(self, task, continue_workgraph=None, args=None, kwargs=None, var_kwargs=None):
         """Execute a Normal task."""

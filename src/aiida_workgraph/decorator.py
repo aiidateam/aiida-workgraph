@@ -47,9 +47,9 @@ def _spec_for(
 
     # Plain Python function -> PyFunction
     if callable(obj):
-        from aiida_workgraph.tasks.pythonjob_tasks import _build_pyfunction_nodespec
+        from aiida_workgraph.tasks.pythonjob_tasks import build_pyfunction_nodespec
 
-        return _build_pyfunction_nodespec(obj, identifier=identifier, in_spec=inputs, out_spec=outputs)
+        return build_pyfunction_nodespec(obj, identifier=identifier, in_spec=inputs, out_spec=outputs)
 
     raise ValueError(f'Unsupported object for @task: {obj!r}')
 
@@ -253,9 +253,9 @@ class TaskDecoratorCollection:
         error_handlers: Optional[Dict[str, ErrorHandlerSpec]] = None,
     ) -> Callable:
         def decorator(func) -> TaskHandle:
-            from aiida_workgraph.tasks.pythonjob_tasks import _build_pythonjob_nodespec
+            from aiida_workgraph.tasks.pythonjob_tasks import build_pythonjob_nodespec
 
-            spec = _build_pythonjob_nodespec(
+            spec = build_pythonjob_nodespec(
                 func,
                 in_spec=inputs,
                 out_spec=outputs,
@@ -275,12 +275,10 @@ class TaskDecoratorCollection:
         error_handlers: Optional[Dict[str, ErrorHandlerSpec]] = None,
     ) -> Callable:
         def decorator(func) -> TaskHandle:
-            from aiida_workgraph.tasks.awaitable_tasks import (
-                _build_monitor_function_nodespec,
-            )
+            from aiida_workgraph.tasks.pythonjob_tasks import build_monitor_function_nodespec
 
             handle = TaskHandle(
-                _build_monitor_function_nodespec(
+                build_monitor_function_nodespec(
                     func,
                     in_spec=inputs,
                     out_spec=outputs,

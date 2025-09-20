@@ -6,7 +6,7 @@ from aiida_pythonjob.data.serializer import all_serializers
 from aiida_pythonjob.data.deserializer import deserialize_to_raw_python_data
 from aiida_workgraph.utils import create_and_pause_process
 from aiida.engine import run_get_node
-from aiida_pythonjob import pyfunction, PythonJob, PyFunction
+from aiida_pythonjob import pyfunction, PythonJob, PyFunction, MonitorPyFunction
 from aiida_pythonjob.utils import serialize_ports
 from aiida_workgraph.task import SpecTask
 from node_graph.socket_spec import SocketSpec, SocketSpecSelect, SocketSpecMeta
@@ -196,9 +196,6 @@ class PyFunctionTask(BaseSerializablePythonTask):
     identifier = 'workgraph.pyfunction'
 
     def execute(self, args=None, kwargs=None, var_kwargs=None, engine_process=None):
-        """
-        Specialized 'execute' for PyFunction. The logic is simpler than PythonJob.
-        """
         from aiida_pythonjob import prepare_pyfunction_inputs
 
         kwargs = kwargs or {}
@@ -258,7 +255,51 @@ class PyFunctionTask(BaseSerializablePythonTask):
             return process, 'FINISHED'
 
 
-def _build_pythonjob_nodespec(
+class MonitorFunctionTask(BaseSerializablePythonTask):
+    """Monitor Function Task."""
+
+    identifier = 'workgraph.monitor_function'
+
+    def execute(self, args=None, kwargs=None, var_kwargs=None, engine_process=None):
+        from aiida_pythonjob import prepare_monitor_function_inputs
+
+        kwargs = kwargs or {}
+        metadata = self.get_process_metadata(kwargs)
+        func = RuntimeExecutor(**self.get_executor().to_dict()).callable
+        # If it's a wrapped function, unwrap
+        if isinstance(func, BaseHandle) and hasattr(func, '_func'):
+            func = func._func
+        function_inputs = self.get_function_inputs(kwargs, var_kwargs)
+        inputs = prepare_monitor_function_inputs(
+            function=func,
+            function_inputs=function_inputs,
+            inputs_spec=self.function_inputs_spec,
+            outputs_spec=self.function_outputs_spec,
+            metadata=metadata,
+            process_label=kwargs.pop('process_label', None),
+            deserializers=kwargs.pop('deserializers', None),
+            serializers=kwargs.pop('serializers', None),
+            register_pickle_by_value=kwargs.pop('register_pickle_by_value', False),
+            **kwargs,
+        )
+        if self.action == 'PAUSE':
+            engine_process.report(f'Task {self.name} is created and paused.')
+            process = create_and_pause_process(
+                engine_process.runner,
+                MonitorPyFunction,
+                inputs,
+                state_msg='Paused through WorkGraph',
+            )
+            state = 'CREATED'
+            process = process.node
+        else:
+            process = engine_process.submit(MonitorPyFunction, **inputs)
+            state = 'RUNNING'
+        process.label = self.name
+        return process, state
+
+
+def build_pythonjob_nodespec(
     obj: Callable,
     identifier: Optional[str] = None,
     in_spec: Optional[SocketSpec] | list = None,
@@ -291,7 +332,7 @@ def _build_pythonjob_nodespec(
     )
 
 
-def _build_pyfunction_nodespec(
+def build_pyfunction_nodespec(
     obj: Callable,
     identifier: Optional[str] = None,
     in_spec: Optional[SocketSpec] = None,
@@ -314,4 +355,31 @@ def _build_pyfunction_nodespec(
         out_spec=out_spec,
         error_handlers=error_handlers,
         metadata=metadata,
+    )
+
+
+def build_monitor_function_nodespec(
+    obj: Callable,
+    identifier: Optional[str] = None,
+    in_spec: Optional[SocketSpec] = None,
+    out_spec: Optional[SocketSpec] = None,
+    error_handlers: Optional[Dict[str, ErrorHandlerSpec]] = None,
+) -> NodeSpec:
+    add_in = namespace(
+        interval=(int, 5),
+        timeout=(int, 3600),
+    )
+    add_out = namespace(exit_code=Any)
+
+    return build_callable_nodespec(
+        obj=obj,
+        node_type='MONITOR',
+        base_class=MonitorFunctionTask,
+        identifier=identifier,
+        process_cls=MonitorPyFunction,
+        in_spec=in_spec,
+        out_spec=out_spec,
+        add_inputs=add_in,
+        add_outputs=add_out,
+        error_handlers=error_handlers,
     )

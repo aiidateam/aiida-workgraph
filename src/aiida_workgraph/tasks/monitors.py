@@ -4,21 +4,6 @@ import typing as t
 from aiida_workgraph import task
 
 
-async def monitor(function, interval, timeout, *args, **kwargs):
-    """Monitor the function until it returns `True` or the timeout is reached."""
-    import asyncio
-    import time
-
-    start_time = time.time()
-    while True:
-        result = function(*args, **kwargs)
-        if result:
-            break
-        if time.time() - start_time > timeout:
-            raise TimeoutError(f'Timeout reached for monitor function {function}')
-        await asyncio.sleep(interval)
-
-
 @task.monitor
 def monitor_file(filepath: str):
     """Return `True` when the file is detected."""

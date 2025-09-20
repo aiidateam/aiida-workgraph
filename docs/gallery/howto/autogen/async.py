@@ -5,6 +5,7 @@ Run ``async`` functions as tasks
 """
 
 # %%
+# .. _async_function:
 # Introduction
 # ------------
 #
@@ -41,13 +42,13 @@ def multiply(x, y):
 
 
 @task.graph
-def AwaitableSum(x, y):
+def SumGraph(x, y):
     sum1 = add_async(x, y, time=5).result
     sum2 = add_async(x, y, time=5).result
     return multiply(sum1, sum2).result
 
 
-AwaitableSum.run(1, 2)
+SumGraph.run(1, 2)
 
 # %%
 # Note the order of execution.
