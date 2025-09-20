@@ -15,6 +15,7 @@ from aiida_workgraph.socket_spec import namespace
 from .function_task import build_callable_nodespec
 from node_graph.error_handler import ErrorHandlerSpec
 from node_graph.executor import RuntimeExecutor
+from node_graph.node_spec import BaseHandle
 
 
 class BaseSerializablePythonTask(SpecTask):
@@ -79,19 +80,8 @@ class BaseSerializablePythonTask(SpecTask):
     def non_function_outputs(self):
         return self._spec.metadata.get('non_function_outputs', [])
 
-
-class PythonJobTask(BaseSerializablePythonTask):
-    """PythonJob Task."""
-
-    identifier = 'workgraph.pythonjob'
-
-    def execute(self, engine_process, args=None, kwargs=None, var_kwargs=None):
-        """
-        Here is the specialized 'execute' method for PythonJobTask,
-        including the 'prepare_for_python_task' logic.
-        """
-        from aiida_pythonjob import prepare_pythonjob_inputs
-
+    @property
+    def function_inputs_spec(self):
         inputs_spec = namespace(
             _=Annotated[
                 Any,
@@ -99,6 +89,10 @@ class PythonJobTask(BaseSerializablePythonTask):
                 SocketSpecSelect(exclude=self.non_function_inputs),
             ]
         ).fields['_']
+        return inputs_spec
+
+    @property
+    def function_outputs_spec(self):
         outputs_spec = namespace(
             _=Annotated[
                 Any,
@@ -106,17 +100,9 @@ class PythonJobTask(BaseSerializablePythonTask):
                 SocketSpecSelect(exclude=self.non_function_outputs),
             ]
         ).fields['_']
+        return outputs_spec
 
-        # Pull out code, computer, etc
-        computer = kwargs.pop('computer', 'localhost')
-        if isinstance(computer, orm.Str):
-            computer = computer.value
-        command_info = kwargs.pop('command_info', {})
-        register_pickle_by_value = kwargs.pop('register_pickle_by_value', False)
-        upload_files = kwargs.pop('upload_files', {})
-        metadata = kwargs.pop('metadata', {})
-        metadata.update({'call_link_label': self.name})
-        # Prepare inputs (similar to the old 'prepare_for_python_task' method):
+    def get_function_inputs(self, kwargs, var_kwargs):
         function_inputs = kwargs.pop('function_inputs', {}) or {}
         for key in list(kwargs.keys()):
             if key not in self.non_function_inputs:
@@ -132,10 +118,38 @@ class PythonJobTask(BaseSerializablePythonTask):
                     function_inputs.update(var_kwargs.value)
                 else:
                     raise ValueError(f'Invalid var_kwargs type: {type(var_kwargs)}')
-        # Resolve the actual function from the NodeExecutor
-        executor = RuntimeExecutor(**self.get_executor().to_dict())
-        func = executor.callable
-        if hasattr(func, '_TaskCls') and hasattr(func, '_func'):
+        return function_inputs
+
+    def get_process_metadata(self, kwargs):
+        metadata = kwargs.pop('metadata', {})
+        metadata.update({'call_link_label': self.name})
+        return metadata
+
+
+class PythonJobTask(BaseSerializablePythonTask):
+    """PythonJob Task."""
+
+    identifier = 'workgraph.pythonjob'
+
+    def execute(self, engine_process, args=None, kwargs=None, var_kwargs=None):
+        """
+        Here is the specialized 'execute' method for PythonJobTask,
+        including the 'prepare_for_python_task' logic.
+        """
+        from aiida_pythonjob import prepare_pythonjob_inputs
+
+        # Pull out code, computer, etc
+        computer = kwargs.pop('computer', 'localhost')
+        if isinstance(computer, orm.Str):
+            computer = computer.value
+        command_info = kwargs.pop('command_info', {})
+        register_pickle_by_value = kwargs.pop('register_pickle_by_value', False)
+        upload_files = kwargs.pop('upload_files', {})
+        metadata = self.get_process_metadata(kwargs)
+        function_inputs = self.get_function_inputs(kwargs, var_kwargs)
+        func = RuntimeExecutor(**self.get_executor().to_dict()).callable
+        # If it's a wrapped function, unwrap
+        if isinstance(func, BaseHandle) and hasattr(func, '_func'):
             func = func._func
 
         if hasattr(func, 'is_process_function'):
@@ -145,8 +159,8 @@ class PythonJobTask(BaseSerializablePythonTask):
         inputs = prepare_pythonjob_inputs(
             function=func,
             function_inputs=function_inputs,
-            inputs_spec=inputs_spec,
-            outputs_spec=outputs_spec,
+            inputs_spec=self.function_inputs_spec,
+            outputs_spec=self.function_outputs_spec,
             code=kwargs.pop('code', None),
             command_info=command_info,
             computer=computer,
@@ -181,49 +195,67 @@ class PyFunctionTask(BaseSerializablePythonTask):
 
     identifier = 'workgraph.pyfunction'
 
-    def execute(self, args=None, kwargs=None, var_kwargs=None):
+    def execute(self, args=None, kwargs=None, var_kwargs=None, engine_process=None):
         """
         Specialized 'execute' for PyFunction. The logic is simpler than PythonJob.
         """
-        from node_graph.node_spec import BaseHandle
-
-        executor = RuntimeExecutor(**self.get_executor().to_dict()).callable
-        # If it's a wrapped function, unwrap
-        if isinstance(executor, BaseHandle) and hasattr(executor, '_func'):
-            executor = executor._func
-        # Make sure it's process_function-decorated
-        if not hasattr(executor, 'is_process_function'):
-            executor = pyfunction()(executor)
+        from aiida_pythonjob import prepare_pyfunction_inputs
 
         kwargs = kwargs or {}
-        kwargs.setdefault('metadata', {})
-        kwargs['metadata'].update({'call_link_label': self.name})
-        inputs_spec = namespace(
-            _=Annotated[
-                Any,
-                self._spec.inputs,
-                SocketSpecSelect(exclude=self.non_function_inputs),
-            ]
-        ).fields['_']
-        outputs_spec = namespace(
-            _=Annotated[
-                Any,
-                self._spec.outputs,
-                SocketSpecSelect(exclude=self.non_function_outputs),
-            ]
-        ).fields['_']
+        metadata = self.get_process_metadata(kwargs)
+        func = RuntimeExecutor(**self.get_executor().to_dict()).callable
+        # If it's a wrapped function, unwrap
+        if isinstance(func, BaseHandle) and hasattr(func, '_func'):
+            func = func._func
 
-        kwargs['inputs_spec'] = inputs_spec
-        kwargs['outputs_spec'] = outputs_spec
+        if self.metadata.get('is_coroutine', False):
+            function_inputs = self.get_function_inputs(kwargs, var_kwargs)
+            inputs = prepare_pyfunction_inputs(
+                function=func,
+                function_inputs=function_inputs,
+                inputs_spec=self.function_inputs_spec,
+                outputs_spec=self.function_outputs_spec,
+                metadata=metadata,
+                process_label=kwargs.pop('process_label', None),
+                deserializers=kwargs.pop('deserializers', None),
+                serializers=kwargs.pop('serializers', None),
+                register_pickle_by_value=kwargs.pop('register_pickle_by_value', False),
+            )
+            if self.action == 'PAUSE':
+                engine_process.report(f'Task {self.name} is created and paused.')
+                process = create_and_pause_process(
+                    engine_process.runner,
+                    PyFunction,
+                    inputs,
+                    state_msg='Paused through WorkGraph',
+                )
+                state = 'CREATED'
+                process = process.node
+            else:
+                process = engine_process.submit(PyFunction, **inputs)
+                state = 'RUNNING'
 
-        # If we have var_kwargs, pass them in
-        if var_kwargs is None:
-            _, process = run_get_node(executor, **kwargs)
+            process.label = self.name
+            return process, state
         else:
-            _, process = run_get_node(executor, **kwargs, **var_kwargs)
+            # Make sure it's process_function-decorated
+            if not hasattr(func, 'is_process_function'):
+                func = pyfunction()(func)
 
-        process.label = self.name
-        return process, 'FINISHED'
+            # If we have var_kwargs, pass them in
+            if var_kwargs is None:
+                _, process = run_get_node(
+                    func,
+                    inputs_spec=self.function_inputs_spec,
+                    outputs_spec=self.function_outputs_spec,
+                    metadata=metadata,
+                    **kwargs,
+                )
+            else:
+                _, process = run_get_node(func, **kwargs, **var_kwargs)
+
+            process.label = self.name
+            return process, 'FINISHED'
 
 
 def _build_pythonjob_nodespec(
@@ -266,6 +298,12 @@ def _build_pyfunction_nodespec(
     out_spec: Optional[SocketSpec] = None,
     error_handlers: Optional[Dict[str, ErrorHandlerSpec]] = None,
 ) -> NodeSpec:
+    import asyncio
+
+    if asyncio.iscoroutinefunction(obj):
+        metadata = {'is_coroutine': True}
+    else:
+        metadata = {}
     return build_callable_nodespec(
         obj=obj,
         node_type='PYFUNCTION',
@@ -275,4 +313,5 @@ def _build_pyfunction_nodespec(
         in_spec=in_spec,
         out_spec=out_spec,
         error_handlers=error_handlers,
+        metadata=metadata,
     )
