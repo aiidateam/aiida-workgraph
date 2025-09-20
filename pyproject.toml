@@ -20,12 +20,12 @@ classifiers = [
 dependencies = [
   "numpy",
   "scipy",
-  "node-graph==0.3.11",
+  "node-graph==0.3.12",
   "node-graph-widget>=0.0.5",
-  "aiida-core~=2.6",
+  "aiida-core~=2.7.1",
   "cloudpickle",
   "aiida-shell~=0.8",
-  "aiida-pythonjob==0.4.1",
+  "aiida-pythonjob==0.4.3",
   "jsonschema"
 ]
 description = "Design flexible node-based workflow for AiiDA calculation."
@@ -34,7 +34,7 @@ keywords = ["aiida", "workflows"]
 license = {file = "LICENSE"}
 name = "aiida-workgraph"
 readme = "README.md"
-requires-python = ">=3.9"
+requires-python = ">=3.9,<3.14"
 
 [project.entry-points."aiida.cmdline"]
 "workgraph" = "aiida_workgraph.cli.cmd_workgraph:workgraph"
@@ -116,7 +116,7 @@ docs = [
   "myst-nb~=1.0.0",
   "nbsphinx",
   "furo",
-  "aiida-core~=2.6.3",
+  "aiida-core~=2.7.1",
   "aiida-quantumespresso",
   "aiida-pseudo",
   "anywidget",

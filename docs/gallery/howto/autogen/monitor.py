@@ -67,10 +67,10 @@ def monitor_time(time: datetime.datetime):
 #            start = datetime.datetime.now()
 #            while True:
 #                if datetime.datetime.now() > time:
-#                    return True
+#                    break
 #                await asyncio.sleep(interval)
 #                if timeout is not None and datetime.datetime.now() - start > timeout:
-#                    return False
+#                    raise TimeoutError(f'Timeout after {timeout} seconds')
 #
 
 
