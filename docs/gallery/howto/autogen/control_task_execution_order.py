@@ -1,6 +1,7 @@
 """
 Control task execution order
 ============================
+.. _task_execution_order:
 """
 
 # %%
