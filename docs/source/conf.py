@@ -92,13 +92,13 @@ html_css_files = [
 ]
 
 html_theme_options = {
-    'source_repository': 'https://github.com/superstar54/aiida-workgraph/',
+    'source_repository': 'https://github.com/aiidateam/aiida-workgraph/',
     'source_branch': 'main',
     'source_directory': 'docs/source',
     'footer_icons': [
         {
             'name': 'GitHub',
-            'url': 'https://github.com/superstar54/aiida-workgraph',
+            'url': 'https://github.com/aiidateam/aiida-workgraph',
             'html': """
                 <svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 16 16">
                     <path fill-rule="evenodd" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47
