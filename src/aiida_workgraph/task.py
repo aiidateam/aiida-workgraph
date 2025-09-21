@@ -2,9 +2,6 @@ from __future__ import annotations
 
 from node_graph.node import Node as GraphNode
 from .registry import RegistryHub, registry_hub
-from aiida_workgraph.collection import (
-    WorkGraphPropertyCollection,
-)
 import aiida
 from typing import Any, Dict, Optional, Union, Callable, List, Set, Iterable, TYPE_CHECKING
 from node_graph.node_spec import NodeSpec, BaseHandle
@@ -23,7 +20,6 @@ class Task(GraphNode):
     """
 
     registry: Optional[RegistryHub] = registry_hub
-    _PropertyClass = WorkGraphPropertyCollection
     _socket_spec = SocketSpecAPI
 
     identifier: str = 'workgraph.task'

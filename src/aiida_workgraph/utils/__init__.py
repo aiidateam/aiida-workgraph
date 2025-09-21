@@ -391,10 +391,6 @@ def get_raw_value(identifier, value: Any) -> Any:
             return value.value
         else:
             return value
-    elif identifier == 'workgraph.aiida_structure' and value is not None and isinstance(value, orm.StructureData):
-        content = value.backend_entity.attributes
-        content['node_type'] = value.node_type
-        return content
     elif isinstance(value, orm.Data):
         content = value.backend_entity.attributes
         content['node_type'] = value.node_type
@@ -412,7 +408,7 @@ def process_properties(task: Dict) -> Dict:
             'value': get_raw_value(identifier, value),
         }
     #
-    for name, input in task.get('inputs', {}).get('sockets', {}).items():
+    for name, input in task.get('input_sockets', {}).get('sockets', {}).items():
         if input.get('property'):
             prop = input['property']
             identifier = prop['identifier']
@@ -481,23 +477,6 @@ def workgraph_to_short_json(wgdata: Dict[str, Union[str, List, Dict]]) -> Dict[s
                 del wgdata_short['nodes'][name]
 
     return wgdata_short
-
-
-def serialize_input_values_recursively(inputs: Dict[str, Any], serializer: callable = None) -> None:
-    """
-    Serialize input values to a format suitable for storage or transmission.
-
-    This function converts all input values to their raw representations, ensuring
-    that complex objects are converted to simple types (e.g., strings, integers).
-
-    :param inputs: A dictionary of inputs to be serialized.
-    :return: A dictionary with serialized input values.
-    """
-    if serializer is None:
-        from aiida.orm.utils.serialize import serialize
-
-        serializer = serialize
-    return serializer(inputs)
 
 
 def wait_to_link(wgdata: Dict[str, Any]) -> None:

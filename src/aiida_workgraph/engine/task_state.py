@@ -81,24 +81,8 @@ class TaskStateManager:
                 state = node.process_state.value.upper()
                 if node.is_finished_ok:
                     self.set_task_runtime_info(task.name, 'state', state)
-                    if task.node_type.upper() == 'WORKGRAPH':
-                        # read the graph-level outputs
-                        keys = node.outputs._get_keys()
-                        if len(keys) > 0:
-                            # if graph-level outputs are defined, expose them
-                            for key in node.outputs._get_keys():
-                                self.ctx._task_results[name][key] = resolve_node_link_managers(node.outputs[key])
-                        else:
-                            # otherwise, expose the outputs of all the tasks in the workgraph
-                            outgoing = node.base.links.get_outgoing()
-                            for link in outgoing.all():
-                                if isinstance(link.node, ProcessNode) and getattr(link.node, 'process_state', False):
-                                    self.ctx._task_results[name][link.link_label] = resolve_node_link_managers(
-                                        link.node.outputs
-                                    )
-                    else:
-                        self.ctx._task_results[name] = resolve_node_link_managers(node.outputs)
-                        # self.ctx._new_data[name] = self.ctx._task_results[name]
+
+                    self.ctx._task_results[name] = resolve_node_link_managers(node.outputs)
                     self.set_task_runtime_info(task.name, 'state', 'FINISHED')
                     self.update_meta_tasks(name)
                     self.process.report(f'Task: {name}, type: {task.node_type}, finished.')

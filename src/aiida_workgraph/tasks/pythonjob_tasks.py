@@ -3,7 +3,6 @@ from typing import Any, Dict, Optional, Callable, Annotated
 from aiida import orm
 from aiida.common.extendeddicts import AttributeDict
 from aiida_pythonjob.data.serializer import all_serializers
-from aiida_pythonjob.data.deserializer import deserialize_to_raw_python_data
 from aiida_workgraph.utils import create_and_pause_process
 from aiida.engine import run_get_node
 from aiida_pythonjob import pyfunction, PythonJob, PyFunction, MonitorPyFunction
@@ -46,25 +45,6 @@ class BaseSerializablePythonTask(SpecTask):
         """
         super().update_from_dict(data, **kwargs)
         return self
-
-    @classmethod
-    def _deserialize_python_data(cls, input_sockets: Dict[str, Any]) -> None:
-        """
-        Recursively walk over the sockets and convert AiiDA Data nodes
-        back into raw Python objects, if needed.
-        """
-        for socket in input_sockets.values():
-            if not socket['metadata'].get('extras', {}).get('is_pythonjob', False):
-                if socket['identifier'] == 'workgraph.namespace':
-                    cls._deserialize_python_data(socket['sockets'])
-                else:
-                    cls._deserialize_socket_data(socket)
-
-    @classmethod
-    def _deserialize_socket_data(cls, socket: Dict[str, Any]) -> Any:
-        value = socket.get('property', {}).get('value')
-        if isinstance(value, orm.Data):
-            socket['property']['value'] = deserialize_to_raw_python_data(value)
 
     def execute(self, *args, **kwargs):
         """

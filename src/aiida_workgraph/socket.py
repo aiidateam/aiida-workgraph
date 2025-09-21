@@ -1,5 +1,3 @@
-from typing import Any, Type
-
 from aiida import orm
 from node_graph.socket import (
     NodeSocket,
@@ -55,20 +53,3 @@ class TaskSocketNamespace(NodeSocketNamespace):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, entry_point='aiida_workgraph.socket', **kwargs)
-
-
-def build_socket_from_AiiDA(DataClass: Type[Any]) -> Type[TaskSocket]:
-    """Create a socket class from AiiDA DataClass."""
-
-    class AiiDATaskSocket(TaskSocket):
-        """AiiDA Task Socket."""
-
-        identifier: str = DataClass.__name__
-
-        def __init__(
-            self, name: str, parent: Any = None, type: str = 'INPUT', index: int = 0, uuid: str = None, **kwargs: Any
-        ) -> None:
-            super().__init__(name, parent, type, index, uuid=uuid)
-            self.add_property(DataClass, name, **kwargs)
-
-    return AiiDATaskSocket
