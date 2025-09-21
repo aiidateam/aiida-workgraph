@@ -483,23 +483,6 @@ def workgraph_to_short_json(wgdata: Dict[str, Union[str, List, Dict]]) -> Dict[s
     return wgdata_short
 
 
-def serialize_input_values_recursively(inputs: Dict[str, Any], serializer: callable = None) -> None:
-    """
-    Serialize input values to a format suitable for storage or transmission.
-
-    This function converts all input values to their raw representations, ensuring
-    that complex objects are converted to simple types (e.g., strings, integers).
-
-    :param inputs: A dictionary of inputs to be serialized.
-    :return: A dictionary with serialized input values.
-    """
-    if serializer is None:
-        from aiida.orm.utils.serialize import serialize
-
-        serializer = serialize
-    return serializer(inputs)
-
-
 def wait_to_link(wgdata: Dict[str, Any]) -> None:
     """Convert wait attribute to link."""
     for name, task in wgdata['tasks'].items():

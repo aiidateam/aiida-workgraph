@@ -1,7 +1,3 @@
-"""
-Test serialize_input_values_recursively and deserialize_input_values_recursively
-"""
-
 from aiida_workgraph import WorkGraph, task
 
 
