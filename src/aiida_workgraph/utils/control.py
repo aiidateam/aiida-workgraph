@@ -71,19 +71,22 @@ def play_tasks(pk: int, tasks: list, timeout: int = 5):
         'PAUSED',
     ]:
         for name in tasks:
-            if get_task_runtime_info(node, name, 'state') == 'PLANNED':
+            state = get_task_runtime_info(node, name, 'state')
+            if state == 'PLANNED':
                 create_task_action(pk, tasks, action='play')
-            elif get_task_runtime_info(node, name, 'state') in ['CREATED', 'PAUSED']:
+                break
+            process = get_task_runtime_info(node, name, 'process')
+            if process.is_finished:
+                raise ValueError(f'Task {name} is already finished.')
+            elif process.process_state.value.upper() in ['CREATED', 'WAITING']:
                 try:
                     control.play_processes(
-                        [get_task_runtime_info(node, name, 'process')],
+                        [process],
                         all_entries=None,
                         timeout=timeout,
                     )
                 except Exception as e:
                     print(f'Play task {name} failed: {e}')
-            elif get_task_runtime_info(node, name, 'process').is_finished:
-                raise ValueError(f'Task {name} is already finished.')
     return True, ''
 
 
@@ -99,12 +102,9 @@ def kill_tasks(pk: int, tasks: list, timeout: int = 5):
         'WAITING',
         'PAUSED',
     ]:
-        print('tasks', tasks)
         for name in tasks:
             state = get_task_runtime_info(node, name, 'state')
             process = get_task_runtime_info(node, name, 'process')
-            print('state', state)
-            print('process', process)
             if state == 'PLANNED':
                 create_task_action(pk, tasks, action='skip')
             elif state in [
@@ -113,13 +113,13 @@ def kill_tasks(pk: int, tasks: list, timeout: int = 5):
                 'WAITING',
                 'PAUSED',
             ]:
-                if get_task_runtime_info(node, name, 'process') is None:
+                if process is None:
                     print(f'Task {name} is not a AiiDA process.')
                     create_task_action(pk, tasks, action='kill')
                 else:
                     try:
                         control.kill_processes(
-                            [get_task_runtime_info(node, name, 'process')],
+                            [process],
                             all_entries=None,
                             timeout=timeout,
                         )
