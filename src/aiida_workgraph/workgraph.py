@@ -1,16 +1,9 @@
 from __future__ import annotations
 
-import aiida.orm
 import node_graph
 import aiida
 from aiida_workgraph.task import Task
 import time
-from aiida_workgraph.utils.graph import (
-    task_deletion_hook,
-    task_creation_hook,
-    link_creation_hook,
-    link_deletion_hook,
-)
 from typing import Any, Dict, List, Optional, Union
 from .registry import RegistryHub, registry_hub
 from node_graph.analysis import NodeGraphAnalysis
@@ -61,10 +54,6 @@ class WorkGraph(node_graph.NodeGraph):
         self.restart_process = None
         self.max_number_jobs = 1000000
         self.max_iteration = 1000000
-        self.nodes.post_deletion_hooks = [task_deletion_hook]
-        self.nodes.post_creation_hooks = [task_creation_hook]
-        self.links.post_creation_hooks = [link_creation_hook]
-        self.links.post_deletion_hooks = [link_deletion_hook]
         self._error_handlers = error_handlers or {}
         self.analyzer = NodeGraphAnalysis(self)
 
