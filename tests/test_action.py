@@ -13,8 +13,8 @@ def test_pause_play_workgraph(wg_engine):
     assert wg.process.process_state.value.upper() == 'PAUSED'
 
 
-@pytest.mark.skip(reason='pause task is not stable for the moment.')
-# @pytest.mark.usefixtures("started_daemon_client")
+# @pytest.mark.skip(reason='pause task is not stable for the moment.')
+@pytest.mark.usefixtures('started_daemon_client')
 def test_pause_play_task(wg_calcjob):
     wg = wg_calcjob
     wg.name = 'test_pause_play_task'
