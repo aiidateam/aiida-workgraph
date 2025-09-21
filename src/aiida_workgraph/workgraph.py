@@ -143,8 +143,7 @@ class WorkGraph(node_graph.NodeGraph):
         # One can not run again if the process is alreay created. otherwise, a new process node will
         # be created again.
         if self.process is not None:
-            print('Your workgraph is already created. Please use the submit() method.')
-            return
+            raise ValueError(f'Process {self.process.pk} has already been created. Please use the submit() method.')
         self.check_before_run()
         inputs = self.to_engine_inputs(metadata=metadata)
         _, node = aiida.engine.run_get_node(WorkGraphEngine, inputs=inputs)

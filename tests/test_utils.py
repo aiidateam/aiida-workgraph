@@ -52,3 +52,16 @@ def test_generate_provenance_graph():
     assert isinstance(graph, IFrame)
     # check file html/node_graph_{pk}.html is created
     assert os.path.isfile(f'html/node_graph_{wn1.pk}.html')
+
+
+def test_workgraph_generate_provenance_graph():
+    from IPython.display import IFrame
+    from aiida_workgraph import WorkGraph
+    import os
+
+    wg = WorkGraph()
+    wg.save()
+
+    graph = wg.generate_provenance_graph()
+    assert isinstance(graph, IFrame)
+    assert os.path.isfile(f'html/node_graph_{wg.pk}.html')

@@ -3,6 +3,23 @@ from aiida_workgraph import WorkGraph, task, spec
 from aiida import orm
 from aiida.calculations.arithmetic.add import ArithmeticAddCalculation
 from typing import Any
+import re
+
+
+def test_represent():
+    """Test the __repr__ method of WorkGraph."""
+    wg = WorkGraph('test_represent')
+    assert repr(wg) == f'WorkGraph(name="test_represent", uuid="{wg.uuid}")'
+    assert str(wg) == f'WorkGraph(name="test_represent", uuid="{wg.uuid}")'
+
+
+def test_should_submit():
+    wg = WorkGraph('test_should_submit')
+    wg.save()
+    with pytest.raises(
+        ValueError, match=re.escape(f'Process {wg.pk} has already been created. Please use the submit() method.')
+    ):
+        wg.run()
 
 
 def test_from_dict(decorated_add):
