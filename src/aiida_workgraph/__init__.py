@@ -3,7 +3,6 @@ from .task import Task
 from .decorator import task
 from .tasks import TaskPool
 from .tasks.shelljob_task import shelljob
-from .utils.flow_control import if_, while_, map_
 from .manager import get_current_graph, If, Map, While, Zone
 from . import socket_spec as spec
 from .socket_spec import namespace, dynamic, select, meta
@@ -15,9 +14,6 @@ __all__ = [
     'WorkGraph',
     'Task',
     'task',
-    'if_',
-    'while_',
-    'map_',
     'get_current_graph',
     'Zone',
     'If',
