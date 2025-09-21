@@ -391,10 +391,6 @@ def get_raw_value(identifier, value: Any) -> Any:
             return value.value
         else:
             return value
-    elif identifier == 'workgraph.aiida_structure' and value is not None and isinstance(value, orm.StructureData):
-        content = value.backend_entity.attributes
-        content['node_type'] = value.node_type
-        return content
     elif isinstance(value, orm.Data):
         content = value.backend_entity.attributes
         content['node_type'] = value.node_type
@@ -412,7 +408,7 @@ def process_properties(task: Dict) -> Dict:
             'value': get_raw_value(identifier, value),
         }
     #
-    for name, input in task.get('inputs', {}).get('sockets', {}).items():
+    for name, input in task.get('input_sockets', {}).get('sockets', {}).items():
         if input.get('property'):
             prop = input['property']
             identifier = prop['identifier']
