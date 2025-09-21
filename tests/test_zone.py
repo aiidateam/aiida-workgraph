@@ -14,3 +14,15 @@ def test_zone_task(decorated_add):
     connectivity = wg.build_connectivity()
     assert connectivity['zone']['add4']['input_tasks'] == ['zone1']
     assert connectivity['zone']['add5']['input_tasks'] == ['zone1']
+
+
+def test_zone_context_manager(decorated_add):
+    """Test the zone context manager."""
+
+    from aiida_workgraph import Zone
+
+    with WorkGraph('test_zone_cm'):
+        with Zone() as zone1:
+            zone1.add_task(decorated_add, name='add2')
+            zone1.add_task(decorated_add, name='add3')
+    assert len(zone1.children) == 2
