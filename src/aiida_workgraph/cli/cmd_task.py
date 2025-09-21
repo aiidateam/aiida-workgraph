@@ -64,24 +64,6 @@ def task_play(process, tasks, timeout):
         echo.echo_critical(f'{exception}\n{REPAIR_INSTRUCTIONS}')
 
 
-@workgraph_task.command('skip')
-@arguments.PROCESS()
-@click.argument('tasks', nargs=-1)
-@options.TIMEOUT()
-@decorators.with_dbenv()
-def task_skip(process, tasks, timeout):
-    """Skip task."""
-    from aiida.engine.processes import control
-    from aiida_workgraph.utils.control import skip_tasks
-
-    for task in tasks:
-        try:
-            skip_tasks(process.pk, task, timeout)
-
-        except control.ProcessTimeoutException as exception:
-            echo.echo_critical(f'{exception}\n{REPAIR_INSTRUCTIONS}')
-
-
 @workgraph_task.command('kill')
 @arguments.PROCESS()
 @click.argument('tasks', nargs=-1)
