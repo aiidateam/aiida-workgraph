@@ -13,18 +13,6 @@ if TYPE_CHECKING:
     from node_graph import Node
 
 
-def _record_specs_block(title: str, in_spec: SocketSpec | None, out_spec: SocketSpec | None) -> dict:
-    """Serialize specs into a metadata block (omit when None)."""
-    if in_spec is None and out_spec is None:
-        return {}
-    block = {}
-    if in_spec is not None:
-        block['inputs'] = in_spec.to_dict()
-    if out_spec is not None:
-        block['outputs'] = out_spec.to_dict()
-    return {title: block}
-
-
 def build_callable_nodespec(
     *,
     obj: Callable,
