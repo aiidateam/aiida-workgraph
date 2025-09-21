@@ -37,33 +37,32 @@ def test_max_depth():
     assert wg.process.exit_status == 302
 
 
-def test_while_instruction(decorated_add, decorated_multiply, decorated_smaller_than):
-    from aiida_workgraph import while_
+def test_While_zone(decorated_add, decorated_multiply, decorated_smaller_than):
+    from aiida_workgraph import While
 
-    wg = WorkGraph('test_while')
-    wg.ctx = {'n': 1}
-    add1 = wg.add_task(decorated_add, name='add1', x=1, y=1)
-    wg.update_ctx({'n': add1.outputs.result})
-    compare1 = wg.add_task(decorated_smaller_than, name='compare1', x=wg.ctx.n, y=20)
-    while_(compare1.outputs['result'], max_iterations=10)(
-        wg.add_task(decorated_add, name='add2', x=wg.ctx.n, y=1),
-        wg.add_task(
-            decorated_multiply,
-            name='multiply1',
-            x=wg.tasks['add2'].outputs['result'],
-            y=2,
-        ),
-    )
-    wg.tasks['add2'].waiting_on.add('add1')
-    wg.update_ctx({'n': wg.tasks.multiply1.outputs.result})
-    add3 = wg.add_task(decorated_add, name='add3', x=1, y=1)
-    wg.add_link(wg.tasks.multiply1.outputs['result'], add3.inputs['x'])
-    assert len(wg.tasks) == 9
-    assert 'while_1' in wg.tasks
-    assert len(wg.tasks.while_1.children) == 2
-    wg.run()
-    assert wg.state == 'FINISHED'
-    assert wg.tasks.add3.outputs.result.value == 31
+    with WorkGraph('test_while') as wg:
+        wg.ctx = {'n': 1}
+        add1 = wg.add_task(decorated_add, name='add1', x=1, y=1)
+        wg.update_ctx({'n': add1.outputs.result})
+        compare1 = wg.add_task(decorated_smaller_than, name='compare1', x=wg.ctx.n, y=20)
+        with While(compare1.outputs['result'], max_iterations=10) as while_zone:
+            while_zone.add_task(decorated_add, name='add2', x=wg.ctx.n, y=1)
+            while_zone.add_task(
+                decorated_multiply,
+                name='multiply1',
+                x=wg.tasks['add2'].outputs['result'],
+                y=2,
+            )
+        wg.tasks['add2'].waiting_on.add('add1')
+        wg.update_ctx({'n': wg.tasks.multiply1.outputs.result})
+        add3 = wg.add_task(decorated_add, name='add3', x=1, y=1)
+        wg.add_link(wg.tasks.multiply1.outputs['result'], add3.inputs['x'])
+        assert len(wg.tasks) == 9
+        assert 'while_zone' in wg.tasks
+        assert len(wg.tasks.while_zone.children) == 2
+        wg.run()
+        assert wg.state == 'FINISHED'
+        assert wg.tasks.add3.outputs.result.value == 31
 
 
 def test_while_task(decorated_add, decorated_smaller_than):
