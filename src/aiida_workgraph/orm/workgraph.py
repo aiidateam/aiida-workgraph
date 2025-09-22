@@ -1,11 +1,12 @@
 """Module with `Node` sub class for work processes."""
+
 from typing import Optional, Tuple
 import logging
 from aiida.common.lang import classproperty
 
 from aiida.orm.nodes.process.workflow.workchain import WorkChainNode
 
-__all__ = ("WorkGraphNode",)
+__all__ = ('WorkGraphNode',)
 
 
 def make_dict_property(attribute_key: str, default=None):
@@ -45,24 +46,22 @@ def set_item_in_dict(base, attribute_key: str, item_key: str, value):
 class WorkGraphNode(WorkChainNode):
     """ORM class for all nodes representing the execution of a WorkGraph."""
 
-    TASK_STATES_KEY = "task_states"
-    TASK_PROCESSES_KEY = "task_processes"
-    TASK_ACTIONS_KEY = "task_actions"
-    TASK_EXECUTORS_KEY = "task_executors"
-    TASK_ERROR_HANDLERS_KEY = "task_error_handlers"
-    TASK_EXECUTION_COUNTS_KEY = "task_execution_counts"
-    TASK_MAP_INFO_KEY = "task_map_info"
-    TASK_INPUTS_KEY = "task_inputs"
-    WORKGRAPH_DATA_KEY = "workgraph_data"
-    WORKGRAPH_DATA_SHORT_KEY = "workgraph_data_short"
-    WORKGRAPH_ERROR_HANDLERS_KEY = "workgraph_error_handlers"
+    TASK_STATES_KEY = 'task_states'
+    TASK_PROCESSES_KEY = 'task_processes'
+    TASK_ACTIONS_KEY = 'task_actions'
+    TASK_EXECUTORS_KEY = 'task_executors'
+    TASK_ERROR_HANDLERS_KEY = 'task_error_handlers'
+    TASK_EXECUTION_COUNTS_KEY = 'task_execution_counts'
+    TASK_MAP_INFO_KEY = 'task_map_info'
+    TASK_INPUTS_KEY = 'task_inputs'
+    WORKGRAPH_DATA_KEY = 'workgraph_data'
+    WORKGRAPH_DATA_SHORT_KEY = 'workgraph_data_short'
+    WORKGRAPH_ERROR_HANDLERS_KEY = 'workgraph_error_handlers'
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         # Use the same logger as WorkChainNode, this ensures the log level is set correctly
-        self._logger = logging.getLogger(
-            "aiida.orm.nodes.process.workflow.workchain.WorkChainNode"
-        )
+        self._logger = logging.getLogger('aiida.orm.nodes.process.workflow.workchain.WorkChainNode')
 
     @classproperty
     def _updatable_attributes(cls) -> Tuple[str, ...]:  # type: ignore
@@ -91,15 +90,11 @@ class WorkGraphNode(WorkChainNode):
     workgraph_data = make_dict_property(WORKGRAPH_DATA_KEY, default=None)
     task_inputs = make_dict_property(TASK_INPUTS_KEY, default=None)
     workgraph_data_short = make_dict_property(WORKGRAPH_DATA_SHORT_KEY, default=None)
-    workgraph_error_handlers = make_dict_property(
-        WORKGRAPH_ERROR_HANDLERS_KEY, default=None
-    )
+    workgraph_error_handlers = make_dict_property(WORKGRAPH_ERROR_HANDLERS_KEY, default=None)
 
     def get_task_state(self, task_name: str) -> Optional[str]:
         """Return the state of a single task."""
-        return get_item_from_dict(
-            self.base, self.TASK_STATES_KEY, task_name, default=""
-        )
+        return get_item_from_dict(self.base, self.TASK_STATES_KEY, task_name, default='')
 
     def set_task_state(self, task_name: str, task_state: str) -> None:
         """Set the state of a single task."""
@@ -107,9 +102,7 @@ class WorkGraphNode(WorkChainNode):
 
     def get_task_process(self, task_name: str) -> Optional[str]:
         """Return the process info of a single task."""
-        return get_item_from_dict(
-            self.base, self.TASK_PROCESSES_KEY, task_name, default=None
-        )
+        return get_item_from_dict(self.base, self.TASK_PROCESSES_KEY, task_name, default=None)
 
     def set_task_process(self, task_name: str, task_process: str) -> None:
         """Set the process info of a single task."""
@@ -117,9 +110,7 @@ class WorkGraphNode(WorkChainNode):
 
     def get_task_action(self, task_name: str) -> Optional[str]:
         """Return the action info of a single task."""
-        return get_item_from_dict(
-            self.base, self.TASK_ACTIONS_KEY, task_name, default=""
-        )
+        return get_item_from_dict(self.base, self.TASK_ACTIONS_KEY, task_name, default='')
 
     def set_task_action(self, task_name: str, task_action: str) -> None:
         """Set the action info of a single task."""
@@ -127,9 +118,7 @@ class WorkGraphNode(WorkChainNode):
 
     def get_task_execution_count(self, task_name: str) -> int:
         """Return the execution count of a single task."""
-        return get_item_from_dict(
-            self.base, self.TASK_EXECUTION_COUNTS_KEY, task_name, default=0
-        )
+        return get_item_from_dict(self.base, self.TASK_EXECUTION_COUNTS_KEY, task_name, default=0)
 
     def set_task_execution_count(self, task_name: str, count: int) -> None:
         """Set the execution count of a single task."""
@@ -137,9 +126,7 @@ class WorkGraphNode(WorkChainNode):
 
     def get_task_map_info(self, task_name: str) -> Optional[str]:
         """Return the map info of a single task."""
-        return get_item_from_dict(
-            self.base, self.TASK_MAP_INFO_KEY, task_name, default=""
-        )
+        return get_item_from_dict(self.base, self.TASK_MAP_INFO_KEY, task_name, default='')
 
     def set_task_map_info(self, task_name: str, task_map_info: str) -> None:
         """Set the map info of a single task."""

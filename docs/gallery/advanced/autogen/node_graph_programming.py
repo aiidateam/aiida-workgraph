@@ -53,11 +53,11 @@ def multiply(x, y):
 # Here's an example demonstrating an "add then multiply" workflow:
 
 # 1. Create an empty WorkGraph
-wg = WorkGraph("add_multiply_workflow")
+wg = WorkGraph('add_multiply_workflow')
 
 # 2. Add tasks to the workgraph
-add_task = wg.add_task(add, name="add1")
-multiply_task = wg.add_task(multiply, name="multiply1")
+add_task = wg.add_task(add, name='add1')
+multiply_task = wg.add_task(multiply, name='multiply1')
 
 # 3. Link the output of 'add1' to the 'x' input of 'multiply1'
 wg.add_link(add_task.outputs.result, multiply_task.inputs.x)
@@ -67,11 +67,11 @@ wg.outputs.result = multiply_task.outputs.result
 
 # Run the workflow with specific input values
 wg.run(
-    inputs={"add1": {"x": 2, "y": 3}, "multiply1": {"y": 4}},
+    inputs={'add1': {'x': 2, 'y': 3}, 'multiply1': {'y': 4}},
 )
 
-print(f"State of WorkGraph: {wg.state}")
-print(f"Result: {wg.outputs.result.value}")
+print(f'State of WorkGraph: {wg.state}')
+print(f'Result: {wg.outputs.result.value}')
 
 # Visualize the workgraph
 wg.to_html()
@@ -91,43 +91,37 @@ wg.to_html()
 #
 # Let's build a workflow where the result of an initial `add` operation dictates whether a subsequent `add` or `multiply` operation is performed.
 
-wg = WorkGraph("if_task_example")
+wg = WorkGraph('if_task_example')
 add_task = wg.add_task(add, x=1, y=1)
 # If the condition is true
-if_true_zone = wg.add_task(
-    "workgraph.if_zone", name="if_true", conditions=add_task.outputs.result
-)
-add2 = if_true_zone.add_task(
-    add, name="add2", x=add_task.outputs.result, y=2
-)  # 2 + 2 = 4
+if_true_zone = wg.add_task('workgraph.if_zone', name='if_true', conditions=add_task.outputs.result)
+add2 = if_true_zone.add_task(add, name='add2', x=add_task.outputs.result, y=2)  # 2 + 2 = 4
 # If the condition is false
 if_false_zone = wg.add_task(
-    "workgraph.if_zone",
-    name="if_false",
+    'workgraph.if_zone',
+    name='if_false',
     conditions=add_task.outputs.result,
     invert_condition=True,
 )
-multiply1 = if_false_zone.add_task(
-    multiply, name="multiply1", x=add_task.outputs.result, y=2
-)  # 2 * 2 = 4
+multiply1 = if_false_zone.add_task(multiply, name='multiply1', x=add_task.outputs.result, y=2)  # 2 * 2 = 4
 # Select the result based on the initial condition
 select1 = wg.add_task(
-    "workgraph.select",
-    name="select1",
-    true=add2.outputs["result"],
-    false=multiply1.outputs["result"],
+    'workgraph.select',
+    name='select1',
+    true=add2.outputs['result'],
+    false=multiply1.outputs['result'],
     condition=add_task.outputs.result,
 )
 # Add 1 to the selected result
-add3 = wg.add_task(add, name="add3", x=select1.outputs["result"], y=1)  # 4 + 1 = 5
+add3 = wg.add_task(add, name='add3', x=select1.outputs['result'], y=1)  # 4 + 1 = 5
 # Graph-level output
 wg.outputs.result = add3.outputs.result
 
 # Run the workflow
 wg.run()
 
-print(f"State of WorkGraph: {wg.state}")
-print(f"Result: {wg.outputs.result.value}")
+print(f'State of WorkGraph: {wg.state}')
+print(f'Result: {wg.outputs.result.value}')
 assert wg.outputs.result.value == 5
 
 # Visualize the workgraph
@@ -140,7 +134,7 @@ wg.to_html()
 # repeatedly executing a set of tasks as long as a specified condition remains `True`.
 # This is handled by the `workgraph.while_zone` task.
 
-wg = WorkGraph("while_task_example")
+wg = WorkGraph('while_task_example')
 
 # Initialize 'n' with an initial value
 initial_add_task = wg.add_task(add, x=1, y=1)  # n = 2
@@ -153,17 +147,13 @@ condition_task = wg.add_task(compare, x=wg.ctx.n, y=8)
 condition_task.waiting_on.add(initial_add_task)
 
 # Start the While Zone
-while_task = wg.add_task(
-    "workgraph.while_zone", max_iterations=10, conditions=condition_task.outputs.result
-)
+while_task = wg.add_task('workgraph.while_zone', max_iterations=10, conditions=condition_task.outputs.result)
 
 # Tasks within the while loop
 # First, add 1 to n
 add_task_in_loop = while_task.add_task(add, x=wg.ctx.n, y=1)
 # Then, multiply the result by 2
-multiply_task_in_loop = while_task.add_task(
-    multiply, x=add_task_in_loop.outputs.result, y=2
-)
+multiply_task_in_loop = while_task.add_task(multiply, x=add_task_in_loop.outputs.result, y=2)
 # Update 'n' for the next iteration of the loop
 wg.ctx.n = multiply_task_in_loop.outputs.result
 
@@ -174,8 +164,8 @@ wg.outputs.result = final_add_task.outputs.result
 # Run the workflow
 wg.run()
 
-print(f"State of WorkGraph: {wg.state}")
-print(f"Result: {wg.outputs.result.value}")
+print(f'State of WorkGraph: {wg.state}')
+print(f'Result: {wg.outputs.result.value}')
 
 assert wg.outputs.result.value == 15
 
@@ -200,8 +190,8 @@ from typing import Any
 @task
 def generate_data(N) -> spec.namespace(result=spec.dynamic(Any)):
     """Generates a dictionary with N items."""
-    data = {f"item_{i}": i for i in range(N)}
-    return {"result": data}
+    data = {f'item_{i}': i for i in range(N)}
+    return {'result': data}
 
 
 @task
@@ -216,13 +206,13 @@ def calc_sum(**kwargs):
 # where `item` represents the value of each key-value pair.
 #
 
-wg = WorkGraph("map_task_example")
+wg = WorkGraph('map_task_example')
 
 # Generate a dictionary of data with 4 items (0, 1, 2, 3)
 data_task = wg.add_task(generate_data, N=4)
 
 # Create a Map Zone, with the source being the dictionary from generate_data
-map_task = wg.add_task("workgraph.map_zone", source=data_task.outputs.result)
+map_task = wg.add_task('workgraph.map_zone', source=data_task.outputs.result)
 
 # Inside the Map Zone, add 1 to each item
 add_task_in_map = map_task.add_task(add, x=map_task.item, y=1)
@@ -236,8 +226,8 @@ wg.outputs.result = sum_task.outputs.result
 
 wg.run()
 
-print(f"State of WorkGraph: {wg.state}")
-print(f"Result: {wg.outputs.result.value}")
+print(f'State of WorkGraph: {wg.state}')
+print(f'Result: {wg.outputs.result.value}')
 
 assert wg.outputs.result.value == 10
 

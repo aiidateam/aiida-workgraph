@@ -1,23 +1,23 @@
 version: 2
 
 build:
-  os: "ubuntu-22.04"
+  os: ubuntu-22.04
   tools:
-    python: "miniconda3-3.12-24.1" # note that libmamba-solver is available since 22.1
-    nodejs: "20" # maybe need to be also miniconda
+    python: miniconda3-3.12-24.1   # note that libmamba-solver is available since 22.1
+    nodejs: '20' # maybe need to be also miniconda
   jobs:
     post_create_environment:
-      - python -m pip install --no-cache-dir .[docs]
-      - pip list
-      - rabbitmq-server -detached
-      - sleep 10
-      - rabbitmq-diagnostics status
-      - verdi presto
-      - verdi daemon start
-      - verdi status
-      - verdi config set logging.aiida_loglevel ERROR
-      - cat /proc/cpuinfo | grep processor | wc -l
-      - verdi code create core.code.installed --label add --computer=localhost --default-calc-job-plugin core.arithmetic.add --filepath-executable=/bin/bash -n
+    - python -m pip install --no-cache-dir .[docs]
+    - pip list
+    - rabbitmq-server -detached
+    - sleep 10
+    - rabbitmq-diagnostics status
+    - verdi presto
+    - verdi daemon start
+    - verdi status
+    - verdi config set logging.aiida_loglevel ERROR
+    - cat /proc/cpuinfo | grep processor | wc -l
+    - verdi code create core.code.installed --label add --computer=localhost --default-calc-job-plugin core.arithmetic.add --filepath-executable=/bin/bash -n
 
 conda:
   environment: docs/environment.yml

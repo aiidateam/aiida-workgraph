@@ -4,13 +4,26 @@ from aiida_workgraph import WorkGraph
 def test_zone_task(decorated_add):
     """Test the zone task."""
 
-    wg = WorkGraph("test_zone")
-    add1 = wg.add_task(decorated_add, name="add1", x=1, y=1)
-    zone1 = wg.add_task("workgraph.zone", name="zone1")
-    zone1.add_task(decorated_add, name="add2", x=1, y=1)
-    zone1.add_task(decorated_add, name="add3", x=1, y=add1.outputs.result)
-    wg.add_task(decorated_add, name="add4", x=1, y=wg.tasks.add2.outputs.result)
-    wg.add_task(decorated_add, name="add5", x=1, y=wg.tasks.add3.outputs.result)
+    wg = WorkGraph('test_zone')
+    add1 = wg.add_task(decorated_add, name='add1', x=1, y=1)
+    zone1 = wg.add_task('workgraph.zone', name='zone1')
+    zone1.add_task(decorated_add, name='add2', x=1, y=1)
+    wg.add_task(decorated_add, name='add4', x=1, y=wg.tasks.add2.outputs.result)
+    zone1.add_task(decorated_add, name='add3', x=1, y=add1.outputs.result)
     connectivity = wg.build_connectivity()
-    assert connectivity["zone"]["add4"]["input_tasks"] == ["zone1"]
-    assert connectivity["zone"]["add5"]["input_tasks"] == ["zone1"]
+    assert connectivity['zone']['add4']['input_tasks'] == ['zone1']
+    wg.run()
+    # add4 should wait the whole zone1 to finish, thus its mtime should be larger than add3
+    assert wg.tasks.add4.node.mtime > wg.tasks.add3.node.mtime
+
+
+def test_zone_context_manager(decorated_add):
+    """Test the zone context manager."""
+
+    from aiida_workgraph import Zone
+
+    with WorkGraph('test_zone_cm'):
+        with Zone() as zone1:
+            zone1.add_task(decorated_add, name='add2')
+            zone1.add_task(decorated_add, name='add3')
+    assert len(zone1.children) == 2

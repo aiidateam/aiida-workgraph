@@ -32,7 +32,7 @@ class SumEvenWorkChain(WorkChain):
     def define(cls, spec):
         """Specify inputs, outputs, and the workchain logic."""
         super().define(spec)
-        spec.input("N", valid_type=Int, help="The integer to sum up to.")
+        spec.input('N', valid_type=Int, help='The integer to sum up to.')
         spec.outline(
             cls.setup,
             while_(cls.smaller_than)(
@@ -43,7 +43,7 @@ class SumEvenWorkChain(WorkChain):
             ),
             cls.result,
         )
-        spec.output("total", valid_type=Int, help="The final sum.")
+        spec.output('total', valid_type=Int, help='The final sum.')
 
     def setup(self):
         """Initialize context variables."""
@@ -68,7 +68,7 @@ class SumEvenWorkChain(WorkChain):
 
     def result(self):
         """Attach the final sum to the outputs."""
-        self.out("total", self.ctx.total)
+        self.out('total', self.ctx.total)
 
 
 # %%
@@ -98,6 +98,7 @@ from aiida_workgraph import task, While, If
 # First, we convert the existing `add` calcfunction into a reusable task.
 add_task = task(add)
 
+
 # Next, we create tasks for the conditions in our loops and conditionals.
 @task()
 def smaller_than(n: int, N: int) -> bool:
@@ -120,7 +121,7 @@ def sum_even_workgraph(N: int):
     wg = get_current_graph()
 
     # The 'setup' step: initialize context variables.
-    wg.ctx = {"n": 1, "total": 0}
+    wg.ctx = {'n': 1, 'total': 0}
 
     # The 'while' loop. The condition is now a task.
     with While(smaller_than(wg.ctx.n, N).result):
@@ -163,7 +164,7 @@ wg.to_html()
 # %%
 # Execute the WorkGraph and print the result.
 wg.run()
-print(f"The sum of even numbers up to {N} is: {wg.outputs['result'].value}")
+print(f'The sum of even numbers up to {N} is: {wg.outputs["result"].value}')
 
 
 # %%

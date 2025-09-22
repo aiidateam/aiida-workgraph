@@ -8,6 +8,7 @@ In WorkGraph, a **Socket** is a fundamental concept that defines the connection 
 This guide will walk you through how to define, customize, and organize sockets for your tasks.
 
 """
+
 from aiida.manage import load_profile
 from aiida_workgraph import task, WorkGraph, spec
 from aiida import orm
@@ -36,8 +37,8 @@ def multiply(x, y):
 # Let's inspect the automatically generated sockets
 wg = WorkGraph()
 task1 = wg.add_task(multiply, x=3, y=4)
-print("Input sockets: ", task1.get_input_names())
-print("Output sockets: ", task1.get_output_names())
+print('Input sockets: ', task1.get_input_names())
+print('Output sockets: ', task1.get_output_names())
 
 
 # %%
@@ -52,15 +53,15 @@ print("Output sockets: ", task1.get_output_names())
 def add_and_subtract(x, y) -> spec.namespace(sum=Any, difference=Any):
     """Return the sum and difference of two numbers in a dict."""
     return {
-        "sum": x + y,
-        "difference": x - y,
+        'sum': x + y,
+        'difference': x - y,
     }
 
 
 # Inspect the new input and output sockets
 task2 = wg.add_task(add_and_subtract, x=3, y=4)
-print("Input sockets: ", task2.get_input_names())
-print("Output sockets: ", task2.get_output_names())
+print('Input sockets: ', task2.get_input_names())
+print('Output sockets: ', task2.get_output_names())
 
 # %%
 # - The function returns a tuple: The elements of the tuple are mapped to the sockets in the order they are declared in the outputs definition.
@@ -78,8 +79,8 @@ def add_and_subtract(x, y) -> spec.namespace(sum=Any, difference=Any):
 
 # Inspect the new input and output sockets
 task2 = wg.add_task(add_and_subtract, x=3, y=4)
-print("Input sockets: ", task2.get_input_names())
-print("Output sockets: ", task2.get_output_names())
+print('Input sockets: ', task2.get_input_names())
+print('Output sockets: ', task2.get_output_names())
 
 
 # %%
@@ -94,10 +95,10 @@ print("Output sockets: ", task2.get_output_names())
 # For convenience, we also support using a list of strings as the output definition, which is equivalent to using ``workgraph.Any`` for each output socket.
 
 
-@task(outputs=["sum", "difference"])
+@task(outputs=['sum', 'difference'])
 def add_and_subtract(x, y):
     """This task returns both the sum and difference of two numbers."""
-    return {"sum": x + y, "difference": x - y}
+    return {'sum': x + y, 'difference': x - y}
 
 
 # %%
@@ -126,7 +127,7 @@ def add_typed(x: orm.Int, y: orm.Float) -> orm.Float:
 
 # When you call this task, WorkGraph expects AiiDA data types
 task3 = wg.add_task(add_typed, x=orm.Int(3), y=orm.Int(4))
-print("Input x: ", task3.inputs.x)
+print('Input x: ', task3.inputs.x)
 
 
 # %%
@@ -148,8 +149,8 @@ with WorkGraph() as wg:
     # We can still override the default value by providing an input.
     outputs2 = power(base=3, exponent=3)
     wg.run()
-    print(f"3 to the default power of 2 is: {outputs1.result.value}")
-    print(f"3 to the power of 3 is: {outputs2.result.value}")
+    print(f'3 to the default power of 2 is: {outputs1.result.value}')
+    print(f'3 to the power of 3 is: {outputs2.result.value}')
 
 
 # %%
@@ -161,16 +162,16 @@ with WorkGraph() as wg:
 # -----------------------
 # If a task has multiple outputs (as defined in the `outputs` decorator argument), WorkGraph automatically groups them into a `SocketNamespace`.
 
-with WorkGraph("simple_namespace_example") as wg:
+with WorkGraph('simple_namespace_example') as wg:
     # The `add_and_subtract` task from before has two outputs.
     # The `outputs` object becomes a namespace.
     outputs = add_and_subtract(x=10, y=4)
     wg.run()
 
     # You can access the results like attributes of an object:
-    print(f"Accessing outputs from a namespace:")
-    print(f"  Sum: {outputs.sum.value}")
-    print(f"  Difference: {outputs.difference.value}")
+    print('Accessing outputs from a namespace:')
+    print(f'  Sum: {outputs.sum.value}')
+    print(f'  Difference: {outputs.difference.value}')
 
 
 # %%
@@ -188,17 +189,17 @@ out = spec.namespace(
 def advanced_math(x, y):
     """A task with a nested output structure."""
     return {
-        "normal": {"sum": x + y, "product": x * y},
-        "squared": {"sum": x**2 + y**2, "product": x**2 * y**2},
+        'normal': {'sum': x + y, 'product': x * y},
+        'squared': {'sum': x**2 + y**2, 'product': x**2 * y**2},
     }
 
 
-with WorkGraph("nested_namespace_example") as wg:
+with WorkGraph('nested_namespace_example') as wg:
     outputs = advanced_math(x=2, y=3)
     wg.run()
-    print("\nAccessing outputs from a nested namespace:")
-    print(f"  Normal sum: {outputs.normal.sum.value}")
-    print(f"  Squared product: {outputs.squared.product.value}")
+    print('\nAccessing outputs from a nested namespace:')
+    print(f'  Normal sum: {outputs.normal.sum.value}')
+    print(f'  Squared product: {outputs.squared.product.value}')
     assert outputs.normal.sum.value == 5
     assert outputs.squared.product.value == 36
 
@@ -221,7 +222,7 @@ def generate_squares(n: int) -> spec.namespace(squares=spec.dynamic(int)):
     # The return dictionary must match the output socket names.
     # The value for the "squares" dynamic namespace is another dictionary,
     # where each key-value pair will become a separate AiiDA node.
-    return {"squares": {f"n_{i}": i**2 for i in range(n)}}
+    return {'squares': {f'n_{i}': i**2 for i in range(n)}}
 
 
 # %%
@@ -248,7 +249,7 @@ def sum_all(**data):
 
 # %%
 # Now, let's build the WorkGraph.
-with WorkGraph("dynamic_namespace_example") as wg:
+with WorkGraph('dynamic_namespace_example') as wg:
     # The first task generates a dynamic set of outputs under the "squares" namespace.
     dynamic_outputs = generate_squares(n=4)
 
@@ -258,11 +259,11 @@ with WorkGraph("dynamic_namespace_example") as wg:
     wg.run()
 
     # You can access the individual dynamic outputs
-    print("\nIndividual dynamic outputs:")
+    print('\nIndividual dynamic outputs:')
     for i in range(4):
-        print(f"  n_{i}: {dynamic_outputs.squares[f'n_{i}'].value}")
+        print(f'  n_{i}: {dynamic_outputs.squares[f"n_{i}"].value}')
 
-    print(f"\nSum of all dynamic outputs: {total.result.value}")
+    print(f'\nSum of all dynamic outputs: {total.result.value}')
     assert total.result.value == 14
 
 # %%

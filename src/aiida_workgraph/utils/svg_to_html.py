@@ -1,4 +1,4 @@
-def svg_to_html(svg_xml: str, width: str = "100%", height: str = "100%") -> str:
+def svg_to_html(svg_xml: str, width: str = '100%', height: str = '100%') -> str:
     """
     Converts an SVG XML string into an HTML string with embedded SVG,
     scaled to the specified width and height using CSS and includes functionality

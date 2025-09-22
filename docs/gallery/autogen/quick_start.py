@@ -117,13 +117,13 @@ wg.to_html()
 
 wg.run()
 
-print("Result:", wg.outputs.result.value)
+print('Result:', wg.outputs.result.value)
 
 # %%
 # We can also access the results of the individual tasks:
 
-print("Result of addition:", wg.tasks.add.outputs.result.value)
-print("Result of multiplication:", wg.tasks.multiply.outputs.result.value)
+print('Result of addition:', wg.tasks.add.outputs.result.value)
+print('Result of multiplication:', wg.tasks.multiply.outputs.result.value)
 
 # %%
 # .. note::

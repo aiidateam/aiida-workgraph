@@ -12,11 +12,11 @@ def add(x, y):
 def test_validate_required_inputs():
     @task.graph()
     def my_graph(a, b: Annotated[dict, namespace(x=int, y=int)]):
-        add(a, b["x"])
+        add(a, b['x'])
         add(a)
 
     with pytest.raises(
         ValueError,
-        match=re.escape("Missing required inputs:"),
+        match=re.escape('Missing required inputs:'),
     ):
-        my_graph.run(a=1, b={"x": 1})
+        my_graph.run(a=1, b={'x': 1})

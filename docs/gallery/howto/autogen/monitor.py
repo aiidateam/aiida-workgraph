@@ -31,7 +31,7 @@ Monitor external events as a task
 # sphinx_gallery_start_ignore
 from aiida_workgraph.utils.logging import set_aiida_loglevel
 
-set_aiida_loglevel("REPORT")
+set_aiida_loglevel('REPORT')
 # sphinx_gallery_end_ignore
 
 from aiida_workgraph import task
@@ -50,7 +50,28 @@ import datetime
 
 @task.monitor
 def monitor_time(time: datetime.datetime):
-    return datetime.datetime.now() > time.value
+    return datetime.datetime.now() > time
+
+
+# %%
+# .. note::
+#
+#    The monitor task can also be implemented using asynchronous function.
+#    For more details, please refer to the section on :ref:`Run async functions as tasks <async_function>`.
+#    For example, the above monitor task can be implemented as:
+#
+#    .. code:: python
+#
+#        @task
+#        async def monitor_time_async(time: datetime.datetime, interval=1, timeout=None):
+#            start = datetime.datetime.now()
+#            while True:
+#                if datetime.datetime.now() > time:
+#                    break
+#                await asyncio.sleep(interval)
+#                if timeout is not None and datetime.datetime.now() - start > timeout:
+#                    raise TimeoutError(f'Timeout after {timeout} seconds')
+#
 
 
 @task
@@ -88,10 +109,11 @@ import asyncio
 from aiida_workgraph.collection import group
 
 
-@task.awaitable
+# Create a file asynchronously, so it does not block the event loop
+@task
 async def sleep_create_file(filepath, content):
     await asyncio.sleep(5)
-    with open(filepath, "w") as f:
+    with open(filepath, 'w') as f:
         f.write(content)
 
 
@@ -105,7 +127,7 @@ def discard_file(filepath):
     if os.path.exists(filepath):
         os.remove(filepath)
     else:
-        raise FileNotFoundError(f"File {filepath} does not exist.")
+        raise FileNotFoundError(f'File {filepath} does not exist.')
 
 
 @task
@@ -117,14 +139,18 @@ def multiply(x, y):
 def FileMonitor(x, y, z):
     # Asynchronously create a file after 5 seconds
     sleep_create_file(
-        filepath="/tmp/monitor_test.txt",
-        content="This is a test file",
+        filepath='/tmp/monitor_test.txt',
+        content='This is a test file',
     )
 
     # While above is running, monitor for the file
     # Once done (`>>` means wait on left operant), discard the file and add two numbers
-    monitor_file("/tmp/monitor_test.txt", interval=1, timeout=10,) >> group(
-        discard_file("/tmp/monitor_test.txt"),
+    monitor_file(
+        '/tmp/monitor_test.txt',
+        interval=1,
+        timeout=10,
+    ) >> group(
+        discard_file('/tmp/monitor_test.txt'),
         the_sum := add(x, y).result,
     )
 
@@ -149,13 +175,7 @@ wg.run()
 #
 # .. code:: console
 #
-#    workgraph task kill <workgraph_pk> <task_name>
-#
-# For example:
-#
-# .. code:: console
-#
-#    workgraph task kill 119974 monitor1
+#    verdi process kill <pk>
 #
 # A killed task will has the status ``KILLED`` and the following task will not be executed.
 #
@@ -177,5 +197,5 @@ wg.run()
 # You have learned how to use the ``monitor`` decorator to create tasks that poll for specific conditions, such as time-based events, file-based events, and task monitoring. You also learned how to kill a monitor task and about the built-in monitor tasks provided by `WorkGraph`.
 
 # sphinx_gallery_start_ignore
-set_aiida_loglevel("ERROR")
+set_aiida_loglevel('ERROR')
 # sphinx_gallery_end_ignore
