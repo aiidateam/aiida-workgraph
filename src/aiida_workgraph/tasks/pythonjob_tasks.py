@@ -166,7 +166,6 @@ class PythonJobTask(BaseSerializablePythonTask):
             process = engine_process.submit(PythonJob, **inputs)
             state = 'RUNNING'
 
-        process.label = self.name
         return process, state
 
 
@@ -212,7 +211,6 @@ class PyFunctionTask(BaseSerializablePythonTask):
                 process = engine_process.submit(PyFunction, **inputs)
                 state = 'RUNNING'
 
-            process.label = self.name
             return process, state
         else:
             # Make sure it's process_function-decorated
@@ -231,7 +229,6 @@ class PyFunctionTask(BaseSerializablePythonTask):
             else:
                 _, process = run_get_node(func, **kwargs, **var_kwargs)
 
-            process.label = self.name
             return process, 'FINISHED'
 
 
@@ -275,7 +272,6 @@ class MonitorFunctionTask(BaseSerializablePythonTask):
         else:
             process = engine_process.submit(MonitorPyFunction, **inputs)
             state = 'RUNNING'
-        process.label = self.name
         return process, state
 
 

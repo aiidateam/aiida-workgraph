@@ -75,7 +75,6 @@ class GraphTask(SpecTask):
         else:
             process = engine_process.submit(WorkGraphEngine, **inputs)
             state = 'RUNNING'
-        process.label = self.name
 
         return process, state
 
