@@ -59,6 +59,7 @@ print('\nResult: ', wg.outputs.result.value)
 # * **Outputs:** In addition to your function's return value (available as ``.result`` by default), the task provides comprehensive outputs, such as ``remote_folder`` (a reference to the job's directory on the remote computer).
 
 # %%
+# .. _pythonjob_metadata:
 # Prepare Python environment on remote computer
 # ---------------------------------------------
 #
@@ -90,8 +91,8 @@ def multiply(x, y):
 
 
 @task.graph
-def RemoteAddLocalMultiply(x: int, y: int, computer: str, metadata: Annotated[dict, add.inputs.metadata]) -> int:
-    the_sum = add(x=x, y=y, computer=computer, metadata=metadata).result
+def RemoteAddLocalMultiply(x: int, y: int, computer: str, add_metadata: Annotated[dict, add.inputs.metadata]) -> int:
+    the_sum = add(x=x, y=y, computer=computer, metadata=add_metadata).result
     return multiply(x=the_sum, y=4)  # this will run locally
 
 
@@ -99,7 +100,7 @@ wg = RemoteAddLocalMultiply.build(
     x=2,
     y=3,
     computer='localhost',
-    metadata=metadata,
+    add_metadata=metadata,
 )
 wg.run()
 

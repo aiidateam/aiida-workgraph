@@ -279,3 +279,46 @@ def test_call_task_inside_task():
         wg.run()
         assert result._node.process.exit_status == 323
         assert 'Invalid nested task call.' in result._node.process.exit_message
+
+
+def test_call_link_label_as_name() -> None:
+    """Test that the call_link_label is used as the name of the task."""
+    from aiida.calculations.arithmetic.add import ArithmeticAddCalculation
+    from aiida.workflows.arithmetic.multiply_add import MultiplyAddWorkChain
+
+    @task()
+    def add(x, y):
+        return x + y
+
+    @task.calcfunction()
+    def add_calcfunction(x, y):
+        return x + y
+
+    @task.graph()
+    def test_graph():
+        pass
+
+    AddTask = task()(ArithmeticAddCalculation)
+    MultiplyAddTask = task()(MultiplyAddWorkChain)
+
+    with WorkGraph('test_call_link_label_as_name'):
+        sum1 = add(1, 2, metadata={'call_link_label': 'my_add'})
+        assert sum1._node.name == 'my_add'
+        sum2 = add_calcfunction(3, 4, metadata={'call_link_label': 'my_add_calc'})
+        assert sum2._node.name == 'my_add_calc'
+        sum3 = AddTask(x=5, y=6, metadata={'call_link_label': 'my_add_calcjob'})
+        assert sum3._node.name == 'my_add_calcjob'
+        sum4 = MultiplyAddTask(x=1, y=2, z=3, metadata={'call_link_label': 'my_multiply_add'})
+        assert sum4._node.name == 'my_multiply_add'
+        sum5 = test_graph(metadata={'call_link_label': 'my_graph'})
+        assert sum5._node.name == 'my_graph'
+
+
+def test_metadata_can_not_be_used_as_function_argument(decorated_add) -> None:
+    """Test that metadata can not be used as a function argument."""
+
+    with pytest.raises(ValueError, match="Invalid input name: 'metadata'"):
+
+        @task
+        def myfunc(x, y, metadata=None):
+            return x + y

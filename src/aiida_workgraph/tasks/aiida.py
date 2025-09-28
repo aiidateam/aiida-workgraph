@@ -31,7 +31,6 @@ class AiiDAFunctionTask(SpecTask):
             _, process = run_get_node(executor, **kwargs)
         else:
             _, process = run_get_node(executor, **kwargs, **var_kwargs)
-        process.label = self.name
 
         return process, 'FINISHED'
 
@@ -64,7 +63,6 @@ class AiiDAProcessTask(SpecTask):
         else:
             process = engine_process.submit(executor, **kwargs)
             state = 'RUNNING'
-        process.label = self.name
 
         return process, state
 

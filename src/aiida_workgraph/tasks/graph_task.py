@@ -4,6 +4,7 @@ from node_graph.socket_spec import SocketSpec
 from node_graph.node_spec import NodeSpec
 from .function_task import build_callable_nodespec
 from node_graph.executor import RuntimeExecutor
+from aiida.engine import Process
 
 
 class GraphTask(SpecTask):
@@ -74,7 +75,6 @@ class GraphTask(SpecTask):
         else:
             process = engine_process.submit(WorkGraphEngine, **inputs)
             state = 'RUNNING'
-        process.label = self.name
 
         return process, state
 
@@ -88,13 +88,17 @@ def _build_graph_task_nodespec(
 ) -> NodeSpec:
     # defaults for max depth
     metadata = {'max_depth': max_depth}
+    # We use Process as the process class here, so that the task inherits the metadata
+    # inputs from the base Process class, such as 'call_link_label'.
+    # While the actual process class will be the WorkGraphEngine,
+    # which is set at runtime in the execute() method
 
     return build_callable_nodespec(
         obj=obj,
         node_type='GRAPH',
         base_class=GraphTask,
         identifier=identifier,
-        process_cls=None,
+        process_cls=Process,
         in_spec=in_spec,
         out_spec=out_spec,
         metadata=metadata,

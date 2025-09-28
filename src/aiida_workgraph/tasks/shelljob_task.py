@@ -97,7 +97,6 @@ class ShellJobTask(SpecTask):
         else:
             process = engine_process.submit(ShellJob, **kwargs)
             state = 'RUNNING'
-        process.label = self.name
         return process, state
 
 
