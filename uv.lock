@@ -98,16 +98,16 @@ wheels = [
 
 [[package]]
 name = "aiida-pythonjob"
-version = "0.4.3"
+version = "0.4.4"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "aiida-core" },
     { name = "ase" },
     { name = "node-graph" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/19/f2/bf7851487652bdf3b930fbea4d4f7e0207bd58e2116b207718e20d3ed59c/aiida_pythonjob-0.4.3.tar.gz", hash = "sha256:9abf0c1201b7143efc96e6ee0c4ff6885bee1f6d07f381ad700d29a7047f56b8", size = 40920, upload-time = "2025-09-20T11:13:45.732Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/38/c0/dce9c9167cda2db851708ce6bab610a3ed370cb2965e9fff455b583575cb/aiida_pythonjob-0.4.4.tar.gz", hash = "sha256:db8d0cb3620ed81bef140d3586216852433eb49ee5d7c2a44d21797dc757a68d", size = 40553, upload-time = "2025-09-28T16:18:32.803Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/5f/a8/d5def5154d700b389618fda37ef57eebac2c0ad92f5a6a0a03ee646597ce/aiida_pythonjob-0.4.3-py3-none-any.whl", hash = "sha256:5a290970751ff674afd8932c731e8c97a6eebb7f7bda71f003851c219f5a4792", size = 37780, upload-time = "2025-09-20T11:13:44.727Z" },
+    { url = "https://files.pythonhosted.org/packages/09/3c/32604219c4435e4c60064737c026e8ff1e1d03d80d2694574dd774f9d89c/aiida_pythonjob-0.4.4-py3-none-any.whl", hash = "sha256:5c51fbc59026e1d946a3f2474a41838c6c1bc4dd470144b7e5aa6b3b8e416017", size = 37549, upload-time = "2025-09-28T16:18:31.576Z" },
 ]
 
 [[package]]
@@ -199,7 +199,7 @@ requires-dist = [
     { name = "aiida-core", specifier = "~=2.7.1" },
     { name = "aiida-core", marker = "extra == 'docs'", specifier = "~=2.7.1" },
     { name = "aiida-pseudo", marker = "extra == 'docs'" },
-    { name = "aiida-pythonjob", specifier = "==0.4.3" },
+    { name = "aiida-pythonjob", specifier = "==0.4.4" },
     { name = "aiida-quantumespresso", marker = "extra == 'docs'" },
     { name = "aiida-shell", specifier = "~=0.8" },
     { name = "anywidget", marker = "extra == 'docs'" },
@@ -2902,7 +2902,7 @@ name = "pexpect"
 version = "4.9.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "ptyprocess" },
+    { name = "ptyprocess", marker = "python_full_version < '3.10' or sys_platform != 'win32'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/42/92/cc564bf6381ff43ce1f4d06852fc19a2f11d180f23dc32d9588bee2f149d/pexpect-4.9.0.tar.gz", hash = "sha256:ee7d41123f3c9911050ea2c2dac107568dc43b2d3b0c7557a33212c398ead30f", size = 166450, upload-time = "2023-11-25T09:07:26.339Z" }
 wheels = [
