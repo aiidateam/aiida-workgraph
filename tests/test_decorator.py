@@ -170,7 +170,7 @@ def test_decorators_graph_args(task_graph_task) -> None:
     # assert task_graph_task.identifier == "add_multiply_group"
     n = task_graph_task._spec.to_node()
     assert n.args_data['args'] == []
-    assert n.args_data['kwargs'] == ['a', 'b']
+    assert n.args_data['kwargs'] == ['a', 'b', 'metadata']
     assert n.args_data['var_args'] is None
     assert n.args_data['var_kwargs'] == 'c'
     assert set(n.get_output_names()) == set(['_outputs', '_wait'])

@@ -294,6 +294,10 @@ def test_call_link_label_as_name() -> None:
     def add_calcfunction(x, y):
         return x + y
 
+    @task.graph()
+    def test_graph():
+        pass
+
     AddTask = task()(ArithmeticAddCalculation)
     MultiplyAddTask = task()(MultiplyAddWorkChain)
 
@@ -306,3 +310,5 @@ def test_call_link_label_as_name() -> None:
         assert sum3._node.name == 'my_add_calcjob'
         sum4 = MultiplyAddTask(x=1, y=2, z=3, metadata={'call_link_label': 'my_multiply_add'})
         assert sum4._node.name == 'my_multiply_add'
+        sum5 = test_graph(metadata={'call_link_label': 'my_graph'})
+        assert sum5._node.name == 'my_graph'
