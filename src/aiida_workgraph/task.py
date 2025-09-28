@@ -333,7 +333,11 @@ class TaskHandle(BaseHandle):
                 '  2) Move shared logic into a plain Python helper function and call that.'
             )
 
-        return super().__call__(*args, **kwargs)
+        outputs = super().__call__(*args, **kwargs)
+        # if "metadata.call_link_label" is set, use it as the name of the task
+        if outputs._node.inputs.metadata.call_link_label.value is not None:
+            outputs._node.name = outputs._node.inputs.metadata.call_link_label.value
+        return outputs
 
     def run(self, /, *args, **kwargs):
         graph = self.build(*args, **kwargs)
