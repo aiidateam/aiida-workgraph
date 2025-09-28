@@ -312,3 +312,13 @@ def test_call_link_label_as_name() -> None:
         assert sum4._node.name == 'my_multiply_add'
         sum5 = test_graph(metadata={'call_link_label': 'my_graph'})
         assert sum5._node.name == 'my_graph'
+
+
+def test_metadata_can_not_be_used_as_function_argument(decorated_add) -> None:
+    """Test that metadata can not be used as a function argument."""
+
+    with pytest.raises(ValueError, match="Invalid input name: 'metadata'"):
+
+        @task
+        def myfunc(x, y, metadata=None):
+            return x + y

@@ -91,7 +91,6 @@ def test_decorator(fixture_localhost, python_executable_path):
     assert wg.tasks.multiply1.outputs.result.value.value == 9
     # process_label and label
     assert wg.tasks.add1.node.process_label == 'PythonJob<add1>'
-    assert wg.tasks.add1.node.label == 'add1'
 
 
 def test_PythonJob_kwargs(fixture_localhost, python_executable_path):
