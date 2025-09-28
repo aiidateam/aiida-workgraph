@@ -43,6 +43,22 @@ def build_callable_nodespec(
 
     # 1) infer from the callable (keep a snapshot before augmentation)
     func_in, func_out = infer_specs_from_callable(obj, in_spec, out_spec)
+    # "metadata" is reserved for AiiDA process, so raise error if user tries to use it
+    if 'metadata' in func_in.fields:
+        fn = getattr(obj, '__name__', 'the task function')
+        raise ValueError(
+            "Invalid input name: 'metadata'\n"
+            "Reason: In AiiDA, 'metadata' is reserved for process-level settings "
+            '(e.g., call_link_label, description) and cannot be used as a task input.\n\n'
+            f'How to fix: Rename the argument in {fn} to something else, e.g.: task_metadata.\n\n'
+            'Example:\n'
+            '    # before\n'
+            f'    def {fn}(metadata: dict, x: int):\n'
+            '        ...\n\n'
+            '    # after\n'
+            f'    def {fn}(task_metadata: dict, x: int):\n'
+            '        ...\n'
+        )
 
     # 2) process-contributed I/O (if any)
     proc_in = proc_out = None
