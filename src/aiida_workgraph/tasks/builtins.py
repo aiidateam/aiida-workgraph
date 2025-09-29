@@ -1,9 +1,9 @@
 from typing import Any, Dict
 from aiida_workgraph.task import Task, ChildTaskSet, SpecTask
 from node_graph.nodes.builtins import _GraphIOSharedMixin
-from node_graph import RuntimeExecutor
 from node_graph.socket import BaseSocket
 from node_graph.executor import RuntimeExecutor
+
 
 class GraphLevelTask(_GraphIOSharedMixin, SpecTask):
     """Graph level task variant with shared IO."""
@@ -97,10 +97,10 @@ class Map(Zone):
     @property
     def item(self):
         for child in self.children:
-            if child.identifier == "workgraph.map_item":
+            if child.identifier == 'workgraph.map_item':
                 return child.outputs
         # create a child map_item_task if it does not exist
-        map_item_task = self.add_task("workgraph.map_item")
+        map_item_task = self.add_task('workgraph.map_item')
         return map_item_task.outputs
 
     def update_sockets(self) -> None:
@@ -111,7 +111,7 @@ class Map(Zone):
         self.add_output('workgraph.any', '_wait')
 
     def gather(self, socket: BaseSocket) -> None:
-        gather_item = self.graph.add_task("workgraph.gather_item")
+        gather_item = self.graph.add_task('workgraph.gather_item')
         self.graph.add_link(socket, gather_item.inputs.value)
         return gather_item.outputs.values
 
@@ -127,11 +127,11 @@ class MapItem(Task):
     def update_sockets(self) -> None:
         self.inputs._clear()
         self.outputs._clear()
-        self.add_input("workgraph.any", "source", link_limit=100000)
-        self.add_input("workgraph.any", "key")
-        self.add_output("workgraph.any", "key")
-        self.add_output("workgraph.any", "value")
-        self.add_output("workgraph.any", "_wait")
+        self.add_input('workgraph.any', 'source', link_limit=100000)
+        self.add_input('workgraph.any', 'key')
+        self.add_output('workgraph.any', 'key')
+        self.add_output('workgraph.any', 'value')
+        self.add_output('workgraph.any', '_wait')
 
     def get_executor(self):
         from aiida_workgraph.executors.builtins import get_item
@@ -142,18 +142,18 @@ class MapItem(Task):
 class GatherItem(Task):
     """GatherItem"""
 
-    identifier = "workgraph.gather_item"
-    name = "GatherItem"
-    node_type = "Normal"
-    catalog = "Control"
+    identifier = 'workgraph.gather_item'
+    name = 'GatherItem'
+    node_type = 'Normal'
+    catalog = 'Control'
 
     def create_sockets(self) -> None:
         self.inputs._clear()
         self.outputs._clear()
 
-        self.add_input("workgraph.any", "value")
-        self.add_output("workgraph.namespace", "values")
-        self.add_output("workgraph.any", "_wait")
+        self.add_input('workgraph.any', 'value')
+        self.add_output('workgraph.namespace', 'values')
+        self.add_output('workgraph.any', '_wait')
 
     def get_executor(self):
         from aiida_workgraph.executors.builtins import return_inputs
