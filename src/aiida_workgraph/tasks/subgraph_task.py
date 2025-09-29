@@ -1,15 +1,19 @@
 from __future__ import annotations
 from node_graph.node_spec import NodeSpec
 from aiida_workgraph.task import SpecTask
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from aiida_workgraph import WorkGraph
 
 
 class SubGraphTask(SpecTask):
     """Task created from WorkGraph."""
 
-    identifier = "workgraph.workgraph_task"
-    name = "SubGraphTask"
-    node_type = "Normal"
-    catalog = "Builtins"
+    identifier = 'workgraph.workgraph_task'
+    name = 'SubGraphTask'
+    node_type = 'Normal'
+    catalog = 'Builtins'
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -40,7 +44,7 @@ class SubGraphTask(SpecTask):
             input_socket = self.subgraph.inputs[name]
             input_socket._set_socket_value(data)
         # merge the properties
-        metadata = {"call_link_label": self.name}
+        metadata = {'call_link_label': self.name}
         inputs = self.subgraph.to_engine_inputs(metadata=metadata)
         return inputs
 
@@ -50,32 +54,31 @@ class SubGraphTask(SpecTask):
 
         inputs = self.prepare_for_subgraph_task(kwargs)
 
-        if self.action == "PAUSE":
-            engine_process.report(f"Task {self.name} is created and paused.")
+        if self.action == 'PAUSE':
+            engine_process.report(f'Task {self.name} is created and paused.')
             process = create_and_pause_process(
                 engine_process.runner,
                 WorkGraphEngine,
                 inputs,
-                state_msg="Paused through WorkGraph",
+                state_msg='Paused through WorkGraph',
             )
-            state = "CREATED"
+            state = 'CREATED'
             process = process.node
         else:
             process = engine_process.submit(WorkGraphEngine, **inputs)
-            state = "RUNNING"
-        process.label = self.name
+            state = 'RUNNING'
 
         return process, state
 
 
 def _build_subgraph_task_nodespec(
-    graph: "WorkGraph",
+    graph: 'WorkGraph',
     name: str | None = None,
 ) -> NodeSpec:
     from node_graph.executor import SafeExecutor
 
     meta = {
-        "node_type": "SubGraph",
+        'node_type': 'SubGraph',
     }
 
     return NodeSpec(

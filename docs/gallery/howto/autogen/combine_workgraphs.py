@@ -87,9 +87,9 @@ wg.run()
 
 random_number = wg.tasks.generate_random_number.outputs.result.value.value
 
-print("\nResults:")
-print("  Random number:", random_number)
-print("  Final result:", f"{wg.outputs.result.value.value} = (1 + 2) * {random_number}")
+print('\nResults:')
+print('  Random number:', random_number)
+print('  Final result:', f'{wg.outputs.result.value.value} = (1 + 2) * {random_number}')
 
 # %%
 # Let's have a look at the provenance graph:

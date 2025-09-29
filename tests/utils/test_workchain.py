@@ -12,41 +12,39 @@ class WorkChainWithNestNamespace(WorkChain):
     def define(cls, spec):
         """Specify inputs and outputs."""
         super().define(spec)
-        spec.input_namespace("non_dynamic_port", required=False)
-        spec.input("non_dynamic_port.a", valid_type=Int)
-        spec.input("non_dynamic_port.b", valid_type=Int)
-        spec.input_namespace("dynamic_port", dynamic=True)
+        spec.input_namespace('non_dynamic_port', required=False)
+        spec.input('non_dynamic_port.a', valid_type=Int)
+        spec.input('non_dynamic_port.b', valid_type=Int)
+        spec.input_namespace('dynamic_port', dynamic=True)
         spec.expose_inputs(
             ArithmeticAddCalculation,
-            namespace="add",
+            namespace='add',
         )
-        spec.expose_inputs(MultiplyAddWorkChain, namespace="multiply_add")
+        spec.expose_inputs(MultiplyAddWorkChain, namespace='multiply_add')
         spec.outline(
             cls.add,
             cls.multiply_add,
             cls.validate_result,
             cls.result,
         )
-        spec.output("result", valid_type=Int)
-        spec.expose_outputs(MultiplyAddWorkChain, namespace="multiply_add")
-        spec.output_namespace("dynamic_port", dynamic=True)
-        spec.exit_code(
-            400, "ERROR_NEGATIVE_NUMBER", message="The result is a negative number."
-        )
+        spec.output('result', valid_type=Int)
+        spec.expose_outputs(MultiplyAddWorkChain, namespace='multiply_add')
+        spec.output_namespace('dynamic_port', dynamic=True)
+        spec.exit_code(400, 'ERROR_NEGATIVE_NUMBER', message='The result is a negative number.')
 
     def add(self):
         """Add two numbers using the `ArithmeticAddCalculation` calculation job plugin."""
-        inputs = AttributeDict(self.exposed_inputs(ArithmeticAddCalculation, "add"))
+        inputs = AttributeDict(self.exposed_inputs(ArithmeticAddCalculation, 'add'))
         future = self.submit(ArithmeticAddCalculation, **inputs)
-        self.report(f"Submitted the `ArithmeticAddCalculation`: {future}")
+        self.report(f'Submitted the `ArithmeticAddCalculation`: {future}')
         return ToContext(addition=future)
 
     def multiply_add(self):
         """Multiply and add two numbers using the `MultiplyAddWorkChain` workchain."""
-        inputs = self.exposed_inputs(MultiplyAddWorkChain, "multiply_add")
-        inputs["z"] = self.ctx.addition.outputs.sum
+        inputs = self.exposed_inputs(MultiplyAddWorkChain, 'multiply_add')
+        inputs['z'] = self.ctx.addition.outputs.sum
         future = self.submit(MultiplyAddWorkChain, **inputs)
-        self.report(f"Submitted the `MultiplyAddWorkChain`: {future}")
+        self.report(f'Submitted the `MultiplyAddWorkChain`: {future}')
         return ToContext(multiply_add=future)
 
     def validate_result(self):
@@ -57,11 +55,7 @@ class WorkChainWithNestNamespace(WorkChain):
 
     def result(self):
         """Add the result to the outputs."""
-        self.out("result", self.ctx.addition.outputs.sum)
-        self.out("dynamic_port.result1", self.ctx.multiply_add.outputs.result)
-        self.out("dynamic_port.result2", self.ctx.multiply_add.outputs.result)
-        self.out_many(
-            self.exposed_outputs(
-                self.ctx.multiply_add, MultiplyAddWorkChain, namespace="multiply_add"
-            )
-        )
+        self.out('result', self.ctx.addition.outputs.sum)
+        self.out('dynamic_port.result1', self.ctx.multiply_add.outputs.result)
+        self.out('dynamic_port.result2', self.ctx.multiply_add.outputs.result)
+        self.out_many(self.exposed_outputs(self.ctx.multiply_add, MultiplyAddWorkChain, namespace='multiply_add'))

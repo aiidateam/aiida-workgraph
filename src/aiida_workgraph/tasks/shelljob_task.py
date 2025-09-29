@@ -20,21 +20,19 @@ class ShellJobTask(SpecTask):
     it and call `execute`.
     """
 
-    identifier = "workgraph.shelljob"
-    name = "shelljob"
-    node_type = "SHELLJOB"
-    catalog = "AIIDA"
+    identifier = 'workgraph.shelljob'
+    name = 'shelljob'
+    node_type = 'SHELLJOB'
+    catalog = 'AIIDA'
 
     def serialize_data(self, data: Dict[str, Any]) -> Dict[str, Any]:
         """Overwrite the serialize_data method to handle the parser function."""
         import inspect
 
-        parser = data["inputs"].get("parser")
+        parser = data['inputs'].get('parser')
         if parser is not None:
             if inspect.isfunction(parser):
-                data["inputs"]["parser"] = RuntimeExecutor.from_callable(
-                    parser
-                ).to_dict()
+                data['inputs']['parser'] = RuntimeExecutor.from_callable(parser).to_dict()
 
     def execute(self, engine_process, args=None, kwargs=None, var_kwargs=None):
         """Submit/launch the AiiDA ShellJob.
@@ -53,31 +51,27 @@ class ShellJobTask(SpecTask):
 
         subset = {k: kwargs[k] for k in list(kwargs) if k in aiida_shell_keys}
 
-        parser = subset.get("parser", None)
-        if isinstance(parser, dict) and {"module_path", "callable_name"} <= set(parser):
+        parser = subset.get('parser', None)
+        if isinstance(parser, dict) and {'module_path', 'callable_name'} <= set(parser):
             # already a Executor dict -> build executor instance
-            subset["parser"] = RuntimeExecutor(**parser).callable
+            subset['parser'] = RuntimeExecutor(**parser).callable
         elif inspect.isfunction(parser):
-            subset["parser"] = parser
+            subset['parser'] = parser
 
         if subset:
-            if "command" in subset:
-                subset["command"] = (
-                    subset["command"].value
-                    if isinstance(subset["command"], orm.Str)
-                    else subset["command"]
+            if 'command' in subset:
+                subset['command'] = (
+                    subset['command'].value if isinstance(subset['command'], orm.Str) else subset['command']
                 )
-            if "resolve_command" in subset:
-                subset["resolve_command"] = (
-                    subset["resolve_command"].value
-                    if isinstance(subset["resolve_command"], orm.Bool)
-                    else subset["resolve_command"]
+            if 'resolve_command' in subset:
+                subset['resolve_command'] = (
+                    subset['resolve_command'].value
+                    if isinstance(subset['resolve_command'], orm.Bool)
+                    else subset['resolve_command']
                 )
-            if "arguments" in subset:
-                subset["arguments"] = (
-                    subset["arguments"].get_list()
-                    if isinstance(subset["arguments"], orm.List)
-                    else subset["arguments"]
+            if 'arguments' in subset:
+                subset['arguments'] = (
+                    subset['arguments'].get_list() if isinstance(subset['arguments'], orm.List) else subset['arguments']
                 )
             prepared = prepare_shell_job_inputs(**subset)
             # drop original keys so they won't clash with launch kwargs
@@ -87,23 +81,22 @@ class ShellJobTask(SpecTask):
             kwargs.update(prepared)
 
         # metadata
-        md = kwargs.setdefault("metadata", {})
-        md.setdefault("call_link_label", self.name)
+        md = kwargs.setdefault('metadata', {})
+        md.setdefault('call_link_label', self.name)
 
-        if getattr(self, "action", None) == "PAUSE":
-            engine_process.report(f"Task {self.name} is created and paused.")
+        if getattr(self, 'action', None) == 'PAUSE':
+            engine_process.report(f'Task {self.name} is created and paused.')
             process = create_and_pause_process(
                 engine_process.runner,
                 ShellJob,
                 kwargs,
-                state_msg="Paused through WorkGraph",
+                state_msg='Paused through WorkGraph',
             )
-            state = "CREATED"
+            state = 'CREATED'
             process = process.node
         else:
             process = engine_process.submit(ShellJob, **kwargs)
-            state = "RUNNING"
-        process.label = self.name
+            state = 'RUNNING'
         return process, state
 
 
@@ -129,14 +122,12 @@ def _build_shelljob_nodespec(
     in_spec, out_spec = from_aiida_process(ShellJob)
     # the code socket is not required in the task
     # as we can build it from the command input
-    code_spec = in_spec.fields["code"]
+    code_spec = in_spec.fields['code']
     patched_code = replace(code_spec, meta=replace(code_spec.meta, required=False))
-    in_spec = replace(in_spec, fields={**in_spec.fields, "code": patched_code})
+    in_spec = replace(in_spec, fields={**in_spec.fields, 'code': patched_code})
 
     # Add additional inputs
-    additions_in = namespace(
-        command=Any, resolve_command=Annotated[bool, SocketSpecMeta(required=False)]
-    )
+    additions_in = namespace(command=Any, resolve_command=Annotated[bool, SocketSpecMeta(required=False)])
     in_spec = merge_specs(in_spec, additions_in)
 
     # Ensure stdout/stderr outputs
@@ -146,10 +137,7 @@ def _build_shelljob_nodespec(
     # add extra outputs requested by user
     if outputs:
         # make sure the key are AiiDA compatible
-        fields = {
-            ShellParser.format_link_label(key): value
-            for key, value in outputs.fields.items()
-        }
+        fields = {ShellParser.format_link_label(key): value for key, value in outputs.fields.items()}
         outputs = replace(outputs, fields=fields)
         out_spec = merge_specs(out_spec, outputs)
 
@@ -159,13 +147,13 @@ def _build_shelljob_nodespec(
     exec_payload = RuntimeExecutor.from_callable(ShellJob)
 
     return NodeSpec(
-        identifier=identifier or "ShellJob",
-        catalog="AIIDA",
+        identifier=identifier or 'ShellJob',
+        catalog='AIIDA',
         inputs=in_spec,
         outputs=out_spec,
         executor=exec_payload,
         base_class=ShellJobTask,
-        metadata={"node_type": "SHELLJOB"},
+        metadata={'node_type': 'SHELLJOB'},
     )
 
 

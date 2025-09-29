@@ -18,7 +18,7 @@ def add(x: Int = 0, y: Int = 0, t: Int = 1) -> Int:
 def sum_diff(x: Int = 0, y: Int = 0, t: Int = 1) -> namespace(sum=Int, diff=Int):
     """Add node."""
     time.sleep(t)
-    return {"sum": x + y, "diff": x - y}
+    return {'sum': x + y, 'diff': x - y}
 
 
 @task.pythonjob()

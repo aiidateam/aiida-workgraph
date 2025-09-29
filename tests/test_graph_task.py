@@ -4,16 +4,14 @@ from aiida_workgraph import task, WorkGraph, spec
 @task
 def add_multiply(a, b) -> spec.namespace(sum=int, product=int):
     """Task that returns a namespace with sum and product."""
-    return {"sum": a + b, "product": a * b}
+    return {'sum': a + b, 'product': a * b}
 
 
 def test_tuple_namespace_outputs():
     """Test mapping tuple results to the workgraph outputs."""
 
     @task.graph
-    def test_graph(
-        x, y
-    ) -> spec.namespace(
+    def test_graph(x, y) -> spec.namespace(
         out1=spec.namespace(sum=int, product=int),
         out2=spec.namespace(sum=int, product=int),
     ):
@@ -44,8 +42,8 @@ def test_single_namespace_outputs():
 
     results, wg = test_graph.run_get_graph(1, 2)
     #
-    assert results["sum"] == 3
-    assert results["product"] == 2
+    assert results['sum'] == 3
+    assert results['product'] == 2
     # graph outputs
     assert wg.outputs.sum.value == 3
     assert wg.outputs.product.value == 2

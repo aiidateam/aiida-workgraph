@@ -42,10 +42,10 @@ def RemoteAdd(x: int, y: int, computer: str) -> int:
     return add(x=x, y=y, computer=computer).result
 
 
-wg = RemoteAdd.build(x=1, y=2, computer="localhost")
+wg = RemoteAdd.build(x=1, y=2, computer='localhost')
 wg.run()
 
-print("\nResult: ", wg.outputs.result.value)
+print('\nResult: ', wg.outputs.result.value)
 
 # %%
 # Understanding inputs and outputs
@@ -59,6 +59,7 @@ print("\nResult: ", wg.outputs.result.value)
 # * **Outputs:** In addition to your function's return value (available as ``.result`` by default), the task provides comprehensive outputs, such as ``remote_folder`` (a reference to the job's directory on the remote computer).
 
 # %%
+# .. _pythonjob_metadata:
 # Prepare Python environment on remote computer
 # ---------------------------------------------
 #
@@ -70,9 +71,9 @@ print("\nResult: ", wg.outputs.result.value)
 
 
 metadata = {
-    "options": {
+    'options': {
         # "custom_scheduler_commands" : "module load anaconda\nconda activate py3.11\n",
-        "custom_scheduler_commands": "",  # Keeping it empty for this example
+        'custom_scheduler_commands': '',  # Keeping it empty for this example
     }
 }
 
@@ -90,22 +91,20 @@ def multiply(x, y):
 
 
 @task.graph
-def RemoteAddLocalMultiply(
-    x: int, y: int, computer: str, metadata: Annotated[dict, add.inputs.metadata]
-) -> int:
-    the_sum = add(x=x, y=y, computer=computer, metadata=metadata).result
+def RemoteAddLocalMultiply(x: int, y: int, computer: str, add_metadata: Annotated[dict, add.inputs.metadata]) -> int:
+    the_sum = add(x=x, y=y, computer=computer, metadata=add_metadata).result
     return multiply(x=the_sum, y=4)  # this will run locally
 
 
 wg = RemoteAddLocalMultiply.build(
     x=2,
     y=3,
-    computer="localhost",
-    metadata=metadata,
+    computer='localhost',
+    add_metadata=metadata,
 )
 wg.run()
 
-print("\nResult:", wg.outputs.result.value)
+print('\nResult:', wg.outputs.result.value)
 
 
 # %%

@@ -18,6 +18,8 @@ This section contains a collection of HowTos for various topics.
    autogen/async
    autogen/monitor
    autogen/control_task_execution_order
+   autogen/limit_concurrent
+   autogen/set_task_metadata
    autogen/error_resistant
    cli
    control
