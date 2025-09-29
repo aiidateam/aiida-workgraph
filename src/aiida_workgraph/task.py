@@ -137,7 +137,7 @@ class Task(GraphNode):
                 self.set_outputs_from_data_node(node)
 
     def set_outputs_from_process_node(self, node: aiida.orm.ProcessNode) -> None:
-        from aiida_workgraph.utils import get_nested_dict
+        from aiida_workgraph.utils import resolve_node_link_managers
 
         # if the node is finished ok, update the output sockets
         # note the task.state may not be the same as the node.process_state
@@ -145,12 +145,7 @@ class Task(GraphNode):
         # even if the node.is_finished_ok is True
         self.process = node
         if node.is_finished_ok:
-            # update the output sockets
-            for socket in self.outputs:
-                if socket._identifier == 'workgraph.namespace':
-                    socket._value = get_nested_dict(node.outputs, socket._name, default=None)
-                else:
-                    socket.value = get_nested_dict(node.outputs, socket._name, default=None)
+            self.outputs._set_socket_value(resolve_node_link_managers(node.outputs))
 
     def set_outputs_from_data_node(self, node: aiida.orm.Data) -> None:
         self.outputs[0].value = node

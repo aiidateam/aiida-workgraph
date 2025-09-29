@@ -339,3 +339,49 @@ def test_expose_task_spec():
     assert wg.outputs.out1.sum.value == 3
     assert wg.outputs.out1.product.value == 2
     assert wg.outputs.out2.value == 1
+
+
+def test_update_outputs():
+    """Test the update method of the WorkGraph."""
+    from aiida_workgraph.orm.workgraph import WorkChainNode
+    from aiida.common.links import LinkType
+
+    def create_process_node(state='finished', exit_status=0, outputs: dict = None):
+        node = WorkChainNode()
+        node.store()
+        # add outputs
+        for key, value in outputs.items():
+            if isinstance(value, dict):
+                for k, v in value.items():
+                    v.base.links.add_incoming(node, link_type=LinkType.RETURN, link_label=f'{key}__{k}')
+            else:
+                value.base.links.add_incoming(node, link_type=LinkType.RETURN, link_label=key)
+        node.set_process_state(state)
+        node.set_exit_status(exit_status)
+        node.seal()
+        return node
+
+    # namespace output
+    wg = WorkGraph('test_update_outputs', outputs=spec.namespace(y=Any))
+    wg.process = create_process_node(outputs={'y': orm.Int(1).store()})
+    wg.update()
+    assert wg.state == 'FINISHED'
+    assert wg.outputs.y.value == 1
+    # dynamic output
+    wg = WorkGraph('test_update_outputs', outputs=spec.dynamic(Any))
+    wg.process = create_process_node(
+        outputs={'x': orm.Int(0).store(), 'y': orm.Int(1).store(), 'z': orm.Int(2).store()}
+    )
+    wg.update()
+    assert wg.outputs.x.value == 0
+    assert wg.outputs.y.value == 1
+    assert wg.outputs.z.value == 2
+    # nested namespace output
+    wg = WorkGraph('test_update_outputs', outputs=spec.namespace(x=Any, nested=spec.namespace(y=Any, z=Any)))
+    wg.process = create_process_node(
+        outputs={'x': orm.Int(0).store(), 'nested': {'y': orm.Int(1).store(), 'z': orm.Int(2).store()}}
+    )
+    wg.update()
+    assert wg.outputs.x.value == 0
+    assert wg.outputs.nested.y.value == 1
+    assert wg.outputs.nested.z.value == 2
