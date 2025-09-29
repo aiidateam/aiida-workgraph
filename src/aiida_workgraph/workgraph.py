@@ -308,7 +308,7 @@ class WorkGraph(node_graph.NodeGraph):
         of the tasks that are outgoing from the process node. This includes updating the state of process nodes
         linked to the current process, and data nodes linked to the current process.
         """
-        from aiida_workgraph.utils import get_processes_latest, get_nested_dict
+        from aiida_workgraph.utils import get_processes_latest, resolve_node_link_managers
 
         if self.process is None:
             return
@@ -326,12 +326,7 @@ class WorkGraph(node_graph.NodeGraph):
             self.widget.states = states
 
         if self.process.is_finished_ok:
-            # update the output sockets
-            for socket in self.outputs:
-                if socket._identifier == 'workgraph.namespace':
-                    socket._value = get_nested_dict(self.process.outputs, socket._name, default=None)
-                else:
-                    socket.value = get_nested_dict(self.process.outputs, socket._name, default=None)
+            self.outputs._set_socket_value(resolve_node_link_managers(self.process.outputs))
 
     @property
     def pk(self) -> Optional[int]:
