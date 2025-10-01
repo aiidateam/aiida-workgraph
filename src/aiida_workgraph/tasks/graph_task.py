@@ -24,6 +24,8 @@ class GraphTask(SpecTask):
 
         executor = RuntimeExecutor(**self.get_executor().to_dict()).callable
         max_depth = self.get_metadata()['spec_schema'].get('metadata', {}).get('max_depth', 100)
+        metadata = kwargs.pop('metadata', {}) if kwargs else {}
+        metadata.setdefault('call_link_label', self.name)
         # Cloudpickle doesn’t restore the function’s own name in its globals after unpickling,
         # so any recursive calls would raise NameError. As a temporary workaround, we re-insert
         # the decorated function into its globals under its original name.
@@ -61,7 +63,7 @@ class GraphTask(SpecTask):
             var_kwargs=var_kwargs,
         )
         wg.parent_uuid = engine_process.node.uuid
-        inputs = wg.to_engine_inputs(metadata={'call_link_label': self.name})
+        inputs = wg.to_engine_inputs(metadata=metadata)
         if self.action == 'PAUSE':
             engine_process.report(f'Task {self.name} is created and paused.')
             process = create_and_pause_process(
