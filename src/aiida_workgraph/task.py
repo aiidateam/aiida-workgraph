@@ -331,7 +331,12 @@ class TaskHandle(BaseHandle):
         outputs = super().__call__(*args, **kwargs)
         # if "metadata.call_link_label" is set, use it as the name of the task
         if outputs._node.inputs.metadata.call_link_label.value is not None:
+            graph = outputs._graph
             outputs._node.name = outputs._node.inputs.metadata.call_link_label.value
+            # update the names of tasks and links collections in the graph
+            graph.tasks._items = {node.name: node for node in graph.tasks._items.values()}
+            graph.links._items = {link.name: link for link in graph.links._items.values()}
+
         return outputs
 
     def run(self, /, *args, **kwargs):
