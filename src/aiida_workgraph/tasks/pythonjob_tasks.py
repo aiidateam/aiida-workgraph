@@ -7,7 +7,7 @@ from aiida_workgraph.utils import create_and_pause_process
 from aiida.engine import run_get_node
 from aiida_pythonjob import pyfunction, PythonJob, PyFunction, MonitorPyFunction
 from aiida_pythonjob.utils import serialize_ports
-from aiida_workgraph.task import SpecTask
+from aiida_workgraph.task import Task
 from node_graph.socket_spec import SocketSpec, SocketSpecSelect, SocketSpecMeta
 from node_graph.node_spec import NodeSpec
 from aiida_workgraph.socket_spec import namespace
@@ -17,7 +17,7 @@ from node_graph.executor import RuntimeExecutor
 from node_graph.node_spec import BaseHandle
 
 
-class BaseSerializablePythonTask(SpecTask):
+class BaseSerializablePythonTask(Task):
     """
     A base Task that handles serialization and deserialization
     of Python data into AiiDA Data nodes, so that raw Python data
@@ -33,7 +33,7 @@ class BaseSerializablePythonTask(SpecTask):
         function_inputs = {key: data['inputs'][key] for key in data['inputs'] if key not in self.non_function_inputs}
         serialized_inputs = serialize_ports(
             python_data=function_inputs,
-            port_schema=self._spec.inputs,
+            port_schema=self.spec.inputs,
             serializers=all_serializers,
         )
         data['inputs'].update(serialized_inputs)
@@ -54,18 +54,18 @@ class BaseSerializablePythonTask(SpecTask):
 
     @property
     def non_function_inputs(self):
-        return self._spec.metadata.get('non_function_inputs', [])
+        return self.spec.metadata.get('non_function_inputs', [])
 
     @property
     def non_function_outputs(self):
-        return self._spec.metadata.get('non_function_outputs', [])
+        return self.spec.metadata.get('non_function_outputs', [])
 
     @property
     def function_inputs_spec(self):
         inputs_spec = namespace(
             _=Annotated[
                 Any,
-                self._spec.inputs,
+                self.spec.inputs,
                 SocketSpecSelect(exclude=self.non_function_inputs),
             ]
         ).fields['_']
@@ -76,7 +76,7 @@ class BaseSerializablePythonTask(SpecTask):
         outputs_spec = namespace(
             _=Annotated[
                 Any,
-                self._spec.outputs,
+                self.spec.outputs,
                 SocketSpecSelect(exclude=self.non_function_outputs),
             ]
         ).fields['_']
@@ -129,8 +129,8 @@ class PythonJobTask(BaseSerializablePythonTask):
         function_inputs = self.get_function_inputs(kwargs, var_kwargs)
         func = RuntimeExecutor(**self.get_executor().to_dict()).callable
         # If it's a wrapped function, unwrap
-        if isinstance(func, BaseHandle) and hasattr(func, '_func'):
-            func = func._func
+        if isinstance(func, BaseHandle) and hasattr(func, '_callable'):
+            func = func._callable
 
         if hasattr(func, 'is_process_function'):
             func = func.func
@@ -181,10 +181,10 @@ class PyFunctionTask(BaseSerializablePythonTask):
         metadata = self.get_process_metadata(kwargs)
         func = RuntimeExecutor(**self.get_executor().to_dict()).callable
         # If it's a wrapped function, unwrap
-        if isinstance(func, BaseHandle) and hasattr(func, '_func'):
-            func = func._func
+        if isinstance(func, BaseHandle) and hasattr(func, '_callable'):
+            func = func._callable
 
-        if self.metadata.get('is_coroutine', False):
+        if self.spec.metadata.get('is_coroutine', False):
             function_inputs = self.get_function_inputs(kwargs, var_kwargs)
             inputs = prepare_pyfunction_inputs(
                 function=func,
@@ -244,8 +244,8 @@ class MonitorFunctionTask(BaseSerializablePythonTask):
         metadata = self.get_process_metadata(kwargs)
         func = RuntimeExecutor(**self.get_executor().to_dict()).callable
         # If it's a wrapped function, unwrap
-        if isinstance(func, BaseHandle) and hasattr(func, '_func'):
-            func = func._func
+        if isinstance(func, BaseHandle) and hasattr(func, '_callable'):
+            func = func._callable
         function_inputs = self.get_function_inputs(kwargs, var_kwargs)
         inputs = prepare_monitor_function_inputs(
             function=func,
@@ -278,6 +278,7 @@ class MonitorFunctionTask(BaseSerializablePythonTask):
 def build_pythonjob_nodespec(
     obj: Callable,
     identifier: Optional[str] = None,
+    catalog: str = 'Others',
     in_spec: Optional[SocketSpec] | list = None,
     out_spec: Optional[SocketSpec] | list = None,
     error_handlers: Optional[Dict[str, ErrorHandlerSpec]] = None,
@@ -298,6 +299,7 @@ def build_pythonjob_nodespec(
     return build_callable_nodespec(
         obj=obj,
         node_type='PYTHONJOB',
+        catalog=catalog,
         base_class=PythonJobTask,
         identifier=identifier,
         process_cls=PythonJob,
@@ -311,6 +313,7 @@ def build_pythonjob_nodespec(
 def build_pyfunction_nodespec(
     obj: Callable,
     identifier: Optional[str] = None,
+    catalog: str = 'Others',
     in_spec: Optional[SocketSpec] = None,
     out_spec: Optional[SocketSpec] = None,
     error_handlers: Optional[Dict[str, ErrorHandlerSpec]] = None,
@@ -324,6 +327,7 @@ def build_pyfunction_nodespec(
     return build_callable_nodespec(
         obj=obj,
         node_type='PYFUNCTION',
+        catalog=catalog,
         base_class=PyFunctionTask,
         identifier=identifier,
         process_cls=PyFunction,
@@ -337,6 +341,7 @@ def build_pyfunction_nodespec(
 def build_monitor_function_nodespec(
     obj: Callable,
     identifier: Optional[str] = None,
+    catalog: str = 'Others',
     in_spec: Optional[SocketSpec] = None,
     out_spec: Optional[SocketSpec] = None,
     error_handlers: Optional[Dict[str, ErrorHandlerSpec]] = None,
@@ -350,6 +355,7 @@ def build_monitor_function_nodespec(
     return build_callable_nodespec(
         obj=obj,
         node_type='MONITOR',
+        catalog=catalog,
         base_class=MonitorFunctionTask,
         identifier=identifier,
         process_cls=MonitorPyFunction,

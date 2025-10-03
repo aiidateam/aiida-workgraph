@@ -146,7 +146,7 @@ class MyAdd(Task):
         'callable_name': 'add',
     }
 
-    def update_sockets(self):
+    def update_spec(self):
         self.inputs._clear()
         self.outputs._clear()
         _ = self.add_input('workgraph.Any', 'x')

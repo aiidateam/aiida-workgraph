@@ -192,10 +192,10 @@ def clean_pickled_task_executor(tdata: Dict[str, Any]) -> None:
     from aiida_workgraph.executors.builtins import UnavailableExecutor
 
     # spec
-    if 'spec_schema' in tdata['metadata']:
-        executor = tdata['metadata']['spec_schema'].get('executor', {})
+    if 'spec' in tdata:
+        executor = tdata['spec'].get('executor', {})
         if executor.get('mode', '') == 'pickled_callable':
-            tdata['metadata']['spec_schema']['executor'] = RuntimeExecutor.from_callable(UnavailableExecutor).to_dict()
+            tdata['spec']['executor'] = RuntimeExecutor.from_callable(UnavailableExecutor).to_dict()
         if executor.get('mode', '') == 'graph':
             wgdata = executor['graph_data']
             for task in wgdata['tasks'].values():
@@ -445,7 +445,7 @@ def workgraph_to_short_json(wgdata: Dict[str, Union[str, List, Dict]]) -> Dict[s
         wgdata_short['nodes'][name] = {
             'identifier': task['identifier'],
             'label': task['name'],
-            'node_type': task['metadata']['node_type'].upper(),
+            'node_type': task['spec']['node_type'].upper(),
             'inputs': inputs,
             'properties': properties,
             'outputs': [],

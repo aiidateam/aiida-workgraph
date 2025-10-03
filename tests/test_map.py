@@ -21,7 +21,7 @@ def calc_sum(**kwargs) -> dict:
     return {'sum': sum(kwargs.values())}
 
 
-def test_map_instruction(add_code):
+def test_map_zone(add_code):
     x = 1
     y = 2
     n = 3

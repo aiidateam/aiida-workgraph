@@ -1,14 +1,23 @@
 from typing import Any, Dict
-from aiida_workgraph.task import Task, ChildTaskSet, SpecTask
+from aiida_workgraph.task import ChildTaskSet, Task
+from aiida_workgraph import task, namespace, meta
 from node_graph.nodes.builtins import _GraphIOSharedMixin
 from node_graph import RuntimeExecutor
+from aiida import orm
+from node_graph.node_spec import NodeSpec
+from node_graph.socket_spec import SocketSpec, SocketSpecMeta
+from typing import Annotated
+from aiida_workgraph.executors.builtins import get_item, update_ctx, get_context, select
 
 
-class GraphLevelTask(_GraphIOSharedMixin, SpecTask):
+class GraphLevelTask(_GraphIOSharedMixin, Task):
     """Graph level task variant with shared IO."""
 
-    catalog = 'Builtins'
-    is_dynamic: bool = True
+    _default_spec = NodeSpec(
+        identifier='workgraph.graph_level_task',
+        catalog='Builtins',
+        base_class_path='aiida_workgraph.tasks.builtins.GraphLevelTask',
+    )
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -20,10 +29,12 @@ class Zone(Task):
     Extend the Task class to include a 'children' attribute.
     """
 
-    identifier = 'workgraph.zone'
-    name = 'Zone'
-    node_type = 'ZONE'
-    catalog = 'Control'
+    _default_spec = NodeSpec(
+        identifier='workgraph.zone',
+        node_type='ZONE',
+        catalog='Control',
+        base_class_path='aiida_workgraph.tasks.builtins.Zone',
+    )
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -36,12 +47,6 @@ class Zone(Task):
         task.parent = self
         return task
 
-    def update_sockets(self) -> None:
-        self.inputs._clear()
-        self.outputs._clear()
-        self.add_input('workgraph.any', '_wait', link_limit=100000, metadata={'arg_type': 'none'})
-        self.add_output('workgraph.any', '_wait')
-
     def to_dict(self, **kwargs) -> Dict[str, Any]:
         tdata = super().to_dict(**kwargs)
         tdata['children'] = [task.name for task in self.children]
@@ -51,44 +56,45 @@ class Zone(Task):
 class While(Zone):
     """While"""
 
-    identifier = 'workgraph.while_zone'
-    name = 'While'
-    node_type = 'WHILE'
-    catalog = 'Control'
-
-    def update_sockets(self) -> None:
-        self.inputs._clear()
-        self.outputs._clear()
-        self.add_input('workgraph.any', '_wait', link_limit=100000, metadata={'arg_type': 'none'})
-        self.add_input('workgraph.int', 'max_iterations', property={'default': 10000})
-        self.add_input('workgraph.any', 'conditions', link_limit=100000)
-        self.add_output('workgraph.any', '_wait')
+    _default_spec = NodeSpec(
+        identifier='workgraph.while_zone',
+        node_type='WHILE',
+        catalog='Control',
+        inputs=namespace(
+            max_iterations=Annotated[int, SocketSpec('workgraph.any', default=10000)],
+            conditions=Annotated[Any, SocketSpec('workgraph.any', link_limit=100000)],
+        ),
+        base_class_path='aiida_workgraph.tasks.builtins.While',
+    )
 
 
 class If(Zone):
     """If task"""
 
-    identifier = 'workgraph.if_zone'
-    name = 'If'
-    node_type = 'IF'
-    catalog = 'Control'
-
-    def update_sockets(self) -> None:
-        self.inputs._clear()
-        self.outputs._clear()
-        self.add_input('workgraph.any', '_wait', link_limit=100000, metadata={'arg_type': 'none'})
-        self.add_input('workgraph.any', 'conditions')
-        self.add_input('workgraph.bool', 'invert_condition', property={'default': False})
-        self.add_output('workgraph.any', '_wait')
+    _default_spec = NodeSpec(
+        identifier='workgraph.if_zone',
+        node_type='IF',
+        catalog='Control',
+        inputs=namespace(
+            invert_condition=Annotated[bool, SocketSpec('workgraph.bool', default=False)],
+            conditions=Annotated[Any, SocketSpec('workgraph.any', link_limit=100000)],
+        ),
+        base_class_path='aiida_workgraph.tasks.builtins.If',
+    )
 
 
 class Map(Zone):
     """Map"""
 
-    identifier = 'workgraph.map_zone'
-    name = 'Map'
-    node_type = 'MAP'
-    catalog = 'Control'
+    _default_spec = NodeSpec(
+        identifier='workgraph.map_zone',
+        node_type='MAP',
+        catalog='Control',
+        inputs=namespace(
+            source=Annotated[Any, SocketSpec('workgraph.any', link_limit=100000)],
+        ),
+        base_class_path='aiida_workgraph.tasks.builtins.Map',
+    )
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -102,178 +108,96 @@ class Map(Zone):
         map_item_task = self.add_task('workgraph.map_item')
         return map_item_task.outputs.item
 
-    def update_sockets(self) -> None:
-        self.inputs._clear()
-        self.outputs._clear()
-        self.add_input('workgraph.any', 'source', link_limit=100000)
-        self.add_input('workgraph.any', '_wait', link_limit=100000, metadata={'arg_type': 'none'})
-        self.add_output('workgraph.any', '_wait')
-
 
 class MapItem(Task):
     """MapItem"""
 
-    identifier = 'workgraph.map_item'
-    name = 'MapItem'
-    node_type = 'Normal'
-    catalog = 'Control'
-
-    def update_sockets(self) -> None:
-        self.inputs._clear()
-        self.outputs._clear()
-        self.add_input('workgraph.any', 'source', link_limit=100000)
-        self.add_input('workgraph.any', 'key')
-        self.add_output('workgraph.any', 'item')
-        self.add_output('workgraph.any', '_wait')
-
-    def get_executor(self):
-        from aiida_workgraph.executors.builtins import get_item
-
-        return RuntimeExecutor.from_callable(get_item)
+    _default_spec = NodeSpec(
+        identifier='workgraph.map_item',
+        node_type='Normal',
+        catalog='Control',
+        inputs=namespace(
+            source=SocketSpec('workgraph.any', link_limit=100000, meta=SocketSpecMeta(required=False)),
+            key=SocketSpec('workgraph.string', meta=SocketSpecMeta(required=False)),
+        ),
+        outputs=namespace(item=SocketSpec('workgraph.any')),
+        executor=RuntimeExecutor.from_callable(get_item),
+        base_class_path='aiida_workgraph.tasks.builtins.MapItem',
+    )
 
 
 class SetContext(Task):
     """SetContext"""
 
-    identifier = 'workgraph.set_context'
-    name = 'SetContext'
-    node_type = 'Normal'
-    catalog = 'Control'
-
-    def update_sockets(self) -> None:
-        self.inputs._clear()
-        self.outputs._clear()
-        self.add_input('workgraph.any', 'context')
-        self.add_input('workgraph.any', 'key')
-        self.add_input('workgraph.any', 'value')
-        self.add_input('workgraph.any', '_wait', link_limit=100000, metadata={'arg_type': 'none'})
-        self.add_output('workgraph.any', '_wait')
-
-    def get_executor(self):
-        from aiida_workgraph.executors.builtins import update_ctx
-
-        return RuntimeExecutor.from_callable(update_ctx)
+    _default_spec = NodeSpec(
+        identifier='workgraph.set_context',
+        node_type='Normal',
+        catalog='Control',
+        inputs=namespace(
+            context=SocketSpec('workgraph.any', meta=SocketSpecMeta(required=False)),
+            key=any,
+            value=any,
+        ),
+        executor=RuntimeExecutor.from_callable(update_ctx),
+        base_class_path='aiida_workgraph.tasks.builtins.SetContext',
+    )
 
 
 class GetContext(Task):
     """GetContext"""
 
-    identifier = 'workgraph.get_context'
-    name = 'GetContext'
-    node_type = 'Normal'
-    catalog = 'Control'
-
-    def update_sockets(self) -> None:
-        self.inputs._clear()
-        self.outputs._clear()
-        self.add_input('workgraph.any', 'context')
-        self.add_input('workgraph.any', 'key')
-        self.add_input('workgraph.any', '_wait', link_limit=100000, metadata={'arg_type': 'none'})
-        self.add_output('workgraph.any', 'result')
-        self.add_output('workgraph.any', '_wait')
-
-    def get_executor(self):
-        from aiida_workgraph.executors.builtins import get_context
-
-        return RuntimeExecutor.from_callable(get_context)
+    _default_spec = NodeSpec(
+        identifier='workgraph.get_context',
+        node_type='Normal',
+        catalog='Control',
+        inputs=namespace(context=SocketSpec('workgraph.any', meta=SocketSpecMeta(required=False)), key=any),
+        outputs=namespace(result=any),
+        executor=RuntimeExecutor.from_callable(get_context),
+        base_class_path='aiida_workgraph.tasks.builtins.GetContext',
+    )
 
 
-class AiiDAInt(Task):
-    identifier = 'workgraph.aiida_int'
-    name = 'AiiDAInt'
-    node_type = 'Normal'
-    catalog = 'Test'
+class Select(Task):
+    """Select"""
 
-    def update_sockets(self) -> None:
-        self.add_input('workgraph.any', 'value', property={'default': 0.0})
-        self.add_input('workgraph.any', '_wait', link_limit=100000, metadata={'arg_type': 'none'})
-        self.add_output('workgraph.int', 'result')
-        self.add_output('workgraph.any', '_wait')
-
-    def get_executor(self):
-        from aiida import orm
-
-        return RuntimeExecutor.from_callable(orm.Int)
-
-
-class AiiDAFloat(Task):
-    identifier = 'workgraph.aiida_float'
-    name = 'AiiDAFloat'
-    node_type = 'Normal'
-    catalog = 'Test'
-
-    def update_sockets(self) -> None:
-        self.inputs._clear()
-        self.outputs._clear()
-        self.add_input('workgraph.float', 'value', property={'default': 0.0})
-        self.add_input('workgraph.any', '_wait', link_limit=100000, metadata={'arg_type': 'none'})
-        self.add_output('workgraph.float', 'result')
-        self.add_output('workgraph.any', '_wait')
-
-    def get_executor(self):
-        from aiida import orm
-
-        return RuntimeExecutor.from_callable(orm.Float)
+    _default_spec = NodeSpec(
+        identifier='workgraph.select',
+        node_type='Normal',
+        catalog='Control',
+        inputs=namespace(
+            condition=any,
+            true=any,
+            false=any,
+        ),
+        outputs=namespace(result=any),
+        executor=RuntimeExecutor.from_callable(select),
+        base_class_path='aiida_workgraph.tasks.builtins.Select',
+    )
 
 
-class AiiDAString(Task):
-    identifier = 'workgraph.aiida_string'
-    name = 'AiiDAString'
-    node_type = 'Normal'
-    catalog = 'Test'
-
-    def update_sockets(self) -> None:
-        self.inputs._clear()
-        self.outputs._clear()
-        self.add_input('workgraph.string', 'value', property={'default': ''})
-        self.add_input('workgraph.any', '_wait', link_limit=100000, metadata={'arg_type': 'none'})
-        self.add_output('workgraph.string', 'result')
-        self.add_output('workgraph.any', '_wait')
-
-    def get_executor(self):
-        from aiida import orm
-
-        return RuntimeExecutor.from_callable(orm.Str)
+@task(identifier='workgraph.aiida_int')
+def aiida_int(value: int) -> orm.Int:
+    return orm.Int(value)
 
 
-class AiiDAList(Task):
-    identifier = 'workgraph.aiida_list'
-    name = 'AiiDAList'
-    node_type = 'Normal'
-    catalog = 'Test'
-
-    def update_sockets(self) -> None:
-        self.inputs._clear()
-        self.outputs._clear()
-        self.add_input('workgraph.any', 'value', property={'default': []})
-        self.add_input('workgraph.any', '_wait', link_limit=100000, metadata={'arg_type': 'none'})
-        self.add_output('workgraph.list', 'result')
-        self.add_output('workgraph.any', '_wait')
-
-    def get_executor(self):
-        from aiida import orm
-
-        return RuntimeExecutor.from_callable(orm.List)
+@task(identifier='workgraph.aiida_float')
+def aiida_float(value: float) -> orm.Float:
+    return orm.Float(value)
 
 
-class AiiDADict(Task):
-    identifier = 'workgraph.aiida_dict'
-    name = 'AiiDADict'
-    node_type = 'Normal'
-    catalog = 'Test'
+@task(identifier='workgraph.aiida_string')
+def aiida_string(value: str) -> orm.Str:
+    return orm.Str(value)
 
-    def update_sockets(self) -> None:
-        self.inputs._clear()
-        self.outputs._clear()
-        self.add_input('workgraph.any', 'value', property={'default': {}})
-        self.add_input('workgraph.any', '_wait', link_limit=100000, metadata={'arg_type': 'none'})
-        self.add_output('workgraph.dict', 'result')
-        self.add_output('workgraph.any', '_wait')
 
-    def get_executor(self):
-        from aiida import orm
+@task(identifier='workgraph.aiida_list')
+def aiida_list(value: list) -> orm.List:
+    return orm.List(value)
 
-        return RuntimeExecutor.from_callable(orm.Dict)
+
+@task(identifier='workgraph.aiida_dict')
+def aiida_dict(value: dict) -> orm.Dict:
+    return orm.Dict(value)
 
 
 class AiiDANode(Task):
@@ -281,27 +205,19 @@ class AiiDANode(Task):
 
     identifier = 'workgraph.load_node'
     name = 'AiiDANode'
-    node_type = 'Normal'
     catalog = 'Test'
 
-    def create_properties(self) -> None:
-        pass
-
-    def update_sockets(self) -> None:
-        self.inputs._clear()
-        self.outputs._clear()
-        self.add_input('workgraph.any', 'identifier')
-        self.add_input('workgraph.any', 'pk')
-        self.add_input('workgraph.any', 'uuid')
-        self.add_input('workgraph.any', 'label')
-        self.add_input('workgraph.any', '_wait', link_limit=100000, metadata={'arg_type': 'none'})
-        self.add_output('workgraph.any', 'node')
-        self.add_output('workgraph.any', '_wait')
-
-    def get_executor(self):
-        from aiida import orm
-
-        return RuntimeExecutor.from_callable(orm.load_node)
+    _default_spec = NodeSpec(
+        identifier=identifier,
+        node_type='Normal',
+        inputs=namespace(
+            pk=Annotated[int, meta(required=False)],
+            uuid=Annotated[str, meta(required=False)],
+        ),
+        outputs=namespace(code=orm.Code),
+        executor=RuntimeExecutor.from_callable(orm.load_node),
+        base_class_path='aiida_workgraph.task.Task',
+    )
 
 
 class AiiDACode(Task):
@@ -309,45 +225,17 @@ class AiiDACode(Task):
 
     identifier = 'workgraph.load_code'
     name = 'AiiDACode'
-    node_type = 'Normal'
     catalog = 'Test'
 
-    def update_sockets(self) -> None:
-        self.inputs._clear()
-        self.outputs._clear()
-        self.add_input('workgraph.any', 'identifier')
-        self.add_input('workgraph.any', 'pk')
-        self.add_input('workgraph.any', 'uuid')
-        self.add_input('workgraph.any', 'label')
-        self.add_input('workgraph.any', '_wait', link_limit=100000, metadata={'arg_type': 'none'})
-        self.add_output('workgraph.any', 'Code')
-        self.add_output('workgraph.any', '_wait')
-
-    def get_executor(self):
-        from aiida import orm
-
-        return RuntimeExecutor.from_callable(orm.load_code)
-
-
-class Select(Task):
-    """Select"""
-
-    identifier = 'workgraph.select'
-    name = 'Select'
-    node_type = 'Normal'
-    catalog = 'Control'
-
-    def update_sockets(self) -> None:
-        self.inputs._clear()
-        self.outputs._clear()
-        self.add_input('workgraph.any', 'condition')
-        self.add_input('workgraph.any', 'true')
-        self.add_input('workgraph.any', 'false')
-        self.add_input('workgraph.any', '_wait', link_limit=100000, metadata={'arg_type': 'none'})
-        self.add_output('workgraph.any', 'result')
-        self.add_output('workgraph.any', '_wait')
-
-    def get_executor(self):
-        from aiida_workgraph.executors.builtins import select
-
-        return RuntimeExecutor.from_callable(select)
+    _default_spec = NodeSpec(
+        identifier=identifier,
+        node_type='Normal',
+        inputs=namespace(
+            pk=Annotated[int, meta(required=False)],
+            uuid=Annotated[str, meta(required=False)],
+            label=Annotated[str, meta(required=False)],
+        ),
+        outputs=namespace(code=orm.Code),
+        executor=RuntimeExecutor.from_callable(orm.load_code),
+        base_class_path='aiida_workgraph.task.Task',
+    )

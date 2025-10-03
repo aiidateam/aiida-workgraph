@@ -9,11 +9,11 @@ from node_graph.node_spec import NodeSpec
 from node_graph.executor import RuntimeExecutor
 from node_graph.socket_spec import SocketSpec, merge_specs, SocketSpecMeta
 from aiida_workgraph.socket_spec import from_aiida_process, namespace
-from aiida_workgraph.task import SpecTask, TaskHandle
+from aiida_workgraph.task import Task, TaskHandle
 from aiida import orm
 
 
-class ShellJobTask(SpecTask):
+class ShellJobTask(Task):
     """Runtime for ShellJob nodes.
 
     This class is referenced by NodeSpec.base_class_path so the engine can import
@@ -149,6 +149,7 @@ def _build_shelljob_nodespec(
     return NodeSpec(
         identifier=identifier or 'ShellJob',
         catalog='AIIDA',
+        node_type='SHELLJOB',
         inputs=in_spec,
         outputs=out_spec,
         executor=exec_payload,

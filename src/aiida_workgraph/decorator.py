@@ -9,6 +9,8 @@ from node_graph.node_spec import NodeSpec
 from node_graph.socket_spec import SocketSpec
 from aiida_workgraph.tasks.aiida import _build_aiida_function_nodespec
 from node_graph.error_handler import ErrorHandlerSpec, normalize_error_handlers
+from aiida_workgraph.tasks.pythonjob_tasks import build_pyfunction_nodespec
+from aiida_workgraph.tasks.aiida import AiiDAProcessTask
 
 
 def _spec_for(
@@ -17,39 +19,35 @@ def _spec_for(
     identifier: Optional[str],
     inputs: Optional[SocketSpec] = None,
     outputs: Optional[SocketSpec] = None,
+    catalog: str = None,
+    error_handlers: Optional[Dict[str, ErrorHandlerSpec]] = None,
 ) -> NodeSpec:
-    from aiida_workgraph.socket_spec import from_aiida_process
-    from aiida_workgraph.utils import inspect_aiida_component_type
-    from node_graph.executor import RuntimeExecutor
-
     # AiiDA process classes
     if inspect.isclass(obj) and issubclass(obj, (CalcJob, WorkChain)):
-        from aiida_workgraph.tasks.aiida import AiiDAProcessTask
-
-        in_spec, out_spec = from_aiida_process(obj)
-        return NodeSpec(
-            identifier=identifier or obj.__name__,
-            mode='decorator_build',
-            catalog='AIIDA',
-            inputs=in_spec,
-            outputs=out_spec,
-            executor=RuntimeExecutor.from_callable(obj),
-            base_class=AiiDAProcessTask,
-            metadata={'node_type': inspect_aiida_component_type(obj)},
-            decorator_path='aiida_workgraph.decorator.task',
-        )
+        return AiiDAProcessTask.build(obj)
 
     # AiiDA process functions (calcfunction/workfunction)
     if callable(obj) and getattr(obj, 'node_class', False):
-        from aiida_workgraph.tasks.aiida import _build_aiida_function_nodespec
-
-        return _build_aiida_function_nodespec(obj, identifier=identifier, in_spec=inputs, out_spec=outputs)
+        return _build_aiida_function_nodespec(
+            obj,
+            identifier=identifier,
+            in_spec=inputs,
+            out_spec=outputs,
+            error_handlers=error_handlers,
+            catalog=catalog or 'Others',
+        )
 
     # Plain Python function -> PyFunction
     if callable(obj):
-        from aiida_workgraph.tasks.pythonjob_tasks import build_pyfunction_nodespec
-
-        return build_pyfunction_nodespec(obj, identifier=identifier, in_spec=inputs, out_spec=outputs)
+        spec = build_pyfunction_nodespec(
+            obj,
+            identifier=identifier,
+            in_spec=inputs,
+            out_spec=outputs,
+            error_handlers=error_handlers,
+            catalog=catalog or 'Others',
+        )
+        return spec
 
     raise ValueError(f'Unsupported object for @task: {obj!r}')
 
@@ -144,26 +142,18 @@ class TaskDecoratorCollection:
         """
 
         def decorator(obj: Union[WorkGraph, type, callable]) -> TaskHandle:
-            spec = _spec_for(obj, identifier=identifier, inputs=inputs, outputs=outputs)
-            handlers = normalize_error_handlers(error_handlers)
-            # allow catalog override
-            spec = NodeSpec(
-                identifier=spec.identifier,
-                mode=spec.mode,
-                catalog=catalog or spec.catalog,
-                inputs=spec.inputs,
-                outputs=spec.outputs,
-                executor=spec.executor,
-                error_handlers=handlers,
-                metadata=spec.metadata,
-                base_class=spec.base_class,
-                base_class_path=spec.base_class_path,
-                decorator=spec.decorator,
-                decorator_path=spec.decorator_path,
-                version=spec.version,
+            normalized_handlers = normalize_error_handlers(error_handlers)
+            spec = _spec_for(
+                obj,
+                identifier=identifier,
+                catalog=catalog,
+                inputs=inputs,
+                outputs=outputs,
+                error_handlers=normalized_handlers,
             )
+
             handle = TaskHandle(spec)
-            handle._func = obj
+            handle._callable = obj
             return handle
 
         return decorator
@@ -172,6 +162,7 @@ class TaskDecoratorCollection:
     @nonfunctional_usage
     def decorator_graph(
         identifier: Optional[str] = None,
+        catalog: Optional[str] = None,
         inputs: Optional[SocketSpec | list] = None,
         outputs: Optional[SocketSpec | list] = None,
         max_depth: int = 100,
@@ -191,12 +182,13 @@ class TaskDecoratorCollection:
                 _build_graph_task_nodespec(
                     func,
                     identifier=identifier,
+                    catalog=catalog,
                     in_spec=inputs,
                     out_spec=outputs,
                     max_depth=max_depth,
                 )
             )
-            handle._func = func
+            handle._callable = func
             return handle
 
         return decorator
@@ -206,6 +198,7 @@ class TaskDecoratorCollection:
     def calcfunction(
         inputs: Optional[SocketSpec | list] = None,
         outputs: Optional[SocketSpec | list] = None,
+        catalog: Optional[str] = None,
         error_handlers: Optional[Dict[str, ErrorHandlerSpec]] = None,
     ) -> Callable:
         def decorator(func) -> TaskHandle:
@@ -215,10 +208,11 @@ class TaskDecoratorCollection:
                     func_decorated,
                     in_spec=inputs,
                     out_spec=outputs,
+                    catalog=catalog,
                     error_handlers=error_handlers,
                 )
             )
-            handle._func = func_decorated
+            handle._callable = func_decorated
             return handle
 
         return decorator
@@ -228,6 +222,7 @@ class TaskDecoratorCollection:
     def workfunction(
         inputs: Optional[SocketSpec | list] = None,
         outputs: Optional[SocketSpec | list] = None,
+        catalog: Optional[str] = None,
         error_handlers: Optional[Dict[str, ErrorHandlerSpec]] = None,
     ) -> Callable:
         def decorator(func) -> TaskHandle:
@@ -237,10 +232,11 @@ class TaskDecoratorCollection:
                     func_decorated,
                     in_spec=inputs,
                     out_spec=outputs,
+                    catalog=catalog,
                     error_handlers=error_handlers,
                 )
             )
-            handle._func = func_decorated
+            handle._callable = func_decorated
             return handle
 
         return decorator
@@ -250,6 +246,7 @@ class TaskDecoratorCollection:
     def pythonjob(
         inputs: Optional[SocketSpec | list] = None,
         outputs: Optional[SocketSpec | list] = None,
+        catalog: Optional[str] = None,
         error_handlers: Optional[Dict[str, ErrorHandlerSpec]] = None,
     ) -> Callable:
         def decorator(func) -> TaskHandle:
@@ -259,10 +256,11 @@ class TaskDecoratorCollection:
                 func,
                 in_spec=inputs,
                 out_spec=outputs,
+                catalog=catalog,
                 error_handlers=error_handlers,
             )
             handle = TaskHandle(spec)
-            handle._func = func
+            handle._callable = func
             return handle
 
         return decorator
@@ -272,6 +270,7 @@ class TaskDecoratorCollection:
     def monitor(
         inputs: Optional[SocketSpec | list] = None,
         outputs: Optional[SocketSpec | list] = None,
+        catalog: Optional[str] = None,
         error_handlers: Optional[Dict[str, ErrorHandlerSpec]] = None,
     ) -> Callable:
         def decorator(func) -> TaskHandle:
@@ -282,10 +281,11 @@ class TaskDecoratorCollection:
                     func,
                     in_spec=inputs,
                     out_spec=outputs,
+                    catalog=catalog,
                     error_handlers=error_handlers,
                 )
             )
-            handle._func = func
+            handle._callable = func
             return handle
 
         return decorator
