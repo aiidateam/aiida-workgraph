@@ -99,11 +99,15 @@ wheels = [
 [[package]]
 name = "aiida-pythonjob"
 version = "0.4.4"
-source = { git = "https://github.com/superstar54/aiida-pythonjob.git#38c24a9783a3c76d0be2d2a7781b6a70b523c0a3" }
+source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "aiida-core" },
     { name = "ase" },
     { name = "node-graph" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/38/c0/dce9c9167cda2db851708ce6bab610a3ed370cb2965e9fff455b583575cb/aiida_pythonjob-0.4.4.tar.gz", hash = "sha256:db8d0cb3620ed81bef140d3586216852433eb49ee5d7c2a44d21797dc757a68d", size = 40553, upload-time = "2025-09-28T16:18:32.803Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/09/3c/32604219c4435e4c60064737c026e8ff1e1d03d80d2694574dd774f9d89c/aiida_pythonjob-0.4.4-py3-none-any.whl", hash = "sha256:5c51fbc59026e1d946a3f2474a41838c6c1bc4dd470144b7e5aa6b3b8e416017", size = 37549, upload-time = "2025-09-28T16:18:31.576Z" },
 ]
 
 [[package]]
@@ -195,7 +199,7 @@ requires-dist = [
     { name = "aiida-core", specifier = "~=2.7.1" },
     { name = "aiida-core", marker = "extra == 'docs'", specifier = "~=2.7.1" },
     { name = "aiida-pseudo", marker = "extra == 'docs'" },
-    { name = "aiida-pythonjob", git = "https://github.com/superstar54/aiida-pythonjob.git" },
+    { name = "aiida-pythonjob", specifier = "==0.4.4" },
     { name = "aiida-quantumespresso", marker = "extra == 'docs'" },
     { name = "aiida-shell", specifier = "~=0.8" },
     { name = "anywidget", marker = "extra == 'docs'" },
@@ -206,7 +210,7 @@ requires-dist = [
     { name = "jsonschema" },
     { name = "myst-nb", marker = "extra == 'docs'", specifier = "~=1.0.0" },
     { name = "nbsphinx", marker = "extra == 'docs'" },
-    { name = "node-graph", git = "https://github.com/superstar54/node-graph.git" },
+    { name = "node-graph", specifier = "==0.3.12" },
     { name = "node-graph-widget", specifier = ">=0.0.5" },
     { name = "numpy" },
     { name = "pgtest", marker = "extra == 'tests'", specifier = "~=1.3" },
@@ -2620,7 +2624,7 @@ wheels = [
 [[package]]
 name = "node-graph"
 version = "0.3.12"
-source = { git = "https://github.com/superstar54/node-graph.git#80ad69bdeee6ef0f1054e655f782e9878f33c54a" }
+source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "cloudpickle" },
     { name = "node-graph-widget" },
@@ -2630,6 +2634,10 @@ dependencies = [
     { name = "scipy", version = "1.16.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
     { name = "typing-extensions", marker = "python_full_version < '3.11'" },
     { name = "wrapt" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/92/06/7fdf9042dd715005f3550ae7d4ef57b26182266ab24b91dd76d95eb3707b/node_graph-0.3.12.tar.gz", hash = "sha256:13154db847aa7931700d3a53fb025c38ebd3ee8b49db92836f8dea6ff5ced133", size = 60134, upload-time = "2025-09-20T10:51:07.286Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/ff/b1/42b3a34466a2fd44a4f5fb3d7e0a31aeaab4602a91225c007257a262cde1/node_graph-0.3.12-py3-none-any.whl", hash = "sha256:d521de6c8770db18170aaa7f272207f592180e689b34b01e384ca7f3649e9106", size = 72139, upload-time = "2025-09-20T10:51:06.067Z" },
 ]
 
 [[package]]
