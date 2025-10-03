@@ -67,7 +67,7 @@ def test_save_load(wg_task, decorated_add):
     from aiida.calculations.arithmetic.add import ArithmeticAddCalculation
     from aiida_workgraph.executors.builtins import UnavailableExecutor
 
-    wg = wg_task
+    wg: WorkGraph = wg_task
     wg.add_task(decorated_add, name='add1', x=2, y=3)
     metadata = {
         'options': {

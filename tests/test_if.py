@@ -51,10 +51,11 @@ def test_if_task(decorated_add, decorated_multiply, decorated_smaller_than):
     assert add3.outputs.result.value == 5
 
 
-def test_empty_if_task():
+def test_empty_if_task(decorated_add):
     """Test the If task with no children."""
 
     wg = WorkGraph('test_empty_if')
-    wg.add_task(TaskPool.workgraph.if_zone, name='if_true')
+    sum = wg.add_task(decorated_add, name='sum', x=1, y=1)
+    wg.add_task(TaskPool.workgraph.if_zone, name='if_true', conditions=sum)
     wg.run()
     assert wg.state == 'FINISHED'

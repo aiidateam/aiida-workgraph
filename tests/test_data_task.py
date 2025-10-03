@@ -43,4 +43,4 @@ def test_load_code_task(add_code) -> None:
     wg = WorkGraph('test_load_code_task')
     task1 = wg.add_task('workgraph.load_code', name='task1', label=add_code.label)
     wg.run()
-    assert task1.outputs.Code.value.label == add_code.label
+    assert task1.outputs.code.value.label == add_code.label

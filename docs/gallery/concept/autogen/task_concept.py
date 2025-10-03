@@ -132,26 +132,25 @@ add1 = wg.add_task(ArithmeticAddCalculation, name='add1')
 # Create a task class by inheriting from ``Task`` base class.
 #
 
-from aiida_workgraph.task import Task
+from aiida_workgraph import Task, namespace
+from node_graph.node_spec import NodeSpec
+from node_graph.executor import RuntimeExecutor
+from math import pow
 
 
-class MyAdd(Task):
-    identifier: str = 'MyAdd'
-    name = 'MyAdd'
-    node_type = 'calcfunction'
-    catalog = 'Test'
-
-    _executor = {
-        'module_path': 'aiida_workgraph.executors.test',
-        'callable_name': 'add',
-    }
-
-    def update_sockets(self):
-        self.inputs._clear()
-        self.outputs._clear()
-        _ = self.add_input('workgraph.Any', 'x')
-        _ = self.add_input('workgraph.Any', 'y')
-        self.add_output('workgraph.Any', 'sum')
+class MyPow(Task):
+    _default_spec = NodeSpec(
+        identifier='MyPow',
+        node_type='Normal',
+        catalog='Test',
+        inputs=namespace(
+            x=float,
+            y=float,
+        ),
+        outputs=namespace(result=float),
+        executor=RuntimeExecutor.from_callable(pow),
+        base_class_path='aiida_workgraph.task.Task',
+    )
 
 
 ######################################################################
@@ -161,14 +160,15 @@ class MyAdd(Task):
 from aiida_workgraph import WorkGraph
 
 wg = WorkGraph()
-add1_task = wg.add_task(MyAdd, name='add1')
+add1_task = wg.add_task(MyPow, name='add1')
+add1_task
 
 
 ######################################################################
 # One can also register the task in task pool, and then use its
-# ``identifer`` directly.
+# ``identifier`` directly.
 #
-# . code:: python
+# .. code:: python
 #
-#    wg.add_task("MyAdd", name="add1")
+#    wg.add_task("my_package.MyPow", name="add1")
 #

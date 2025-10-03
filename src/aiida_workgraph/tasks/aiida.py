@@ -1,14 +1,16 @@
-from aiida_workgraph.task import SpecTask
+from aiida_workgraph.task import Task
 from aiida.engine import Process
 from typing import Callable, Optional, Dict
 from node_graph.socket_spec import SocketSpec
-from node_graph.node_spec import NodeSpec
+from node_graph.node_spec import NodeSpec, SchemaSource
 from .function_task import build_callable_nodespec
 from node_graph.executor import RuntimeExecutor
 from node_graph.error_handler import ErrorHandlerSpec
+from aiida_workgraph.utils import inspect_aiida_component_type
+from aiida_workgraph.socket_spec import from_aiida_process
 
 
-class AiiDAFunctionTask(SpecTask):
+class AiiDAFunctionTask(Task):
     """Task with AiiDA calcfunction/workfunction as executor."""
 
     identifier = 'workgraph.aiida_functions'
@@ -22,8 +24,8 @@ class AiiDAFunctionTask(SpecTask):
 
         executor = RuntimeExecutor(**self.get_executor().to_dict()).callable
         # the imported executor could be a wrapped function
-        if isinstance(executor, BaseHandle) and hasattr(executor, '_func'):
-            executor = getattr(executor, '_func')
+        if isinstance(executor, BaseHandle) and hasattr(executor, '_callable'):
+            executor = getattr(executor, '_callable')
         kwargs.setdefault('metadata', {})
         kwargs['metadata'].update({'call_link_label': self.name})
         # since aiida 2.5.0, we need to use args_dict to pass the args to the run_get_node
@@ -35,13 +37,27 @@ class AiiDAFunctionTask(SpecTask):
         return process, 'FINISHED'
 
 
-class AiiDAProcessTask(SpecTask):
+class AiiDAProcessTask(Task):
     """Task with AiiDA calcfunction/workfunction as executor."""
 
     identifier = 'workgraph.aiida_process'
     name = 'aiida_process'
     node_type = 'Process'
     catalog = 'AIIDA'
+
+    @classmethod
+    def build(cls, callable):
+        in_spec, out_spec = from_aiida_process(callable)
+        return NodeSpec(
+            identifier=callable.__name__,
+            schema_source=SchemaSource.CALLABLE,
+            catalog='AIIDA',
+            inputs=in_spec,
+            outputs=out_spec,
+            executor=RuntimeExecutor.from_callable(callable),
+            base_class=cls,
+            node_type=inspect_aiida_component_type(callable),
+        )
 
     def execute(self, engine_process, args=None, kwargs=None, var_kwargs=None):
         from aiida_workgraph.utils import create_and_pause_process
@@ -84,6 +100,7 @@ class WorkChainTask(AiiDAProcessTask):
 def _build_aiida_function_nodespec(
     obj: Callable,
     identifier: Optional[str] = None,
+    catalog: str = 'AIIDA',
     in_spec: Optional[SocketSpec] = None,
     out_spec: Optional[SocketSpec] = None,
     error_handlers: Optional[Dict[str, ErrorHandlerSpec]] = None,
@@ -93,6 +110,7 @@ def _build_aiida_function_nodespec(
     return build_callable_nodespec(
         obj=obj,
         node_type=inspect_aiida_component_type(obj),
+        catalog=catalog,
         base_class=AiiDAFunctionTask,
         identifier=identifier,
         process_cls=Process,

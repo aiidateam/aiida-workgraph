@@ -4,9 +4,9 @@ from node_graph.node import Node as GraphNode
 from .registry import RegistryHub, registry_hub
 import aiida
 from typing import Any, Dict, Optional, Union, Callable, List, Set, Iterable, TYPE_CHECKING
-from node_graph.node_spec import NodeSpec, BaseHandle
-from node_graph.spec_node import _SpecBackedMixin
+from node_graph.node_spec import BaseHandle
 from aiida_workgraph.socket_spec import SocketSpecAPI
+from node_graph.node_spec import NodeSpec
 
 if TYPE_CHECKING:
     from aiida_workgraph import WorkGraph
@@ -19,11 +19,17 @@ class Task(GraphNode):
     attributes to it.
     """
 
-    registry: Optional[RegistryHub] = registry_hub
-    _socket_spec = SocketSpecAPI
+    _REGISTRY: Optional[RegistryHub] = registry_hub
+    _SOCKET_SPEC_API = SocketSpecAPI
 
-    identifier: str = 'workgraph.task'
-    is_aiida_component = False
+    _default_spec = NodeSpec(
+        identifier='workgraph.task',
+        node_type='Normal',
+        inputs=_SOCKET_SPEC_API.namespace(),
+        outputs=_SOCKET_SPEC_API.namespace(),
+        catalog='Base',
+        base_class_path='aiida_workgraph.task.Task',
+    )
 
     def __init__(
         self,
@@ -58,7 +64,6 @@ class Task(GraphNode):
         tdata['parent_task'] = [self.parent.name] if self.parent else [None]
         tdata['process'] = serialize(self.process) if self.process else serialize(None)
         tdata['metadata']['pk'] = self.process.pk if self.process else None
-        tdata['metadata']['is_aiida_component'] = self.is_aiida_component
 
         return tdata
 
@@ -156,8 +161,8 @@ class Task(GraphNode):
 
         executor = self.get_executor().callable
         # the imported executor could be a wrapped function
-        if isinstance(executor, BaseHandle) and hasattr(executor, '_func'):
-            executor = getattr(executor, '_func')
+        if isinstance(executor, BaseHandle) and hasattr(executor, '_callable'):
+            executor = getattr(executor, '_callable')
         if var_kwargs is None:
             result = executor(*args, **kwargs)
         else:
@@ -283,16 +288,6 @@ class WaitingTaskSet(TaskSet):
             source = task.outputs._wait
             target = self.parent.inputs._wait
             self.graph.add_link(source, target)
-
-
-class SpecTask(_SpecBackedMixin, Task):
-    """Concrete task materialized from a NodeSpec."""
-
-    identifier: str = 'aiida_workgraph.spec_task'
-
-    def __init__(self, *args, spec: NodeSpec, embed_spec: bool = True, **kwargs) -> None:
-        super().__init__(*args, **kwargs)
-        self._init_with_spec(spec, embed_spec=embed_spec)
 
 
 class TaskHandle(BaseHandle):
