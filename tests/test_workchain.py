@@ -1,4 +1,5 @@
 from aiida.workflows.arithmetic.multiply_add import MultiplyAddWorkChain
+from node_graph.node_spec import SchemaSource
 from aiida_workgraph import task
 
 
@@ -11,8 +12,7 @@ def test_build_workchain_inputs_outputs():
     ninput = len(inputs.ports) + 1
     assert len(node.inputs) == ninput
     assert len(node.outputs) == 3
-    assert node._spec.mode == 'decorator_build'
-    assert node._spec.decorator_path == 'aiida_workgraph.decorator.task'
+    assert node.spec.schema_source == SchemaSource.CALLABLE
 
 
 def test_build_workchain(add_code):

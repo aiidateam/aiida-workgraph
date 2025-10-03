@@ -19,7 +19,7 @@ def build_callable_nodespec(
     node_type: str,
     base_class: Type['Node'],
     identifier: Optional[str] = None,
-    catalog: str = 'AIIDA',
+    catalog: str = 'Others',
     in_spec: Optional[SocketSpec | List[str]] = None,
     out_spec: Optional[SocketSpec | List[str]] = None,
     process_cls: Optional[type] = None,  # e.g. PythonJob, PyFunction, or aiida.engine.Process
@@ -77,7 +77,6 @@ def build_callable_nodespec(
     metadata = metadata or {}
     metadata.update(
         {
-            'node_type': node_type,
             'non_function_inputs': list(
                 set((proc_in and proc_in.fields.keys()) or []) | set((add_inputs and add_inputs.fields.keys()) or [])
             ),
@@ -90,6 +89,7 @@ def build_callable_nodespec(
 
     return NodeSpec(
         identifier=identifier or obj.__name__,
+        node_type=node_type,
         catalog=catalog,
         inputs=func_in,
         outputs=func_out,

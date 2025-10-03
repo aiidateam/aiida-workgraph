@@ -1,4 +1,4 @@
-from aiida_workgraph.task import SpecTask
+from aiida_workgraph.task import Task
 from typing import Callable, Optional
 from node_graph.socket_spec import SocketSpec
 from node_graph.node_spec import NodeSpec
@@ -7,7 +7,7 @@ from node_graph.executor import RuntimeExecutor
 from aiida.engine import Process
 
 
-class GraphTask(SpecTask):
+class GraphTask(Task):
     """Graph builder task"""
 
     identifier = 'workgraph.graph_task'
@@ -23,14 +23,16 @@ class GraphTask(SpecTask):
         from aiida_workgraph.task import TaskHandle
 
         executor = RuntimeExecutor(**self.get_executor().to_dict()).callable
-        max_depth = self.get_metadata()['spec_schema'].get('metadata', {}).get('max_depth', 100)
+        max_depth = self.spec.metadata.get('max_depth', 100)
+        metadata = kwargs.pop('metadata', {}) if kwargs else {}
+        metadata.setdefault('call_link_label', self.name)
         # Cloudpickle doesn’t restore the function’s own name in its globals after unpickling,
         # so any recursive calls would raise NameError. As a temporary workaround, we re-insert
         # the decorated function into its globals under its original name.
         # Downside: this mutates the module globals at runtime, if another symbol with the same name exists,
         # we may introduce hard-to-trace bugs or collisions.
-        if isinstance(executor, TaskHandle) and hasattr(executor, '_func'):
-            executor = executor._func
+        if isinstance(executor, TaskHandle) and hasattr(executor, '_callable'):
+            executor = executor._callable
         if executor.__name__ not in executor.__globals__:
             executor.__globals__[executor.__name__] = task.graph(max_depth=max_depth)(executor)
         depth = call_depth_from_node(engine_process.node)
@@ -52,8 +54,8 @@ class GraphTask(SpecTask):
                 raise RecursionError(msg)
         wg = materialize_graph(
             executor,
-            self._spec.inputs,
-            self._spec.outputs,
+            self.spec.inputs,
+            self.spec.outputs,
             self.name,
             WorkGraph,
             args=args,
@@ -61,7 +63,7 @@ class GraphTask(SpecTask):
             var_kwargs=var_kwargs,
         )
         wg.parent_uuid = engine_process.node.uuid
-        inputs = wg.to_engine_inputs(metadata={'call_link_label': self.name})
+        inputs = wg.to_engine_inputs(metadata=metadata)
         if self.action == 'PAUSE':
             engine_process.report(f'Task {self.name} is created and paused.')
             process = create_and_pause_process(
@@ -85,6 +87,7 @@ def _build_graph_task_nodespec(
     in_spec: Optional[SocketSpec] = None,
     out_spec: Optional[SocketSpec] = None,
     max_depth: int = 100,
+    catalog: str = 'Others',
 ) -> NodeSpec:
     # defaults for max depth
     metadata = {'max_depth': max_depth}
@@ -98,6 +101,7 @@ def _build_graph_task_nodespec(
         node_type='GRAPH',
         base_class=GraphTask,
         identifier=identifier,
+        catalog=catalog,
         process_cls=Process,
         in_spec=in_spec,
         out_spec=out_spec,

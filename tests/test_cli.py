@@ -9,13 +9,13 @@ AddTask = task(ArithmeticAddCalculation)
 
 @task.graph
 def add_graph(x, y, code):
-    return AddTask(code=code, x=x, y=y, metadata={'options': {'sleep': 10}}).sum
+    return AddTask(code=code, x=x, y=y, metadata={'options': {'sleep': 15}}).sum
 
 
 @task.graph
 def two_add_graph(x, y, code):
-    sum1 = AddTask(code=code, x=x, y=y, metadata={'options': {'sleep': 10}}).sum
-    sum2 = AddTask(code=code, x=sum1, y=y, metadata={'options': {'sleep': 10}}).sum
+    sum1 = AddTask(code=code, x=x, y=y, metadata={'options': {'sleep': 15}}).sum
+    sum2 = AddTask(code=code, x=sum1, y=y, metadata={'options': {'sleep': 15}}).sum
     return sum2
 
 

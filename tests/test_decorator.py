@@ -51,8 +51,10 @@ def test_decorators_calcfunction_args() -> None:
     def test(a, b=1, **c):
         print(a, b, c)
 
-    metadata_kwargs = set([f'{key}' for key in test._func.process_class.spec().inputs.ports['metadata'].ports.keys()])
-    kwargs = set(test._func.process_class.spec().inputs.ports.keys())
+    metadata_kwargs = set(
+        [f'{key}' for key in test._callable.process_class.spec().inputs.ports['metadata'].ports.keys()]
+    )
+    kwargs = set(test._callable.process_class.spec().inputs.ports.keys())
     n = test._spec.to_node()
     assert n.args_data['args'] == []
     assert set(n.args_data['kwargs']) == set(kwargs)
@@ -118,9 +120,9 @@ def task_workfunction(request):
 
 def test_decorators_workfunction_args(task_workfunction) -> None:
     metadata_kwargs = set(
-        [f'{key}' for key in task_workfunction._func.process_class.spec().inputs.ports['metadata'].ports.keys()]
+        [f'{key}' for key in task_workfunction._callable.process_class.spec().inputs.ports['metadata'].ports.keys()]
     )
-    kwargs = set(task_workfunction._func.process_class.spec().inputs.ports.keys())
+    kwargs = set(task_workfunction._callable.process_class.spec().inputs.ports.keys())
     #
     n = task_workfunction._spec.to_node()
     assert n.args_data['args'] == []

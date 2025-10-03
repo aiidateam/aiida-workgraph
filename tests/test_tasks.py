@@ -301,11 +301,13 @@ def test_call_link_label_as_name() -> None:
     AddTask = task()(ArithmeticAddCalculation)
     MultiplyAddTask = task()(MultiplyAddWorkChain)
 
-    with WorkGraph('test_call_link_label_as_name'):
+    with WorkGraph('test_call_link_label_as_name') as wg:
         sum1 = add(1, 2, metadata={'call_link_label': 'my_add'})
         assert sum1._node.name == 'my_add'
-        sum2 = add_calcfunction(3, 4, metadata={'call_link_label': 'my_add_calc'})
+        sum2 = add_calcfunction(3, sum1.result, metadata={'call_link_label': 'my_add_calc'})
         assert sum2._node.name == 'my_add_calc'
+        # the link name should also be updated
+        assert 'my_add.result -> my_add_calc.y' in wg.links
         sum3 = AddTask(x=5, y=6, metadata={'call_link_label': 'my_add_calcjob'})
         assert sum3._node.name == 'my_add_calcjob'
         sum4 = MultiplyAddTask(x=1, y=2, z=3, metadata={'call_link_label': 'my_multiply_add'})

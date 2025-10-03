@@ -10,7 +10,6 @@ from node_graph.analysis import NodeGraphAnalysis
 from node_graph.config import BUILTIN_NODES
 from node_graph.collection import NodeCollection
 from node_graph.socket import BaseSocket, NodeSocketNamespace
-from aiida_workgraph.registry import type_mapping
 from aiida_workgraph.socket_spec import SocketSpecAPI
 from node_graph.error_handler import ErrorHandlerSpec
 
@@ -29,10 +28,10 @@ class WorkGraph(node_graph.NodeGraph):
         pk (int): The primary key of the process node.
     """
 
-    registry: Optional[RegistryHub] = registry_hub
+    _REGISTRY: Optional[RegistryHub] = registry_hub
+    _SOCKET_SPEC_API = SocketSpecAPI
+
     platform: str = 'aiida_workgraph'
-    type_mapping: dict = type_mapping
-    _socket_spec = SocketSpecAPI
 
     def __init__(
         self,
@@ -574,7 +573,7 @@ class WorkGraph(node_graph.NodeGraph):
             raise ValueError(f'Task name {name} can not be used, it is reserved.')
 
         if isinstance(identifier, str):
-            identifier = self.NodePool[identifier.lower()].load()
+            identifier = self._REGISTRY.node_pool[identifier.lower()].load()
         if isinstance(identifier, WorkGraph):
             identifier = _build_subgraph_task_nodespec(identifier, name=name)
         elif isinstance(identifier, ProcessBuilder):

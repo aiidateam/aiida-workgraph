@@ -161,7 +161,7 @@ class TaskManager:
             self.ctx._task_results[task.name] = {}
             task_type = task.node_type.upper()
             if task_type == 'PYFUNCTION':
-                if task._metadata.get('is_coroutine', False):
+                if task.spec.metadata.get('is_coroutine', False):
                     self.execute_process_task(task, **inputs)
                 else:
                     self.execute_function_task(task, continue_workgraph, **inputs)

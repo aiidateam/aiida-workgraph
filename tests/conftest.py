@@ -165,8 +165,8 @@ def decorated_add_multiply(decorated_add, decorated_multiply) -> Callable:
     def add_multiply(x, y, z):
         """Add two numbers and multiply it with a third."""
         # we need use the calcfunction to get the result, instead of the wrapped function
-        addition = decorated_add._func(x, y)
-        product = decorated_multiply._func(addition, z)
+        addition = decorated_add._callable(x, y)
+        product = decorated_multiply._callable(addition, z)
         return {'result': product}
 
     return add_multiply

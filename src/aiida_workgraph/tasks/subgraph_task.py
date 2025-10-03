@@ -1,13 +1,13 @@
 from __future__ import annotations
 from node_graph.node_spec import NodeSpec
-from aiida_workgraph.task import SpecTask
+from aiida_workgraph.task import Task
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from aiida_workgraph import WorkGraph
 
 
-class SubGraphTask(SpecTask):
+class SubGraphTask(Task):
     """Task created from WorkGraph."""
 
     identifier = 'workgraph.workgraph_task'
@@ -77,15 +77,11 @@ def _build_subgraph_task_nodespec(
 ) -> NodeSpec:
     from node_graph.executor import SafeExecutor
 
-    meta = {
-        'node_type': 'SubGraph',
-    }
-
     return NodeSpec(
         identifier=name or graph.name,
+        node_type='SubGraph',
         inputs=graph._inputs,
         outputs=graph._outputs,
         executor=SafeExecutor.from_graph(graph),
         base_class=SubGraphTask,
-        metadata=meta,
     )
