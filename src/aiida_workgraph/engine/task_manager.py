@@ -303,6 +303,9 @@ class TaskManager:
             map_info['children'] = list(new_tasks.keys())
             map_info['links'] = new_links
         self.state_manager.set_task_runtime_info(name, 'map_info', map_info)
+        # gather task finishes immediately
+        gather_task = task.gather_item_task
+        self.state_manager.set_task_runtime_info(gather_task.name, 'state', 'FINISHED')
 
         self.continue_workgraph()
 
@@ -472,7 +475,8 @@ class TaskManager:
 
     def update_map_item_task_state(self, item_task, prefix, value: Any):
         new_name = f'{prefix}_{item_task.name}'
-        self.ctx._task_results[new_name]['item'] = value
+        self.ctx._task_results[new_name]['key'] = prefix
+        self.ctx._task_results[new_name]['value'] = value
         self.state_manager.set_task_runtime_info(new_name, 'state', 'FINISHED')
 
     def copy_task(self, name: str, prefix: str) -> 'Task':

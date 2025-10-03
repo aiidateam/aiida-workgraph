@@ -28,7 +28,6 @@ def get_item(data: dict, key: str) -> Any:
     return data.get(key, None)
 
 
-def return_inputs(**inputs: dict) -> dict:
-    """Return the inputs"""
-    inputs['items'] = inputs.pop('item', {})
-    return inputs
+def return_input(**kwargs: Any) -> dict:
+    """Return the input"""
+    return kwargs
