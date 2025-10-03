@@ -26,3 +26,8 @@ def select(condition, true=None, false=None):
 def get_item(data: dict, key: str) -> Any:
     """Get an item from a dictionary."""
     return data.get(key, None)
+
+
+def return_input(**kwargs: Any) -> dict:
+    """Return the input"""
+    return kwargs

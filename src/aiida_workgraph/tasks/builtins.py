@@ -1,13 +1,16 @@
+from __future__ import annotations
 from typing import Any, Dict
 from aiida_workgraph.task import ChildTaskSet, Task
 from aiida_workgraph import task, namespace, meta
 from node_graph.nodes.builtins import _GraphIOSharedMixin
+from node_graph.socket import BaseSocket
 from node_graph import RuntimeExecutor
 from aiida import orm
 from node_graph.node_spec import NodeSpec
 from node_graph.socket_spec import SocketSpec, SocketSpecMeta
 from typing import Annotated
-from aiida_workgraph.executors.builtins import get_item, update_ctx, get_context, select
+from aiida_workgraph.executors.builtins import update_ctx, get_context, select, return_input
+from node_graph.node import BuiltinPolicy
 
 
 class GraphLevelTask(_GraphIOSharedMixin, Task):
@@ -40,7 +43,7 @@ class Zone(Task):
         super().__init__(*args, **kwargs)
         self.children = ChildTaskSet(parent=self)
 
-    def add_task(self, *args, **kwargs):
+    def add_task(self, *args, **kwargs) -> Task:
         """Syntactic sugar to add a task to the zone."""
         task = self.graph.add_task(*args, **kwargs)
         self.children.add(task)
@@ -91,8 +94,9 @@ class Map(Zone):
         node_type='MAP',
         catalog='Control',
         inputs=namespace(
-            source=Annotated[Any, SocketSpec('workgraph.any', link_limit=100000)],
+            source=SocketSpec('workgraph.any', link_limit=100000),
         ),
+        outputs=namespace(),
         base_class_path='aiida_workgraph.tasks.builtins.Map',
     )
 
@@ -103,14 +107,33 @@ class Map(Zone):
     def item(self):
         for child in self.children:
             if child.identifier == 'workgraph.map_item':
-                return child.outputs.item
+                return child.outputs
         # create a child map_item_task if it does not exist
         map_item_task = self.add_task('workgraph.map_item')
-        return map_item_task.outputs.item
+        return map_item_task.outputs
+
+    @property
+    def gather_item_task(self) -> Task | None:
+        for child in self.children:
+            if child.identifier == 'workgraph.gather_item':
+                return child
+        gather_item = self.add_task('workgraph.gather_item')
+        return gather_item
+
+    def gather(self, sockets: Dict[str, BaseSocket]) -> None:
+        gather_item = self.gather_item_task
+        for name in sockets:
+            gather_item.add_input_spec('workgraph.any', name=name)
+            self.add_output_spec('workgraph.any', name=name)
+        gather_item.set_inputs(sockets)
+        return gather_item.outputs
 
 
 class MapItem(Task):
     """MapItem"""
+
+    # turn off framework builtins for these graph-level nodes
+    _BUILTINS_POLICY = BuiltinPolicy(input_wait=False, output_wait=False, default_output=False)
 
     _default_spec = NodeSpec(
         identifier='workgraph.map_item',
@@ -120,9 +143,25 @@ class MapItem(Task):
             source=SocketSpec('workgraph.any', link_limit=100000, meta=SocketSpecMeta(required=False)),
             key=SocketSpec('workgraph.string', meta=SocketSpecMeta(required=False)),
         ),
-        outputs=namespace(item=SocketSpec('workgraph.any')),
-        executor=RuntimeExecutor.from_callable(get_item),
+        outputs=namespace(key=str, value=any),
         base_class_path='aiida_workgraph.tasks.builtins.MapItem',
+    )
+
+
+class GatherItem(Task):
+    """GatherItem"""
+
+    # turn off framework builtins for these graph-level nodes
+    _BUILTINS_POLICY = BuiltinPolicy(input_wait=True, output_wait=False, default_output=False)
+
+    _default_spec = NodeSpec(
+        identifier='workgraph.gather_item',
+        node_type='Normal',
+        catalog='Control',
+        inputs=namespace(),
+        outputs=namespace(),
+        executor=RuntimeExecutor.from_callable(return_input),
+        base_class_path='aiida_workgraph.tasks.builtins.GatherItem',
     )
 
 

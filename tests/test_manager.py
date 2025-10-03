@@ -6,7 +6,7 @@ from aiida_workgraph.manager import (
     Map,
 )
 from aiida_workgraph import socket_spec as spec
-from typing import Any
+from typing import Any, Annotated
 
 
 @task()
@@ -41,15 +41,16 @@ def test_map(decorated_add):
         return {'result': {f'item_{i}': i for i in range(1, N + 1)}}
 
     @task()
-    def sum_values(**items):
-        return sum(items.values())
+    def sum_values(data: Annotated[dict, spec.dynamic(int)]):
+        return sum(data.values())
 
     N = 5
     with WorkGraph() as wg:
         outputs = generate_list(N)
         with Map(source_socket=outputs.result) as map_zone:
-            outputs1 = decorated_add(x=map_zone.item, y=1)
-        outputs2 = sum_values(items=outputs1.result)
+            outputs1 = decorated_add(x=map_zone.item.value, y=1)
+            map_zone.gather({'result': outputs1.result})
+        outputs2 = sum_values(data=map_zone.outputs.result)
         wg.run()
         # wg.to_html("test_map.html")
     assert outputs2.result.value == 20

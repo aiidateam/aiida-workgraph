@@ -2,58 +2,44 @@ from aiida_workgraph import (
     WorkGraph,
     task,
     Map,
-    If,
+    namespace,
+    dynamic,
 )
-from aiida.calculations.arithmetic.add import ArithmeticAddCalculation
 from aiida import orm
+from typing import Annotated
 
 
-@task.calcfunction(outputs=['result'])
-def generate_data(n: int) -> dict:
+@task()
+def generate_data(n: int) -> Annotated[dict, namespace(data=dynamic(int))]:
     """Generate a dictionary of integers."""
-    result = {f'key_{i}': orm.Int(i) for i in range(n.value)}
-    return {'result': result}
+    result = {f'key_{i}': i for i in range(n)}
+    return {'data': result}
 
 
-@task.calcfunction(outputs=['sum'])
-def calc_sum(**kwargs) -> dict:
+@task()
+def add(x, y):
+    """Add two numbers."""
+    return x + y
+
+
+@task()
+def calc_sum(data: Annotated[dict, dynamic(orm.Int)]) -> float:
     """Compute the sum of all provided values."""
-    return {'sum': sum(kwargs.values())}
+    return sum(data.values())
 
 
-def test_map_zone(add_code):
+def test_map_zone():
     x = 1
     y = 2
     n = 3
     with WorkGraph('add_graph') as wg:
-        wg.add_task(generate_data, name='generate_data', n=n)
-        with Map(wg.tasks.generate_data.outputs.result) as map_zone:
-            map_zone.add_task(
-                ArithmeticAddCalculation,
-                name='add1',
-                x=map_zone.item,
-                y=y,
-                code=add_code,
-            )
-            with If(wg.tasks.add1.outputs.sum < 4) as if_zone1:
-                if_zone1.add_task(
-                    ArithmeticAddCalculation,
-                    name='add2',
-                    x=x,
-                    y=wg.tasks.add1.outputs.sum,
-                    code=add_code,
-                )
-                wg.update_ctx({'sum': wg.tasks.add2.outputs.sum})
-            with If(wg.tasks.add1.outputs.sum >= 4) as if_zone2:
-                if_zone2.add_task(
-                    ArithmeticAddCalculation,
-                    name='add3',
-                    x=3,
-                    y=wg.tasks.add1.outputs.sum,
-                    code=add_code,
-                )
-                wg.update_ctx({'sum': wg.tasks.add3.outputs.sum})
-        wg.add_task(calc_sum, name='calc_sum1', kwargs=wg.ctx.sum)
-        wg.tasks.calc_sum1.waiting_on.add([wg.tasks.add2, wg.tasks.add3])
+        data = generate_data(n=n).data
+        with Map(data) as map_zone:
+            out1 = add(x=map_zone.item.value, y=x).result
+            out2 = add(x=map_zone.item.value, y=y).result
+            map_zone.gather({'sum1': out1, 'sum2': out2})
+        out3 = calc_sum(data=map_zone.outputs.sum1).result
+        out4 = calc_sum(data=map_zone.outputs.sum2).result
         wg.run()
-        assert wg.tasks.calc_sum1.outputs.sum.value == 14
+        assert out3.value == 6
+        assert out4.value == 9

@@ -485,7 +485,9 @@ wg.generate_provenance_graph()
 # ``Map`` zone
 # ============
 # .. warning::
-#   **This feature is experimental.** The API for ``Map`` zone is subject to change in future releases. We welcome your feedback on its functionality.
+#   **This feature is experimental.** The API for ``Map`` zone is subject to change in future releases.
+#   We welcome your feedback on its functionality.
+#   **ctx** does not work inside a ``Map`` zone yet.
 #
 # The ``Map`` context manager works similarly to Python's built-in ``map`` function.
 # By accessing the ``item`` member of the ``Map`` context, we can pass each individual element (e.g. a dictionary entry) to tasks.
@@ -522,10 +524,13 @@ from aiida_workgraph import Map
 
 with WorkGraph('AddMap') as wg:
     with Map(data) as map_zone:
-        wg.outputs.result = add(
-            x=get_value(map_zone.item, 'x').result,
-            y=get_value(map_zone.item, 'y').result,
+        result = add(
+            x=get_value(map_zone.item.value, 'x').result,
+            y=get_value(map_zone.item.value, 'y').result,
         ).result
+        map_zone.gather({'result': result})
+        wg.ctx.result = map_zone.outputs.result
+        wg.outputs.result = wg.ctx.result
 
 wg.run()
 
@@ -561,17 +566,18 @@ wg.generate_provenance_graph()
 
 
 @task
-def aggregate_sum(data):
+def aggregate_sum(data: spec.dynamic(Any)) -> int:
     return sum(data.values())
 
 
 with WorkGraph('AddAggregate') as wg:
     with Map(data) as map_zone:
         added_numbers = add(
-            x=get_value(map_zone.item, 'x').result,
-            y=get_value(map_zone.item, 'y').result,
+            x=get_value(map_zone.item.value, 'x').result,
+            y=get_value(map_zone.item.value, 'y').result,
         ).result
-    wg.outputs.result = aggregate_sum(added_numbers).result
+        map_zone.gather({'result': added_numbers})
+    wg.outputs.result = aggregate_sum(map_zone.outputs.result).result
 
 wg.run()
 
@@ -597,6 +603,10 @@ assert wg.outputs.result.value == 12
 # ----------------
 #
 # Let's run an add-multiply workflow with a hardcoded multiplication factor:
+
+
+# In order to restart a workflow, the tasks should be importable from a module (i.e. not defined on-the-fly).
+from aiida_workgraph.tasks.tests import add, multiply
 
 with WorkGraph('AddMultiplyToBeContinued', inputs=spec.namespace(x=Any, y=Any)) as wg1:
     the_sum = add(

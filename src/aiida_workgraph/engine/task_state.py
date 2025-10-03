@@ -249,8 +249,10 @@ class TaskStateManager:
             node_type = parent_task.node_type.upper()
             if node_type == 'WHILE':
                 self.update_while_task_state(parent_task.name)
-            elif node_type in ['IF', 'ZONE', 'MAP']:
+            elif node_type in ['IF', 'ZONE']:
                 self.update_zone_task_state(parent_task.name)
+            elif node_type == 'MAP':
+                self.update_map_task_state(parent_task.name)
 
         # If the task is a mapped child, update its parent's "template" (the original map node)
         if self.process.wg.tasks[name].map_data:
@@ -283,6 +285,31 @@ class TaskStateManager:
             self.process.report(f'Task: {name} finished.')
             self.update_parent_task_state(name)
 
+    def update_map_task_state(self, name: str) -> None:
+        """Update the map task state.
+        1) check if all child tasks are finished.
+        2) gather the results of all the mapped tasks.
+        3) update the parent task state.
+        """
+        finished, _ = self.are_childen_finished(name)
+        if finished:
+            map_zone = self.process.wg.tasks[name]
+            # gather the results of all the mapped tasks
+            gather_task = map_zone.gather_item_task
+            for input in gather_task.inputs:
+                if input._name.startswith('_'):
+                    continue
+                results = {}
+                link = input._links[0]
+                for prefix, mapped_task in self.process.wg.tasks[gather_task.name].mapped_tasks.items():
+                    results[prefix] = self.ctx._task_results[mapped_task.name][link.to_socket._name]
+                self.ctx._task_results[name][link.to_socket._name] = results
+            self.set_task_runtime_info(name, 'state', 'FINISHED')
+            # self.update_meta_tasks(name)
+            self.process.report(f'Task: {name} finished.')
+            self.update_meta_tasks(name)
+            self.update_parent_task_state(name)
+
     def update_template_task_state(self, name: str) -> None:
         """Update the template task state.
         1) check if all child tasks are finished.
@@ -291,16 +318,16 @@ class TaskStateManager:
         """
         finished, _ = self.are_childen_finished(name)
         if finished:
-            # gather the results of all the mapped tasks
-            results = {}
-            for prefix, mapped_task in self.process.wg.tasks[name].mapped_tasks.items():
-                for output in mapped_task.outputs:
-                    if output._name in self.ctx._task_results[mapped_task.name]:
-                        results.setdefault(output._name, {})
-                        results[output._name][prefix] = self.ctx._task_results[mapped_task.name][output._name]
-            self.ctx._task_results[name] = results
+            # # gather the results of all the mapped tasks
+            # results = {}
+            # for prefix, mapped_task in self.process.wg.tasks[name].mapped_tasks.items():
+            #     for output in mapped_task.outputs:
+            #         if output._name in self.ctx._task_results[mapped_task.name]:
+            #             results.setdefault(output._name, {})
+            #             results[output._name][prefix] = self.ctx._task_results[mapped_task.name][output._name]
+            # self.ctx._task_results[name] = results
             self.set_task_runtime_info(name, 'state', 'FINISHED')
-            self.update_meta_tasks(name)
+            # self.update_meta_tasks(name)
             self.process.report(f'Task: {name} finished.')
             self.update_parent_task_state(name)
 

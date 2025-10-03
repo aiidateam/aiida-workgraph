@@ -195,9 +195,9 @@ def generate_data(N) -> spec.namespace(result=spec.dynamic(Any)):
 
 
 @task
-def calc_sum(**kwargs):
+def calc_sum(data: spec.dynamic(Any)) -> int:
     """Calculates the sum of all keyword arguments' values."""
-    return sum(kwargs.values())
+    return sum(data.values())
 
 
 # %%
@@ -215,11 +215,13 @@ data_task = wg.add_task(generate_data, N=4)
 map_task = wg.add_task('workgraph.map_zone', source=data_task.outputs.result)
 
 # Inside the Map Zone, add 1 to each item
-add_task_in_map = map_task.add_task(add, x=map_task.item, y=1)
+add_task_in_map = map_task.add_task(add, x=map_task.item.value, y=1)
+
+map_task.gather({'result': add_task_in_map.outputs.result})
 
 # After the Map Zone, sum all the results from the add_task_in_map
 # The 'kwargs' input allows collecting all dynamic outputs from the mapped tasks.
-sum_task = wg.add_task(calc_sum, kwargs=add_task_in_map.outputs.result)
+sum_task = wg.add_task(calc_sum, data=map_task.outputs.result)
 
 # Set the final output of the workgraph
 wg.outputs.result = sum_task.outputs.result
