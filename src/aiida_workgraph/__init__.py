@@ -8,7 +8,7 @@ from . import socket_spec as spec
 from .socket_spec import namespace, dynamic, select, meta
 from .collection import group
 
-__version__ = '1.0.0b2'
+__version__ = '1.0.0b3'
 
 __all__ = [
     'WorkGraph',
