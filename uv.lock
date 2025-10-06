@@ -210,7 +210,7 @@ requires-dist = [
     { name = "jsonschema" },
     { name = "myst-nb", marker = "extra == 'docs'", specifier = "~=1.0.0" },
     { name = "nbsphinx", marker = "extra == 'docs'" },
-    { name = "node-graph", specifier = "==0.3.13" },
+    { name = "node-graph", git = "https://github.com/superstar54/node-graph.git?rev=use_pydantic" },
     { name = "node-graph-widget", specifier = ">=0.0.5" },
     { name = "numpy" },
     { name = "pgtest", marker = "extra == 'tests'", specifier = "~=1.3" },
@@ -2624,20 +2624,17 @@ wheels = [
 [[package]]
 name = "node-graph"
 version = "0.3.13"
-source = { registry = "https://pypi.org/simple" }
+source = { git = "https://github.com/superstar54/node-graph.git?rev=use_pydantic#c50587b17f691848984ae918837a52ea1f7966be" }
 dependencies = [
     { name = "cloudpickle" },
     { name = "node-graph-widget" },
     { name = "numpy" },
+    { name = "pydantic" },
     { name = "scipy", version = "1.13.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.10'" },
     { name = "scipy", version = "1.15.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version == '3.10.*'" },
     { name = "scipy", version = "1.16.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
     { name = "typing-extensions", marker = "python_full_version < '3.11'" },
     { name = "wrapt" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/a5/dd/30392390f1b3efefaabc333f27cdaf35cd2456ac728cf66a470f391a1c0d/node_graph-0.3.13.tar.gz", hash = "sha256:6cc425281e097454203fd2374961ffc305322ac2f9bb891aa216287df8affe34", size = 60332, upload-time = "2025-10-03T19:55:43.339Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/d7/66/e79de26f7d69fe3195199270280c10d7292d4ad9775278df1731f66aba91/node_graph-0.3.13-py3-none-any.whl", hash = "sha256:7b943bce404347729d549939f77c0a58048d2b86a19eb9b67a065116e309f404", size = 72756, upload-time = "2025-10-03T19:55:42.008Z" },
 ]
 
 [[package]]

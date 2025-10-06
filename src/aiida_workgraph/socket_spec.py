@@ -1,14 +1,14 @@
 from __future__ import annotations
 from dataclasses import replace
-from typing import Any, Tuple
+from typing import Any, Tuple, Dict
 from node_graph.socket_spec import (
     SocketSpecMeta,
     SocketSpecSelect,
     SocketSpec,
-    BaseSocketSpecAPI,
-    BaseSpecInferAPI,
+    SocketSpecAPI as _SocketSpecAPI,
     select,
     meta,
+    Leaf,
 )
 from aiida_workgraph.registry import type_mapping
 from aiida.engine import Process
@@ -19,7 +19,6 @@ from .socket import TaskSocketNamespace
 
 __all__ = [
     'SocketSpecAPI',
-    'SpecInferAPI',
     'socket',
     'namespace',
     'dynamic',
@@ -29,16 +28,16 @@ __all__ = [
     'SocketSpecSelect',
     'select',
     'meta',
+    'Leaf',
 ]
 
 
-class SocketSpecAPI(BaseSocketSpecAPI):
-    TYPE_MAPPING = type_mapping
+class SocketSpecAPI(_SocketSpecAPI):
+    MAP: Dict[Any, str] = type_mapping
+    NAMESPACE: str = 'workgraph.namespace'
+    DEFAULT: str = 'workgraph.any'
+
     SocketNamespace = TaskSocketNamespace
-
-
-class SpecInferAPI(BaseSpecInferAPI):
-    TYPE_MAPPING = type_mapping
 
     @classmethod
     def _identifier_from_valid_type(cls, valid_type: Any) -> str:
@@ -50,9 +49,9 @@ class SpecInferAPI(BaseSpecInferAPI):
         if isinstance(valid_type, tuple):
             if len(valid_type) == 1:
                 return cls._map_identifier(valid_type[0])
-            return cls.TYPE_MAPPING['default']
+            return cls.DEFAULT
         if valid_type in (None, Ellipsis):
-            return cls.TYPE_MAPPING['default']
+            return cls.DEFAULT
         return cls._map_identifier(valid_type)
 
     @classmethod
@@ -69,7 +68,7 @@ class SpecInferAPI(BaseSpecInferAPI):
                 fields[name] = cls._from_port(child, parent_required=required_here, role=role)
 
             ns = SocketSpec(
-                identifier=cls.TYPE_MAPPING['namespace'],
+                identifier=cls.NAMESPACE,
                 fields=fields,
                 meta=SocketSpecMeta(
                     required=required_here,
@@ -143,5 +142,5 @@ socket = SocketSpecAPI.socket
 namespace = SocketSpecAPI.namespace
 dynamic = SocketSpecAPI.dynamic
 validate_socket_data = SocketSpecAPI.validate_socket_data
-infer_specs_from_callable = SpecInferAPI.infer_specs_from_callable
-from_aiida_process = SpecInferAPI.from_aiida_process
+infer_specs_from_callable = SocketSpecAPI.infer_specs_from_callable
+from_aiida_process = SocketSpecAPI.from_aiida_process
