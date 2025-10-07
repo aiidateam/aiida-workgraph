@@ -250,24 +250,20 @@ from pydantic import BaseModel
 from aiida_workgraph.socket_spec import Leaf
 
 
-class InputsModel(BaseModel):
-    x: int
-    y: int
-
-
 class OutputsModel(BaseModel):
     sum: int
     product: int
 
 
 @task
-def add_multiply_pydantic_in_out(data: InputsModel) -> OutputsModel:
-    return {'sum': data['x'] + data['y'], 'product': data['x'] * data['y']}
+def add_multiply_pydantic_in_out(x, y) -> OutputsModel:
+    return {'sum': x + y, 'product': x * y}
 
 
 @task.graph
 def AddMultiplyPydantic():
-    add_multiply_pydantic_in_out(data={'x': 2, 'y': 5})
+    # IMPORTANT: pass a plain dict, not OutputsModel(x=3, y=4)
+    add_multiply_pydantic_in_out(x=3, y=4)
 
 
 wg = AddMultiplyPydantic.build()
@@ -365,6 +361,49 @@ class OuterModel(BaseModel):
 
 
 # %%
+# Using dataclasses
+# -----------------
+#
+# Dataclasses work just like Pydantic models for *annotations*:
+#
+# - Plain dataclass  -> expanded static namespace (one socket per field)
+# - model_config={'extra': 'allow', 'item_type': T} -> dynamic namespace
+# - model_config={'leaf': True} or Leaf[YourDataclass] -> single leaf (blob)
+
+from dataclasses import dataclass
+
+
+@dataclass
+class DCOutputs:
+    sum: int
+    product: int
+
+
+@task
+def add_multiply_dc_in_out(x, y) -> DCOutputs:
+    return {'sum': x + y, 'product': x * y}
+
+
+@task.graph
+def AddMultiplyDataclass():
+    # IMPORTANT: pass a plain dict, not DCInputs(...)
+    add_multiply_dc_in_out(x=2, y=5)
+
+
+wg = AddMultiplyDataclass.build()
+wg.run()
+wg.generate_provenance_graph()
+
+# %%
+# .. important::
+#
+#    Models/dataclasses are annotation-only
+#    Even when you annotate with BaseModel or @dataclass, do not pass instances of these types to tasks/graphs. Always pass plain dictionaries:
+#
+#    - This lets WorkGraph expand inputs/outputs into individual sockets, so it can wire provenance edges precisely (e.g., data.x --> task.data.x).
+#    - It allows graph inputs to be collected from task outputs as a dict of AiiDA ORM nodes, preserving AiiDA links between nodes.
+#    - Validation still happens via the WorkGraph spec (derived from your annotations)--you’re just not constructing runtime model/dataclass objects.
+#
 # Data linkage
 # ------------
 #
@@ -569,8 +608,8 @@ def UseMeta(
 # - Annotate task/graph outputs to unpack results into individual AiiDA nodes.
 # - Annotate inputs to specify input structures.
 # - Employ ``dynamic`` (or Pydantic models with ``extra='allow'``) for tasks with a variable number of outputs.
-# - Use **Pydantic** for reusable, validated schemas:
-#     * Plain ``BaseModel`` --> expanded namespace
+# - Use **Pydantic model** or dataclass for reusable, validated schemas:
+#     * Plain ``BaseModel`` or dataclass --> expanded namespace
 #     * ``model_config={'extra':'allow', 'item_type': T}`` --> dynamic namespace
 #     * ``model_config={'leaf': True}`` or ``Leaf[Model]`` --> single leaf (blob)
 # - Reuse ``.inputs`` and ``.outputs`` specifications at the graph level to build modular and robust workflows.
