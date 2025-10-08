@@ -659,13 +659,10 @@ print(f'  Product: {wg2.outputs.product.value}')
 # ----------------
 #
 # Let's now pick up the previous workgraph and extend it by a second addition, leveraging the results of the previous work.
-from node_graph.socket_spec import add_spec_field, SocketSpec
 
 with WorkGraph.load(wg2.pk) as wg3:
     wg3.name = 'AddMultiplyContinued'
-    wg3.add_input('workgraph.any', name='z')  # introduce a new input socket
-    # also need to update the inputs spec
-    wg3._inputs = add_spec_field(wg3._inputs, 'z', SocketSpec(identifier='workgraph.any'))
+    wg3.add_input_spec('workgraph.any', name='z')
     wg3.restart()
     new_sum = add(
         x=wg3.tasks.multiply.outputs.result,

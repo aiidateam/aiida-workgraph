@@ -16,7 +16,8 @@ Use annotations to control data provenance
 # - **Data creation**: How should data be created and stored? For example, if a task returns a nested dictionary, should it be stored as a single entity or unpacked into separate nodes?
 # - **Data lineage**: Where does the data come from? How does it flow between tasks in the workflow?
 #
-# This guide will walk you through the various ways to annotate your tasks.
+# This guide will walk you through the various ways to annotate your tasks—using both the native annotation helpers and **Pydantic models**.
+#
 
 import typing as t
 
@@ -43,8 +44,6 @@ load_profile()
 # The first task, ``add_multiply1``, has no output specification.
 # Consequently, the returned dictionary will be stored as a single AiiDA ``Dict`` node.
 # The second task, ``add_multiply2``, uses an output namespace to specify that each key-value pair in the dictionary should be stored as a separate AiiDA node.
-
-# Import the `namespace` module for specifications
 
 
 @task
@@ -80,7 +79,7 @@ wg.run()
 # .. note::
 #
 #    In ``add_multiply2``, we also annotated the input types (``x: int, y: int``).
-#    This adds a layer of validaton to ensure only integers are passed to the task.
+#    This adds a layer of validation to ensure only integers are passed to the task.
 #    This feature is experimental - its API and behavior may change in future releases.
 #
 # Let's visualize the data provenance of our executed workflow:
@@ -124,7 +123,6 @@ wg.to_html()
 # This is due to the namespace specifications.
 
 wg.run()
-
 
 # %%
 # Finally, we can inspect the provenance graph for this workflow:
@@ -202,7 +200,6 @@ wg.run()
 
 # %%
 # Instead of visualizing the full graph, let's inspect the outputs of the task using a summary utility.
-# This is often clearer for verifying data structures.
 
 print(get_process_summary(wg.tasks[-1].pk))
 
@@ -230,7 +227,6 @@ def DynamicNestedDictGenerator(n: int):
 
 wg = DynamicNestedDictGenerator.build(n=3)
 wg.run()
-
 # %%
 # Let's check the output summary for this dynamically generated nested structure:
 
@@ -239,6 +235,174 @@ print(get_process_summary(wg.tasks[-1].pk))
 
 # %%
 # The output shows a dictionary with dynamic keys (``data_0``, ``data_1``, etc.), where each value is itself a dictionary with a fixed ``square`` and ``cube`` structure, as specified by ``dynamic(namespace(...))``.
+
+# %%
+# Using Pydantic models
+# ---------------------
+#
+# You can use **Pydantic models** in annotations as a more structured, reusable way to define namespaces.
+# By default, a ``BaseModel`` expands to a **static namespace** with one socket per field.
+#
+# If you want a **dynamic** namespace, set ``model_config = {"extra": "allow"}`` and (optionally) ``"item_type"`` for the type of each dynamic value.
+# If you want to treat a model as a **single leaf** (blob), set ``model_config = {"leaf": True}`` or use ``Leaf[YourModel]`` in the annotation.
+
+from pydantic import BaseModel
+from aiida_workgraph.socket_spec import Leaf
+
+
+class OutputsModel(BaseModel):
+    sum: int
+    product: int
+
+
+@task
+def add_multiply_pydantic_in_out(x, y) -> OutputsModel:
+    return {'sum': x + y, 'product': x * y}
+
+
+@task.graph
+def AddMultiplyPydantic():
+    # IMPORTANT: pass a plain dict, not OutputsModel(x=3, y=4)
+    add_multiply_pydantic_in_out(x=3, y=4)
+
+
+wg = AddMultiplyPydantic.build()
+wg.run()
+wg.generate_provenance_graph()
+
+# %%
+# Dynamic Pydantic models
+# ~~~~~~~~~~~~~~~~~~~~~~~
+#
+# Mark a model as dynamic with ``extra='allow'``. Add ``item_type`` to specify the per-key value type.
+# Fixed fields still appear as normal sockets alongside your dynamic keys.
+
+
+class DynamicOut(BaseModel):
+    model_config = {'extra': 'allow', 'item_type': int}
+
+    header: int = 42  # fixed (non-dynamic) field
+
+
+@task
+def make_dynamic_with_model(n: int) -> DynamicOut:
+    # fixed field + dynamic keys with int values
+    return {'header': 100, **{f'k{i}': i * i for i in range(n)}}
+
+
+@task.graph
+def GraphDynamicOut(n: int):
+    make_dynamic_with_model(n=n)
+
+
+wg = GraphDynamicOut.build(n=4)
+wg.run()
+wg.generate_provenance_graph()
+
+# %%
+# Leaf Pydantic models (single blob)
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#
+# Sometimes you want to **validate** with a Pydantic model but store it as a **single node** instead of expanding fields.
+# There are two ways:
+#
+# 1) Mark the model: ``model_config = {"leaf": True}``
+# 2) Per-use override: annotate with ``Leaf[YourModel]``
+
+
+class BlobModel(BaseModel):
+    model_config = {'leaf': True}  # always a leaf blob
+
+    a: int
+    b: int
+
+
+@task
+def consume_blob(m: BlobModel) -> dict:
+    # 'm' is validated by Pydantic but stored/treated as one leaf node
+    return {'sum': m['a'] + m['b']}
+
+
+# Per-use override without modifying the model:
+class AnotherModel(BaseModel):
+    a: int
+    b: int
+
+
+@task
+def consume_blob_per_use(m: Leaf[AnotherModel]) -> dict:
+    return {'sum': m['a'] + m['b']}
+
+
+@task.graph
+def BlobExamples():
+    consume_blob(m={'a': 1, 'b': 2})
+    consume_blob_per_use(m={'a': 3, 'b': 4})
+
+
+wg = BlobExamples.build()
+wg.run()
+wg.generate_provenance_graph()
+
+# %%
+# Nested Pydantic models
+# ~~~~~~~~~~~~~~~~~~~~~~~~
+# Pydantic models can be nested to represent complex data structures.
+# You can mix static, dynamic, and leaf models as needed.
+
+
+class InnerModel(BaseModel):
+    value: int
+
+
+class OuterModel(BaseModel):
+    name: str
+    inner: InnerModel
+
+
+# %%
+# Using dataclasses
+# -----------------
+#
+# Dataclasses work just like Pydantic models for *annotations*:
+#
+# - Plain dataclass  -> expanded static namespace (one socket per field)
+# - model_config={'extra': 'allow', 'item_type': T} -> dynamic namespace
+# - model_config={'leaf': True} or Leaf[YourDataclass] -> single leaf (blob)
+
+from dataclasses import dataclass
+
+
+@dataclass
+class DCOutputs:
+    sum: int
+    product: int
+
+
+@task
+def add_multiply_dc_in_out(x, y) -> DCOutputs:
+    return {'sum': x + y, 'product': x * y}
+
+
+@task.graph
+def AddMultiplyDataclass():
+    # IMPORTANT: pass a plain dict, not DCInputs(...)
+    add_multiply_dc_in_out(x=2, y=5)
+
+
+wg = AddMultiplyDataclass.build()
+wg.run()
+wg.generate_provenance_graph()
+
+# %%
+# .. important::
+#
+#    Models/dataclasses are annotation-only
+#    Even when you annotate with BaseModel or @dataclass, do not pass instances of these types to tasks/graphs. Always pass plain dictionaries:
+#
+#    - This lets WorkGraph expand inputs/outputs into individual sockets, so it can wire provenance edges precisely (e.g., data.x --> task.data.x).
+#    - It allows graph inputs to be collected from task outputs as a dict of AiiDA ORM nodes, preserving AiiDA links between nodes.
+#    - Validation still happens via the WorkGraph spec (derived from your annotations)--you’re just not constructing runtime model/dataclass objects.
 #
 # Data linkage
 # ------------
@@ -307,9 +471,9 @@ wg.to_html()
 # In the example above:
 #
 # - **Graph outputs:** The outputs are annotated with a nested namespace that defines the *shape* of the final result.
-#   Here we reuse ``generate_square_numbers.outputs`` and ``add_multiply_task.outputs`` to ensure the graph's output signature is consistent with the tasks it contains.
+#   Here we reuse ``generate_square_numbers.outputs`` and ``add_multiply.outputs`` to ensure the graph's output signature is consistent with the tasks it contains.
 #
-# - **Graph inputs:** The ``data`` input is annotated with a nested namespace that reuses ``add_multiply_task.inputs``.
+# - **Graph inputs:** The ``data`` input is annotated with a nested namespace that reuses ``add_multiply.inputs``.
 #   This allows `aiida-workgraph` to validate the complex input dictionary and create the correct data links.
 #
 # In the GUI representation of the WorkGraph, you will see how the nested inputs are correctly wired.
@@ -329,14 +493,12 @@ wg.to_html()
 # Let's run the graph and visualize its provenance.
 
 wg.run()
-
 wg.generate_provenance_graph()
 
 # %%
 # Note how the outputs of the various tasks are exposed (linked) to the graph, making accessible via the graph node.
-#
 # Reshaping specifications with ``select``
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #
 # Often, you'll want to reuse parts of a specification while modifying it.
 # For example, you might want to exclude a field that is provided by another source or rename fields for clarity.
@@ -438,15 +600,20 @@ def UseMeta(
 # ----------
 #
 # You now know how to annotate task and graph inputs and outputs in `aiida-workgraph`.
-# By leveraging static (``namespace``), dynamic (``dynamic``), and nested namespaces, you can precisely control data serialization and create transparent data lineages.
+# By leveraging static (``namespace``), dynamic (``dynamic``), nested namespaces, and **Pydantic models**,
+# you can precisely control data serialization and create transparent data lineages.
 #
 # The key takeaways are:
 #
 # - Annotate task/graph outputs to unpack results into individual AiiDA nodes.
 # - Annotate inputs to specify input structures.
-# - Employ ``dynamic`` for tasks with a variable number of outputs.
+# - Employ ``dynamic`` (or Pydantic models with ``extra='allow'``) for tasks with a variable number of outputs.
+# - Use **Pydantic model** or dataclass for reusable, validated schemas:
+#     * Plain ``BaseModel`` or dataclass --> expanded namespace
+#     * ``model_config={'extra':'allow', 'item_type': T}`` --> dynamic namespace
+#     * ``model_config={'leaf': True}`` or ``Leaf[Model]`` --> single leaf (blob)
 # - Reuse ``.inputs`` and ``.outputs`` specifications at the graph level to build modular and robust workflows.
-# - Use ``select`` inside ``Annotated`` to reshape reused specifications (e.g., ``include``/``exclude`` with dotted paths, ``rename``, `prefix`).
+# - Use ``select`` inside ``Annotated`` to reshape reused specifications (e.g., ``include``/``exclude`` with dotted paths, ``rename``, ``prefix``).
 # - Use ``meta`` to modify metadata of a specification, such as making it optional.
 #
 # These tools are fundamental to building reproducible and verifiable scientific workflows with complete data provenance.
