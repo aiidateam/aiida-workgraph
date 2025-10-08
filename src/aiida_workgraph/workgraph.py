@@ -249,7 +249,7 @@ class WorkGraph(node_graph.NodeGraph):
         if should_serialize:
             # serialize the graph-level tasks
             wgdata['tasks']['graph_inputs']['inputs'] = serialize_graph_level_data(
-                wgdata['tasks']['graph_inputs']['inputs'], self._inputs, all_serializers
+                wgdata['tasks']['graph_inputs']['inputs'], self.spec.inputs, all_serializers
             )
 
         return wgdata

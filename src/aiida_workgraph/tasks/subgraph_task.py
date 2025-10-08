@@ -80,8 +80,8 @@ def _build_subgraph_task_nodespec(
     return NodeSpec(
         identifier=name or graph.name,
         node_type='SubGraph',
-        inputs=graph._inputs,
-        outputs=graph._outputs,
+        inputs=graph.spec.inputs,
+        outputs=graph.spec.outputs,
         executor=SafeExecutor.from_graph(graph),
         base_class=SubGraphTask,
     )

@@ -210,7 +210,7 @@ requires-dist = [
     { name = "jsonschema" },
     { name = "myst-nb", marker = "extra == 'docs'", specifier = "~=1.0.0" },
     { name = "nbsphinx", marker = "extra == 'docs'" },
-    { name = "node-graph", git = "https://github.com/superstar54/node-graph.git?rev=use_pydantic" },
+    { name = "node-graph", git = "https://github.com/superstar54/node-graph.git" },
     { name = "node-graph-widget", specifier = ">=0.0.5" },
     { name = "numpy" },
     { name = "pgtest", marker = "extra == 'tests'", specifier = "~=1.3" },
@@ -2624,7 +2624,7 @@ wheels = [
 [[package]]
 name = "node-graph"
 version = "0.3.13"
-source = { git = "https://github.com/superstar54/node-graph.git?rev=use_pydantic#c50587b17f691848984ae918837a52ea1f7966be" }
+source = { git = "https://github.com/superstar54/node-graph.git#e575b6e34bd2ec592713671184159c0061fbdac5" }
 dependencies = [
     { name = "cloudpickle" },
     { name = "node-graph-widget" },

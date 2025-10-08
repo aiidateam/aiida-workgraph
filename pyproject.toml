@@ -20,7 +20,7 @@ classifiers = [
 dependencies = [
   "numpy",
   "scipy",
-  "node-graph @ git+https://github.com/superstar54/node-graph.git@use_pydantic",
+  "node-graph @ git+https://github.com/superstar54/node-graph.git",
   "node-graph-widget>=0.0.5",
   "aiida-core~=2.7.1",
   "cloudpickle",
