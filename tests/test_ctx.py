@@ -61,8 +61,7 @@ def test_task_update_nested_ctx():
     wg.add_task(add, name='add', x=1, y=2)
     wg.update_ctx({'data.sum': wg.tasks.add.outputs.results.sum})
     wg.outputs.sum = wg.ctx.data.sum
-    wg.outputs.add = {}
-    wg.outputs.add.sum = wg.ctx.data.sum
+    wg.outputs.add = {'sum': wg.ctx.data.sum}
     wg.run()
     assert wg.process.outputs.sum.value == 3
     assert wg.process.outputs.add.sum.value == 3
