@@ -89,6 +89,7 @@ def test_save_load(wg_task, decorated_add):
     assert wg.process.process_state.value.upper() == 'CREATED'
     assert wg.process.process_label == 'WorkGraph<test_save_load>'
     assert wg.process.label == 'test_save_load'
+
     wg2 = WorkGraph.load(wg.process.pk)
     assert len(wg.tasks) == len(wg2.tasks)
     # the executor of the decorated task is pickled,
@@ -104,6 +105,17 @@ def test_save_load(wg_task, decorated_add):
     # wg2.save()
     # assert wg2.tasks.add1.executor == decorated_add
     # remove the extra, will raise an error
+
+    # Check that it also works for the uuid
+    wg3 = WorkGraph.load(wg.process.uuid)
+    assert len(wg.tasks) == len(wg3.tasks)
+
+    assert wg3.tasks.add1.get_executor().callable == UnavailableExecutor
+
+    assert wg3.tasks.add2.get_executor().callable == wg.tasks.add2.get_executor().callable
+    assert wg.tasks.add2.inputs.metadata._value == wg3.tasks.add2.inputs.metadata._value
+
+    assert wg3.tasks.add2.inputs.metadata.options.resources.value['num_mpiprocs_per_machine'] == 2
 
 
 def test_load_failure(create_process_node):
