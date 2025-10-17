@@ -8,7 +8,7 @@ from aiida.engine import run_get_node
 from aiida_pythonjob import pyfunction, PythonJob, PyFunction, MonitorPyFunction
 from aiida_pythonjob.utils import serialize_ports
 from aiida_workgraph.task import Task
-from node_graph.socket_spec import SocketSpec, SocketSpecSelect, SocketSpecMeta
+from node_graph.socket_spec import SocketSpec, SocketSpecSelect, SocketMeta
 from node_graph.node_spec import NodeSpec
 from aiida_workgraph.socket_spec import namespace
 from .function_task import build_callable_nodespec
@@ -291,9 +291,9 @@ def build_pythonjob_nodespec(
 
     # additions specific to PythonJob
     add_in = namespace(
-        computer=Annotated[str, SocketSpecMeta(required=False)],
-        command_info=Annotated[dict, SocketSpecMeta(required=False)],
-        register_pickle_by_value=Annotated[bool, SocketSpecMeta(required=False)],
+        computer=Annotated[str, SocketMeta(required=False)],
+        command_info=Annotated[dict, SocketMeta(required=False)],
+        register_pickle_by_value=Annotated[bool, SocketMeta(required=False)],
     )
 
     return build_callable_nodespec(

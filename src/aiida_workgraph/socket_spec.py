@@ -2,7 +2,7 @@ from __future__ import annotations
 from dataclasses import replace
 from typing import Any, Tuple, Dict
 from node_graph.socket_spec import (
-    SocketSpecMeta,
+    SocketMeta,
     SocketSpecSelect,
     SocketSpec,
     SocketSpecAPI as _SocketSpecAPI,
@@ -70,7 +70,7 @@ class SocketSpecAPI(_SocketSpecAPI):
             ns = SocketSpec(
                 identifier=cls.NAMESPACE,
                 fields=fields,
-                meta=SocketSpecMeta(
+                meta=SocketMeta(
                     required=required_here,
                     is_metadata=getattr(port, 'is_metadata', False),
                     call_role=('kwargs' if role == 'input' else None),
@@ -81,8 +81,11 @@ class SocketSpecAPI(_SocketSpecAPI):
             is_dyn = bool(getattr(port, 'dynamic', False))
             if is_dyn:
                 valid_type = getattr(port, 'valid_type', None)
-                item_ident = cls._identifier_from_valid_type(valid_type)
-                ns = replace(ns, dynamic=True, item=SocketSpec(identifier=item_ident))
+                if valid_type:
+                    item_ident = cls._identifier_from_valid_type(valid_type)
+                    ns = replace(ns, meta=replace(ns.meta, dynamic=True), item=SocketSpec(identifier=item_ident))
+                else:
+                    ns = replace(ns, meta=replace(ns.meta, dynamic=True), item=None)
             return ns
 
         # Leaf Port (InputPort/OutputPort)
@@ -91,7 +94,7 @@ class SocketSpecAPI(_SocketSpecAPI):
         ident = cls._identifier_from_valid_type(valid_type)
         return SocketSpec(
             identifier=ident,
-            meta=SocketSpecMeta(
+            meta=SocketMeta(
                 required=required_here,
                 is_metadata=getattr(port, 'is_metadata', False),
                 call_role=('kwargs' if role == 'input' else None),

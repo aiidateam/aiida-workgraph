@@ -7,7 +7,7 @@ from aiida_shell import ShellJob
 from aiida_shell.launch import prepare_shell_job_inputs
 from node_graph.node_spec import NodeSpec
 from node_graph.executor import RuntimeExecutor
-from node_graph.socket_spec import SocketSpec, merge_specs, SocketSpecMeta
+from node_graph.socket_spec import SocketSpec, merge_specs, SocketMeta
 from aiida_workgraph.socket_spec import from_aiida_process, namespace
 from aiida_workgraph.task import Task, TaskHandle
 from aiida import orm
@@ -127,7 +127,7 @@ def _build_shelljob_nodespec(
     in_spec = replace(in_spec, fields={**in_spec.fields, 'code': patched_code})
 
     # Add additional inputs
-    additions_in = namespace(command=Any, resolve_command=Annotated[bool, SocketSpecMeta(required=False)])
+    additions_in = namespace(command=Any, resolve_command=Annotated[bool, SocketMeta(required=False)])
     in_spec = merge_specs(in_spec, additions_in)
 
     # Ensure stdout/stderr outputs

@@ -74,16 +74,6 @@ class Task(GraphNode):
         data = get_dict_from_builder(builder)
         self.set_inputs(data)
 
-    def set_from_protocol(self, *args: Any, **kwargs: Any) -> None:
-        """Set the task inputs from protocol data."""
-
-        executor = self.get_executor().callable
-        # check if the executor has the get_builder_from_protocol method
-        if not hasattr(executor, 'get_builder_from_protocol'):
-            raise AttributeError(f'Executor {executor.__name__} does not have the get_builder_from_protocol method.')
-        builder = executor.get_builder_from_protocol(*args, **kwargs)
-        self.set_from_builder(builder)
-
     @classmethod
     def new(cls, identifier: Union[str, Callable], name: Optional[str] = None) -> 'Task':
         """Create a task from a identifier."""
@@ -176,21 +166,6 @@ class Task(GraphNode):
         wgdata = {'name': self.name, 'tasks': {self.name: tdata}, 'links': []}
         wgdata = workgraph_to_short_json(wgdata)
         return wgdata
-
-    def _repr_mimebundle_(self, *args: Any, **kwargs: Any) -> any:
-        # if ipywdigets > 8.0.0, use _repr_mimebundle_ instead of _ipython_display_
-        self.widget.value = self.to_widget_value()
-        if hasattr(self.widget, '_repr_mimebundle_'):
-            return self.widget._repr_mimebundle_(*args, **kwargs)
-        else:
-            return self.widget._ipython_display_(*args, **kwargs)
-
-    def to_html(self, output: str = None, show_socket_depth: Optional[int] = None, **kwargs):
-        """Write a standalone html file to visualize the task."""
-        if show_socket_depth is None:
-            show_socket_depth = self.show_socket_depth
-        self.widget.value = self.to_widget_value()
-        return self.widget.to_html(output=output, **kwargs)
 
 
 class TaskSet:

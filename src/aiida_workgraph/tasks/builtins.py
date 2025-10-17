@@ -7,7 +7,7 @@ from node_graph.socket import BaseSocket
 from node_graph import RuntimeExecutor
 from aiida import orm
 from node_graph.node_spec import NodeSpec
-from node_graph.socket_spec import SocketSpec, SocketSpecMeta
+from node_graph.socket_spec import SocketSpec, SocketMeta
 from typing import Annotated
 from aiida_workgraph.executors.builtins import update_ctx, get_context, select, return_input
 from node_graph.node import BuiltinPolicy
@@ -140,8 +140,8 @@ class MapItem(Task):
         node_type='Normal',
         catalog='Control',
         inputs=namespace(
-            source=SocketSpec('workgraph.any', link_limit=100000, meta=SocketSpecMeta(required=False)),
-            key=SocketSpec('workgraph.string', meta=SocketSpecMeta(required=False)),
+            source=SocketSpec('workgraph.any', link_limit=100000, meta=SocketMeta(required=False)),
+            key=SocketSpec('workgraph.string', meta=SocketMeta(required=False)),
         ),
         outputs=namespace(key=str, value=any),
         base_class_path='aiida_workgraph.tasks.builtins.MapItem',
@@ -173,7 +173,7 @@ class SetContext(Task):
         node_type='Normal',
         catalog='Control',
         inputs=namespace(
-            context=SocketSpec('workgraph.any', meta=SocketSpecMeta(required=False)),
+            context=SocketSpec('workgraph.any', meta=SocketMeta(required=False)),
             key=any,
             value=any,
         ),
@@ -189,7 +189,7 @@ class GetContext(Task):
         identifier='workgraph.get_context',
         node_type='Normal',
         catalog='Control',
-        inputs=namespace(context=SocketSpec('workgraph.any', meta=SocketSpecMeta(required=False)), key=any),
+        inputs=namespace(context=SocketSpec('workgraph.any', meta=SocketMeta(required=False)), key=any),
         outputs=namespace(result=any),
         executor=RuntimeExecutor.from_callable(get_context),
         base_class_path='aiida_workgraph.tasks.builtins.GetContext',

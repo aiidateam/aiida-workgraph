@@ -331,9 +331,6 @@ class WorkGraph(node_graph.NodeGraph):
     def pk(self) -> Optional[int]:
         return self.process.pk if self.process else None
 
-    def update_ctx(self, value: Dict[str, Any]) -> None:
-        self.ctx._set_socket_value(value, link_limit=100000)
-
     @classmethod
     def from_dict(cls, wgdata: Dict[str, Any]) -> 'WorkGraph':
         if 'tasks' in wgdata:
@@ -602,19 +599,6 @@ class WorkGraph(node_graph.NodeGraph):
         wait_to_link(wgdata)
         wgdata = workgraph_to_short_json(wgdata)
         return wgdata
-
-    def _repr_mimebundle_(self, *args, **kwargs):
-        # if ipywdigets > 8.0.0, use _repr_mimebundle_ instead of _ipython_display_
-        self.widget.value = self.to_widget_value()
-        if hasattr(self.widget, '_repr_mimebundle_'):
-            return self.widget._repr_mimebundle_(*args, **kwargs)
-        else:
-            return self.widget._ipython_display_(*args, **kwargs)
-
-    def to_html(self, output: str = None, **kwargs):
-        """Write a standalone html file to visualize the workgraph."""
-        self.widget.value = self.to_widget_value()
-        return self.widget.to_html(output=output, **kwargs)
 
     def generate_provenance_graph(self):
         """Generate the provenance graph of the workgraph process."""
