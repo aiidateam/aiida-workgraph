@@ -157,11 +157,6 @@ def test_set_inputs_from_builder(add_code) -> None:
     assert add1.inputs.x.value == 1
     assert add1.inputs['y'].value == 2
     assert add1.inputs['code'].value == add_code
-    with pytest.raises(
-        AttributeError,
-        match=f'Executor {ArithmeticAddCalculation.__name__} does not have the get_builder_from_protocol method.',
-    ):
-        add1.set_from_protocol(code=add_code, protocol='fast')
 
 
 def test_namespace_outputs():
