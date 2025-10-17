@@ -497,6 +497,7 @@ wg.generate_provenance_graph()
 
 # %%
 # Note how the outputs of the various tasks are exposed (linked) to the graph, making accessible via the graph node.
+#
 # Reshaping specifications with ``select``
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #
