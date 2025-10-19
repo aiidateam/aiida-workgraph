@@ -108,7 +108,6 @@ class TaskStateManager:
         """Set the results of a normal task.
         A normal task is created by decorating a function with @task().
         """
-        from aiida_workgraph.config import builtin_outputs
 
         if success:
             task = self.process.wg.tasks[name]
@@ -117,7 +116,9 @@ class TaskStateManager:
                 if len(task.outputs) - 2 != len(results):
                     self.on_task_failed(name)
                     return self.process.exit_codes.OUTPUS_NOT_MATCH_RESULTS
-                output_names = [output._name for output in task.outputs if output._name not in builtin_outputs]
+                output_names = [
+                    output._name for output in task.outputs if output._metadata.extra.get('builtin_socket') is not True
+                ]
                 for i, output_name in enumerate(output_names):
                     self.ctx._task_results[name][output_name] = results[i]
             elif isinstance(results, dict):
