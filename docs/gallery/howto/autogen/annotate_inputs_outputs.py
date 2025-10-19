@@ -171,6 +171,11 @@ wg.generate_provenance_graph()
 # The graph shows that the ``generate_square_numbers`` task has multiple output nodes, one for each entry in the dynamically generated dictionary.
 # The ``dynamic(typing.Any)`` specification instructs the workgraph to treat each value in the returned dictionary as a separate output node of any type.
 #
+# .. note::
+#
+#    If no item type is specified (i.e., just ``dynamic()``), the namespace becomes fully dynamic,
+#    enabling arbitrary nested structures (e.g., dictionaries). Each value will then be recursively treated as a leaf node.
+#
 # Nested namespaces
 # ~~~~~~~~~~~~~~~~~
 #
