@@ -33,8 +33,8 @@ class GraphTask(Task):
         # we may introduce hard-to-trace bugs or collisions.
         if isinstance(executor, TaskHandle) and hasattr(executor, '_callable'):
             executor = executor._callable
-        if executor.__name__ not in executor.__globals__:
-            executor.__globals__[executor.__name__] = task.graph(max_depth=max_depth)(executor)
+        # We override the executor's globals to include the decorated function for recursion
+        executor.__globals__[executor.__name__] = task.graph(max_depth=max_depth)(executor)
         depth = call_depth_from_node(engine_process.node)
         if depth >= max_depth:
             if depth >= max_depth:
