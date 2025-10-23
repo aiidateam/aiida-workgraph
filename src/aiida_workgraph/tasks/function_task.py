@@ -5,7 +5,7 @@ from aiida_workgraph.socket_spec import (
     infer_specs_from_callable,
 )
 from node_graph.socket_spec import SocketSpec, merge_specs
-from node_graph.node_spec import NodeSpec
+from node_graph.node_spec import NodeSpec, SchemaSource
 from node_graph.executor import RuntimeExecutor
 from node_graph.error_handler import ErrorHandlerSpec, normalize_error_handlers
 
@@ -86,14 +86,18 @@ def build_callable_nodespec(
             ),
         }
     )
+    # if not importable, embed schema
+    executor = RuntimeExecutor.from_callable(obj)
+    schema_source = SchemaSource.HANDLE if executor.mode == 'module' else SchemaSource.EMBEDDED
 
     return NodeSpec(
         identifier=identifier or obj.__name__,
+        schema_source=schema_source,
         node_type=node_type,
         catalog=catalog,
         inputs=func_in,
         outputs=func_out,
-        executor=RuntimeExecutor.from_callable(obj),
+        executor=executor,
         error_handlers=error_handlers,
         base_class=base_class,
         metadata=metadata,

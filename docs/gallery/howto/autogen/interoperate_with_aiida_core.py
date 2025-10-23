@@ -53,6 +53,18 @@ def add_more(x, y, z):
 
 
 # %%
+# .. important::
+#
+#    The ``task`` decorator accepts the same arguments when used functionally.
+#    However, here are a few things to consider:
+#      - Input specifications are inferred from the Python signature. Declaring explicit input namespaces is not supported, because `calcfunction` and `workfunction` accept namespaced inputs only via keyword argument (e.g., ``**kwargs``): this is treated as a dynamic namespace and bypasses validation, allowing arbitrary nested AiiDA data to be provided.
+#      - Outputs are always dynamic: whatever structure the function returns becomes its provenance without validation. Defining an output specification is therefore only needed to expose output sockets that other tasks can link to.
+#      - When the AiiDA process provides a single output (e.g., ``return x``), the socket name defaults to ``result``. You may override it (e.g., ``task(outputs=["my_sum"])(add)(...)``) for clearer graph labels, understanding the provenance graph will still record ``result``.
+#      - When the process returns a dictionary (e.g., ``return {"x": x, "y": y}``), you must assign output socket names explicitly if you want to reference individual entries. See :doc:`../../gallery/howto/autogen/annotate_inputs_outputs` for more on namespaces and dynamic sockets.
+#
+
+
+# %%
 # To use ``aiida-core`` components in a ``WorkGraph``, we can simply cast them as tasks using the ``task`` decorator functionally (``task(<aiida-core-component>)``).
 # Task functional components can then be called functionally with their respective inputs, linking outputs to inputs as needed.
 
@@ -92,19 +104,7 @@ wg.to_html()
 # %%
 # .. important::
 #
-#    The ``task`` decorator accepts the same arguments when used functionally.
-#    However, here are a few things to consider:
-#
-#    - For ``WorkChain`` and ``CalcJob``, inputs and outputs are determined by the AiiDA process definition and cannot be overridden.
-#    - For ``calcfunction`` and ``workfunction``:
-#
-#      - When the AiiDA process provides a single output (e.g., ``return x``), the output socket name is implicitly set to ``result``.
-#        The user may override this by assigning a custom output socket name (e.g., ``task(outputs=["my_sum"])(add)(...)``).
-#        However, the benefits of clear graph visualization labels must be weighed against the loss of provenance consistency (the provenance graph will still show ``result``).
-#      - When the AiiDA process provides multiple outputs (e.g., ``return {"x": x, "y": y}``), it is actually necessary to assign output socket names explicitly.
-#        However, the previous point applies here as well if the user chooses to assign output socket names different from the dictionary keys of the AiiDA process.
-#
-#    For more about sockets, please refer to the :doc:`../../concept/autogen/socket_concept` concept section.
+#    For ``WorkChain`` and ``CalcJob``, inputs and outputs are determined by the AiiDA process definition and cannot be overridden by passing the `inputs` or `outputs` arguments to the ``task`` decorator.
 
 
 # %%
