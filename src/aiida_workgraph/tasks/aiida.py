@@ -106,8 +106,9 @@ def _build_aiida_function_nodespec(
     error_handlers: Optional[Dict[str, ErrorHandlerSpec]] = None,
 ) -> NodeSpec:
     from aiida_workgraph.utils import inspect_aiida_component_type
+    from dataclasses import replace
 
-    return build_callable_nodespec(
+    spec = build_callable_nodespec(
         obj=obj,
         node_type=inspect_aiida_component_type(obj),
         catalog=catalog,
@@ -118,3 +119,6 @@ def _build_aiida_function_nodespec(
         out_spec=out_spec,
         error_handlers=error_handlers,
     )
+    # the outputs of calcfunctions/workfunctions are always dynamic
+    spec = replace(spec, outputs=replace(spec.outputs, meta=replace(spec.outputs.meta, dynamic=True)))
+    return spec

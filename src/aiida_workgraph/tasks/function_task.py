@@ -5,7 +5,7 @@ from aiida_workgraph.socket_spec import (
     infer_specs_from_callable,
 )
 from node_graph.socket_spec import SocketSpec, merge_specs
-from node_graph.node_spec import NodeSpec
+from node_graph.node_spec import NodeSpec, SchemaSource
 from node_graph.executor import RuntimeExecutor
 from node_graph.error_handler import ErrorHandlerSpec, normalize_error_handlers
 
@@ -86,9 +86,15 @@ def build_callable_nodespec(
             ),
         }
     )
+    # We always use EMBEDDED schema for function tasks
+    # but when store the spec in the DB, we will check if the
+    # callable is a BaseHandler, and switch the schema_source to HANDLER accordingly.
+    # This avoid cyclic import.
+    schema_source = SchemaSource.EMBEDDED
 
     return NodeSpec(
         identifier=identifier or obj.__name__,
+        schema_source=schema_source,
         node_type=node_type,
         catalog=catalog,
         inputs=func_in,
