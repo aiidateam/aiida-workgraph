@@ -602,6 +602,47 @@ def UseMeta(
 
 
 # %%
+# Attaching extra info to data nodes
+# ----------------------------------
+# Sometimes you need to attach extra information to the data a task creates,
+# like a physical unit or a descriptive label.
+# You can do this directly in the output annotation by passing a dictionary
+# to ``meta(extras=...)``. This populates the ``.extras`` attribute of the
+# resulting AiiDA node, perfect for any custom, JSON-serializable metadata.
+# Let's see an example where we calculate the potential energy of a crystal
+# structure and attach its unit to the output node.
+#
+
+from ase import Atoms
+from ase.build import bulk
+
+
+@task()
+def calc_energy(atoms: Atoms) -> t.Annotated[float, meta(extras={'unit': 'eV'})]:
+    """Calculates the potential energy and attaches metadata to the output."""
+    from ase.calculators.emt import EMT
+
+    atoms.set_calculator(EMT())
+    return atoms.get_potential_energy()
+
+
+@task.graph()
+def MyWorkflow(atoms: Atoms):
+    """A simple workflow to run the energy calculation."""
+    return calc_energy(atoms).result
+
+
+wg = MyWorkflow.build(atoms=bulk('Cu'))
+wg.run()
+
+# %%
+# Now, let's inspect the output AiiDA node to confirm that our metadata was correctly attached.
+output_node = wg.outputs.result.value
+energy_unit = output_node.base.extras.get('unit')
+print(f'Calculated energy: {output_node.value} {energy_unit}')
+
+
+# %%
 # Conclusion
 # ----------
 #

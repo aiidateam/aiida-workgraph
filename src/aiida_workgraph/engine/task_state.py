@@ -3,6 +3,7 @@ from typing import Optional, Tuple, List, Any
 from aiida.orm.utils.serialize import serialize
 from aiida_workgraph.orm.utils import deserialize_safe
 from aiida.orm import ProcessNode, Data
+from node_graph.socket import BaseSocket, NodeSocketNamespace
 
 
 class TaskStateManager:
@@ -86,6 +87,7 @@ class TaskStateManager:
                     self.set_task_runtime_info(task.name, 'state', 'FINISHED')
                     self.update_meta_tasks(name)
                     self.process.report(f'Task: {name}, type: {task.node_type}, finished.')
+                    self.apply_socket_spec_extras_to_aiida_node(name, node)
                 # all other states are considered as failed
                 else:
                     self.ctx._task_results[name] = resolve_node_link_managers(node.outputs)
@@ -356,3 +358,24 @@ class TaskStateManager:
                 finished = False
                 break
         return finished, None
+
+    def apply_socket_spec_extras_to_aiida_node(self, name: str, node: ProcessNode) -> None:
+        """Apply the socket spec extras to the AiiDA process node for a task."""
+        task = self.process.wg.tasks[name]
+        task.set_outputs_from_process_node(node)
+        self.set_socket_spec_extra(task.outputs)
+
+    @classmethod
+    def set_socket_spec_extra(cls, socket: BaseSocket) -> None:
+        """Set the socket spec extra to the AiiDA process node for a task."""
+        if isinstance(socket, NodeSocketNamespace):
+            for sub_socket in socket._sockets.values():
+                cls.set_socket_spec_extra(sub_socket)
+        else:
+            if isinstance(socket.value, Data):
+                extras = {
+                    key: value
+                    for key, value in socket._metadata.extras.items()
+                    if key not in ['identifier', 'builtin_socket', 'function_socket']
+                }
+                socket.value.base.extras.set_many(extras)
