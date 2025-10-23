@@ -86,9 +86,11 @@ def build_callable_nodespec(
             ),
         }
     )
-    # if not importable, embed schema
-    executor = RuntimeExecutor.from_callable(obj)
-    schema_source = SchemaSource.HANDLE if executor.mode == 'module' else SchemaSource.EMBEDDED
+    # We always use EMBEDDED schema for function tasks
+    # but when store the spec in the DB, we will check if the
+    # callable is a BaseHandler, and switch the schema_source to HANDLER accordingly.
+    # This avoid cyclic import.
+    schema_source = SchemaSource.EMBEDDED
 
     return NodeSpec(
         identifier=identifier or obj.__name__,
@@ -97,7 +99,7 @@ def build_callable_nodespec(
         catalog=catalog,
         inputs=func_in,
         outputs=func_out,
-        executor=executor,
+        executor=RuntimeExecutor.from_callable(obj),
         error_handlers=error_handlers,
         base_class=base_class,
         metadata=metadata,
