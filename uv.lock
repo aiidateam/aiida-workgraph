@@ -210,7 +210,7 @@ requires-dist = [
     { name = "jsonschema" },
     { name = "myst-nb", marker = "extra == 'docs'", specifier = "~=1.0.0" },
     { name = "nbsphinx", marker = "extra == 'docs'" },
-    { name = "node-graph", specifier = "~=0.4.2" },
+    { name = "node-graph", specifier = "~=0.4.3" },
     { name = "node-graph-widget", specifier = ">=0.0.5" },
     { name = "numpy" },
     { name = "pgtest", marker = "extra == 'tests'", specifier = "~=1.3" },
@@ -2623,7 +2623,7 @@ wheels = [
 
 [[package]]
 name = "node-graph"
-version = "0.4.2"
+version = "0.4.3"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "cloudpickle" },
@@ -2637,9 +2637,9 @@ dependencies = [
     { name = "typing-extensions", marker = "python_full_version < '3.11'" },
     { name = "wrapt" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/54/c2/71601109155e1fb645b85470114844cc0ce2337de092f7fb061926bf171a/node_graph-0.4.2.tar.gz", hash = "sha256:b1bc3df18ee2d055561bcfa132a0d4ef19cf3186d74ff623fac1ab553b59707a", size = 73990, upload-time = "2025-10-19T09:57:19.112Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/4d/83/eaad09397554fbcab30dc17017dba46c6e55f2a7e2010383b5d81403c76c/node_graph-0.4.3.tar.gz", hash = "sha256:9bdd067d4f1d5812d3171e8766e000102d45dd917d3503203afc20781c48e47d", size = 74031, upload-time = "2025-10-23T12:26:44.166Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/50/81/e935ca4c3f781360707752f362928ba297246a040e3ddfbd2fc1c1d73791/node_graph-0.4.2-py3-none-any.whl", hash = "sha256:eb05c6d84bb81e8df8142914aed678a932be7aa5e882f8491745cd7eabe0f1c3", size = 89073, upload-time = "2025-10-19T09:57:17.777Z" },
+    { url = "https://files.pythonhosted.org/packages/e0/63/75d2dd631bc99fc009c0cb02f480b42cee53d6ea94f4316a94e614ca7859/node_graph-0.4.3-py3-none-any.whl", hash = "sha256:50f9197757c0e180c3905475a0561716d5e4c23377a1a16db60994e6f13c5e76", size = 89177, upload-time = "2025-10-23T12:26:42.746Z" },
 ]
 
 [[package]]
