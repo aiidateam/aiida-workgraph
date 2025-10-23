@@ -121,4 +121,6 @@ def _build_aiida_function_nodespec(
     )
     # the outputs of calcfunctions/workfunctions are always dynamic
     spec = replace(spec, outputs=replace(spec.outputs, meta=replace(spec.outputs.meta, dynamic=True)))
+    if obj.spec().inputs.dynamic:
+        spec = replace(spec, inputs=replace(spec.inputs, meta=replace(spec.inputs.meta, dynamic=True)))
     return spec

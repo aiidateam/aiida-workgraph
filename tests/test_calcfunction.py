@@ -23,6 +23,12 @@ def test_dynamic_inputs() -> None:
 
     wg = WorkGraph('test_dynamic_inputs')
     wg.add_task(add, name='add1', x=orm.Int(1), y=orm.Int(2))
+    # the top-level inputs are dynamic
+    assert wg.tasks.add1.inputs._metadata.dynamic is True
+    # the kwargs inputs are dynamic
+    assert wg.tasks.add1.inputs.kwargs._metadata.dynamic is True
     assert wg.tasks.add1.inputs.kwargs._link_limit == 1e6
     wg.run()
     assert wg.tasks.add1.outputs.result.value == 3
+    # the outputs are dynamic as well
+    assert wg.tasks.add1.outputs._metadata.dynamic is True
