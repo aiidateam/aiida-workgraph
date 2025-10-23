@@ -1,13 +1,13 @@
 from aiida_workgraph.task import Task
 from aiida.engine import Process
-from typing import Callable, Optional, Dict, Any
+from typing import Callable, Optional, Dict
 from node_graph.socket_spec import SocketSpec
 from node_graph.node_spec import NodeSpec, SchemaSource
 from .function_task import build_callable_nodespec
 from node_graph.executor import RuntimeExecutor
 from node_graph.error_handler import ErrorHandlerSpec
 from aiida_workgraph.utils import inspect_aiida_component_type
-from aiida_workgraph.socket_spec import from_aiida_process, validate_socket_data
+from aiida_workgraph.socket_spec import from_aiida_process
 
 
 class AiiDAFunctionTask(Task):
@@ -106,13 +106,9 @@ def _build_aiida_function_nodespec(
     error_handlers: Optional[Dict[str, ErrorHandlerSpec]] = None,
 ) -> NodeSpec:
     from aiida_workgraph.utils import inspect_aiida_component_type
-    from aiida_workgraph.socket_spec import dynamic
     from dataclasses import replace
 
-    out_spec = validate_socket_data(out_spec) or dynamic(result=Any)
-    out_spec = replace(out_spec, meta=replace(out_spec.meta, dynamic=True))
-
-    return build_callable_nodespec(
+    spec = build_callable_nodespec(
         obj=obj,
         node_type=inspect_aiida_component_type(obj),
         catalog=catalog,
@@ -123,3 +119,6 @@ def _build_aiida_function_nodespec(
         out_spec=out_spec,
         error_handlers=error_handlers,
     )
+    # the outputs of calcfunctions/workfunctions are always dynamic
+    spec = replace(spec, outputs=replace(spec.outputs, meta=replace(spec.outputs.meta, dynamic=True)))
+    return spec
