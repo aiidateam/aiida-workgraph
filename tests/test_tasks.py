@@ -3,7 +3,7 @@ from aiida_workgraph import WorkGraph, task
 from typing import Callable
 from aiida import orm
 from aiida_workgraph import socket_spec as spec
-from typing import Any
+from typing import Any, Annotated
 
 
 def test_task_collection(decorated_add: Callable) -> None:
@@ -319,3 +319,19 @@ def test_metadata_can_not_be_used_as_function_argument(decorated_add) -> None:
         @task
         def myfunc(x, y, metadata=None):
             return x + y
+
+
+def test_attach_extras_to_aiida_data_node():
+    @task()
+    def calc_energy() -> Annotated[float, spec.meta(extras={'unit': 'eV'})]:
+        """Calculates the potential energy and attaches metadata to the output."""
+        return 1.00
+
+    @task.graph()
+    def MyWorkflow():
+        """A simple workflow to run the energy calculation."""
+        return calc_energy().result
+
+    wg = MyWorkflow.build()
+    wg.run()
+    assert wg.outputs.result.value.base.extras.get('unit') == 'eV'
