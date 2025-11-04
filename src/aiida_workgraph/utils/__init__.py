@@ -16,6 +16,7 @@ from node_graph.socket import TaggedValue
 from node_graph.socket_spec import SocketSpec
 from aiida.orm.utils.serialize import serialize
 from aiida_workgraph.orm.utils import deserialize_safe
+from copy import deepcopy
 
 
 def inspect_aiida_component_type(executor: Callable) -> str:
@@ -392,7 +393,8 @@ def get_raw_value(identifier, value: Any) -> Any:
         else:
             return value
     elif isinstance(value, orm.Data):
-        content = value.backend_entity.attributes
+        # avoid modifying the original attributes
+        content = deepcopy(value.backend_entity.attributes)
         content['node_type'] = value.node_type
         return content
 
@@ -423,7 +425,6 @@ def process_properties(task: Dict) -> Dict:
 
 def workgraph_to_short_json(wgdata: Dict[str, Union[str, List, Dict]]) -> Dict[str, Union[str, Dict]]:
     """Export a workgraph to a rete js editor data."""
-    from copy import deepcopy
 
     wgdata_short = {
         'name': wgdata['name'],
