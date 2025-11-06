@@ -44,6 +44,19 @@ class TaskManager:
         self.state_manager = TaskStateManager(ctx_manager, logger, process, awaitable_manager)
         self.action_manager = TaskActionManager(self.state_manager, logger, process)
 
+        # Initialize window state with defaults (will be loaded from WorkGraph context later)
+        self.window_config = {
+            'enabled': False,
+            'window_size': float('inf'),
+            'max_queued_jobs': None,
+            'task_levels': {},
+        }
+        self.window_state = {
+            'min_active_level': 0,
+            'max_allowed_level': float('inf'),
+        }
+        self._window_initialized = False
+
     def get_task(self, name: str):
         """Get task from the context."""
         task = self.process.wg.tasks[name]
@@ -57,6 +70,120 @@ class TaskManager:
             else:
                 socket.value = get_nested_dict(self.ctx._task_results[name], socket._name, default=None)
         return task
+
+    def _init_window_state(self):
+        """Initialize window state from WorkGraph context."""
+        # Check if WorkGraph is available yet
+        if not hasattr(self.process, 'wg') or self.process.wg is None:
+            print("DEBUG: WorkGraph not available yet for window initialization")
+            return  # WorkGraph not loaded yet, use defaults
+
+        if self._window_initialized:
+            return  # Already initialized
+
+        # Load window config from WorkGraph extras (persisted with the WorkGraph)
+        window_config = getattr(self.process.wg, 'extras', {}).get('window_config', {})
+        print(f"DEBUG: Initializing window state, config: {window_config}")
+
+        self.window_config = {
+            'enabled': window_config.get('enabled', False),
+            'window_size': window_config.get('window_size', float('inf')),
+            'max_queued_jobs': window_config.get('max_queued_jobs', None),
+            'task_levels': window_config.get('task_levels', {}),
+        }
+
+        # Initialize window state
+        if self.window_config['enabled']:
+            self.window_state = {
+                'min_active_level': 0,
+                'max_allowed_level': self.window_config['window_size'],
+            }
+        else:
+            self.window_state = {
+                'min_active_level': 0,
+                'max_allowed_level': float('inf'),
+            }
+
+        self._window_initialized = True
+
+    def _update_window(self):
+        """Update the active window based on task completion."""
+        if not self.window_config['enabled']:
+            return
+
+        # Find minimum level of active (CREATED/RUNNING) launcher tasks
+        active_levels = []
+        for task_name, level in self.window_config['task_levels'].items():
+            state = self.state_manager.get_task_runtime_info(task_name, 'state')
+            if state in ['CREATED', 'RUNNING']:
+                active_levels.append(level)
+
+        if not active_levels:
+            # No active tasks - advance window to next pending level
+            old_min = self.window_state['min_active_level']
+            # Find next level with pending tasks
+            for level in range(old_min, max(self.window_config['task_levels'].values()) + 1):
+                tasks_at_level = [
+                    name for name, l in self.window_config['task_levels'].items()
+                    if l == level
+                ]
+                if tasks_at_level:
+                    # Check if any task at this level is not finished
+                    has_pending = any(
+                        self.state_manager.get_task_runtime_info(name, 'state')
+                        not in ['FINISHED', 'FAILED', 'SKIPPED']
+                        for name in tasks_at_level
+                    )
+                    if has_pending:
+                        self.window_state['min_active_level'] = level
+                        break
+            else:
+                # All tasks finished, keep current min
+                self.window_state['min_active_level'] = old_min
+        else:
+            # Set min_active_level to minimum of active tasks
+            self.window_state['min_active_level'] = min(active_levels)
+
+        # Update max_allowed_level
+        window_size = self.window_config['window_size']
+        self.window_state['max_allowed_level'] = (
+            self.window_state['min_active_level'] + window_size
+        )
+
+    def _is_task_in_window(self, task_name: str) -> bool:
+        """Check if task is within the active submission window."""
+        if not self.window_config['enabled']:
+            return True  # No windowing, all tasks allowed
+
+        # get_job_data tasks and other non-launcher tasks are always allowed
+        if not task_name.startswith('launch_'):
+            return True
+
+        # Check topological level
+        task_level = self.window_config['task_levels'].get(task_name)
+        if task_level is None:
+            # Task not in level mapping - allow it
+            return True
+
+        if task_level > self.window_state['max_allowed_level']:
+            return False  # Outside window
+
+        # Check max_queued_jobs threshold if configured
+        if self.window_config.get('max_queued_jobs'):
+            active_count = self._count_active_jobs()
+            if active_count >= self.window_config['max_queued_jobs']:
+                return False  # Too many jobs already
+
+        return True
+
+    def _count_active_jobs(self) -> int:
+        """Count tasks in CREATED or RUNNING state."""
+        count = 0
+        for task in self.process.wg.tasks:
+            state = self.state_manager.get_task_runtime_info(task.name, 'state')
+            if state in ['CREATED', 'RUNNING']:
+                count += 1
+        return count
 
     def set_task_results(self) -> None:
         from node_graph.config import BUILTIN_NODES
@@ -103,7 +230,24 @@ class TaskManager:
         Resume the WorkGraph by looking for tasks that are ready to run.
         """
         # self.process.report("Continue workgraph.")
+
+        # Initialize window state if not already done (lazy initialization)
+        self._init_window_state()
+
+        # Update window state if rolling window is enabled
+        if self.window_config.get('enabled'):
+            self._update_window()
+            # Report window state
+            if self.window_config['task_levels']:
+                active_count = self._count_active_jobs()
+                self.process.report(
+                    f"Window: levels {self.window_state['min_active_level']}-"
+                    f"{self.window_state['max_allowed_level']}, "
+                    f"active jobs: {active_count}"
+                )
+
         task_to_run = []
+        skipped_by_window = []
         for task in self.process.wg.tasks:
             # update task state
             if (
@@ -121,9 +265,15 @@ class TaskManager:
                 continue
             ready, _ = self.state_manager.is_task_ready_to_run(task.name)
             if ready:
-                task_to_run.append(task.name)
+                # Check if task is within active window
+                if self._is_task_in_window(task.name):
+                    task_to_run.append(task.name)
+                else:
+                    skipped_by_window.append(task.name)
         #
         self.process.report('tasks ready to run: {}'.format(','.join(task_to_run)))
+        if skipped_by_window:
+            self.process.report('tasks skipped (outside window): {}'.format(','.join(skipped_by_window)))
         self.run_tasks(task_to_run)
 
     def should_run_task(self, task: 'Task') -> bool:
