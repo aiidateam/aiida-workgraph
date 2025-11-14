@@ -166,6 +166,7 @@ class TaskDecoratorCollection:
         inputs: Optional[SocketSpec | list] = None,
         outputs: Optional[SocketSpec | list] = None,
         max_depth: int = 100,
+        max_number_jobs: Optional[int] = None,
     ) -> Callable:
         """Generate a decorator that register a function as a graph task.
         Attributes:
@@ -186,6 +187,7 @@ class TaskDecoratorCollection:
                     in_spec=inputs,
                     out_spec=outputs,
                     max_depth=max_depth,
+                    max_number_jobs=max_number_jobs,
                 )
             )
             handle._callable = func

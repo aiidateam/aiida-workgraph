@@ -24,6 +24,7 @@ class GraphTask(Task):
 
         executor = RuntimeExecutor(**self.get_executor().to_dict()).callable
         max_depth = self.spec.metadata.get('max_depth', 100)
+        max_number_jobs = self.spec.metadata.get('max_number_jobs')
         metadata = kwargs.pop('metadata', {}) if kwargs else {}
         metadata.setdefault('call_link_label', self.name)
         # Cloudpickle doesn’t restore the function’s own name in its globals after unpickling,
@@ -61,6 +62,7 @@ class GraphTask(Task):
             args=args,
             kwargs=kwargs,
             var_kwargs=var_kwargs,
+            max_number_jobs=max_number_jobs,
         )
         wg.parent_uuid = engine_process.node.uuid
         inputs = wg.to_engine_inputs(metadata=metadata)
@@ -87,10 +89,11 @@ def _build_graph_task_nodespec(
     in_spec: Optional[SocketSpec] = None,
     out_spec: Optional[SocketSpec] = None,
     max_depth: int = 100,
+    max_number_jobs: int = 1000000,
     catalog: str = 'Others',
 ) -> NodeSpec:
     # defaults for max depth
-    metadata = {'max_depth': max_depth}
+    metadata = {'max_depth': max_depth, 'max_number_jobs': max_number_jobs}
     # We use Process as the process class here, so that the task inherits the metadata
     # inputs from the base Process class, such as 'call_link_label'.
     # While the actual process class will be the WorkGraphEngine,
