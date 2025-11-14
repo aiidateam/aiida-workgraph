@@ -64,7 +64,8 @@ class GraphTask(Task):
         )
         # Set the maximum number of concurrent jobs
         max_number_jobs = self.spec.metadata.get('max_number_jobs')
-        wg.max_number_jobs = max_number_jobs
+        if max_number_jobs is not None:
+            wg.max_number_jobs = max_number_jobs
         wg.parent_uuid = engine_process.node.uuid
         inputs = wg.to_engine_inputs(metadata=metadata)
         if self.action == 'PAUSE':
