@@ -24,7 +24,6 @@ class GraphTask(Task):
 
         executor = RuntimeExecutor(**self.get_executor().to_dict()).callable
         max_depth = self.spec.metadata.get('max_depth', 100)
-        max_number_jobs = self.spec.metadata.get('max_number_jobs')
         metadata = kwargs.pop('metadata', {}) if kwargs else {}
         metadata.setdefault('call_link_label', self.name)
         # Cloudpickle doesn’t restore the function’s own name in its globals after unpickling,
@@ -62,8 +61,10 @@ class GraphTask(Task):
             args=args,
             kwargs=kwargs,
             var_kwargs=var_kwargs,
-            max_number_jobs=max_number_jobs,
         )
+        # Set the maximum number of concurrent jobs
+        max_number_jobs = self.spec.metadata.get('max_number_jobs')
+        wg.max_number_jobs = max_number_jobs
         wg.parent_uuid = engine_process.node.uuid
         inputs = wg.to_engine_inputs(metadata=metadata)
         if self.action == 'PAUSE':
