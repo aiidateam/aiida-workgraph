@@ -72,6 +72,7 @@ wg.run()
 # .. tip::
 #
 #     * **Workflow-Specific Limit:** The `max_number_jobs` attribute only governs child processes created by *this specific* WorkGraph instance. It does not limit other AiiDA jobs or workflows you might be running.
+#     * **Nested graph task:** To limit the number of concurrent jobs in a nested graph task, you can set the `max_number_jobs`  in the `@task.graph` decorator, e.g. `@task.graph(max_number_jobs = 2)`.
 #
 #     * **Concurrency vs. Order:** This controls **how many** jobs run, not **which ones** run first. To enforce a specific execution sequence (e.g., Task B must run after Task A), you must define dependencies between them, see :ref:`Control task execution order <task_execution_order>`
 #

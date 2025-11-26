@@ -62,6 +62,10 @@ class GraphTask(Task):
             kwargs=kwargs,
             var_kwargs=var_kwargs,
         )
+        # Set the maximum number of concurrent jobs
+        max_number_jobs = self.spec.metadata.get('max_number_jobs')
+        if max_number_jobs is not None:
+            wg.max_number_jobs = max_number_jobs
         wg.parent_uuid = engine_process.node.uuid
         inputs = wg.to_engine_inputs(metadata=metadata)
         if self.action == 'PAUSE':
@@ -87,10 +91,11 @@ def _build_graph_task_nodespec(
     in_spec: Optional[SocketSpec] = None,
     out_spec: Optional[SocketSpec] = None,
     max_depth: int = 100,
+    max_number_jobs: int = 1000000,
     catalog: str = 'Others',
 ) -> NodeSpec:
     # defaults for max depth
-    metadata = {'max_depth': max_depth}
+    metadata = {'max_depth': max_depth, 'max_number_jobs': max_number_jobs}
     # We use Process as the process class here, so that the task inherits the metadata
     # inputs from the base Process class, such as 'call_link_label'.
     # While the actual process class will be the WorkGraphEngine,

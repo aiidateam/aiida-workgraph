@@ -16,7 +16,7 @@ MAX_NUMBER_AWAITABLES_MSG = 'The maximum number of subprocesses has been reached
 process_task_types = [
     'CALCJOB',
     'WORKCHAIN',
-    'GRAPH_TASK',
+    'GRAPH',
     'SUBGRAPH',
     'PYTHONJOB',
     'SHELLJOB',
