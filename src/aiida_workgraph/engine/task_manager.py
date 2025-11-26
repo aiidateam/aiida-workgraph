@@ -48,12 +48,12 @@ class TaskManager:
         self.window_config = {
             'enabled': False,
             'window_size': float('inf'),
-            'max_queued_jobs': None,
-            'task_levels': {},
+            'task_dependencies': {},
         }
         self.window_state = {
             'min_active_level': 0,
             'max_allowed_level': float('inf'),
+            'dynamic_task_levels': {},
         }
         self._window_initialized = False
 
@@ -75,7 +75,7 @@ class TaskManager:
         """Initialize window state from WorkGraph context."""
         # Check if WorkGraph is available yet
         if not hasattr(self.process, 'wg') or self.process.wg is None:
-            print("DEBUG: WorkGraph not available yet for window initialization")
+            self.logger.debug("WorkGraph not available yet for window initialization")
             return  # WorkGraph not loaded yet, use defaults
 
         if self._window_initialized:
@@ -83,13 +83,13 @@ class TaskManager:
 
         # Load window config from WorkGraph extras (persisted with the WorkGraph)
         window_config = getattr(self.process.wg, 'extras', {}).get('window_config', {})
-        print(f"DEBUG: Initializing window state, config: {window_config}")
+        self.logger.debug(f"Initializing window state, config: {window_config}")
 
         self.window_config = {
             'enabled': window_config.get('enabled', False),
             'window_size': window_config.get('window_size', float('inf')),
             'max_queued_jobs': window_config.get('max_queued_jobs', None),
-            'task_levels': window_config.get('task_levels', {}),
+            'task_dependencies': window_config.get('task_dependencies', {}),
         }
 
         # Initialize window state
@@ -97,24 +97,100 @@ class TaskManager:
             self.window_state = {
                 'min_active_level': 0,
                 'max_allowed_level': self.window_config['window_size'],
+                'dynamic_task_levels': self._compute_dynamic_levels(),
             }
         else:
             self.window_state = {
                 'min_active_level': 0,
                 'max_allowed_level': float('inf'),
+                'dynamic_task_levels': {},
             }
 
         self._window_initialized = True
 
+    def _compute_dynamic_levels(self) -> dict[str, int]:
+        """Compute task levels based on current unfinished tasks only.
+
+        Key idea: Exclude FINISHED/FAILED/SKIPPED tasks from dependency graph,
+        then run BFS to compute levels. This allows faster branches to collapse
+        to lower levels as their dependencies complete.
+
+        Returns:
+            Dict mapping task_name -> current dynamic level
+        """
+        from collections import deque
+
+        if not self.window_config['enabled']:
+            return {}
+
+        task_deps = self.window_config['task_dependencies']
+
+        # Step 1: Filter to only unfinished tasks
+        unfinished_tasks = set()
+        for task_name in task_deps.keys():
+            state = self.state_manager.get_task_runtime_info(task_name, 'state')
+            if state not in ['FINISHED', 'FAILED', 'SKIPPED']:
+                unfinished_tasks.add(task_name)
+
+        # Step 2: Build filtered dependency graph (only unfinished tasks)
+        filtered_deps = {}
+        for task_name in unfinished_tasks:
+            unfinished_parents = [
+                p for p in task_deps[task_name]
+                if p in unfinished_tasks
+            ]
+            filtered_deps[task_name] = unfinished_parents
+
+        # Step 3: Compute levels using BFS (same algorithm as compute_topological_levels)
+        levels = {}
+        in_degree = {task: len(parents) for task, parents in filtered_deps.items()}
+
+        # Find all tasks with no unfinished dependencies (level 0)
+        queue = deque([task for task, degree in in_degree.items() if degree == 0])
+        for task_name in queue:
+            levels[task_name] = 0
+
+        # Build reverse dependency graph
+        children = {task: [] for task in filtered_deps}
+        for task_name, parents in filtered_deps.items():
+            for parent in parents:
+                if parent not in children:
+                    children[parent] = []
+                children[parent].append(task_name)
+
+        # Process tasks in topological order
+        processed = set()
+        while queue:
+            current = queue.popleft()
+            processed.add(current)
+
+            for child in children.get(current, []):
+                parents = filtered_deps[child]
+                if all(p in processed for p in parents):
+                    parent_levels = [levels[p] for p in parents]
+                    levels[child] = max(parent_levels) + 1 if parent_levels else 0
+                    queue.append(child)
+
+        return levels
+
     def _update_window(self):
-        """Update the active window based on task completion."""
+        """Update the active window based on task completion.
+
+        Recomputes dynamic levels after each task completion to allow
+        faster branches to advance independently.
+        """
         if not self.window_config['enabled']:
             return
 
+        # RECOMPUTE DYNAMIC LEVELS based on current task states
+        self.window_state['dynamic_task_levels'] = self._compute_dynamic_levels()
+
         # Find minimum level of active (CREATED/RUNNING) launcher tasks
         active_levels = []
-        for task_name, level in self.window_config['task_levels'].items():
+        for task_name, level in self.window_state['dynamic_task_levels'].items():
             state = self.state_manager.get_task_runtime_info(task_name, 'state')
+            # PRCOMMENT: These are all the states to be considered here?
+            # WG uses custom states, not plumpy's `class ProcessState` or core's `class JobState` enums?!
             if state in ['CREATED', 'RUNNING']:
                 active_levels.append(level)
 
@@ -122,23 +198,28 @@ class TaskManager:
             # No active tasks - advance window to next pending level
             old_min = self.window_state['min_active_level']
             # Find next level with pending tasks
-            for level in range(old_min, max(self.window_config['task_levels'].values()) + 1):
-                tasks_at_level = [
-                    name for name, l in self.window_config['task_levels'].items()
-                    if l == level
-                ]
-                if tasks_at_level:
-                    # Check if any task at this level is not finished
-                    has_pending = any(
-                        self.state_manager.get_task_runtime_info(name, 'state')
-                        not in ['FINISHED', 'FAILED', 'SKIPPED']
-                        for name in tasks_at_level
-                    )
-                    if has_pending:
-                        self.window_state['min_active_level'] = level
-                        break
+            if self.window_state['dynamic_task_levels']:
+                max_level = max(self.window_state['dynamic_task_levels'].values())
+                for level in range(old_min, max_level + 1):
+                    tasks_at_level = [
+                        name for name, lvl in self.window_state['dynamic_task_levels'].items()
+                        if lvl == level
+                    ]
+                    if tasks_at_level:
+                        # Check if any task at this level is not finished
+                        has_pending = any(
+                            self.state_manager.get_task_runtime_info(name, 'state')
+                            not in ['FINISHED', 'FAILED', 'SKIPPED']
+                            for name in tasks_at_level
+                        )
+                        if has_pending:
+                            self.window_state['min_active_level'] = level
+                            break
+                else:
+                    # All tasks finished, keep current min
+                    self.window_state['min_active_level'] = old_min
             else:
-                # All tasks finished, keep current min
+                # No tasks in dynamic levels (all finished), keep current min
                 self.window_state['min_active_level'] = old_min
         else:
             # Set min_active_level to minimum of active tasks
@@ -156,11 +237,13 @@ class TaskManager:
             return True  # No windowing, all tasks allowed
 
         # get_job_data tasks and other non-launcher tasks are always allowed
+        # FIXME
         if not task_name.startswith('launch_'):
+            breakpoint()
             return True
 
-        # Check topological level
-        task_level = self.window_config['task_levels'].get(task_name)
+        # Check dynamic topological level
+        task_level = self.window_state['dynamic_task_levels'].get(task_name)
         if task_level is None:
             # Task not in level mapping - allow it
             return True
@@ -238,11 +321,12 @@ class TaskManager:
         if self.window_config.get('enabled'):
             self._update_window()
             # Report window state
-            if self.window_config['task_levels']:
+            if self.window_state['dynamic_task_levels']:
                 active_count = self._count_active_jobs()
+                max_level = max(self.window_state['dynamic_task_levels'].values()) if self.window_state['dynamic_task_levels'] else 0
                 self.process.report(
                     f"Window: levels {self.window_state['min_active_level']}-"
-                    f"{self.window_state['max_allowed_level']}, "
+                    f"{self.window_state['max_allowed_level']} (max dynamic level: {max_level}), "
                     f"active jobs: {active_count}"
                 )
 
