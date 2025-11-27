@@ -237,9 +237,7 @@ class TaskManager:
             return True  # No windowing, all tasks allowed
 
         # get_job_data tasks and other non-launcher tasks are always allowed
-        # FIXME
         if not task_name.startswith('launch_'):
-            breakpoint()
             return True
 
         # Check dynamic topological level
