@@ -6,15 +6,14 @@ from aiida_workgraph.task import Task
 import time
 from typing import Any, Dict, List, Optional, Union
 from .registry import RegistryHub, registry_hub
-from node_graph.analysis import NodeGraphAnalysis
-from node_graph.config import BUILTIN_NODES
-from node_graph.collection import NodeCollection
-from node_graph.socket import BaseSocket, NodeSocketNamespace
+from node_graph.analysis import GraphAnalysis
+from node_graph.config import BUILTIN_TASKS
+from node_graph.socket import BaseSocket, TaskSocketNamespace
 from aiida_workgraph.socket_spec import SocketSpecAPI
 from node_graph.error_handler import ErrorHandlerSpec
 
 
-class WorkGraph(node_graph.NodeGraph):
+class WorkGraph(node_graph.Graph):
     """Build flexible workflows with AiiDA.
 
     The class extends from NodeGraph and provides methods to run,
@@ -54,12 +53,7 @@ class WorkGraph(node_graph.NodeGraph):
         self.max_number_jobs = 1000000
         self.max_iteration = 1000000
         self._error_handlers = error_handlers or {}
-        self.analyzer = NodeGraphAnalysis(self)
-
-    @property
-    def tasks(self) -> NodeCollection:
-        """Add alias to `nodes` for WorkGraph"""
-        return self.nodes
+        self.analyzer = GraphAnalysis(self)
 
     def to_engine_inputs(self, metadata: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         wgdata = self.to_dict(should_serialize=True)
@@ -89,7 +83,7 @@ class WorkGraph(node_graph.NodeGraph):
         """Check if all required inputs are provided."""
         missing_inputs = self.find_missing_inputs(self.inputs)
         for task in self.tasks:
-            if task.name in BUILTIN_NODES:
+            if task.name in BUILTIN_TASKS:
                 continue
             missing_inputs.extend(self.find_missing_inputs(task.inputs))
         if missing_inputs:
@@ -108,11 +102,11 @@ class WorkGraph(node_graph.NodeGraph):
         """Check if all required inputs are provided."""
         missing_inputs = []
         for sub_socket in socket:
-            if isinstance(sub_socket, NodeSocketNamespace):
+            if isinstance(sub_socket, TaskSocketNamespace):
                 missing_inputs.extend(self.find_missing_inputs(sub_socket))
             else:
                 if sub_socket._metadata.required and sub_socket.value is None and len(sub_socket._links) == 0:
-                    missing_inputs.append(f'{sub_socket._node.name}.{sub_socket._scoped_name}')
+                    missing_inputs.append(f'{sub_socket._task.name}.{sub_socket._scoped_name}')
         return missing_inputs
 
     def check_modified_tasks(self) -> None:
@@ -122,7 +116,7 @@ class WorkGraph(node_graph.NodeGraph):
         existing_process = self._load_existing_process()
         if existing_process:
             diffs = self.analyzer.compare_graphs(existing_process, self)
-            self.reset_tasks(diffs['modified_nodes'])
+            self.reset_tasks(diffs['modified_tasks'])
 
     def run(
         self,
@@ -242,7 +236,6 @@ class WorkGraph(node_graph.NodeGraph):
         )
         # save error handlers
         wgdata['error_handlers'] = {name: eh.to_dict() for name, eh in self.get_error_handlers().items()}
-        wgdata['tasks'] = wgdata.pop('nodes')
         wgdata['connectivity'] = self.build_connectivity()
         wgdata['process'] = serialize(self.process) if self.process else serialize(None)
         wgdata['metadata']['pk'] = self.process.pk if self.process else None
@@ -333,8 +326,6 @@ class WorkGraph(node_graph.NodeGraph):
 
     @classmethod
     def from_dict(cls, wgdata: Dict[str, Any]) -> 'WorkGraph':
-        if 'tasks' in wgdata:
-            wgdata['nodes'] = wgdata.pop('tasks')
         wg = super().from_dict(wgdata)
         for key in [
             'max_iteration',
@@ -350,10 +341,7 @@ class WorkGraph(node_graph.NodeGraph):
         # for zone tasks, add their children
         for task in wg.tasks:
             if hasattr(task, 'children'):
-                task.children.add(wgdata['nodes'][task.name].get('children', []))
-        # reinstate the tasks
-        wgdata['tasks'] = wgdata.pop('nodes')
-
+                task.children.add(wgdata['tasks'][task.name].get('children', []))
         return wg
 
     @classmethod
@@ -375,9 +363,7 @@ class WorkGraph(node_graph.NodeGraph):
             wgdata = yaml.safe_load(string)
         else:
             raise Exception('Please specific a filename or yaml string.')
-        wgdata['nodes'] = wgdata.pop('tasks')
         wgdata = yaml_to_dict(wgdata)
-        wgdata['tasks'] = wgdata.pop('nodes')
         # serialized_data = make_json_serializable(wgdata)
         # with importlib.resources.open_text(
         #     "aiida_workgraph.schemas", "aiida_workgraph.schema.json"
@@ -530,7 +516,7 @@ class WorkGraph(node_graph.NodeGraph):
         for task in wg.tasks:
             # skip the built-in tasks
             # need to fix this in the future
-            if task.name in BUILTIN_NODES:
+            if task.name in BUILTIN_TASKS:
                 continue
             task.name = prefix + task.name
             task.graph = self
@@ -539,7 +525,7 @@ class WorkGraph(node_graph.NodeGraph):
         # links
         for link in wg.links:
             # skip the links that are from or to built-in tasks
-            if link.from_node.name in BUILTIN_NODES or link.to_node.name in BUILTIN_NODES:
+            if link.from_task.name in BUILTIN_TASKS or link.to_task.name in BUILTIN_TASKS:
                 link.unmount()
                 continue
             self.links._append(link)
@@ -561,31 +547,31 @@ class WorkGraph(node_graph.NodeGraph):
         from aiida_workgraph.utils import get_dict_from_builder
         from aiida_workgraph.tasks.shelljob_task import (
             shelljob,
-            _build_shelljob_nodespec,
+            _build_shelljob_TaskSpec,
         )
         from aiida_workgraph.task import Task, TaskHandle
-        from aiida_workgraph.tasks.subgraph_task import _build_subgraph_task_nodespec
-        from node_graph.node_spec import NodeSpec
+        from aiida_workgraph.tasks.subgraph_task import _build_subgraph_task_TaskSpec
+        from node_graph.task_spec import TaskSpec
 
-        if name in BUILTIN_NODES and not include_builtins:
+        if name in BUILTIN_TASKS and not include_builtins:
             raise ValueError(f'Task name {name} can not be used, it is reserved.')
 
         if isinstance(identifier, str):
-            identifier = self._REGISTRY.node_pool[identifier.lower()].load()
+            identifier = self._REGISTRY.task_pool[identifier.lower()].load()
         if isinstance(identifier, WorkGraph):
-            identifier = _build_subgraph_task_nodespec(identifier, name=name)
+            identifier = _build_subgraph_task_TaskSpec(identifier, name=name)
         elif isinstance(identifier, ProcessBuilder):
             kwargs = {**kwargs, **get_dict_from_builder(identifier)}
             identifier = build_task_from_callable(identifier.process_class)
         # todo
         elif identifier is shelljob:
-            spec = _build_shelljob_nodespec(
+            spec = _build_shelljob_TaskSpec(
                 outputs=kwargs.get('outputs'),
                 parser_outputs=kwargs.pop('parser_outputs', None),
             )
             identifier = TaskHandle(spec)
         # build the task on the fly if the identifier is a callable
-        elif callable(identifier) and not isinstance(identifier, (NodeSpec, TaskHandle, Task)):
+        elif callable(identifier) and not isinstance(identifier, (TaskSpec, TaskHandle, Task)):
             identifier = build_task_from_callable(identifier)
         node = self.tasks._new(identifier, name, **kwargs)
         self._version += 1
@@ -598,6 +584,7 @@ class WorkGraph(node_graph.NodeGraph):
         wgdata = self.to_dict(include_sockets=True)
         wait_to_link(wgdata)
         wgdata = workgraph_to_short_json(wgdata)
+
         return wgdata
 
     def generate_provenance_graph(self):

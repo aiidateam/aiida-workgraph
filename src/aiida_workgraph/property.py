@@ -1,8 +1,8 @@
 from typing import Union, Optional, Callable
-from node_graph.property import NodeProperty
+from node_graph.property import TaskProperty as BaseTaskProperty
 
 
-class TaskProperty(NodeProperty):
+class TaskProperty(BaseTaskProperty):
     """Represent a property of a Task in the AiiDA WorkGraph."""
 
     def validate(self, value: any) -> None:

@@ -435,7 +435,7 @@ def workgraph_to_short_json(wgdata: Dict[str, Union[str, List, Dict]]) -> Dict[s
     }
     #
     for name, task in wgdata['tasks'].items():
-        # Add required inputs to nodes
+        # Add required inputs to tasks
         inputs = []
         for input in task.get('input_sockets', {}).get('sockets', {}).values():
             metadata = input.get('metadata', {}) or {}
@@ -446,7 +446,7 @@ def workgraph_to_short_json(wgdata: Dict[str, Union[str, List, Dict]]) -> Dict[s
         wgdata_short['nodes'][name] = {
             'identifier': task['identifier'],
             'label': task['name'],
-            'node_type': task['spec']['node_type'].upper(),
+            'node_type': task['spec']['task_type'].upper(),
             'inputs': inputs,
             'properties': properties,
             'outputs': [],
@@ -454,14 +454,14 @@ def workgraph_to_short_json(wgdata: Dict[str, Union[str, List, Dict]]) -> Dict[s
             'children': task.get('children', []),
         }
 
-    # Add links to nodes
+    # Add links to tasks
     for link in wgdata_short.get('links', []):
-        wgdata_short['nodes'][link['to_node']]['inputs'].append(
+        wgdata_short['nodes'][link['to_task']]['inputs'].append(
             {
                 'name': link['to_socket'],
             }
         )
-        wgdata_short['nodes'][link['from_node']]['outputs'].append(
+        wgdata_short['nodes'][link['from_task']]['outputs'].append(
             {
                 'name': link['from_socket'],
             }
@@ -470,13 +470,17 @@ def workgraph_to_short_json(wgdata: Dict[str, Union[str, List, Dict]]) -> Dict[s
     # remove the inputs socket of "graph_inputs"
     if 'graph_inputs' in wgdata_short['nodes']:
         wgdata_short['nodes']['graph_inputs']['inputs'] = []
-    # remove the empty graph-level nodes
+    # remove the empty graph-level tasks
     for name in ['graph_inputs', 'graph_outputs', 'graph_ctx']:
         if name in wgdata_short['nodes']:
             node = wgdata_short['nodes'][name]
             if len(node['inputs']) == 0 and len(node['outputs']) == 0:
                 del wgdata_short['nodes'][name]
-
+    for link in wgdata_short['links']:
+        link['from_node'] = link.pop('from_task')
+        link['to_node'] = link.pop('to_task')
+        link['from_socket'] = link.pop('from_socket')
+        link['to_socket'] = link.pop('to_socket')
     return wgdata_short
 
 
@@ -487,9 +491,9 @@ def wait_to_link(wgdata: Dict[str, Any]) -> None:
             if wait_task in wgdata['tasks']:
                 wgdata['links'].append(
                     {
-                        'from_node': wait_task,
+                        'from_task': wait_task,
                         'from_socket': '_wait',
-                        'to_node': name,
+                        'to_task': name,
                         'to_socket': '_wait',
                     }
                 )

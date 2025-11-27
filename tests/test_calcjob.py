@@ -1,6 +1,6 @@
 from aiida_workgraph import task
 from typing import Annotated
-from node_graph.node_spec import SchemaSource
+from node_graph.task_spec import SchemaSource
 
 
 def test_create_task_from_calcJob(add_code) -> None:

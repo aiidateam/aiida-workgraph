@@ -42,7 +42,7 @@ def test_calcfunction():
     # define outputs explicitly
     AddTask = task(outputs=['sum', 'difference'])(add_minus)
     assert isinstance(AddTask, TaskHandle)
-    assert 'sum' in AddTask()._node.get_output_names()
+    assert 'sum' in AddTask()._task.get_output_names()
     # use the class directly
     wg = WorkGraph()
     add1 = wg.add_task(add, name='add1')
@@ -51,7 +51,7 @@ def test_calcfunction():
 
     AddTask_outputs_list = task(outputs=['sum', 'difference'])(add_minus)
     assert isinstance(AddTask_outputs_list, TaskHandle)
-    assert 'sum' in AddTask_outputs_list()._node.get_output_names()
+    assert 'sum' in AddTask_outputs_list()._task.get_output_names()
 
 
 def test_function():

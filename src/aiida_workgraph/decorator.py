@@ -5,11 +5,11 @@ from aiida_workgraph.task import Task
 from .workgraph import WorkGraph
 import inspect
 from .task import TaskHandle
-from node_graph.node_spec import NodeSpec
+from node_graph.task_spec import TaskSpec
 from node_graph.socket_spec import SocketSpec
-from aiida_workgraph.tasks.aiida import _build_aiida_function_nodespec
+from aiida_workgraph.tasks.aiida import _build_aiida_function_taskspec
 from node_graph.error_handler import ErrorHandlerSpec, normalize_error_handlers
-from aiida_workgraph.tasks.pythonjob_tasks import build_pyfunction_nodespec
+from aiida_workgraph.tasks.pythonjob_tasks import build_pyfunction_taskspec
 from aiida_workgraph.tasks.aiida import AiiDAProcessTask
 
 
@@ -21,14 +21,14 @@ def _spec_for(
     outputs: Optional[SocketSpec] = None,
     catalog: str = None,
     error_handlers: Optional[Dict[str, ErrorHandlerSpec]] = None,
-) -> NodeSpec:
+) -> TaskSpec:
     # AiiDA process classes
     if inspect.isclass(obj) and issubclass(obj, (CalcJob, WorkChain)):
         return AiiDAProcessTask.build(obj)
 
     # AiiDA process functions (calcfunction/workfunction)
     if callable(obj) and getattr(obj, 'node_class', False):
-        return _build_aiida_function_nodespec(
+        return _build_aiida_function_taskspec(
             obj,
             identifier=identifier,
             in_spec=inputs,
@@ -39,7 +39,7 @@ def _spec_for(
 
     # Plain Python function -> PyFunction
     if callable(obj):
-        spec = build_pyfunction_nodespec(
+        spec = build_pyfunction_taskspec(
             obj,
             identifier=identifier,
             in_spec=inputs,
@@ -177,10 +177,10 @@ class TaskDecoratorCollection:
         """
 
         def decorator(func) -> TaskHandle:
-            from aiida_workgraph.tasks.graph_task import _build_graph_task_nodespec
+            from aiida_workgraph.tasks.graph_task import _build_graph_task_taskspec
 
             handle = TaskHandle(
-                _build_graph_task_nodespec(
+                _build_graph_task_taskspec(
                     func,
                     identifier=identifier,
                     catalog=catalog,
@@ -206,7 +206,7 @@ class TaskDecoratorCollection:
         def decorator(func) -> TaskHandle:
             func_decorated = calcfunction(func)
             handle = TaskHandle(
-                _build_aiida_function_nodespec(
+                _build_aiida_function_taskspec(
                     func_decorated,
                     in_spec=inputs,
                     out_spec=outputs,
@@ -230,7 +230,7 @@ class TaskDecoratorCollection:
         def decorator(func) -> TaskHandle:
             func_decorated = workfunction(func)
             handle = TaskHandle(
-                _build_aiida_function_nodespec(
+                _build_aiida_function_taskspec(
                     func_decorated,
                     in_spec=inputs,
                     out_spec=outputs,
@@ -252,9 +252,9 @@ class TaskDecoratorCollection:
         error_handlers: Optional[Dict[str, ErrorHandlerSpec]] = None,
     ) -> Callable:
         def decorator(func) -> TaskHandle:
-            from aiida_workgraph.tasks.pythonjob_tasks import build_pythonjob_nodespec
+            from aiida_workgraph.tasks.pythonjob_tasks import build_pythonjob_taskspec
 
-            spec = build_pythonjob_nodespec(
+            spec = build_pythonjob_taskspec(
                 func,
                 in_spec=inputs,
                 out_spec=outputs,
@@ -276,10 +276,10 @@ class TaskDecoratorCollection:
         error_handlers: Optional[Dict[str, ErrorHandlerSpec]] = None,
     ) -> Callable:
         def decorator(func) -> TaskHandle:
-            from aiida_workgraph.tasks.pythonjob_tasks import build_monitor_function_nodespec
+            from aiida_workgraph.tasks.pythonjob_tasks import build_monitor_function_taskspec
 
             handle = TaskHandle(
-                build_monitor_function_nodespec(
+                build_monitor_function_taskspec(
                     func,
                     in_spec=inputs,
                     out_spec=outputs,

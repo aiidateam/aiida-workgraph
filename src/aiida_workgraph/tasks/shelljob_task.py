@@ -5,7 +5,7 @@ from typing import Any, Dict, List, Optional, Union, Callable, Annotated
 import inspect
 from aiida_shell import ShellJob
 from aiida_shell.launch import prepare_shell_job_inputs
-from node_graph.node_spec import NodeSpec
+from node_graph.task_spec import TaskSpec
 from node_graph.executor import RuntimeExecutor
 from node_graph.socket_spec import SocketSpec, merge_specs, SocketMeta
 from aiida_workgraph.socket_spec import from_aiida_process, namespace
@@ -16,13 +16,13 @@ from aiida import orm
 class ShellJobTask(Task):
     """Runtime for ShellJob nodes.
 
-    This class is referenced by NodeSpec.base_class_path so the engine can import
+    This class is referenced by TaskSpec.base_class_path so the engine can import
     it and call `execute`.
     """
 
     identifier = 'workgraph.shelljob'
     name = 'shelljob'
-    node_type = 'SHELLJOB'
+    task_type = 'SHELLJOB'
     catalog = 'AIIDA'
 
     def serialize_data(self, data: Dict[str, Any]) -> Dict[str, Any]:
@@ -100,13 +100,13 @@ class ShellJobTask(Task):
         return process, state
 
 
-def _build_shelljob_nodespec(
+def _build_shelljob_TaskSpec(
     *,
     identifier: Optional[str] = None,
     outputs: Optional[SocketSpec | List[str]] = None,
     parser_outputs: Optional[SocketSpec | List[str]] = None,
-) -> NodeSpec:
-    """Create a `NodeSpec` for a ShellJob, augmenting inputs/outputs as needed.
+) -> TaskSpec:
+    """Create a `TaskSpec` for a ShellJob, augmenting inputs/outputs as needed.
 
     - Start from AiiDA Process spec inference
     - Add inputs: command, resolve_command
@@ -146,15 +146,15 @@ def _build_shelljob_nodespec(
 
     exec_payload = RuntimeExecutor.from_callable(ShellJob)
 
-    return NodeSpec(
+    return TaskSpec(
         identifier=identifier or 'ShellJob',
         catalog='AIIDA',
-        node_type='SHELLJOB',
+        task_type='SHELLJOB',
         inputs=in_spec,
         outputs=out_spec,
         executor=exec_payload,
         base_class=ShellJobTask,
-        metadata={'node_type': 'SHELLJOB'},
+        metadata={'task_type': 'SHELLJOB'},
     )
 
 
@@ -180,7 +180,7 @@ def shelljob(
             outs = shelljob(command="date", arguments=["--iso-8601"])  # returns handle
             wg.run()
     """
-    spec = _build_shelljob_nodespec(outputs=outputs, parser_outputs=parser_outputs)
+    spec = _build_shelljob_TaskSpec(outputs=outputs, parser_outputs=parser_outputs)
 
     handle = TaskHandle(spec)
     return handle(

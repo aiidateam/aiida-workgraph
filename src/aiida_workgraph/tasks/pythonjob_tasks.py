@@ -9,12 +9,12 @@ from aiida_pythonjob import pyfunction, PythonJob, PyFunction, MonitorPyFunction
 from aiida_pythonjob.utils import serialize_ports
 from aiida_workgraph.task import Task
 from node_graph.socket_spec import SocketSpec, SocketSpecSelect, SocketMeta
-from node_graph.node_spec import NodeSpec
+from node_graph.task_spec import TaskSpec
 from aiida_workgraph.socket_spec import namespace
-from .function_task import build_callable_nodespec
+from .function_task import build_callable_TaskSpec
 from node_graph.error_handler import ErrorHandlerSpec
 from node_graph.executor import RuntimeExecutor
-from node_graph.node_spec import BaseHandle
+from node_graph.task_spec import BaseHandle
 
 
 class BaseSerializablePythonTask(Task):
@@ -275,14 +275,14 @@ class MonitorFunctionTask(BaseSerializablePythonTask):
         return process, state
 
 
-def build_pythonjob_nodespec(
+def build_pythonjob_taskspec(
     obj: Callable,
     identifier: Optional[str] = None,
     catalog: str = 'Others',
     in_spec: Optional[SocketSpec] | list = None,
     out_spec: Optional[SocketSpec] | list = None,
     error_handlers: Optional[Dict[str, ErrorHandlerSpec]] = None,
-) -> NodeSpec:
+) -> TaskSpec:
     # allow list specs just for PythonJob (keep existing behavior)
     from aiida_workgraph.socket_spec import validate_socket_data
 
@@ -296,9 +296,9 @@ def build_pythonjob_nodespec(
         register_pickle_by_value=Annotated[bool, SocketMeta(required=False)],
     )
 
-    return build_callable_nodespec(
+    return build_callable_TaskSpec(
         obj=obj,
-        node_type='PYTHONJOB',
+        task_type='PYTHONJOB',
         catalog=catalog,
         base_class=PythonJobTask,
         identifier=identifier,
@@ -310,23 +310,23 @@ def build_pythonjob_nodespec(
     )
 
 
-def build_pyfunction_nodespec(
+def build_pyfunction_taskspec(
     obj: Callable,
     identifier: Optional[str] = None,
     catalog: str = 'Others',
     in_spec: Optional[SocketSpec] = None,
     out_spec: Optional[SocketSpec] = None,
     error_handlers: Optional[Dict[str, ErrorHandlerSpec]] = None,
-) -> NodeSpec:
+) -> TaskSpec:
     import asyncio
 
     if asyncio.iscoroutinefunction(obj):
         metadata = {'is_coroutine': True}
     else:
         metadata = {}
-    return build_callable_nodespec(
+    return build_callable_TaskSpec(
         obj=obj,
-        node_type='PYFUNCTION',
+        task_type='PYFUNCTION',
         catalog=catalog,
         base_class=PyFunctionTask,
         identifier=identifier,
@@ -338,23 +338,23 @@ def build_pyfunction_nodespec(
     )
 
 
-def build_monitor_function_nodespec(
+def build_monitor_function_taskspec(
     obj: Callable,
     identifier: Optional[str] = None,
     catalog: str = 'Others',
     in_spec: Optional[SocketSpec] = None,
     out_spec: Optional[SocketSpec] = None,
     error_handlers: Optional[Dict[str, ErrorHandlerSpec]] = None,
-) -> NodeSpec:
+) -> TaskSpec:
     add_in = namespace(
         interval=(int, 5),
         timeout=(int, 3600),
     )
     add_out = namespace(exit_code=Any)
 
-    return build_callable_nodespec(
+    return build_callable_TaskSpec(
         obj=obj,
-        node_type='MONITOR',
+        task_type='MONITOR',
         catalog=catalog,
         base_class=MonitorFunctionTask,
         identifier=identifier,

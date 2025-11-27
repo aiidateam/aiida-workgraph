@@ -19,10 +19,10 @@ tasks:
       x: 2
     inputs:
     - to_socket: code
-      from_node: code1
+      from_task: code1
       from_socket: 0
     - to_socket: y
-      from_node: int1
+      from_task: int1
       from_socket: 0
   - identifier: workgraph.test_arithmetic_add
     name: add2
@@ -30,8 +30,8 @@ tasks:
       x: 4
     inputs:
     - to_socket: code
-      from_node: code1
+      from_task: code1
       from_socket: 0
     - to_socket: y
-      from_node: add1
+      from_task: add1
       from_socket: 0
