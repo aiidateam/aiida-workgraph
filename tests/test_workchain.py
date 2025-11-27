@@ -1,12 +1,12 @@
 from aiida.workflows.arithmetic.multiply_add import MultiplyAddWorkChain
-from node_graph.node_spec import SchemaSource
+from node_graph.task_spec import SchemaSource
 from aiida_workgraph import task
 
 
 def test_build_workchain_inputs_outputs():
     """Run simple workchain."""
 
-    node = task(MultiplyAddWorkChain)()._node
+    node = task(MultiplyAddWorkChain)()._task
     inputs = MultiplyAddWorkChain.spec().inputs
     # inputs + metadata + _wait
     ninput = len(inputs.ports) + 1

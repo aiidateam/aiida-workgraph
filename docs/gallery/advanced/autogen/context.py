@@ -146,7 +146,7 @@ wg = WorkGraph(name='context_gui_demo')
 # Set initial context values
 wg.ctx = {'x': 2, 'multiplier': 10}
 
-# Use context tasks - these appear as nodes in the GUI
+# Use context tasks - these appear as tasks in the GUI
 get_x = wg.add_task('workgraph.get_context', name='get_x', key='x')
 get_multiplier = wg.add_task('workgraph.get_context', name='get_multiplier', key='multiplier')
 
@@ -166,7 +166,7 @@ wg.show()
 
 # %%
 # As shown in the GUI, the ``get_context`` and ``set_context`` tasks appear as
-# visible nodes in the workflow graph. This makes the data flow through context
+# visible tasks in the workflow graph. This makes the data flow through context
 # explicit and traceable, unlike direct context access via ``wg.ctx.x`` which
 # is invisible in the visualization.
 

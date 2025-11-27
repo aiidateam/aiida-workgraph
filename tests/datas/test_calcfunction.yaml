@@ -18,11 +18,11 @@ tasks:
     inputs:
       x: 4
 links:
-  - to_node: sumdiff1
-    from_node: int1
+  - to_task: sumdiff1
+    from_task: int1
     to_socket: y
     from_socket: result
-  - to_node: sumdiff2
-    from_node: sumdiff1
+  - to_task: sumdiff2
+    from_task: sumdiff1
     to_socket: y
     from_socket: sum

@@ -237,9 +237,9 @@ def test_task_from_builder_multiply_add(add_code, decorated_add) -> None:
     assert len(wg.links) == 1
     assert wg.links_to_dict() == [
         {
-            'from_node': multiply_add_task_name,
+            'from_task': multiply_add_task_name,
             'from_socket': 'result',
-            'to_node': add_task_name,
+            'to_task': add_task_name,
             'to_socket': 'x',
         }
     ]
@@ -272,8 +272,8 @@ def test_call_task_inside_task():
     with WorkGraph() as wg:
         result = multiply(3, 4).result
         wg.run()
-        assert result._node.process.exit_status == 323
-        assert 'Invalid nested task call.' in result._node.process.exit_message
+        assert result._task.process.exit_status == 323
+        assert 'Invalid nested task call.' in result._task.process.exit_message
 
 
 def test_call_link_label_as_name() -> None:
@@ -298,17 +298,17 @@ def test_call_link_label_as_name() -> None:
 
     with WorkGraph('test_call_link_label_as_name') as wg:
         sum1 = add(1, 2, metadata={'call_link_label': 'my_add'})
-        assert sum1._node.name == 'my_add'
+        assert sum1._task.name == 'my_add'
         sum2 = add_calcfunction(3, sum1.result, metadata={'call_link_label': 'my_add_calc'})
-        assert sum2._node.name == 'my_add_calc'
+        assert sum2._task.name == 'my_add_calc'
         # the link name should also be updated
         assert 'my_add.result -> my_add_calc.y' in wg.links
         sum3 = AddTask(x=5, y=6, metadata={'call_link_label': 'my_add_calcjob'})
-        assert sum3._node.name == 'my_add_calcjob'
+        assert sum3._task.name == 'my_add_calcjob'
         sum4 = MultiplyAddTask(x=1, y=2, z=3, metadata={'call_link_label': 'my_multiply_add'})
-        assert sum4._node.name == 'my_multiply_add'
+        assert sum4._task.name == 'my_multiply_add'
         sum5 = test_graph(metadata={'call_link_label': 'my_graph'})
-        assert sum5._node.name == 'my_graph'
+        assert sum5._task.name == 'my_graph'
 
 
 def test_metadata_can_not_be_used_as_function_argument(decorated_add) -> None:
