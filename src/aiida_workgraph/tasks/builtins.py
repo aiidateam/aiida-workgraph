@@ -2,21 +2,21 @@ from __future__ import annotations
 from typing import Any, Dict
 from aiida_workgraph.task import ChildTaskSet, Task
 from aiida_workgraph import task, namespace, meta
-from node_graph.nodes.builtins import _GraphIOSharedMixin
+from node_graph.tasks.builtins import _GraphIOSharedMixin
 from node_graph.socket import BaseSocket
 from node_graph import RuntimeExecutor
 from aiida import orm
-from node_graph.node_spec import NodeSpec
+from node_graph.task_spec import TaskSpec
 from node_graph.socket_spec import SocketSpec, SocketMeta
 from typing import Annotated
 from aiida_workgraph.executors.builtins import update_ctx, get_context, select, return_input
-from node_graph.node import BuiltinPolicy
+from node_graph.task import BuiltinPolicy
 
 
 class GraphLevelTask(_GraphIOSharedMixin, Task):
     """Graph level task variant with shared IO."""
 
-    _default_spec = NodeSpec(
+    _default_spec = TaskSpec(
         identifier='workgraph.graph_level_task',
         catalog='Builtins',
         base_class_path='aiida_workgraph.tasks.builtins.GraphLevelTask',
@@ -32,9 +32,9 @@ class Zone(Task):
     Extend the Task class to include a 'children' attribute.
     """
 
-    _default_spec = NodeSpec(
+    _default_spec = TaskSpec(
         identifier='workgraph.zone',
-        node_type='ZONE',
+        task_type='ZONE',
         catalog='Control',
         base_class_path='aiida_workgraph.tasks.builtins.Zone',
     )
@@ -59,9 +59,9 @@ class Zone(Task):
 class While(Zone):
     """While"""
 
-    _default_spec = NodeSpec(
+    _default_spec = TaskSpec(
         identifier='workgraph.while_zone',
-        node_type='WHILE',
+        task_type='WHILE',
         catalog='Control',
         inputs=namespace(
             max_iterations=Annotated[int, SocketSpec('workgraph.any', default=10000)],
@@ -74,9 +74,9 @@ class While(Zone):
 class If(Zone):
     """If task"""
 
-    _default_spec = NodeSpec(
+    _default_spec = TaskSpec(
         identifier='workgraph.if_zone',
-        node_type='IF',
+        task_type='IF',
         catalog='Control',
         inputs=namespace(
             invert_condition=Annotated[bool, SocketSpec('workgraph.bool', default=False)],
@@ -89,9 +89,9 @@ class If(Zone):
 class Map(Zone):
     """Map"""
 
-    _default_spec = NodeSpec(
+    _default_spec = TaskSpec(
         identifier='workgraph.map_zone',
-        node_type='MAP',
+        task_type='MAP',
         catalog='Control',
         inputs=namespace(
             source=SocketSpec('workgraph.any', link_limit=100000),
@@ -135,9 +135,9 @@ class MapItem(Task):
     # turn off framework builtins for these graph-level nodes
     _BUILTINS_POLICY = BuiltinPolicy(input_wait=False, output_wait=False, default_output=False)
 
-    _default_spec = NodeSpec(
+    _default_spec = TaskSpec(
         identifier='workgraph.map_item',
-        node_type='Normal',
+        task_type='Normal',
         catalog='Control',
         inputs=namespace(
             source=SocketSpec('workgraph.any', link_limit=100000, meta=SocketMeta(required=False)),
@@ -154,9 +154,9 @@ class GatherItem(Task):
     # turn off framework builtins for these graph-level nodes
     _BUILTINS_POLICY = BuiltinPolicy(input_wait=True, output_wait=False, default_output=False)
 
-    _default_spec = NodeSpec(
+    _default_spec = TaskSpec(
         identifier='workgraph.gather_item',
-        node_type='Normal',
+        task_type='Normal',
         catalog='Control',
         inputs=namespace(),
         outputs=namespace(),
@@ -168,9 +168,9 @@ class GatherItem(Task):
 class SetContext(Task):
     """SetContext"""
 
-    _default_spec = NodeSpec(
+    _default_spec = TaskSpec(
         identifier='workgraph.set_context',
-        node_type='Normal',
+        task_type='Normal',
         catalog='Control',
         inputs=namespace(
             context=SocketSpec('workgraph.any', meta=SocketMeta(required=False)),
@@ -185,9 +185,9 @@ class SetContext(Task):
 class GetContext(Task):
     """GetContext"""
 
-    _default_spec = NodeSpec(
+    _default_spec = TaskSpec(
         identifier='workgraph.get_context',
-        node_type='Normal',
+        task_type='Normal',
         catalog='Control',
         inputs=namespace(context=SocketSpec('workgraph.any', meta=SocketMeta(required=False)), key=any),
         outputs=namespace(result=any),
@@ -199,9 +199,9 @@ class GetContext(Task):
 class Select(Task):
     """Select"""
 
-    _default_spec = NodeSpec(
+    _default_spec = TaskSpec(
         identifier='workgraph.select',
-        node_type='Normal',
+        task_type='Normal',
         catalog='Control',
         inputs=namespace(
             condition=any,
@@ -246,9 +246,9 @@ class AiiDANode(Task):
     name = 'AiiDANode'
     catalog = 'Test'
 
-    _default_spec = NodeSpec(
+    _default_spec = TaskSpec(
         identifier=identifier,
-        node_type='Normal',
+        task_type='Normal',
         inputs=namespace(
             pk=Annotated[int, meta(required=False)],
             uuid=Annotated[str, meta(required=False)],
@@ -266,9 +266,9 @@ class AiiDACode(Task):
     name = 'AiiDACode'
     catalog = 'Test'
 
-    _default_spec = NodeSpec(
+    _default_spec = TaskSpec(
         identifier=identifier,
-        node_type='Normal',
+        task_type='Normal',
         inputs=namespace(
             pk=Annotated[int, meta(required=False)],
             uuid=Annotated[str, meta(required=False)],

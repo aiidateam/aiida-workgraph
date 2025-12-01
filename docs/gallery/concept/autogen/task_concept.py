@@ -31,10 +31,10 @@ def multiply(x, y):
 
 
 # export the task to html file so that it can be visualized in a browser
-add()._node.to_html()
+add()._task.to_html()
 
 # visualize the task in jupyter-notebook
-# add()._node
+# add()._task
 
 
 ######################################################################
@@ -45,7 +45,7 @@ add()._node.to_html()
 # outputs:
 #
 
-add1 = add()._node
+add1 = add()._task
 print('Inputs:', add1.get_input_names())
 print('Outputs:', add1.get_output_names())
 
@@ -133,15 +133,15 @@ add1 = wg.add_task(ArithmeticAddCalculation, name='add1')
 #
 
 from aiida_workgraph import Task, namespace
-from node_graph.node_spec import NodeSpec
+from node_graph.task_spec import TaskSpec
 from node_graph.executor import RuntimeExecutor
 from math import pow
 
 
 class MyPow(Task):
-    _default_spec = NodeSpec(
+    _default_spec = TaskSpec(
         identifier='MyPow',
-        node_type='Normal',
+        task_type='Normal',
         catalog='Test',
         inputs=namespace(
             x=float,

@@ -20,12 +20,12 @@ classifiers = [
 dependencies = [
   "numpy",
   "scipy",
-  "node-graph~=0.4.3",
+  "node-graph~=0.5.0",
   "node-graph-widget>=0.0.5",
   "aiida-core~=2.7.1",
   "cloudpickle",
   "aiida-shell~=0.8",
-  "aiida-pythonjob~=0.4.6",
+  "aiida-pythonjob~=0.4.8",
   "jsonschema"
 ]
 description = "Design flexible node-based workflow for AiiDA calculation."

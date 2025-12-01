@@ -1,18 +1,18 @@
 from aiida import orm
 from node_graph.socket import (
-    NodeSocket,
-    NodeSocketNamespace,
+    TaskSocket as BaseTaskSocket,
+    TaskSocketNamespace as BaseTaskSocketNamespace,
 )
 
 from aiida_workgraph.property import TaskProperty
 from aiida_workgraph.registry import type_mapping
 
 
-class TaskSocket(NodeSocket):
+class TaskSocket(BaseTaskSocket):
     """Represent a socket of a Task in the AiiDA WorkGraph."""
 
     # use TaskProperty from aiida_workgraph.property
-    # to override the default NodeProperty from node_graph
+    # to override the default TaskProperty from node_graph
     _socket_property_class = TaskProperty
 
     @property
@@ -38,7 +38,7 @@ class TaskSocket(NodeSocket):
             return self.value
 
 
-class TaskSocketNamespace(NodeSocketNamespace):
+class TaskSocketNamespace(BaseTaskSocketNamespace):
     """Represent a namespace of a Task in the AiiDA WorkGraph."""
 
     _identifier = 'workgraph.namespace'

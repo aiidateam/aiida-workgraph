@@ -1,5 +1,5 @@
 from __future__ import annotations
-from node_graph.node_spec import NodeSpec
+from node_graph.task_spec import TaskSpec
 from aiida_workgraph.task import Task
 from typing import TYPE_CHECKING
 
@@ -12,7 +12,7 @@ class SubGraphTask(Task):
 
     identifier = 'workgraph.workgraph_task'
     name = 'SubGraphTask'
-    node_type = 'Normal'
+    task_type = 'Normal'
     catalog = 'Builtins'
 
     def __init__(self, *args, **kwargs):
@@ -71,15 +71,15 @@ class SubGraphTask(Task):
         return process, state
 
 
-def _build_subgraph_task_nodespec(
+def _build_subgraph_task_TaskSpec(
     graph: 'WorkGraph',
     name: str | None = None,
-) -> NodeSpec:
+) -> TaskSpec:
     from node_graph.executor import SafeExecutor
 
-    return NodeSpec(
+    return TaskSpec(
         identifier=name or graph.name,
-        node_type='SubGraph',
+        task_type='SubGraph',
         inputs=graph.spec.inputs,
         outputs=graph.spec.outputs,
         executor=SafeExecutor.from_graph(graph),
