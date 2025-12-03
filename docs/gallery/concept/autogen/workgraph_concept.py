@@ -42,6 +42,12 @@ wg.add_link(add1.outputs.result, add2.inputs.x)
 wg.to_html()
 
 # %%
+# .. note::
+#
+#    By creating a link to ``add2.inputs.x``, you can no longer set this task's input
+#    directly. It can only be changed through changes to ``add1.outputs.result``.
+
+# %%
 # Execute the workgraph
 # ========================
 # With the graph defined, you can now execute it. You provide the inputs for the tasks.
@@ -85,6 +91,15 @@ assert wg.outputs.sum2.value == 2 + (2 + 3)
 
 # Visualize the graph with inputs and outputs
 wg.to_html()
+
+# %%
+# .. note::
+#
+#    As when explicitly linking tasks, graph-level inputs create a link that cannot be
+#    overridden by setting task-level inputs. In this case, this means you cannot set
+#    ``wg.tasks.add1.inputs.x`` or ``wg.tasks.add2.inputs.x``, in addition to
+#    being unable to set ``wg.tasks.add2.inputs.y`` due to the link to ``add1``'s
+#    result.
 
 # %%
 # Context variables
