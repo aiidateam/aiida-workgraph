@@ -63,7 +63,7 @@ def build_task_from_callable(
     If it is a function, build task from function.
     If it is a class, it only supports CalcJob and WorkChain.
     """
-    from aiida_workgraph.task import Task
+    from node_graph.task import Task
 
     # if it is already a task, return it
     if (
