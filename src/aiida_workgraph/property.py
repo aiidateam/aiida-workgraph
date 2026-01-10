@@ -16,3 +16,12 @@ class TaskProperty(BaseTaskProperty):
         from aiida_workgraph.properties import PropertyPool
 
         return super().new(identifier, name=name, PropertyPool=PropertyPool, **kwargs)
+
+
+def unwrap_aiida_node(value):
+    if hasattr(value, 'value'):
+        return value.value
+    return TaskProperty.NOT_ADAPTED
+
+
+TaskProperty.register_validation_adapter(unwrap_aiida_node)

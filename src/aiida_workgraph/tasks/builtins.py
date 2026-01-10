@@ -1,8 +1,9 @@
 from __future__ import annotations
 from typing import Any, Dict
-from aiida_workgraph.task import ChildTaskSet, Task
+from aiida_workgraph.task import Task
 from aiida_workgraph import task, namespace, meta
 from node_graph.tasks.builtins import _GraphIOSharedMixin
+from node_graph.task import ChildTaskSet
 from node_graph.socket import BaseSocket
 from node_graph import RuntimeExecutor
 from aiida import orm

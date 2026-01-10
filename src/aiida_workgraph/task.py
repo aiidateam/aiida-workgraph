@@ -3,13 +3,14 @@ from __future__ import annotations
 from node_graph.task import Task as GraphTask
 from .registry import RegistryHub, registry_hub
 import aiida
-from typing import Any, Dict, Optional, Union, Callable, List, Set, Iterable, TYPE_CHECKING
+from typing import Any, Dict, Optional, Union, Callable, List, TYPE_CHECKING
 from node_graph.task_spec import BaseHandle
+from node_graph.task import TaskSet
 from aiida_workgraph.socket_spec import SocketSpecAPI
 from node_graph.task_spec import TaskSpec
 
 if TYPE_CHECKING:
-    from aiida_workgraph import WorkGraph
+    pass
 
 
 class Task(GraphTask):
@@ -166,93 +167,6 @@ class Task(GraphTask):
         wgdata = {'name': self.name, 'tasks': {self.name: tdata}, 'links': []}
         wgdata = workgraph_to_short_json(wgdata)
         return wgdata
-
-
-class TaskSet:
-    """
-    A collection of tasks that belong to a specific parent task.
-
-    This class provides an interface for managing a set of tasks, allowing
-    tasks to be added, removed, and iterated over while maintaining a reference
-    to their parent task and ensuring they exist within a valid task graph.
-
-    """
-
-    def __init__(self, parent: 'Task'):
-        self._items: Set[str] = set()
-        self.parent = parent
-
-    @property
-    def graph(self) -> 'WorkGraph':
-        """Cache and return the graph of the parent task."""
-        return self.parent.graph
-
-    @property
-    def items(self) -> Set[str]:
-        return self._items
-
-    def _normalize_tasks(self, tasks: Union[List[Union[str, Task]], str, Task]) -> Iterable[str]:
-        """Normalize input to an iterable of task names."""
-        if isinstance(tasks, (str, Task)):
-            tasks = [tasks]
-        task_objects = []
-        for task in tasks:
-            if isinstance(task, str):
-                if task not in self.graph.tasks:
-                    raise ValueError(f"Task '{task}' is not in the graph. Available tasks: {self.graph.tasks}")
-                task_objects.append(self.graph.tasks[task])
-            elif isinstance(task, Task):
-                task_objects.append(task)
-            else:
-                raise ValueError(f'Invalid task type: {type(task)}')
-        return task_objects
-
-    def add(self, tasks: Union[List[Union[str, Task]], str, Task]) -> None:
-        """Add tasks to the collection. Tasks can be a list or a single Task or task name."""
-        # If the task does not belong to any graph, skip adding it
-        if isinstance(self.graph, Task):
-            return
-        normalize_tasks = []
-        for task in self._normalize_tasks(tasks):
-            self._items.add(task)
-            normalize_tasks.append(task)
-        return normalize_tasks
-
-    def remove(self, tasks: Union[List[Union[str, Task]], str, Task]) -> None:
-        """Remove tasks from the collection. Tasks can be a list or a single Task or task name."""
-        for task in self._normalize_tasks(tasks):
-            if task not in self._items:
-                raise ValueError(f"Task '{task.name}' is not in the collection.")
-            self._items.remove(task)
-
-    def clear(self) -> None:
-        """Clear all items from the collection."""
-        self._items.clear()
-
-    def __contains__(self, item: str) -> bool:
-        """Check if a task name is in the collection."""
-        return item in self._items
-
-    def __iter__(self):
-        """Yield each task name in the collection for iteration."""
-        return iter(self._items)
-
-    def __len__(self) -> int:
-        return len(self._items)
-
-    def __repr__(self) -> str:
-        return f'{self._items}'
-
-
-# collection of child tasks
-class ChildTaskSet(TaskSet):
-    def add(self, tasks: Union[List[Union[str, Task]], str, Task]) -> None:
-        """Add tasks to the collection. Tasks can be a list or a single Task or task name."""
-        normalize_tasks = super().add(tasks)
-        for task in normalize_tasks:
-            if task.parent is not None:
-                raise ValueError('Task is already a child of the task: {task.parent}')
-            task.parent = self.parent
 
 
 class WaitingTaskSet(TaskSet):

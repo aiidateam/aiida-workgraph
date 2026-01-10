@@ -210,7 +210,7 @@ requires-dist = [
     { name = "jsonschema" },
     { name = "myst-nb", marker = "extra == 'docs'", specifier = "~=1.0.0" },
     { name = "nbsphinx", marker = "extra == 'docs'" },
-    { name = "node-graph", specifier = "~=0.5.0" },
+    { name = "node-graph", specifier = "~=0.5.2" },
     { name = "node-graph-widget", specifier = ">=0.0.5" },
     { name = "numpy" },
     { name = "pgtest", marker = "extra == 'tests'", specifier = "~=1.3" },
@@ -1648,6 +1648,15 @@ wheels = [
 ]
 
 [[package]]
+name = "isodate"
+version = "0.7.2"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/54/4d/e940025e2ce31a8ce1202635910747e5a87cc3a6a6bb2d00973375014749/isodate-0.7.2.tar.gz", hash = "sha256:4cd1aa0f43ca76f4a6c6c0292a85f40b35ec2e43e315b59f06e6d32171a953e6", size = 29705, upload-time = "2024-10-08T23:04:11.5Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/15/aa/0aca39a37d3c7eb941ba736ede56d689e7be91cab5d9ca846bde3999eba6/isodate-0.7.2-py3-none-any.whl", hash = "sha256:28009937d8031054830160fce6d409ed342816b543597cece116d966c6d99e15", size = 22320, upload-time = "2024-10-08T23:04:09.501Z" },
+]
+
+[[package]]
 name = "jedi"
 version = "0.18.2"
 source = { registry = "https://pypi.org/simple" }
@@ -2633,23 +2642,26 @@ wheels = [
 
 [[package]]
 name = "node-graph"
-version = "0.5.0"
+version = "0.5.2"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
+    { name = "click" },
     { name = "cloudpickle" },
+    { name = "graphviz" },
     { name = "node-graph-widget" },
     { name = "numpy" },
     { name = "pydantic" },
     { name = "pyyaml" },
+    { name = "rdflib" },
     { name = "scipy", version = "1.13.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.10'" },
     { name = "scipy", version = "1.15.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version == '3.10.*'" },
     { name = "scipy", version = "1.16.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
     { name = "typing-extensions", marker = "python_full_version < '3.11'" },
     { name = "wrapt" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/5e/51/b75cefcfebeac98d677fab611473762b6028622e5983f37d3ecca6a7dfa8/node_graph-0.5.0.tar.gz", hash = "sha256:d39a7ce93f473eb9dfbe59d2ce70341d876fc7a31455c88a377cc4111a252ced", size = 80276, upload-time = "2025-11-27T14:25:11.784Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/4b/4d/29ec4deb281dc4cf7ded642a5e599d91ae3f30e65c6f254605c605b4b17d/node_graph-0.5.2.tar.gz", hash = "sha256:d42c266c85e4ae4bb349bbfdee6e2a50aa83adf109e9fe3878813615de1028ab", size = 92736, upload-time = "2026-01-10T09:47:29.372Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/0f/5c/eb9142d0fb1ff83a0f127721042498d590b28dfbf4a21fef2905d5f2e488/node_graph-0.5.0-py3-none-any.whl", hash = "sha256:95811914a03e5a3078b0c78b630ebecb3720bcad602bd4bdfda83ef7d269ad30", size = 94890, upload-time = "2025-11-27T14:25:10.393Z" },
+    { url = "https://files.pythonhosted.org/packages/6f/d9/80eca0390d0eb2da420b22ab6580caeb7f480cab4358bd4460d8b0bab2eb/node_graph-0.5.2-py3-none-any.whl", hash = "sha256:c3c0d7e8a84cbde407b1d2eca8a984c155d97ef2d12a884438bb2a4861dc2e00", size = 109511, upload-time = "2026-01-10T09:47:27.594Z" },
 ]
 
 [[package]]
@@ -3981,6 +3993,19 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/9c/21/36733b8e22f151ae9f1b35ec95ad93338b8ba97abdbbe8995f22b0d0d8d1/qe_tools-2.3.0.tar.gz", hash = "sha256:208004ea4a6dfb2952f7dc61b7c47d669e52f352760321bde1c6a8e25c8b5e3b", size = 22038, upload-time = "2024-11-21T11:03:24.662Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/c9/75/3e9f01ad4e7e4ba4e58649efb5c7ef9418415dc81c9b140cc9ad019633eb/qe_tools-2.3.0-py3-none-any.whl", hash = "sha256:65f24c8c2267f7ef3479d085b0fecb1b494b68dde6509234eeb7afe7e36d12f9", size = 24243, upload-time = "2024-11-21T11:03:22.949Z" },
+]
+
+[[package]]
+name = "rdflib"
+version = "7.5.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "isodate", marker = "python_full_version < '3.11'" },
+    { name = "pyparsing" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/ec/1b/4cd9a29841951371304828d13282e27a5f25993702c7c87dcb7e0604bd25/rdflib-7.5.0.tar.gz", hash = "sha256:663083443908b1830e567350d72e74d9948b310f827966358d76eebdc92bf592", size = 4903859, upload-time = "2025-11-28T05:51:54.562Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/b9/20/35d2baebacf357b562bd081936b66cd845775442973cb033a377fd639a84/rdflib-7.5.0-py3-none-any.whl", hash = "sha256:b011dfc40d0fc8a44252e906dcd8fc806a7859bc231be190c37e9568a31ac572", size = 587215, upload-time = "2025-11-28T05:51:38.178Z" },
 ]
 
 [[package]]
