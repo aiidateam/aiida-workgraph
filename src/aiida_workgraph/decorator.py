@@ -24,7 +24,7 @@ def _spec_for(
 ) -> TaskSpec:
     # AiiDA process classes
     if inspect.isclass(obj) and issubclass(obj, (CalcJob, WorkChain)):
-        return AiiDAProcessTask.build(obj)
+        return AiiDAProcessTask.build(obj, attached_error_handlers=error_handlers)
 
     # AiiDA process functions (calcfunction/workfunction)
     if callable(obj) and getattr(obj, 'node_class', False):
