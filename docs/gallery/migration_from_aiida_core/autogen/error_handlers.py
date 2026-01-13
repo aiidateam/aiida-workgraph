@@ -82,11 +82,11 @@ class ArithmeticAddBaseWorkChain(BaseRestartWorkChain):
 #
 # 1.  **Define an error handler function**: This function takes a `Task` object
 #     as input and contains the logic to resolve the error.
-# 2.  **Build a WorkGraph**: Create a WorkGraph and add the task that might fail.
-# 3.  **Register the error handler**: Attach the handler function to the specific
+# 2.  **Register the error handler**: Attach the handler function to the specific
 #     task, specifying which exit codes should trigger it.
+# 3.  **Build a WorkGraph**: Create a WorkGraph and add the task that might fail.
 
-from aiida_workgraph import WorkGraph, Task
+from aiida_workgraph import Task, task
 from aiida.cmdline.utils.ascii_vis import format_call_graph
 
 
@@ -103,55 +103,54 @@ def handle_negative_sum(task: Task):
     """
     from aiida.orm import Int
 
-    print(f'Executing error handler for task: {task.name}')
     # Modify the inputs of the failed task for the next retry.
-    task.set_inputs({'x': Int(abs(task.inputs['x'].value)), 'y': Int(abs(task.inputs['y'].value))})
+    task.set_inputs({'x': Int(abs(task.inputs.x.value)), 'y': Int(abs(task.inputs.y.value))})
     msg = 'Run error handler: handle_negative_sum.'
     return msg
 
 
 # %%
-# Building and Running the WorkGraph
-# ==================================
-# We create a WorkGraph, add the `ArithmeticAddCalculation` as a task, and then
-# register our `handle_negative_sum` function as its error handler.
+# Register the `handle_negative_sum` function as error handler of the
+# `ArithmeticAddCalculation` task.
 
-# 1. Create a new WorkGraph
-wg = WorkGraph('error_handling_graph')
-
-# 2. Add the calculation task
-task1 = wg.add_task(ArithmeticAddCalculation, name='add_task')
-
-# 3. Register the error handler for the task
-task1.add_error_handler(
-    {
+AddTask = task(
+    error_handlers={
         'handle_negative_sum': {
             'executor': handle_negative_sum,
-            'exit_codes': [ArithmeticAddCalculation.exit_codes.ERROR_NEGATIVE_NUMBER.status],
-            'max_retries': 3,
+            'exit_codes': [
+                ArithmeticAddCalculation.exit_codes.ERROR_NEGATIVE_NUMBER.status,
+            ],
+            'max_retries': 5,
         }
     }
-)
+)(ArithmeticAddCalculation)
+
+
+# %%
+# Building and Running the WorkGraph
+# ==================================
+# We create a WorkGraph, add the `AddTask` task.
+#
+
+
+@task.graph()
+def restart_graph(code, x, y):
+    AddTask(code=code, x=x, y=y)
+
 
 # ------------------------- Submit the calculation -------------------
 from aiida import load_profile
-from aiida.orm import Int, load_code
 
 load_profile()
 
-# Define the inputs that will cause the calculation to fail initially.
-inputs = {
-    'add_task': {
-        'code': load_code('add@localhost'),
-        'x': Int(1),
-        'y': Int(-6),  # This will result in a negative sum, triggering the error.
-    },
-}
+add_code = orm.load_code('add@localhost')
+
+wg = restart_graph.build(code=add_code, x=orm.Int(1), y=orm.Int(-2))
 
 # Submit the WorkGraph and wait for it to complete.
 # The error handler will be executed automatically by the engine.
 print('Submitting WorkGraph that is expected to fail and be corrected...')
-wg.run(inputs=inputs)
+wg.run()
 
 
 # %%
@@ -161,7 +160,7 @@ wg.run(inputs=inputs)
 # to confirm that the error was handled and the calculation eventually
 # succeeded.
 
-add_task = wg.tasks['add_task']
+add_task = wg.tasks[-1]  # Get the last task in the WorkGraph
 print(f'Task finished OK? {add_task.process.is_finished_ok}')
 print(f'Final exit status: {add_task.process.exit_status}')
 print(f'Final result: {add_task.outputs["sum"].value}')

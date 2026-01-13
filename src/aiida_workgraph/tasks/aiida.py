@@ -5,7 +5,7 @@ from node_graph.socket_spec import SocketSpec
 from node_graph.task_spec import TaskSpec, SchemaSource
 from .function_task import build_callable_TaskSpec
 from node_graph.executor import RuntimeExecutor
-from node_graph.error_handler import ErrorHandlerSpec
+from node_graph.error_handler import ErrorHandlerSpec, normalize_error_handlers
 from aiida_workgraph.utils import inspect_aiida_component_type
 from aiida_workgraph.socket_spec import from_aiida_process
 
@@ -46,7 +46,12 @@ class AiiDAProcessTask(Task):
     catalog = 'AIIDA'
 
     @classmethod
-    def build(cls, callable):
+    def build(
+        cls,
+        callable,
+        attached_error_handlers: Optional[Dict[str, ErrorHandlerSpec]] = None,
+    ):
+        attached_error_handlers = normalize_error_handlers(attached_error_handlers)
         in_spec, out_spec = from_aiida_process(callable)
         return TaskSpec(
             identifier=callable.__name__,
@@ -55,6 +60,7 @@ class AiiDAProcessTask(Task):
             inputs=in_spec,
             outputs=out_spec,
             executor=RuntimeExecutor.from_callable(callable),
+            attached_error_handlers=attached_error_handlers,
             base_class=cls,
             task_type=inspect_aiida_component_type(callable),
         )
