@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import Any, Dict, List, Optional, Tuple
 from aiida_workgraph.task import Task
+from aiida_workgraph.socket import TaskSocketNamespace
 from aiida_workgraph.utils import get_nested_dict
 from aiida.engine.processes.exit_code import ExitCode
 from .task_state import TaskStateManager
@@ -47,6 +48,7 @@ class TaskManager:
     def get_task(self, name: str):
         """Get task from the context."""
         task = self.process.wg.tasks[name]
+        task.set_input_resolver(self.get_socket_value)
         action = self.state_manager.get_task_runtime_info(name, 'action').upper()
         task.action = action
         # update task results
@@ -333,7 +335,7 @@ class TaskManager:
     def get_socket_value(self, socket) -> Any:
         """Get the value of the socket recursively."""
         socket_value = None
-        if socket._identifier == 'workgraph.namespace':
+        if isinstance(socket, TaskSocketNamespace):
             socket_value = {}
             for name, sub_socket in socket._sockets.items():
                 value = self.get_socket_value(sub_socket)
@@ -342,6 +344,12 @@ class TaskManager:
                 socket_value[name] = value
         else:
             socket_value = socket.property.value
+        if (
+            socket._task is not None
+            and socket._full_name.split('.')[0] == 'inputs'
+            and socket._metadata.extras.get('value_source') == 'property'
+        ):
+            return socket_value
         links = socket._links
         if len(links) == 1:
             link = links[0]

@@ -1,4 +1,4 @@
-from aiida_workgraph import WorkGraph, Task
+from aiida_workgraph import WorkGraph, Task, task
 from aiida import orm
 from aiida.calculations.arithmetic.add import ArithmeticAddCalculation
 
@@ -41,3 +41,19 @@ def test_error_handlers(add_code):
         },
     )
     assert wg.tasks.add1.outputs.sum.value == 3
+
+
+def test_error_handlers_graph_inputs(add_code):
+    """Test error handlers with graph inputs linked to task inputs."""
+    from aiida_workgraph.tasks.tests import BaseAddTask
+
+    @task.graph()
+    def restart_graph(code, x, y):
+        BaseAddTask(code=code, x=x, y=y)
+
+    g = restart_graph.build(code=add_code, x=1, y=-2)
+    assert len(g.tasks.ArithmeticAddCalculation.error_handlers) == 1
+    g1 = WorkGraph.from_dict(g.to_dict())
+    assert len(g1.tasks.ArithmeticAddCalculation.error_handlers) == 1
+    g.run()
+    assert g.tasks.ArithmeticAddCalculation.outputs.sum.value == 3

@@ -40,7 +40,10 @@ class ErrorHandlerManager:
         self.process.report(f'Run error handler: {executor.__name__}')
         if handler.retry < handler.max_retries:
             task = self.process.task_manager.get_task(task_name)
+            prev_allow_overrides = getattr(task, '_allow_input_overrides', False)
             try:
+                task.set_input_resolver(self.process.task_manager.get_socket_value)
+                task._allow_input_overrides = True
                 # Run the error handler to update the inputs of the task
                 if 'engine' in executor_sig.parameters:
                     msg = executor(task, engine=self, **(handler.kwargs or {}))
@@ -58,3 +61,5 @@ class ErrorHandlerManager:
                 error_traceback = traceback.format_exc()  # Capture the full traceback
                 self.logger.error(f'Error in running error handler for {task_name}: {e}\n{error_traceback}')
                 self.process.report(f'Error in running error handler for {task_name}: {e}\n{error_traceback}')
+            finally:
+                task._allow_input_overrides = prev_allow_overrides
