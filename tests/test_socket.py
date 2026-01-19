@@ -34,9 +34,9 @@ def test_type_mapping(data_type, data, identifier) -> None:
     def add(x: data_type):
         pass
 
-    assert add()._node.inputs.x._identifier == identifier
-    assert add()._node.inputs.x.property.identifier == identifier
-    add_task = add()._node
+    assert add()._task.inputs.x._identifier == identifier
+    assert add()._task.inputs.x.property.identifier == identifier
+    add_task = add()._task
     add_task.set_inputs({'x': data})
 
     assert type_mapping.get(data_type, None) == identifier, (
@@ -77,9 +77,9 @@ def test_aiida_data_socket() -> None:
         def add(x: data_type):
             pass
 
-        assert add()._node.inputs.x._identifier == identifier
-        assert add()._node.inputs.x.property.identifier == identifier
-        add_task = add()._node
+        assert add()._task.inputs.x._identifier == identifier
+        assert add()._task.inputs.x.property.identifier == identifier
+        add_task = add()._task
         add_task.set_inputs({'x': data})
         with pytest.raises(TypeError, match='Invalid value for property'):
             add_task.set_inputs({'x': '{{variable}}'})
@@ -104,7 +104,7 @@ def test_socket_validate(data_type, data) -> None:
     def add(x: data_type):
         """"""
 
-    add_task = add()._node
+    add_task = add()._task
     # Test setting a value that should raise an exception
     with pytest.raises(Exception) as excinfo:
         add_task.set_inputs({'x': data})
@@ -133,7 +133,7 @@ def test_kwargs() -> None:
     def test(a, b=1, **kwargs):
         return {'sum': a + b, 'product': a * b}
 
-    test1 = test()._node
+    test1 = test()._task
     assert test1.inputs['kwargs']._link_limit == 1e6
     assert test1.inputs['kwargs']._identifier == 'workgraph.namespace'
 

@@ -1,8 +1,8 @@
 from typing import Union, Optional, Callable
-from node_graph.property import NodeProperty
+from node_graph.property import TaskProperty as BaseTaskProperty
 
 
-class TaskProperty(NodeProperty):
+class TaskProperty(BaseTaskProperty):
     """Represent a property of a Task in the AiiDA WorkGraph."""
 
     def validate(self, value: any) -> None:
@@ -16,3 +16,12 @@ class TaskProperty(NodeProperty):
         from aiida_workgraph.properties import PropertyPool
 
         return super().new(identifier, name=name, PropertyPool=PropertyPool, **kwargs)
+
+
+def unwrap_aiida_node(value):
+    if hasattr(value, 'value'):
+        return value.value
+    return TaskProperty.NOT_ADAPTED
+
+
+TaskProperty.register_validation_adapter(unwrap_aiida_node)

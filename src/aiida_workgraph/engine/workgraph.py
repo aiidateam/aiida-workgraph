@@ -25,7 +25,7 @@ from .awaitable_manager import AwaitableManager
 from .task_manager import TaskManager
 from .error_handler_manager import ErrorHandlerManager
 from aiida.engine.processes.workchains.awaitable import Awaitable
-from node_graph.config import BUILTIN_NODES
+from node_graph.config import BUILTIN_TASKS
 
 if t.TYPE_CHECKING:
     from aiida.engine.runners import Runner  # pylint: disable=unused-import
@@ -277,7 +277,7 @@ class WorkGraphEngine(Process, metaclass=Protect):
         }
         self.task_manager.set_task_results()
         # set meta-tasks state
-        for task_name in BUILTIN_NODES:
+        for task_name in BUILTIN_TASKS:
             self.task_manager.state_manager.set_task_runtime_info(task_name, 'state', 'FINISHED')
 
     def apply_action(self, msg: dict) -> None:

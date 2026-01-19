@@ -28,7 +28,7 @@ def test_decorators_args() -> None:
     def test(a, b=1, **c):
         print(a, b, c)
 
-    n = test._spec.to_node()
+    n = test._spec.to_task()
     assert n.args_data['args'] == []
     assert set(n.args_data['kwargs']) == set(
         {
@@ -55,7 +55,7 @@ def test_decorators_calcfunction_args() -> None:
         [f'{key}' for key in test._callable.process_class.spec().inputs.ports['metadata'].ports.keys()]
     )
     kwargs = set(test._callable.process_class.spec().inputs.ports.keys())
-    n = test._spec.to_node()
+    n = test._spec.to_task()
     assert n.args_data['args'] == []
     assert set(n.args_data['kwargs']) == set(kwargs)
     assert n.args_data['var_args'] is None
@@ -85,7 +85,7 @@ def task_function(request):
 
 
 def test_decorators_task_args(task_function):
-    n = task_function._spec.to_node()
+    n = task_function._spec.to_task()
     assert n.args_data['args'] == []
     assert set(n.args_data['kwargs']) == {
         'metadata',
@@ -124,7 +124,7 @@ def test_decorators_workfunction_args(task_workfunction) -> None:
     )
     kwargs = set(task_workfunction._callable.process_class.spec().inputs.ports.keys())
     #
-    n = task_workfunction._spec.to_node()
+    n = task_workfunction._spec.to_task()
     assert n.args_data['args'] == []
     assert set(n.args_data['kwargs']) == set(kwargs)
     assert n.args_data['var_args'] is None
@@ -142,7 +142,7 @@ def test_decorators_parameters() -> None:
     def test(a, b=1, **c):
         return {'sum': a + b, 'product': a * b}
 
-    test1 = test._spec.to_node()
+    test1 = test._spec.to_task()
     assert test1.inputs['c']._link_limit == 1000000
     assert 'sum' in test1.get_output_names()
     assert 'product' in test1.get_output_names()
@@ -170,7 +170,7 @@ def task_graph_task(request):
 
 def test_decorators_graph_args(task_graph_task) -> None:
     # assert task_graph_task.identifier == "add_multiply_group"
-    n = task_graph_task._spec.to_node()
+    n = task_graph_task._spec.to_task()
     assert n.args_data['args'] == []
     assert n.args_data['kwargs'] == ['a', 'b', 'metadata']
     assert n.args_data['var_args'] is None
@@ -250,7 +250,7 @@ def test_set_current_graph():
 
     sum = add(1, 2)
     g = get_current_graph()
-    assert g == sum._node.graph
+    assert g == sum._task.graph
     g2 = WorkGraph()
     set_current_graph(g2)
     assert get_current_graph() == g2

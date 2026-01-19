@@ -1,8 +1,8 @@
 from aiida_workgraph.task import Task
 from typing import Callable, Optional
 from node_graph.socket_spec import SocketSpec
-from node_graph.node_spec import NodeSpec
-from .function_task import build_callable_nodespec
+from node_graph.task_spec import TaskSpec
+from .function_task import build_callable_TaskSpec
 from node_graph.executor import RuntimeExecutor
 from aiida.engine import Process
 
@@ -12,7 +12,7 @@ class GraphTask(Task):
 
     identifier = 'workgraph.graph_task'
     name = 'graph_task'
-    node_type = 'graph_task'
+    task_type = 'graph_task'
     catalog = 'builtins'
 
     def execute(self, engine_process, args=None, kwargs=None, var_kwargs=None):
@@ -85,7 +85,7 @@ class GraphTask(Task):
         return process, state
 
 
-def _build_graph_task_nodespec(
+def _build_graph_task_taskspec(
     obj: Callable,
     identifier: Optional[str] = None,
     in_spec: Optional[SocketSpec] = None,
@@ -93,7 +93,7 @@ def _build_graph_task_nodespec(
     max_depth: int = 100,
     max_number_jobs: int = 1000000,
     catalog: str = 'Others',
-) -> NodeSpec:
+) -> TaskSpec:
     # defaults for max depth
     metadata = {'max_depth': max_depth, 'max_number_jobs': max_number_jobs}
     # We use Process as the process class here, so that the task inherits the metadata
@@ -101,9 +101,9 @@ def _build_graph_task_nodespec(
     # While the actual process class will be the WorkGraphEngine,
     # which is set at runtime in the execute() method
 
-    return build_callable_nodespec(
+    return build_callable_TaskSpec(
         obj=obj,
-        node_type='GRAPH',
+        task_type='GRAPH',
         base_class=GraphTask,
         identifier=identifier,
         catalog=catalog,

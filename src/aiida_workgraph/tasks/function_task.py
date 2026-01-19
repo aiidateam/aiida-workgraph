@@ -5,7 +5,7 @@ from aiida_workgraph.socket_spec import (
     infer_specs_from_callable,
 )
 from node_graph.socket_spec import SocketSpec, merge_specs
-from node_graph.node_spec import NodeSpec, SchemaSource
+from node_graph.task_spec import TaskSpec, SchemaSource
 from node_graph.executor import RuntimeExecutor
 from node_graph.error_handler import ErrorHandlerSpec, normalize_error_handlers
 
@@ -13,10 +13,10 @@ if TYPE_CHECKING:
     from node_graph import Node
 
 
-def build_callable_nodespec(
+def build_callable_TaskSpec(
     *,
     obj: Callable,
-    node_type: str,
+    task_type: str,
     base_class: Type['Node'],
     identifier: Optional[str] = None,
     catalog: str = 'Others',
@@ -27,7 +27,7 @@ def build_callable_nodespec(
     add_outputs: Optional[SocketSpec | List[str]] = None,
     error_handlers: Optional[Dict[str, ErrorHandlerSpec]] = None,
     metadata: Optional[dict] = None,
-) -> NodeSpec:
+) -> TaskSpec:
     """
     - infers function I/O
     - optionally merges process-contributed I/O
@@ -92,10 +92,10 @@ def build_callable_nodespec(
     # This avoid cyclic import.
     schema_source = SchemaSource.EMBEDDED
 
-    return NodeSpec(
+    return TaskSpec(
         identifier=identifier or obj.__name__,
         schema_source=schema_source,
-        node_type=node_type,
+        task_type=task_type,
         catalog=catalog,
         inputs=func_in,
         outputs=func_out,

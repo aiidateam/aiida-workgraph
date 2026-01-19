@@ -2,13 +2,14 @@ from __future__ import annotations
 
 from typing import Any, Dict, List, Optional, Tuple
 from aiida_workgraph.task import Task
+from aiida_workgraph.socket import TaskSocketNamespace
 from aiida_workgraph.utils import get_nested_dict
 from aiida.engine.processes.exit_code import ExitCode
 from .task_state import TaskStateManager
 from .task_actions import TaskActionManager
 from .awaitable_manager import AwaitableManager
 import traceback
-from node_graph.link import NodeLink
+from node_graph.link import TaskLink
 from aiida.engine.processes import Process
 
 MAX_NUMBER_AWAITABLES_MSG = 'The maximum number of subprocesses has been reached: {}. Cannot launch the job: {}.'
@@ -60,6 +61,7 @@ class TaskManager:
     def get_task(self, name: str):
         """Get task from the context."""
         task = self.process.wg.tasks[name]
+        task.set_input_resolver(self.get_socket_value)
         action = self.state_manager.get_task_runtime_info(name, 'action').upper()
         task.action = action
         # update task results
@@ -267,10 +269,10 @@ class TaskManager:
         return count
 
     def set_task_results(self) -> None:
-        from node_graph.config import BUILTIN_NODES
+        from node_graph.config import BUILTIN_TASKS
 
         for task in self.process.wg.tasks:
-            if task.name in BUILTIN_NODES:
+            if task.name in BUILTIN_TASKS:
                 # skip built-in nodes, they are not executed
                 continue
             if self.state_manager.get_task_runtime_info(task.name, 'action').upper() == 'RESET':
@@ -362,7 +364,7 @@ class TaskManager:
         """Check if the task should run."""
         name = task.name
         # skip if the max number of awaitables is reached
-        if task.node_type.upper() in process_task_types:
+        if task.task_type.upper() in process_task_types:
             if len(self.process._awaitables) >= self.process.wg.max_number_jobs:
                 print(MAX_NUMBER_AWAITABLES_MSG.format(self.process.wg.max_number_jobs, name))
                 return False
@@ -387,11 +389,11 @@ class TaskManager:
             self.ctx._executed_tasks.append(name)
             # print("-" * 60)
 
-            self.logger.info(f'Run task: {name}, type: {task.node_type}')
+            self.logger.info(f'Run task: {name}, type: {task.task_type}')
             inputs = self.get_inputs(name)
             # print("kwargs: ", inputs["kwargs"])
             self.ctx._task_results[task.name] = {}
-            task_type = task.node_type.upper()
+            task_type = task.task_type.upper()
             if task_type == 'PYFUNCTION':
                 if task.spec.metadata.get('is_coroutine', False):
                     self.execute_process_task(task, **inputs)
@@ -565,7 +567,7 @@ class TaskManager:
     def get_socket_value(self, socket) -> Any:
         """Get the value of the socket recursively."""
         socket_value = None
-        if socket._identifier == 'workgraph.namespace':
+        if isinstance(socket, TaskSocketNamespace):
             socket_value = {}
             for name, sub_socket in socket._sockets.items():
                 value = self.get_socket_value(sub_socket)
@@ -574,18 +576,24 @@ class TaskManager:
                 socket_value[name] = value
         else:
             socket_value = socket.property.value
+        if (
+            socket._task is not None
+            and socket._full_name.split('.')[0] == 'inputs'
+            and socket._metadata.extras.get('value_source') == 'property'
+        ):
+            return socket_value
         links = socket._links
         if len(links) == 1:
             link = links[0]
-            if self.ctx._task_results.get(link.from_node.name):
+            if self.ctx._task_results.get(link.from_task.name):
                 # handle the special socket _wait, _outputs
                 if link.from_socket._scoped_name == '_wait':
                     return socket_value
                 elif link.from_socket._scoped_name == '_outputs':
-                    socket_value = self.ctx._task_results[link.from_node.name]
+                    socket_value = self.ctx._task_results[link.from_task.name]
                 else:
                     socket_value = get_nested_dict(
-                        self.ctx._task_results[link.from_node.name],
+                        self.ctx._task_results[link.from_task.name],
                         link.from_socket._scoped_name,
                         default=None,
                     )
@@ -593,14 +601,14 @@ class TaskManager:
         elif len(links) > 1:
             socket_value = {}
             for link in links:
-                item_name = f'{link.from_node.name}_{link.from_socket._scoped_name}'
+                item_name = f'{link.from_task.name}_{link.from_socket._scoped_name}'
                 # handle the special socket _wait, _outputs
                 if link.from_socket._scoped_name in ['_wait', '_outputs']:
                     continue
-                if self.ctx._task_results[link.from_node.name] is None:
+                if self.ctx._task_results[link.from_task.name] is None:
                     socket_value[item_name] = None
                 else:
-                    socket_value[item_name] = self.ctx._task_results[link.from_node.name][link.from_socket._scoped_name]
+                    socket_value[item_name] = self.ctx._task_results[link.from_task.name][link.from_socket._scoped_name]
         return socket_value
 
     def get_inputs(
@@ -727,14 +735,14 @@ class TaskManager:
         self.state_manager.set_task_runtime_info(new_name, 'state', 'PLANNED')
         self.state_manager.set_task_runtime_info(new_name, 'action', '')
         # Insert new_data in ctx._tasks
-        task = self.process.wg.add_node_from_dict(task_data)
+        task = self.process.wg.add_task_from_dict(task_data)
         self.process.wg.tasks[name].mapped_tasks[prefix] = task
         return task
 
     def _patch_cloned_tasks(
         self,
         new_tasks: dict[str, 'Task'],
-        all_links: List[NodeLink],
+        all_links: List[TaskLink],
     ):
         """
         For each newly mapped task, fix references (children, input_links, etc.)
@@ -757,15 +765,15 @@ class TaskManager:
         # fix links references
         new_links = []
         for link in all_links:
-            if link.to_node.name in new_tasks:
-                to_node = new_tasks[link.to_node.name]
+            if link.to_task.name in new_tasks:
+                to_node = new_tasks[link.to_task.name]
                 to_socket = to_node.inputs[link.to_socket._scoped_name]
             else:
                 # if the to_node is not in the new_tasks, skip
                 continue
             new_links.append(link.to_dict())
-            if link.from_node.name in new_tasks:
-                from_node = new_tasks[link.from_node.name]
+            if link.from_task.name in new_tasks:
+                from_node = new_tasks[link.from_task.name]
                 from_socket = from_node.outputs[link.from_socket._scoped_name]
             else:
                 from_socket = link.from_socket

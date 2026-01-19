@@ -41,7 +41,7 @@ def test_inputs_outptus_auto_generate(wg_task: WorkGraph) -> None:
 
 def test_link_subgraph_task(decorated_add: Callable) -> None:
     # create a subgraph
-    from node_graph.collection import NodeCollection
+    from node_graph.collection import TaskCollection
     from aiida_workgraph.socket_spec import namespace
     from typing import Any
 
@@ -68,7 +68,7 @@ def test_link_subgraph_task(decorated_add: Callable) -> None:
     assert wg_task.inputs._value == {'x': x}
     assert hasattr(wg.tasks.sub_wg, 'links')
     assert hasattr(wg.tasks.sub_wg, 'tasks')
-    assert isinstance(wg.tasks.sub_wg.tasks, NodeCollection)
+    assert isinstance(wg.tasks.sub_wg.tasks, TaskCollection)
     assert wg_task.name == 'sub_wg'
 
     wg.add_task(decorated_add, name='add2', y=3)

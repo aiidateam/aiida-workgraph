@@ -2,10 +2,10 @@ from aiida_workgraph.task import Task
 from aiida.engine import Process
 from typing import Callable, Optional, Dict
 from node_graph.socket_spec import SocketSpec
-from node_graph.node_spec import NodeSpec, SchemaSource
-from .function_task import build_callable_nodespec
+from node_graph.task_spec import TaskSpec, SchemaSource
+from .function_task import build_callable_TaskSpec
 from node_graph.executor import RuntimeExecutor
-from node_graph.error_handler import ErrorHandlerSpec
+from node_graph.error_handler import ErrorHandlerSpec, normalize_error_handlers
 from aiida_workgraph.utils import inspect_aiida_component_type
 from aiida_workgraph.socket_spec import from_aiida_process
 
@@ -15,12 +15,12 @@ class AiiDAFunctionTask(Task):
 
     identifier = 'workgraph.aiida_functions'
     name = 'aiida_function'
-    node_type = 'function'
+    task_type = 'function'
     catalog = 'AIIDA'
 
     def execute(self, args=None, kwargs=None, var_kwargs=None):
         from aiida.engine import run_get_node
-        from node_graph.node_spec import BaseHandle
+        from node_graph.task_spec import BaseHandle
 
         executor = RuntimeExecutor(**self.get_executor().to_dict()).callable
         # the imported executor could be a wrapped function
@@ -42,21 +42,27 @@ class AiiDAProcessTask(Task):
 
     identifier = 'workgraph.aiida_process'
     name = 'aiida_process'
-    node_type = 'Process'
+    task_type = 'Process'
     catalog = 'AIIDA'
 
     @classmethod
-    def build(cls, callable):
+    def build(
+        cls,
+        callable,
+        attached_error_handlers: Optional[Dict[str, ErrorHandlerSpec]] = None,
+    ):
+        attached_error_handlers = normalize_error_handlers(attached_error_handlers)
         in_spec, out_spec = from_aiida_process(callable)
-        return NodeSpec(
+        return TaskSpec(
             identifier=callable.__name__,
             schema_source=SchemaSource.CALLABLE,
             catalog='AIIDA',
             inputs=in_spec,
             outputs=out_spec,
             executor=RuntimeExecutor.from_callable(callable),
+            attached_error_handlers=attached_error_handlers,
             base_class=cls,
-            node_type=inspect_aiida_component_type(callable),
+            task_type=inspect_aiida_component_type(callable),
         )
 
     def execute(self, engine_process, args=None, kwargs=None, var_kwargs=None):
@@ -86,31 +92,31 @@ class AiiDAProcessTask(Task):
 class CalcJobTask(AiiDAProcessTask):
     identifier = 'workgraph.calcjob'
     name = 'calcjob'
-    node_type = 'CalcJob'
+    task_type = 'CalcJob'
     catalog = 'AIIDA'
 
 
 class WorkChainTask(AiiDAProcessTask):
     identifier = 'workgraph.workchain'
     name = 'workchain'
-    node_type = 'WorkChain'
+    task_type = 'WorkChain'
     catalog = 'AIIDA'
 
 
-def _build_aiida_function_nodespec(
+def _build_aiida_function_taskspec(
     obj: Callable,
     identifier: Optional[str] = None,
     catalog: str = 'AIIDA',
     in_spec: Optional[SocketSpec] = None,
     out_spec: Optional[SocketSpec] = None,
     error_handlers: Optional[Dict[str, ErrorHandlerSpec]] = None,
-) -> NodeSpec:
+) -> TaskSpec:
     from aiida_workgraph.utils import inspect_aiida_component_type
     from dataclasses import replace
 
-    spec = build_callable_nodespec(
+    spec = build_callable_TaskSpec(
         obj=obj,
-        node_type=inspect_aiida_component_type(obj),
+        task_type=inspect_aiida_component_type(obj),
         catalog=catalog,
         base_class=AiiDAFunctionTask,
         identifier=identifier,

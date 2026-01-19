@@ -13,6 +13,9 @@ The following sections provide details on advanced use of AiiDA WorkGraph:
 * :doc:`/advanced/autogen/node_graph_programming`
    This section covers node-graph programming, allowing users to build workflows by connecting task inputs and outputs, enabling easy modification and extension.
 
+* :doc:`/advanced/autogen/error_resistant`
+   This section explains how to create error-resistant workflows that can handle failures gracefully, ensuring robustness and reliability in execution.
+
 .. toctree::
    :maxdepth: 1
    :caption: Contents:
@@ -21,3 +24,4 @@ The following sections provide details on advanced use of AiiDA WorkGraph:
    autogen/context
    autogen/context_manager
    autogen/node_graph_programming
+   autogen/error_resistant

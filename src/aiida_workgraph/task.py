@@ -1,30 +1,31 @@
 from __future__ import annotations
 
-from node_graph.node import Node as GraphNode
+from node_graph.task import Task as GraphTask
 from .registry import RegistryHub, registry_hub
 import aiida
-from typing import Any, Dict, Optional, Union, Callable, List, Set, Iterable, TYPE_CHECKING
-from node_graph.node_spec import BaseHandle
+from typing import Any, Dict, Optional, Union, Callable, List, TYPE_CHECKING
+from node_graph.task_spec import BaseHandle
+from node_graph.task import TaskSet
 from aiida_workgraph.socket_spec import SocketSpecAPI
-from node_graph.node_spec import NodeSpec
+from node_graph.task_spec import TaskSpec
 
 if TYPE_CHECKING:
-    from aiida_workgraph import WorkGraph
+    pass
 
 
-class Task(GraphNode):
+class Task(GraphTask):
     """Represent a Task in the AiiDA WorkGraph.
 
-    The class extends from node_graph.node.Node and add new
+    The class extends from node_graph.task.Task and add new
     attributes to it.
     """
 
     _REGISTRY: Optional[RegistryHub] = registry_hub
     _SOCKET_SPEC_API = SocketSpecAPI
 
-    _default_spec = NodeSpec(
+    _default_spec = TaskSpec(
         identifier='workgraph.task',
-        node_type='Normal',
+        task_type='Normal',
         inputs=_SOCKET_SPEC_API.namespace(),
         outputs=_SOCKET_SPEC_API.namespace(),
         catalog='Base',
@@ -79,26 +80,26 @@ class Task(GraphNode):
         """Create a task from a identifier."""
         from aiida_workgraph.tasks import TaskPool
 
-        return super().new(identifier, name=name, NodePool=TaskPool)
+        return super().new(identifier, name=name, TaskPool=TaskPool)
 
     @classmethod
     def from_dict(cls, data: Dict[str, Any], TaskPool: Optional[Any] = None) -> 'Task':
-        """Create a task from a dictionary. This method initializes a Node instance with properties and settings
+        """Create a task from a dictionary. This method initializes a Task instance with properties and settings
         defined within the provided data dictionary. If TaskPool is not specified, the default TaskPool from
         aiida_workgraph.tasks is used.
 
         Args:
             data (Dict[str, Any]): A dictionary containing the task's configuration.
-            TaskPool (Optional[Any]): A pool of node configurations, defaults to None
+            TaskPool (Optional[Any]): A pool of task configurations, defaults to None
             which will use the global TaskPool.
 
         Returns:
-            Node: An instance of Node initialized with the provided data."""
+            Task: An instance of Task initialized with the provided data."""
         from aiida_workgraph.tasks import TaskPool as workgraph_TaskPool
 
         if TaskPool is None:
             TaskPool = workgraph_TaskPool
-        task = GraphNode.from_dict(data, NodePool=TaskPool)
+        task = GraphTask.from_dict(data, TaskPool=TaskPool)
 
         return task
 
@@ -134,7 +135,7 @@ class Task(GraphNode):
     def set_outputs_from_process_node(self, node: aiida.orm.ProcessNode) -> None:
         from aiida_workgraph.utils import resolve_node_link_managers
 
-        # if the node is finished ok, update the output sockets
+        # if the process is finished ok, update the output sockets
         # note the task.state may not be the same as the node.process_state
         # for example, task.state can be `SKIPPED` if it is inside a conditional block,
         # even if the node.is_finished_ok is True
@@ -147,7 +148,7 @@ class Task(GraphNode):
 
     def execute(self, args=None, kwargs=None, var_kwargs=None):
         """Execute the task."""
-        from node_graph.node_spec import BaseHandle
+        from node_graph.task_spec import BaseHandle
 
         executor = self.get_executor().callable
         # the imported executor could be a wrapped function
@@ -166,93 +167,6 @@ class Task(GraphNode):
         wgdata = {'name': self.name, 'tasks': {self.name: tdata}, 'links': []}
         wgdata = workgraph_to_short_json(wgdata)
         return wgdata
-
-
-class TaskSet:
-    """
-    A collection of tasks that belong to a specific parent task.
-
-    This class provides an interface for managing a set of tasks, allowing
-    tasks to be added, removed, and iterated over while maintaining a reference
-    to their parent task and ensuring they exist within a valid task graph.
-
-    """
-
-    def __init__(self, parent: 'Task'):
-        self._items: Set[str] = set()
-        self.parent = parent
-
-    @property
-    def graph(self) -> 'WorkGraph':
-        """Cache and return the graph of the parent task."""
-        return self.parent.graph
-
-    @property
-    def items(self) -> Set[str]:
-        return self._items
-
-    def _normalize_tasks(self, tasks: Union[List[Union[str, Task]], str, Task]) -> Iterable[str]:
-        """Normalize input to an iterable of task names."""
-        if isinstance(tasks, (str, Task)):
-            tasks = [tasks]
-        task_objects = []
-        for task in tasks:
-            if isinstance(task, str):
-                if task not in self.graph.tasks:
-                    raise ValueError(f"Task '{task}' is not in the graph. Available tasks: {self.graph.tasks}")
-                task_objects.append(self.graph.tasks[task])
-            elif isinstance(task, Task):
-                task_objects.append(task)
-            else:
-                raise ValueError(f'Invalid task type: {type(task)}')
-        return task_objects
-
-    def add(self, tasks: Union[List[Union[str, Task]], str, Task]) -> None:
-        """Add tasks to the collection. Tasks can be a list or a single Task or task name."""
-        # If the task does not belong to any graph, skip adding it
-        if isinstance(self.graph, Task):
-            return
-        normalize_tasks = []
-        for task in self._normalize_tasks(tasks):
-            self._items.add(task)
-            normalize_tasks.append(task)
-        return normalize_tasks
-
-    def remove(self, tasks: Union[List[Union[str, Task]], str, Task]) -> None:
-        """Remove tasks from the collection. Tasks can be a list or a single Task or task name."""
-        for task in self._normalize_tasks(tasks):
-            if task not in self._items:
-                raise ValueError(f"Task '{task.name}' is not in the collection.")
-            self._items.remove(task)
-
-    def clear(self) -> None:
-        """Clear all items from the collection."""
-        self._items.clear()
-
-    def __contains__(self, item: str) -> bool:
-        """Check if a task name is in the collection."""
-        return item in self._items
-
-    def __iter__(self):
-        """Yield each task name in the collection for iteration."""
-        return iter(self._items)
-
-    def __len__(self) -> int:
-        return len(self._items)
-
-    def __repr__(self) -> str:
-        return f'{self._items}'
-
-
-# collection of child tasks
-class ChildTaskSet(TaskSet):
-    def add(self, tasks: Union[List[Union[str, Task]], str, Task]) -> None:
-        """Add tasks to the collection. Tasks can be a list or a single Task or task name."""
-        normalize_tasks = super().add(tasks)
-        for task in normalize_tasks:
-            if task.parent is not None:
-                raise ValueError('Task is already a child of the task: {task.parent}')
-            task.parent = self.parent
 
 
 class WaitingTaskSet(TaskSet):
@@ -300,11 +214,11 @@ class TaskHandle(BaseHandle):
 
         outputs = super().__call__(*args, **kwargs)
         # if "metadata.call_link_label" is set, use it as the name of the task
-        if outputs._node.inputs.metadata.call_link_label.value is not None:
+        if outputs._task.inputs.metadata.call_link_label.value is not None:
             graph = outputs._graph
-            outputs._node.name = outputs._node.inputs.metadata.call_link_label.value
+            outputs._task.name = outputs._task.inputs.metadata.call_link_label.value
             # update the names of tasks and links collections in the graph
-            graph.tasks._items = {node.name: node for node in graph.tasks._items.values()}
+            graph.tasks._items = {task.name: task for task in graph.tasks._items.values()}
             graph.links._items = {link.name: link for link in graph.links._items.values()}
 
         return outputs

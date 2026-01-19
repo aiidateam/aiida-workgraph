@@ -3,7 +3,7 @@ from typing import Optional, Tuple, List, Any
 from aiida.orm.utils.serialize import serialize
 from aiida_workgraph.orm.utils import deserialize_safe
 from aiida.orm import ProcessNode, Data
-from node_graph.socket import BaseSocket, NodeSocketNamespace
+from node_graph.socket import BaseSocket, TaskSocketNamespace
 
 
 class TaskStateManager:
@@ -86,7 +86,7 @@ class TaskStateManager:
                     self.ctx._task_results[name] = resolve_node_link_managers(node.outputs)
                     self.set_task_runtime_info(task.name, 'state', 'FINISHED')
                     self.update_meta_tasks(name)
-                    self.process.report(f'Task: {name}, type: {task.node_type}, finished.')
+                    self.process.report(f'Task: {name}, type: {task.task_type}, finished.')
                     self.apply_socket_spec_extras_to_aiida_node(name, node)
                 # all other states are considered as failed
                 else:
@@ -150,7 +150,7 @@ class TaskStateManager:
         from aiida_workgraph.utils import resolve_node_link_managers
 
         for link in self.process.wg.links:
-            if link.from_node.name == name and link.to_node.name in [
+            if link.from_task.name == name and link.to_task.name in [
                 'graph_ctx',
                 'graph_outputs',
             ]:
@@ -162,7 +162,7 @@ class TaskStateManager:
                 else:
                     result = get_nested_dict(self.ctx._task_results[name], result_key, default=None)
                 result = resolve_node_link_managers(result)
-                update_nested_dict(self.ctx._task_results[link.to_node.name], key, result)
+                update_nested_dict(self.ctx._task_results[link.to_task.name], key, result)
 
     def reset_task(
         self,
@@ -181,13 +181,13 @@ class TaskStateManager:
             self.set_task_runtime_info(name, 'process', None)
         self.remove_executed_task(name)
 
-        node_type = self.process.wg.tasks[name].node_type.upper()
-        if node_type == 'WHILE':
+        task_type = self.process.wg.tasks[name].task_type.upper()
+        if task_type == 'WHILE':
             if reset_execution_count:
                 self.set_task_runtime_info(name, 'execution_count', 0)
             for child_task in self.process.wg.tasks[name].children:
                 self.reset_task(child_task.name, reset_process=False, recursive=False)
-        elif node_type in ['IF', 'ZONE']:
+        elif task_type in ['IF', 'ZONE']:
             for child_task in self.process.wg.tasks[name].children:
                 self.reset_task(child_task.name, reset_process=False, recursive=False)
 
@@ -232,7 +232,7 @@ class TaskStateManager:
         """
         Mark a task as FAILED, skip its children, and run any error handlers.
         """
-        task_type = self.process.wg.tasks[name].node_type
+        task_type = self.process.wg.tasks[name].task_type
         self.set_task_runtime_info(name, 'state', 'FAILED')
         self.set_tasks_state(self.process.wg.connectivity['child_node'][name], 'SKIPPED')
         msg = f'Task, {name}, type: {task_type}, failed.'
@@ -249,12 +249,12 @@ class TaskStateManager:
         """
         parent_task = self.process.wg.tasks[name].parent
         if parent_task:
-            node_type = parent_task.node_type.upper()
-            if node_type == 'WHILE':
+            task_type = parent_task.task_type.upper()
+            if task_type == 'WHILE':
                 self.update_while_task_state(parent_task.name)
-            elif node_type in ['IF', 'ZONE']:
+            elif task_type in ['IF', 'ZONE']:
                 self.update_zone_task_state(parent_task.name)
-            elif node_type == 'MAP':
+            elif task_type == 'MAP':
                 self.update_map_task_state(parent_task.name)
 
         # If the task is a mapped child, update its parent's "template" (the original map node)
@@ -273,7 +273,7 @@ class TaskStateManager:
             self.process.report(f'While Task {name}: this iteration finished. Try to reset for the next iteration.')
             # reset the condition tasks
             for link in self.process.wg.tasks[name].inputs.conditions._links:
-                self.reset_task(link.from_node.name, recursive=False)
+                self.reset_task(link.from_task.name, recursive=False)
             # reset the task and all its children, so that the task can run again
             # do not reset the execution count
             self.reset_task(name, reset_execution_count=False)
@@ -368,7 +368,7 @@ class TaskStateManager:
     @classmethod
     def set_socket_spec_extra(cls, socket: BaseSocket) -> None:
         """Set the socket spec extra to the AiiDA process node for a task."""
-        if isinstance(socket, NodeSocketNamespace):
+        if isinstance(socket, TaskSocketNamespace):
             for sub_socket in socket._sockets.values():
                 cls.set_socket_spec_extra(sub_socket)
         else:
