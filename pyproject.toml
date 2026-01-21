@@ -11,7 +11,6 @@ classifiers = [
   "Operating System :: POSIX :: Linux",
   "Operating System :: MacOS :: MacOS X",
   "Programming Language :: Python",
-  "Programming Language :: Python :: 3.9",
   "Programming Language :: Python :: 3.10",
   "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.12",
@@ -20,12 +19,12 @@ classifiers = [
 dependencies = [
   "numpy",
   "scipy",
-  "node-graph~=0.5.4",
+  "node-graph~=0.6.0",
   "node-graph-widget>=0.0.5",
   "aiida-core~=2.7.1",
   "cloudpickle",
   "aiida-shell~=0.8",
-  "aiida-pythonjob~=0.4.8",
+  "aiida-pythonjob~=0.5.0",
   "jsonschema"
 ]
 description = "Design flexible node-based workflow for AiiDA calculation."
@@ -34,7 +33,7 @@ keywords = ["aiida", "workflows"]
 license = {file = "LICENSE"}
 name = "aiida-workgraph"
 readme = "README.md"
-requires-python = ">=3.9,<3.14"
+requires-python = ">=3.10,<3.14"
 
 [project.entry-points."aiida.cmdline"]
 "workgraph" = "aiida_workgraph.cli.cmd_workgraph:workgraph"
@@ -61,6 +60,7 @@ requires-python = ">=3.9,<3.14"
 "workgraph.aiida_float_vector" = "aiida_workgraph.sockets.builtins:SocketAiiDAFloatVector"
 "workgraph.aiida_int_vector" = "aiida_workgraph.sockets.builtins:SocketAiiDAIntVector"
 "workgraph.aiida_structuredata" = "aiida_workgraph.sockets.builtins:SocketStructureData"
+"workgraph.annotated" = "aiida_workgraph.sockets.builtins:SocketAnnotated"
 "workgraph.any" = "aiida_workgraph.sockets.builtins:SocketAny"
 "workgraph.bool" = "aiida_workgraph.sockets.builtins:SocketBool"
 "workgraph.dict" = "aiida_workgraph.sockets.builtins:SocketDict"

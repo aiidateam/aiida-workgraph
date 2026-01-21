@@ -144,7 +144,7 @@ class MapItem(Task):
             source=SocketSpec('workgraph.any', link_limit=100000, meta=SocketMeta(required=False)),
             key=SocketSpec('workgraph.string', meta=SocketMeta(required=False)),
         ),
-        outputs=namespace(key=str, value=any),
+        outputs=namespace(key=str, value=Any),
         base_class_path='aiida_workgraph.tasks.builtins.MapItem',
     )
 
@@ -175,8 +175,8 @@ class SetContext(Task):
         catalog='Control',
         inputs=namespace(
             context=SocketSpec('workgraph.any', meta=SocketMeta(required=False)),
-            key=any,
-            value=any,
+            key=Any,
+            value=Any,
         ),
         executor=RuntimeExecutor.from_callable(update_ctx),
         base_class_path='aiida_workgraph.tasks.builtins.SetContext',
@@ -190,8 +190,11 @@ class GetContext(Task):
         identifier='workgraph.get_context',
         task_type='Normal',
         catalog='Control',
-        inputs=namespace(context=SocketSpec('workgraph.any', meta=SocketMeta(required=False)), key=any),
-        outputs=namespace(result=any),
+        inputs=namespace(
+            context=SocketSpec('workgraph.any', meta=SocketMeta(required=False)),
+            key=Any,
+        ),
+        outputs=namespace(result=Any),
         executor=RuntimeExecutor.from_callable(get_context),
         base_class_path='aiida_workgraph.tasks.builtins.GetContext',
     )
@@ -205,11 +208,11 @@ class Select(Task):
         task_type='Normal',
         catalog='Control',
         inputs=namespace(
-            condition=any,
-            true=any,
-            false=any,
+            condition=Any,
+            true=Any,
+            false=Any,
         ),
-        outputs=namespace(result=any),
+        outputs=namespace(result=Any),
         executor=RuntimeExecutor.from_callable(select),
         base_class_path='aiida_workgraph.tasks.builtins.Select',
     )
@@ -254,7 +257,7 @@ class AiiDANode(Task):
             pk=Annotated[int, meta(required=False)],
             uuid=Annotated[str, meta(required=False)],
         ),
-        outputs=namespace(code=orm.Code),
+        outputs=namespace(node=orm.Node),
         executor=RuntimeExecutor.from_callable(orm.load_node),
         base_class_path='aiida_workgraph.task.Task',
     )

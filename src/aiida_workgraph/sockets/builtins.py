@@ -8,6 +8,13 @@ class SocketAny(TaskSocket):
     _socket_property_identifier: str = 'workgraph.any'
 
 
+class SocketAnnotated(TaskSocket):
+    """Socket for annotated Python types stored in metadata."""
+
+    _identifier: str = 'workgraph.annotated'
+    _socket_property_identifier: str = 'workgraph.any'
+
+
 class SocketFloat(TaskSocket):
     """Float socket."""
 
