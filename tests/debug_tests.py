@@ -9,7 +9,7 @@ logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
 def main():
     """Run pytest with Playwright in non-headless mode."""
     pytest_args = [
-        'tests/test_map.py::test_map_instruction',
+        'tests/test_group_inputs_outputs.py::test_detect_graph_inputs',
         '-sv',  # Show output and verbose mode
     ]
 

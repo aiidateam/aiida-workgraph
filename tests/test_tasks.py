@@ -203,7 +203,7 @@ def test_task_from_builder_add(add_code) -> None:
 
 def test_task_from_builder_multiply_add(add_code, decorated_add) -> None:
     """Test adding a task from a ``ProcessBuilder`` for ``MultiplyAdd``."""
-    from aiida_workgraph.sockets.builtins import SocketAny
+    from aiida_workgraph.sockets.builtins import SocketAnnotated
     from aiida.workflows.arithmetic.multiply_add import MultiplyAddWorkChain
 
     multiply_add_builder = MultiplyAddWorkChain.get_builder()
@@ -230,7 +230,7 @@ def test_task_from_builder_multiply_add(add_code, decorated_add) -> None:
     # Check if task coming from ProcessBuilder behaves as other Tasks
     add_task = wg.add_task(decorated_add, name=add_task_name, x=multiply_add_task.outputs.result, y=11)
 
-    assert isinstance(add_task.inputs.x, SocketAny)
+    assert isinstance(add_task.inputs.x, SocketAnnotated)
     assert add_task.inputs.x.value is None
 
     assert len(wg.tasks) == 5

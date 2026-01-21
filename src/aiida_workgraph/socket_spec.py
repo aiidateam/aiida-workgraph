@@ -36,6 +36,7 @@ class SocketSpecAPI(_SocketSpecAPI):
     MAP: Dict[Any, str] = type_mapping
     NAMESPACE: str = 'workgraph.namespace'
     DEFAULT: str = 'workgraph.any'
+    ANNOTATED: str = 'workgraph.annotated'
 
     SocketNamespace = TaskSocketNamespace
 
