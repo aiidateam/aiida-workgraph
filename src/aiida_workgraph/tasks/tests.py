@@ -1,5 +1,18 @@
 from aiida_workgraph import task, Task
 from aiida.calculations.arithmetic.add import ArithmeticAddCalculation
+from pydantic import BaseModel
+
+
+class BlobModel(BaseModel):
+    model_config = {'leaf': True}  # always a leaf blob
+
+    a: int
+    b: int
+
+
+class AnotherModel(BaseModel):
+    a: int
+    b: int
 
 
 @task

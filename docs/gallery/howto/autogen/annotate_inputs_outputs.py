@@ -255,23 +255,27 @@ from pydantic import BaseModel
 from aiida_workgraph.socket_spec import Leaf
 
 
+class InputsModel(BaseModel):
+    x: int
+    y: int
+
+
 class OutputsModel(BaseModel):
     sum: int
     product: int
 
 
 @task
-def add_multiply_pydantic_in_out(x, y) -> OutputsModel:
-    return {'sum': x + y, 'product': x * y}
+def add_multiply_pydantic_in_out(data: InputsModel) -> OutputsModel:
+    return OutputsModel(sum=data.x + data.y, product=data.x * data.y)
 
 
 @task.graph
-def AddMultiplyPydantic():
-    # IMPORTANT: pass a plain dict, not OutputsModel(x=3, y=4)
-    add_multiply_pydantic_in_out(x=3, y=4)
+def AddMultiplyPydantic(data: InputsModel) -> OutputsModel:
+    return add_multiply_pydantic_in_out(data=data)
 
 
-wg = AddMultiplyPydantic.build()
+wg = AddMultiplyPydantic.build(data=InputsModel(x=3, y=4))
 wg.run()
 wg.generate_provenance_graph()
 
@@ -292,7 +296,9 @@ class DynamicOut(BaseModel):
 @task
 def make_dynamic_with_model(n: int) -> DynamicOut:
     # fixed field + dynamic keys with int values
-    return {'header': 100, **{f'k{i}': i * i for i in range(n)}}
+    payload = {'header': 100}
+    payload.update({f'k{i}': i * i for i in range(n)})
+    return DynamicOut(**payload)
 
 
 @task.graph
@@ -309,6 +315,12 @@ wg.generate_provenance_graph()
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #
 # Sometimes you want to **validate** with a Pydantic model but store it as a **single node** instead of expanding fields.
+# For leaf models, WorkGraph treats the value as a blob. If a serializer is registered for the class, it is used;
+# otherwise ``JsonableData`` stores the model as a JSON-friendly dict.
+#
+# Note: Pydantic annotations define the *schema* for WorkGraph sockets. Outputs are stored as typed
+# AiiDA nodes per field, so runtime results are dicts of nodes (not Pydantic instances). Use those
+# nodes for linking/provenance; rebuild a Pydantic model only for convenience.
 # There are two ways:
 #
 # 1) Mark the model: ``model_config = {"leaf": True}``
@@ -325,7 +337,7 @@ class BlobModel(BaseModel):
 @task
 def consume_blob(m: BlobModel) -> dict:
     # 'm' is validated by Pydantic but stored/treated as one leaf node
-    return {'sum': m['a'] + m['b']}
+    return {'sum': m.a + m.b}
 
 
 # Per-use override without modifying the model:
@@ -336,13 +348,13 @@ class AnotherModel(BaseModel):
 
 @task
 def consume_blob_per_use(m: Leaf[AnotherModel]) -> dict:
-    return {'sum': m['a'] + m['b']}
+    return {'sum': m.a + m.b}
 
 
 @task.graph
 def BlobExamples():
-    consume_blob(m={'a': 1, 'b': 2})
-    consume_blob_per_use(m={'a': 3, 'b': 4})
+    consume_blob(m=BlobModel(a=1, b=2))
+    consume_blob_per_use(m=AnotherModel(a=3, b=4))
 
 
 wg = BlobExamples.build()
@@ -402,12 +414,14 @@ wg.generate_provenance_graph()
 # %%
 # .. important::
 #
-#    Models/dataclasses are annotation-only
-#    Even when you annotate with BaseModel or @dataclass, do not pass instances of these types to tasks/graphs. Always pass plain dictionaries:
+#    Structured models (Pydantic or dataclasses) are supported as *runtime* values.
+#    You may pass instances to tasks/graphs and return them from tasks:
 #
-#    - This lets WorkGraph expand inputs/outputs into individual sockets, so it can wire provenance edges precisely (e.g., data.x --> task.data.x).
-#    - It allows graph inputs to be collected from task outputs as a dict of AiiDA ORM nodes, preserving AiiDA links between nodes.
-#    - Validation still happens via the WorkGraph spec (derived from your annotations)--you’re just not constructing runtime model/dataclass objects.
+#    - Instances are expanded to plain dicts when assigned to namespace sockets, so WorkGraph can
+#      wire provenance edges precisely (e.g., data.x --> task.data.x).
+#    - Graph inputs can still be collected from task outputs as a dict of AiiDA ORM nodes,
+#      preserving AiiDA links between nodes.
+#    - Validation still happens via the WorkGraph spec (derived from your annotations).
 #
 # Data linkage
 # ------------
