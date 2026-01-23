@@ -203,7 +203,7 @@ requires-dist = [
     { name = "jsonschema" },
     { name = "myst-nb", marker = "extra == 'docs'", specifier = "~=1.0.0" },
     { name = "nbsphinx", marker = "extra == 'docs'" },
-    { name = "node-graph", specifier = "~=0.6.1" },
+    { name = "node-graph", specifier = "~=0.6.2" },
     { name = "node-graph-widget", specifier = ">=0.0.5" },
     { name = "numpy" },
     { name = "pgtest", marker = "extra == 'tests'", specifier = "~=1.3" },
@@ -2173,7 +2173,7 @@ wheels = [
 
 [[package]]
 name = "node-graph"
-version = "0.6.1"
+version = "0.6.2"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "click" },
@@ -2186,11 +2186,12 @@ dependencies = [
     { name = "rdflib" },
     { name = "scipy", version = "1.15.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
     { name = "scipy", version = "1.16.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
+    { name = "typing-extensions" },
     { name = "wrapt" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/a7/64/d42170d6c5c56555864447bba99be72075446c2e8b8786de99797db6b0bb/node_graph-0.6.1.tar.gz", hash = "sha256:3bf16594d3915a42ffea262d3b231e91e6a05ca4ef1a69356bf23558884634c5", size = 97288, upload-time = "2026-01-22T13:50:19.333Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/06/f3/1b604180c6802b140b59db2cf383d6c317f35ad5cf98f192560c10babe64/node_graph-0.6.2.tar.gz", hash = "sha256:0ef47647ec6a4cbde717b0329cd52e3c6465802ec313e66a983ef1a8d3980c03", size = 97840, upload-time = "2026-01-23T11:47:02.555Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/b8/c4/59143589bca44ea27fda12b489f4bfb19b7873e08c70e9b996fb7acbde07/node_graph-0.6.1-py3-none-any.whl", hash = "sha256:ef1927a8d1a94bebec8a46375c90fef704d508080cf34873a497a04ad5399ad7", size = 114676, upload-time = "2026-01-22T13:50:18.086Z" },
+    { url = "https://files.pythonhosted.org/packages/b0/38/4efca6ce3855a1c9c2f901b906b668d77f946a788f3f4ecc463f9c8b4b16/node_graph-0.6.2-py3-none-any.whl", hash = "sha256:b85afd35f96ae0f88fdff6a808c28b8f87d1a3fe3a695ec4cf0c3c37728e4d15", size = 115265, upload-time = "2026-01-23T11:47:00.417Z" },
 ]
 
 [[package]]
