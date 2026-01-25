@@ -69,7 +69,7 @@ wg = AddMultiplyComposed.build(minimum=1, maximum=10, x=1, y=2)
 # See how we're using `AddMultiply` as a regular task? It's as simple as that!
 # This is also clear in when we visualize the workgraph:
 
-wg.to_html()
+wg
 
 # %%
 # .. tip::

@@ -102,7 +102,7 @@ for i, result_node in enumerate(wg.outputs.squares):
 # Workflow view
 # """""""""""""
 
-wg.to_html()
+wg
 
 # %%
 # Provenance graph

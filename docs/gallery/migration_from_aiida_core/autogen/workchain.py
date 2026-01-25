@@ -159,7 +159,7 @@ wg = sum_even_workgraph.build(N=N)
 
 # The `to_html()` method generates an interactive visualization of the graph.
 # In a Sphinx-Gallery build, this will be embedded directly in the output.
-wg.to_html()
+wg
 
 # %%
 # Execute the WorkGraph and print the result.

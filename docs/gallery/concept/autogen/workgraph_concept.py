@@ -39,7 +39,7 @@ add2 = wg.add_task(add, name='add2')
 wg.add_link(add1.outputs.result, add2.inputs.x)
 
 # Visualize the graph
-wg.to_html()
+wg
 
 # %%
 # .. note::
@@ -90,7 +90,7 @@ wg.run()
 assert wg.outputs.sum2.value == 2 + (2 + 3)
 
 # Visualize the graph with inputs and outputs
-wg.to_html()
+wg
 
 # %%
 # .. note::

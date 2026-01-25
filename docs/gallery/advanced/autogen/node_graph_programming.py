@@ -74,7 +74,7 @@ print(f'State of WorkGraph: {wg.state}')
 print(f'Result: {wg.outputs.result.value}')
 
 # Visualize the workgraph
-wg.to_html()
+wg
 
 # %%
 # Conditional logic with the `If Zone` task
@@ -125,7 +125,7 @@ print(f'Result: {wg.outputs.result.value}')
 assert wg.outputs.result.value == 5
 
 # Visualize the workgraph
-wg.to_html()
+wg
 
 # %%
 # Loops with `While Zone` task
@@ -170,7 +170,7 @@ print(f'Result: {wg.outputs.result.value}')
 assert wg.outputs.result.value == 15
 
 # Visualize the workgraphs
-wg.to_html()
+wg
 
 # %%
 # Mapping operations with `Map Zone` task
@@ -234,7 +234,7 @@ print(f'Result: {wg.outputs.result.value}')
 assert wg.outputs.result.value == 10
 
 # Visualize the workgraph
-wg.to_html()
+wg
 
 # %%
 # Conclusion

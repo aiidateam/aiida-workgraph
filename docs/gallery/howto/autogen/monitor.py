@@ -90,7 +90,7 @@ wg = TimeMonitor.build(
     x=1,
     y=2,
 )
-wg.to_html()
+wg
 
 # %%
 wg.run()
@@ -159,7 +159,7 @@ def FileMonitor(x, y, z):
 
 
 wg = FileMonitor.build(x=1, y=2, z=3)
-wg.to_html()
+wg
 
 # %%
 wg.run()

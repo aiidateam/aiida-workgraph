@@ -65,7 +65,7 @@ def add_and_multiply(x, y, z):
 
 # Build and visualize the graph
 wg = add_and_multiply.build(x=1, y=2, z=3)
-wg.to_html()
+wg
 
 # %%
 # As you can see in the visualization, the task are now labeled "my_add" and "my_multiply" instead of the default function names.

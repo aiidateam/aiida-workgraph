@@ -103,12 +103,9 @@ def AddMultiply(x, y, z):
 #
 # Let's build the workflow with some input and visualize it:
 #
-# .. important::
-#
-#    If you are following along in a Jupyter notebook, replace ``wg.to_html()`` with ``wg``.
 
 wg = AddMultiply.build(x=2, y=3, z=4)
-wg.to_html()
+wg
 
 # %%
 # We can see our two tasks, the assignment of the sum to the multiplication task, and the subsequent assignment of the product to the workflow (graph) result.

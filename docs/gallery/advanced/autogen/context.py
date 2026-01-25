@@ -107,7 +107,7 @@ print(wg.ctx.sum.add1)
 wg3.add_task('workgraph.get_context', name='get_ctx1', key='sum.add1')
 
 wg.show()
-wg.to_html()
+wg
 
 
 @task.graph()
@@ -161,7 +161,7 @@ wg.add_task(
     value=add1.outputs.result,
 )
 
-wg.to_html()
+wg
 wg.show()
 
 # %%

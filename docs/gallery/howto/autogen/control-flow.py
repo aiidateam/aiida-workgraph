@@ -72,7 +72,7 @@ def ForLoop(n, m):
     return m
 
 
-ForLoop.build(n=4, m=0).to_html()
+ForLoop.build(n=4, m=0)
 
 # %%
 # .. important::
@@ -114,7 +114,7 @@ def WhileLoop(n, m):
 
 wg = WhileLoop.build(n=4, m=0)
 
-wg.to_html()
+wg
 
 
 # %%
