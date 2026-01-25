@@ -173,7 +173,7 @@ def ShellAddMultiply(x: int, y: int, z: int) -> int:
 
 # Create a workgraph
 wg = ShellAddMultiply.build(2, 3, 4)
-wg.to_html()
+wg
 
 # %%
 

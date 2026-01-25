@@ -31,7 +31,7 @@ def multiply(x, y):
 
 
 # export the task to html file so that it can be visualized in a browser
-add()._task.to_html()
+add()._task
 
 # visualize the task in jupyter-notebook
 # add()._task
@@ -83,7 +83,7 @@ NormTask = task()(norm)
 
 wg = WorkGraph()
 norm_task = wg.add_task(NormTask, name='norm1')
-norm_task.to_html()
+norm_task
 
 
 ######################################################################

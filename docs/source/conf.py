@@ -15,7 +15,6 @@ import sys
 import shutil
 from pathlib import Path
 
-
 sys.path.insert(0, os.path.abspath('../..'))
 
 
@@ -67,6 +66,7 @@ sphinx_gallery_conf = {
     'filename_pattern': '/*',
     'examples_dirs': gallery_src_dirs,  # in sphinx-gallery doc referred as gallery source
     'gallery_dirs': sphinx_src_autogen_dirs,  # path to where to gallery puts generated files
+    'capture_repr': ('_repr_html_', '__repr__'),
 }
 
 exclude_patterns = []
@@ -122,6 +122,8 @@ html_theme_options = {
 
 
 # Function to copy HTML files
+
+
 def copy_html_files(app, exception):
     """
     Copy all .html files from source to build directory, maintaining the directory structure.

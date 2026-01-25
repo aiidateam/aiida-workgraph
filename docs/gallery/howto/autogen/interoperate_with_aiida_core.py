@@ -139,7 +139,7 @@ def AiiDAComponentsWorkflow():
 
 
 wg = AiiDAComponentsWorkflow.build()
-wg.to_html()
+wg
 
 # %%
 # Let's run our ``aiida-core``-powered ``WorkGraph`` and examine the provenance graph:
