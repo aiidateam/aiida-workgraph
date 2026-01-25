@@ -149,8 +149,10 @@ def test_PythonJob_namespace_output_input(fixture_localhost, python_executable_p
     """Test function with namespace output and input."""
 
     # output namespace
+    add_spec = namespace(sum=Any, total=Any)
+    add_multiply_spec = namespace(add=add_spec, multiply=Any)
     out = namespace(
-        add_multiply=namespace(add=namespace(sum=Any, total=Any), multiply=Any),
+        add_multiply=add_multiply_spec,
         minus=Any,
     )
 
@@ -163,13 +165,13 @@ def test_PythonJob_namespace_output_input(fixture_localhost, python_executable_p
 
     # input namespace
     @task.pythonjob
-    def myfunc2(x, y):
+    def myfunc2(x: add_multiply_spec, y):
         add = x['add']['sum']
         multiply = x['multiply']
         return y + add + multiply
 
     @task.pythonjob
-    def myfunc3(x, y):
+    def myfunc3(x: add_spec, y):
         return x['sum'] + y
 
     wg = WorkGraph('test_namespace_outputs')

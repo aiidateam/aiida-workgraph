@@ -1,7 +1,7 @@
 from __future__ import annotations
 from typing import Any, Dict
 from aiida_workgraph.task import Task
-from aiida_workgraph import task, namespace, meta
+from aiida_workgraph import task, namespace, meta, dynamic
 from node_graph.tasks.builtins import _GraphIOSharedMixin
 from node_graph.task import ChildTaskSet
 from node_graph.socket import BaseSocket
@@ -95,7 +95,7 @@ class Map(Zone):
         task_type='MAP',
         catalog='Control',
         inputs=namespace(
-            source=SocketSpec('workgraph.any', link_limit=100000),
+            source=dynamic(Any),
         ),
         outputs=namespace(),
         base_class_path='aiida_workgraph.tasks.builtins.Map',
@@ -125,7 +125,7 @@ class Map(Zone):
         gather_item = self.gather_item_task
         for name in sockets:
             gather_item.add_input_spec('workgraph.any', name=name)
-            self.add_output_spec('workgraph.any', name=name)
+            self.add_output_spec('workgraph.namespace', name=name)
         gather_item.set_inputs(sockets)
         return gather_item.outputs
 

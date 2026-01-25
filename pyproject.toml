@@ -19,7 +19,7 @@ classifiers = [
 dependencies = [
   "numpy",
   "scipy",
-  "node-graph~=0.6.2",
+  "node-graph~=0.6.3",
   "node-graph-widget>=0.0.5",
   "aiida-core~=2.7.1",
   "cloudpickle",
