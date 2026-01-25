@@ -529,16 +529,15 @@ with WorkGraph('AddMap') as wg:
             y=get_value(map_zone.item.value, 'y').result,
         ).result
         map_zone.gather({'result': result})
-        wg.ctx.result = map_zone.outputs.result
-        wg.outputs.result = wg.ctx.result
+        wg.outputs.result = map_zone.outputs.result
 
 wg.run()
 
 print('\nResults:')
-for i, item in enumerate(wg.outputs.result.value.values()):
-    print(f'  Item {i}: {item}')
+for item in wg.outputs.result:
+    print(f'  {item._name}: {item.value}')
 # (1+1) + (2+2) + (3+3) = 12
-assert sum(wg.outputs.result.value.values()) == 12
+sum([socket.value.value for socket in wg.outputs.result]) == 12
 
 # %%
 # Let's inspect the task graph:
