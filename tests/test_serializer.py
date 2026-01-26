@@ -1,4 +1,5 @@
 from aiida_workgraph import WorkGraph, task
+import pytest
 
 
 @task.graph()
@@ -11,11 +12,5 @@ def test_func_as_input(capsys):
 
     wg = WorkGraph('test_func_as_input')
     wg.add_task(sub_workflow, func=add, name='sub_workflow')
-    wg.save()
-
-    # load and capture stdout
-    loaded_wg = WorkGraph.load(wg.pk)
-    captured = capsys.readouterr()
-
-    assert 'Info: could not deserialize input' in captured.out
-    assert 'sub_workflow' in loaded_wg.tasks
+    with pytest.raises(Exception, match='Cannot serialize the provided object'):
+        wg.save()

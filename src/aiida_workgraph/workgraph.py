@@ -38,6 +38,8 @@ class WorkGraph(node_graph.Graph):
         inputs: Optional[type | List[str]] = None,
         outputs: Optional[type | List[str]] = None,
         error_handlers: Optional[Dict[str, ErrorHandlerSpec]] = None,
+        serialization: Optional[object] = None,
+        serialization_policy: str = 'off',
         **kwargs,
     ) -> None:
         """
@@ -47,7 +49,18 @@ class WorkGraph(node_graph.Graph):
             name (str, optional): The name of the WorkGraph. Defaults to 'WorkGraph'.
             **kwargs: Additional keyword arguments to be passed to the WorkGraph class.
         """
-        super().__init__(name, inputs=inputs, outputs=outputs, **kwargs)
+        from aiida_workgraph.serialization import AiidaSerializationAdapter
+
+        if serialization is None:
+            serialization = AiidaSerializationAdapter()
+        super().__init__(
+            name,
+            inputs=inputs,
+            outputs=outputs,
+            serialization=serialization,
+            serialization_policy=serialization_policy,
+            **kwargs,
+        )
         self.process = None
         self.restart_process = None
         self.max_number_jobs = 1000000
@@ -223,8 +236,6 @@ class WorkGraph(node_graph.Graph):
     def to_dict(self, include_sockets: bool = False, should_serialize: bool = False) -> Dict[str, Any]:
         """Convert the workgraph to a dictionary."""
         from aiida.orm.utils.serialize import serialize
-        from aiida_workgraph.utils import serialize_graph_level_data
-        from aiida_pythonjob.data.serializer import all_serializers
 
         wgdata = super().to_dict(include_sockets=include_sockets, should_serialize=should_serialize)
         wgdata.update(
@@ -239,11 +250,6 @@ class WorkGraph(node_graph.Graph):
         wgdata['connectivity'] = self.build_connectivity()
         wgdata['process'] = serialize(self.process) if self.process else serialize(None)
         wgdata['metadata']['pk'] = self.process.pk if self.process else None
-        if should_serialize:
-            # serialize the graph-level tasks
-            wgdata['tasks']['graph_inputs']['inputs'] = serialize_graph_level_data(
-                wgdata['tasks']['graph_inputs']['inputs'], self.spec.inputs, all_serializers
-            )
 
         return wgdata
 

@@ -528,12 +528,9 @@ def make_json_serializable(data):
 
 def resolve_tagged_values(inputs: Dict[str, Any]) -> None:
     """Recursively resolve all TaggedValue either in a dictionary or a TaggedValue."""
-    if isinstance(inputs, dict):
-        for key, value in inputs.items():
-            if isinstance(value, TaggedValue):
-                inputs[key] = value.__wrapped__
-            else:
-                resolve_tagged_values(value)
+    from node_graph.utils import resolve_tagged_values as _resolve_tagged_values
+
+    _resolve_tagged_values(inputs)
 
 
 def serialize_graph_level_data(
