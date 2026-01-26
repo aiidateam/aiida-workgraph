@@ -2,11 +2,9 @@ from __future__ import annotations
 from typing import Any, Dict, Optional, Callable, Annotated
 from aiida import orm
 from aiida.common.extendeddicts import AttributeDict
-from aiida_pythonjob.data.serializer import all_serializers
 from aiida_workgraph.utils import create_and_pause_process
 from aiida.engine import run_get_node
 from aiida_pythonjob import pyfunction, PythonJob, PyFunction, MonitorPyFunction
-from aiida_pythonjob.utils import serialize_ports
 from aiida_workgraph.task import Task
 from node_graph.socket_spec import SocketSpec, SocketSpecSelect, SocketMeta
 from node_graph.task_spec import TaskSpec
@@ -24,33 +22,6 @@ class BaseSerializablePythonTask(Task):
     can be stored/passed around by the WorkGraph engine.
     Subclasses must implement their own `execute` method.
     """
-
-    def serialize_data(self, data: Dict[str, Any]) -> Dict[str, Any]:
-        """
-        Called during Task -> dict conversion. We walk over the input sockets
-        and run our specialized Python serialization.
-        """
-        function_inputs = {key: data['inputs'][key] for key in data['inputs'] if key not in self.non_function_inputs}
-        serialized_inputs = serialize_ports(
-            python_data=function_inputs,
-            port_schema=self.spec.inputs,
-            serializers=all_serializers,
-        )
-        data['inputs'].update(serialized_inputs)
-
-    def update_from_dict(self, data: Dict[str, Any], **kwargs) -> 'BaseSerializablePythonTask':
-        """
-        Called when reloading from a dict. Note, we do not run `_deserialize_python_data` here.
-        Thus, the value of the socket will be AiiDA data nodes.
-        """
-        super().update_from_dict(data, **kwargs)
-        return self
-
-    def execute(self, *args, **kwargs):
-        """
-        Subclasses must override.
-        """
-        raise NotImplementedError('Subclasses must implement `execute`.')
 
     @property
     def non_function_inputs(self):

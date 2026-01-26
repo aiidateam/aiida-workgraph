@@ -41,6 +41,6 @@ def test_load_code_task(add_code) -> None:
     """Test AiiDA Code task."""
 
     wg = WorkGraph('test_load_code_task')
-    task1 = wg.add_task('workgraph.load_code', name='task1', label=add_code.label)
+    task1 = wg.add_task('workgraph.load_code', name='task1', label=add_code.full_label)
     wg.run()
     assert task1.outputs.code.value.label == add_code.label

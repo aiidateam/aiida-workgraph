@@ -12,6 +12,7 @@ from node_graph.socket_spec import SocketSpec, SocketMeta
 from typing import Annotated
 from aiida_workgraph.executors.builtins import update_ctx, get_context, select, return_input
 from node_graph.task import BuiltinPolicy
+from aiida_workgraph.executors.builtins import load_node, load_code
 
 
 class GraphLevelTask(_GraphIOSharedMixin, Task):
@@ -37,6 +38,8 @@ class Zone(Task):
         identifier='workgraph.zone',
         task_type='ZONE',
         catalog='Control',
+        inputs=namespace(),
+        outputs=namespace(),
         base_class_path='aiida_workgraph.tasks.builtins.Zone',
     )
 
@@ -258,7 +261,7 @@ class AiiDANode(Task):
             uuid=Annotated[str, meta(required=False)],
         ),
         outputs=namespace(node=orm.Node),
-        executor=RuntimeExecutor.from_callable(orm.load_node),
+        executor=RuntimeExecutor.from_callable(load_node),
         base_class_path='aiida_workgraph.task.Task',
     )
 
@@ -279,6 +282,6 @@ class AiiDACode(Task):
             label=Annotated[str, meta(required=False)],
         ),
         outputs=namespace(code=orm.Code),
-        executor=RuntimeExecutor.from_callable(orm.load_code),
+        executor=RuntimeExecutor.from_callable(load_code),
         base_class_path='aiida_workgraph.task.Task',
     )

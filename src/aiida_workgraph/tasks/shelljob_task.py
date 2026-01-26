@@ -13,6 +13,15 @@ from aiida_workgraph.task import Task, TaskHandle
 from aiida import orm
 
 
+def _serialize_value(self, store: bool = False) -> Any:
+    from node_graph.utils import resolve_tagged_values
+
+    value = resolve_tagged_values(self._value)
+    if value is None:
+        return None
+    return RuntimeExecutor.from_callable(value).to_dict()
+
+
 class ShellJobTask(Task):
     """Runtime for ShellJob nodes.
 
@@ -25,14 +34,10 @@ class ShellJobTask(Task):
     task_type = 'SHELLJOB'
     catalog = 'AIIDA'
 
-    def serialize_data(self, data: Dict[str, Any]) -> Dict[str, Any]:
-        """Overwrite the serialize_data method to handle the parser function."""
-        import inspect
-
-        parser = data['inputs'].get('parser')
-        if parser is not None:
-            if inspect.isfunction(parser):
-                data['inputs']['parser'] = RuntimeExecutor.from_callable(parser).to_dict()
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # override the _serialize_value
+        self.inputs['parser'].set_serializer(_serialize_value)
 
     def execute(self, engine_process, args=None, kwargs=None, var_kwargs=None):
         """Submit/launch the AiiDA ShellJob.
