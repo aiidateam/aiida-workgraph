@@ -1,5 +1,8 @@
+import logging
 from typing import Any
 from aiida import orm
+
+LOGGER = logging.getLogger(__name__)
 
 
 def UnavailableExecutor(*args, **kwargs):
@@ -53,5 +56,5 @@ def load_code(pk: int = None, uuid: str = None, label: str = None) -> orm.Code:
         pk = label.value if isinstance(label, orm.Str) else label
     else:
         pk = pk.value if isinstance(pk, orm.Int) else pk
-    print(f'Loading code with pk: {pk}')
+    LOGGER.info('Loading code with pk: %s', pk)
     return orm.load_code(pk)

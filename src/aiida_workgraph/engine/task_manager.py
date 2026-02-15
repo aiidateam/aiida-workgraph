@@ -134,7 +134,7 @@ class TaskManager:
         # skip if the max number of awaitables is reached
         if task.task_type.upper() in process_task_types:
             if len(self.process._awaitables) >= self.process.wg.max_number_jobs:
-                print(MAX_NUMBER_AWAITABLES_MSG.format(self.process.wg.max_number_jobs, name))
+                self.process.report(MAX_NUMBER_AWAITABLES_MSG.format(self.process.wg.max_number_jobs, name))
                 return False
         # skip if the task is already executed or if the task is in a skippped state
         if name in self.ctx._executed_tasks or self.state_manager.get_task_runtime_info(name, 'state') in ['SKIPPED']:

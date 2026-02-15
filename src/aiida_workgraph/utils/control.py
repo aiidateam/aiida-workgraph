@@ -1,8 +1,12 @@
 from __future__ import annotations
 
+import logging
+
 from aiida.manage import get_manager
 from aiida import orm
 from aiida.engine.processes import control
+
+LOGGER = logging.getLogger(__name__)
 
 
 def create_task_action(
@@ -35,7 +39,7 @@ def pause_tasks(pk: int, tasks: list[str], timeout: int = 5):
     node = orm.load_node(pk)
     if node.is_finished:
         message = 'WorkGraph is finished. Cannot pause tasks.'
-        print(message)
+        LOGGER.warning(message)
         return False, message
     elif node.process_state.value.upper() in [
         'CREATED',
@@ -54,7 +58,7 @@ def pause_tasks(pk: int, tasks: list[str], timeout: int = 5):
                         timeout=timeout,
                     )
                 except Exception as e:
-                    print(f'Pause task {name} failed: {e}')
+                    LOGGER.exception('Pause task %s failed: %s', name, e)
     return True, ''
 
 
@@ -62,7 +66,7 @@ def play_tasks(pk: int, tasks: list, timeout: int = 5):
     node = orm.load_node(pk)
     if node.is_finished:
         message = 'WorkGraph is finished. Cannot kill tasks.'
-        print(message)
+        LOGGER.warning(message)
         return False, message
     elif node.process_state.value.upper() in [
         'CREATED',
@@ -86,7 +90,7 @@ def play_tasks(pk: int, tasks: list, timeout: int = 5):
                         timeout=timeout,
                     )
                 except Exception as e:
-                    print(f'Play task {name} failed: {e}')
+                    LOGGER.exception('Play task %s failed: %s', name, e)
     return True, ''
 
 
@@ -94,7 +98,7 @@ def kill_tasks(pk: int, tasks: list, timeout: int = 5):
     node = orm.load_node(pk)
     if node.is_finished:
         message = 'WorkGraph is finished. Cannot kill tasks.'
-        print(message)
+        LOGGER.warning(message)
         return False, message
     elif node.process_state.value.upper() in [
         'CREATED',
@@ -114,7 +118,7 @@ def kill_tasks(pk: int, tasks: list, timeout: int = 5):
                 'PAUSED',
             ]:
                 if process is None:
-                    print(f'Task {name} is not a AiiDA process.')
+                    LOGGER.warning('Task %s is not an AiiDA process.', name)
                     create_task_action(pk, tasks, action='kill')
                 else:
                     try:
@@ -124,7 +128,7 @@ def kill_tasks(pk: int, tasks: list, timeout: int = 5):
                             timeout=timeout,
                         )
                     except Exception as e:
-                        print(f'Kill task {name} failed: {e}')
+                        LOGGER.exception('Kill task %s failed: %s', name, e)
     return True, ''
 
 
@@ -136,7 +140,7 @@ def reset_tasks(pk: int, tasks: list) -> None:
     node = orm.load_node(pk)
     if node.is_finished:
         message = 'WorkGraph is finished. Cannot kill tasks.'
-        print(message)
+        LOGGER.warning(message)
         return False, message
     elif node.process_state.value.upper() in [
         'CREATED',
