@@ -1,7 +1,10 @@
 import datetime
 import typing as t
+import logging
 
 from aiida_workgraph import task
+
+LOGGER = logging.getLogger(__name__)
 
 
 @task.monitor
@@ -49,8 +52,8 @@ def monitor_task(task_name: str, workgraph_pk: int = None, workgraph_name: str =
         )
         if builder.count() == 0:
             return False
-    print('Found workgraph')
+    LOGGER.debug('Found workgraph')
     node = builder.first()[0]
     state = node.task_states.get(task_name, '')
-    print(f'Task state: {state}')
+    LOGGER.debug('Task state: %s', state)
     return state in ['FINISHED', 'FAILED', 'SKIPPED']

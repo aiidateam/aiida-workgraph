@@ -131,7 +131,7 @@ class AwaitableManager:
         try:
             self.process.resume()
         except Exception as e:
-            print(e)
+            self.logger.exception('Failed to resume process after awaitable completion: %s', e)
 
     def to_context(self, **kwargs: Awaitable | ProcessNode) -> None:
         """Add a dictionary of awaitables to the context.

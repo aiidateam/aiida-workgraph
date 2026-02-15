@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from typing import Any, Dict, Optional, Union, Callable, List
 from aiida.engine.processes import Process
 from aiida import orm
@@ -17,6 +18,8 @@ from node_graph.socket_spec import SocketSpec
 from aiida.orm.utils.serialize import serialize
 from aiida_workgraph.orm.utils import deserialize_safe
 from copy import deepcopy
+
+LOGGER = logging.getLogger(__name__)
 
 
 def inspect_aiida_component_type(executor: Callable) -> str:
@@ -261,9 +264,7 @@ def load_workgraph_data(node: Union[int, orm.Node]) -> Optional[Dict[str, Any]]:
     try:
         task_inputs = deserialize_safe(node.task_inputs or '')
     except (yaml.constructor.ConstructorError, yaml.YAMLError):
-        print(
-            'Info: could not deserialize inputs.The workgraph is still loaded and you can inspect tasks and outputs. '
-        )
+        LOGGER.info('Could not deserialize inputs. The workgraph is still loaded and tasks/outputs remain inspectable.')
         task_inputs = {}
 
     for name, data in task_inputs.items():

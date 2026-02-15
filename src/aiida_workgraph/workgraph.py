@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 import node_graph
 import aiida
 from aiida_workgraph.task import Task
@@ -11,6 +12,8 @@ from node_graph.config import BUILTIN_TASKS
 from node_graph.socket import BaseSocket, TaskSocketNamespace
 from aiida_workgraph.socket_spec import SocketSpecAPI
 from node_graph.error_handler import ErrorHandlerSpec
+
+LOGGER = logging.getLogger(__name__)
 
 
 class WorkGraph(node_graph.Graph):
@@ -207,7 +210,7 @@ class WorkGraph(node_graph.Graph):
             self.process = process_inited.node
             self.process_inited = process_inited
             process_inited.close()
-            print(f'WorkGraph process created, PK: {self.process.pk}')
+            LOGGER.info('WorkGraph process created, PK: %s', self.process.pk)
         else:
             self.save_to_base(inputs)
         self.update()
@@ -290,7 +293,7 @@ class WorkGraph(node_graph.Graph):
                 finished = self.state in terminating_states
 
             if finished:
-                print(f'Process {self.process.pk} finished with state: {self.state}')
+                LOGGER.info('Process %s finished with state: %s', self.process.pk, self.state)
                 return
 
             time.sleep(interval)
@@ -470,7 +473,7 @@ class WorkGraph(node_graph.Graph):
     def reset_tasks(self, tasks: List[str]) -> None:
         from aiida_workgraph.utils.control import reset_tasks
 
-        print(f'Reset tasks: {tasks}')
+        LOGGER.info('Reset tasks: %s', tasks)
 
         if self.process is None:
             for name in tasks:
