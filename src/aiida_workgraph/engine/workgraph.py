@@ -276,6 +276,7 @@ class WorkGraphEngine(Process, metaclass=Protect):
             'graph_outputs': self.wg.outputs._value,
         }
         self.task_manager.set_task_results()
+        self.task_manager.state_manager.update_meta_tasks('graph_inputs')
         # set meta-tasks state
         for task_name in BUILTIN_TASKS:
             self.task_manager.state_manager.set_task_runtime_info(task_name, 'state', 'FINISHED')
