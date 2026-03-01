@@ -24,7 +24,7 @@ dependencies = [
   "aiida-core~=2.7.1",
   "cloudpickle",
   "aiida-shell~=0.8",
-  "aiida-pythonjob~=0.5.1",
+  "aiida-pythonjob~=0.5.2",
   "jsonschema"
 ]
 description = "Design flexible node-based workflow for AiiDA calculation."
