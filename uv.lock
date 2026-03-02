@@ -92,16 +92,16 @@ wheels = [
 
 [[package]]
 name = "aiida-pythonjob"
-version = "0.5.1"
+version = "0.5.2"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "aiida-core" },
     { name = "ase" },
     { name = "node-graph" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/f7/3f/1b894e08940c70f7e7d9f122ea9b804ffde2b4071db90a53655f28d2f56f/aiida_pythonjob-0.5.1.tar.gz", hash = "sha256:ef2b5dcdf1f1ad012ff9ef3e845cd0adc025bedd0a1b36282d413059f9c2db04", size = 41641, upload-time = "2026-01-22T15:29:10.647Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/ce/43/f8bb3199d9097dd8c0be0858041bf0a350cd9795b26eab756338fe1d4241/aiida_pythonjob-0.5.2.tar.gz", hash = "sha256:2512a8e3440124a427225188d539ee660302272d3aac2bd12722263f60cd8e82", size = 42115, upload-time = "2026-03-01T19:58:08.686Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/51/99/155f8f8d8b77b53d7b4bcd575f59a459e573a1db5445ddd26276dea6ecba/aiida_pythonjob-0.5.1-py3-none-any.whl", hash = "sha256:8767eff3f2703de9a8fac0fd638017bc5bbd2391aff80975a986c60136139081", size = 38285, upload-time = "2026-01-22T15:29:09.584Z" },
+    { url = "https://files.pythonhosted.org/packages/44/2a/9646f438580ef5a6681ade6ec2a9f136708f4d65167a1392396ced3ce0bb/aiida_pythonjob-0.5.2-py3-none-any.whl", hash = "sha256:00304fc584cb22c34b0ab8c3eb4b0574a2364349304c1cc7fd3d9c988b30afea", size = 38734, upload-time = "2026-03-01T19:58:07.501Z" },
 ]
 
 [[package]]
@@ -192,7 +192,7 @@ requires-dist = [
     { name = "aiida-core", specifier = "~=2.7.1" },
     { name = "aiida-core", marker = "extra == 'docs'", specifier = "~=2.7.1" },
     { name = "aiida-pseudo", marker = "extra == 'docs'" },
-    { name = "aiida-pythonjob", specifier = "~=0.5.1" },
+    { name = "aiida-pythonjob", specifier = "~=0.5.2" },
     { name = "aiida-quantumespresso", marker = "extra == 'docs'" },
     { name = "aiida-shell", specifier = "~=0.8" },
     { name = "anywidget", marker = "extra == 'docs'" },
