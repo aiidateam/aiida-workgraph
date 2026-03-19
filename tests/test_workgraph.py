@@ -3,7 +3,7 @@ from aiida_workgraph import WorkGraph, task, spec
 from aiida import orm
 from aiida.calculations.arithmetic.add import ArithmeticAddCalculation
 from typing import Any
-import re
+from aiida.engine import run, submit
 
 
 def test_represent():
@@ -11,15 +11,6 @@ def test_represent():
     wg = WorkGraph('test_represent')
     assert repr(wg) == f'WorkGraph(name="test_represent", uuid="{wg.uuid}")'
     assert str(wg) == f'WorkGraph(name="test_represent", uuid="{wg.uuid}")'
-
-
-def test_should_submit():
-    wg = WorkGraph('test_should_submit')
-    wg.save()
-    with pytest.raises(
-        ValueError, match=re.escape(f'Process {wg.pk} has already been created. Please use the submit() method.')
-    ):
-        wg.run()
 
 
 def test_from_dict(decorated_add):
@@ -158,7 +149,7 @@ def test_reset_message(wg_calcjob):
     from aiida.cmdline.utils.common import get_workchain_report
 
     wg = wg_calcjob
-    wg.submit()
+    submit(wg)
     timeout = 30
     wg.wait(tasks={'add1': ['RUNNING']}, timeout=timeout, interval=1)
     wg = WorkGraph.load(wg.process.pk)
@@ -183,12 +174,12 @@ def test_restart_and_reset(wg_task):
         y=wg.tasks.sumdiff2.outputs.sum,
     )
     wg.name = 'test_restart_0'
-    wg.run()
+    run(wg)
     wg1 = WorkGraph.load(wg.process.pk)
     wg1.restart()
     wg1.name = 'test_restart_1'
     wg1.tasks.sumdiff2.set_inputs({'x': orm.Int(10).store()})
-    wg1.run()
+    run(wg1)
     assert wg1.tasks.sumdiff1.pk == wg.tasks.sumdiff1.pk
     assert wg1.tasks.sumdiff2.pk != wg.tasks.sumdiff2.pk
     assert wg1.tasks.sumdiff3.pk != wg.tasks.sumdiff3.pk
@@ -212,7 +203,7 @@ def test_extend_workgraph(decorated_add_multiply_group):
     wg.extend(add_multiply_wg, prefix='group_')
     assert 'group_add' in [task.name for task in wg.tasks.group_multiply.waiting_on]
     wg.add_link(add1.outputs[0], wg.tasks.group_add.inputs.x)
-    wg.run()
+    run(wg)
     assert wg.tasks.group_multiply.outputs.result.value == 45
 
 
@@ -220,7 +211,7 @@ def test_workgraph_outputs(decorated_add):
     wg = WorkGraph('test_workgraph_outputs')
     wg.add_task(decorated_add, 'add1', x=2, y=3)
     wg.outputs.sum = wg.tasks.add1.outputs.result
-    wg.run()
+    run(wg)
     assert wg.process.outputs.sum.value == 5
     # assert wg.process.outputs.add1.result.value == 5
 
@@ -259,7 +250,7 @@ def test_inputs_outputs(decorated_namespace_sum_diff):
     # same as
     # wg.add_output("workgraph.namespace", "nested")
     # wg.add_output("workgraph.any", "nested.sum")
-    wg.run()
+    run(wg)
     assert wg.outputs.sum.value == 4
     assert wg.outputs.nested.sum.value == 5
 
@@ -273,12 +264,12 @@ def test_inputs_run_submit_api():
         return wg
 
     wg = generate_workgraph()
-    wg.run(inputs={'x': 1, 'y': 2})
+    run(wg, inputs={'x': 1, 'y': 2})
 
     assert wg.outputs.sum.value == 3
 
     wg = generate_workgraph()
-    wg.submit(inputs={'x': 3, 'y': 4}, wait=True)
+    submit(wg, inputs={'x': 3, 'y': 4}, wait=True)
 
     assert wg.outputs.sum.value == 7
 
@@ -321,7 +312,7 @@ def test_calling_workgraph_in_context_manager():
         add_outputs = add(x=sub_outputs.sum, y=5)
         wg2.outputs.sum = add_outputs.result
 
-    wg2.run()
+    run(wg2)
 
     assert wg2.outputs.sum.value == 9
 
@@ -347,7 +338,7 @@ def test_expose_task_spec():
         return {'out1': am, 'out2': tc.square}
 
     wg = test_graph.build(x=1, data={'y': 2})
-    wg.run()
+    run(wg)
     assert wg.outputs.out1.sum.value == 3
     assert wg.outputs.out1.product.value == 2
     assert wg.outputs.out2.value == 1

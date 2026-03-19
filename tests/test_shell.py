@@ -2,6 +2,7 @@ import pytest
 from aiida_workgraph import WorkGraph, task, shelljob
 from aiida_shell.launch import prepare_code
 from aiida.orm import SinglefileData, load_computer, Int
+from aiida.engine import run
 
 
 @pytest.mark.skip(reason='need rewrite')
@@ -11,7 +12,7 @@ def test_nonexistent_command():
     with pytest.raises(ValueError, match='failed to determine the absolute path'):
         wg = WorkGraph(name='test_shell_command')
         wg.add_task(shelljob, command='abc42')
-        wg.run()
+        run(wg)
 
 
 def test_shell_command(fixture_localhost):
@@ -29,7 +30,7 @@ def test_shell_command(fixture_localhost):
     )
     # also check if we can set the computer explicitly
     job1.set_inputs({'metadata.computer': load_computer('localhost')})
-    wg.run()
+    run(wg)
     assert job1.outputs.stdout.value.get_content() == 'string astring b'
 
 
@@ -46,7 +47,7 @@ def test_shell_code():
                 'file_b': SinglefileData.from_string('string b'),
             },
         )
-        wg.run()
+        run(wg)
         assert outputs.stdout.value.get_content() == 'string astring b'
 
 
@@ -122,6 +123,6 @@ def test_shell_graph_task():
         return out2.result
 
     wg = add_multiply.build(x=Int(2), y=Int(3), command1='echo', command2='bc')
-    wg.run()
-    # wg.submit(wait=True, timeout=60)
+    run(wg)
+    # submit(wg, wait=True, timeout=60)
     assert wg.outputs.result.value.value == 5

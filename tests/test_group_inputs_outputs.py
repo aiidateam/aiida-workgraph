@@ -1,5 +1,6 @@
 from aiida_workgraph import WorkGraph, task, spec
 from typing import Any
+from aiida.engine import run
 
 
 def test_group_inputs_outputs(decorated_add):
@@ -21,7 +22,7 @@ def test_group_inputs_outputs(decorated_add):
         'sum1': task1.outputs.result,
         'sum2': task2.outputs.result,
     }
-    wg.run()
+    run(wg)
     assert wg.outputs.results.sum1.value == 3
     assert wg.outputs.results.sum2.value == 4
     # the graph inputs will be serialized as AiiDA nodes

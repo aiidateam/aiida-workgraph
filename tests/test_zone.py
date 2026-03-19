@@ -1,4 +1,5 @@
 from aiida_workgraph import WorkGraph
+from aiida.engine import run
 
 
 def test_zone_task(decorated_add):
@@ -12,7 +13,7 @@ def test_zone_task(decorated_add):
     zone1.add_task(decorated_add, name='add3', x=1, y=add1.outputs.result)
     connectivity = wg.build_connectivity()
     assert connectivity['zone']['add4']['input_tasks'] == ['zone1']
-    wg.run()
+    run(wg)
     # add4 should wait the whole zone1 to finish, thus its mtime should be larger than add3
     assert wg.tasks.add4.node.mtime > wg.tasks.add3.node.mtime
 

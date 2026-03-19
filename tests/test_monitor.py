@@ -4,6 +4,7 @@ from aiida_pythonjob import MonitorPyFunction
 import pytest
 from aiida_workgraph import WorkGraph, task
 from aiida_workgraph.tasks.monitors import monitor_time
+from aiida.engine import run, submit
 
 
 def test_monitor_decorator():
@@ -14,7 +15,7 @@ def test_monitor_decorator():
         'time_monitor1',
         time=t,
     )
-    wg.run()
+    run(wg)
     assert wg.process.is_finished_ok is True
     assert monitor1.node.is_finished_ok is True
     assert (monitor1.node.mtime - monitor1.node.ctime) >= datetime.timedelta(seconds=5)
@@ -27,7 +28,7 @@ def test_monitor_timeout_and_interval():
             interval=2,
             timeout=5,
         )
-        wg.run()
+        run(wg)
         node = wg.tasks[-1].node
         assert not node.is_finished_ok
         assert node.exit_status == MonitorPyFunction.exit_codes.ERROR_TIMEOUT.status
@@ -59,7 +60,7 @@ def test_builtin_file_monitor_entrypoint(tmp_path):
     wg = WorkGraph(name='test_file_monitor')
     wg.add_task(create_test_file, 'create_test_file1', filepath=monitor_file_path, t=t)
     monitor1 = wg.add_task('workgraph.monitor_file', name='monitor1', filepath=monitor_file_path)
-    wg.run()
+    run(wg)
     assert wg.process.is_finished_ok is True
     assert (monitor1.node.mtime - monitor1.node.ctime) >= datetime.timedelta(seconds=t)
 
@@ -76,11 +77,11 @@ def test_builtin_task_monitor_entrypoint(decorated_add):
     )
     add1 = wg2.add_task(decorated_add, 'add1', x=1, y=2, t=0)
     monitor1 >> add1
-    wg2.submit()
+    submit(wg2)
     #
     wg1 = WorkGraph(name='wg1')
     wg1.add_task(decorated_add, 'add1', x=1, y=2, t=5)
-    wg1.run()
+    run(wg1)
     wg2.wait()
     assert wg2.tasks.add1.node.ctime > wg1.tasks.add1.node.ctime
 
@@ -95,7 +96,7 @@ def test_builtin_task_monitor_entrypoint_timeout(decorated_add):
         timeout=2,
         filepath='/tmp/test_file_monitor.txt',
     )
-    wg.run()
+    run(wg)
     node = monitor1.node
     assert not node.is_finished_ok
     assert node.exit_status == MonitorPyFunction.exit_codes.ERROR_TIMEOUT.status
@@ -111,7 +112,7 @@ def test_task_monitor_kill():
         timeout=30,
         filepath='/tmp/test_file_monitor.txt',
     )
-    wg.submit()
+    submit(wg)
     wg.wait(tasks={'monitor1': ['RUNNING']})
     wg.kill_tasks(['monitor1'])
     wg.wait()

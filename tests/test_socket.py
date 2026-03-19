@@ -2,6 +2,7 @@ import pytest
 from aiida_workgraph import WorkGraph, task
 from aiida import orm
 from typing import Any
+from aiida.engine import run
 
 
 # @pytest.mark.usefixtures("aiida_profile")
@@ -121,8 +122,8 @@ def test_numpy_array(decorated_normal_add):
     y = np.array([4, 5, 6])
     wg = WorkGraph()
     wg.add_task(decorated_normal_add, name='add1', x=x, y=y)
-    wg.run()
-    # wg.run()
+    run(wg)
+    # run(wg)
     assert wg.state.upper() == 'FINISHED'
 
 

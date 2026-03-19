@@ -1,6 +1,7 @@
 import pytest
 from aiida_workgraph import WorkGraph
 from typing import Callable
+from aiida.engine import run, submit
 
 
 def test_normal_function_run(decorated_normal_add: Callable, decorated_add: Callable) -> None:
@@ -9,7 +10,7 @@ def test_normal_function_run(decorated_normal_add: Callable, decorated_add: Call
     add1 = wg.add_task(decorated_normal_add, 'add1', x=2, y=3)
     add2 = wg.add_task(decorated_add, 'add2', x=6)
     wg.add_link(add1.outputs.result, add2.inputs['y'])
-    wg.run()
+    run(wg)
     assert wg.tasks.add2.outputs.result.value == 11
 
 
@@ -20,5 +21,5 @@ def test_normal_function_submit(decorated_normal_add: Callable, decorated_add: C
     add1 = wg.add_task(decorated_normal_add, 'add1', x=2, y=3)
     add2 = wg.add_task(decorated_add, 'add2', x=6)
     wg.add_link(add1.outputs.result, add2.inputs['y'])
-    wg.submit(wait=True)
+    submit(wg, wait=True)
     assert wg.tasks.add2.outputs.result.value == 11

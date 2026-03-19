@@ -1,4 +1,5 @@
 from aiida_workgraph import task, WorkGraph, spec
+from aiida.engine import run
 
 
 @task
@@ -21,14 +22,14 @@ def test_tuple_namespace_outputs():
     # graph inputs
     assert wg.inputs.x.value == 1
     assert wg.inputs.y.value == 2
-    wg.run()
+    run(wg)
     # graph outputs
     assert wg.outputs.out1.sum.value == 3
     assert wg.outputs.out1.product.value == 2
 
     with WorkGraph() as wg:
         outputs = test_graph(1, 2)
-        wg.run()
+        run(wg)
     assert outputs.out1.sum.value == 3
     assert outputs.out2.product.value == 2
 
