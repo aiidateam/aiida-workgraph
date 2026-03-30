@@ -22,6 +22,7 @@ Use annotations to control data provenance
 import typing as t
 
 from aiida import load_profile
+from aiida.engine import run
 
 from aiida_workgraph import dynamic, namespace, task
 from aiida_workgraph.utils import get_process_summary
@@ -72,7 +73,7 @@ def AddMultiply(x: int, y: int):
 
 
 wg = AddMultiply.build(x=1, y=2)
-wg.run()
+run(wg)
 
 # %%
 #
@@ -122,7 +123,7 @@ wg
 # Note how the ``x`` input is passed to ``data.x`` (and similarly for ``y``).
 # This is due to the namespace specifications.
 
-wg.run()
+run(wg)
 
 # %%
 # Finally, we can inspect the provenance graph for this workflow:
@@ -160,7 +161,7 @@ def SquareNumbersGenerator(n: int):
 
 
 wg = SquareNumbersGenerator.build(n=5)
-wg.run()
+run(wg)
 
 # %%
 # Let's examine the provenance of this dynamic workflow:
@@ -201,7 +202,7 @@ def NestedDictGenerator(x: int, y: int):
 
 
 wg = NestedDictGenerator.build(x=1, y=2)
-wg.run()
+run(wg)
 
 # %%
 # Instead of visualizing the full graph, let's inspect the outputs of the task using a summary utility.
@@ -231,7 +232,7 @@ def DynamicNestedDictGenerator(n: int):
 
 
 wg = DynamicNestedDictGenerator.build(n=3)
-wg.run()
+run(wg)
 # %%
 # Let's check the output summary for this dynamically generated nested structure:
 
@@ -271,7 +272,7 @@ def AddMultiplyTypedDict():
 
 
 wg = AddMultiplyTypedDict.build()
-wg.run()
+run(wg)
 wg.generate_provenance_graph()
 
 # %%
@@ -316,7 +317,7 @@ def AddMultiplyPydantic(data: InputsModel) -> OutputsModel:
 
 
 wg = AddMultiplyPydantic.build(data=InputsModel(x=3, y=4))
-wg.run()
+run(wg)
 wg.generate_provenance_graph()
 
 # %%
@@ -347,7 +348,7 @@ def GraphDynamicOut(n: int):
 
 
 wg = GraphDynamicOut.build(n=4)
-wg.run()
+run(wg)
 wg.generate_provenance_graph()
 
 # %%
@@ -398,7 +399,7 @@ def BlobExamples():
 
 
 wg = BlobExamples.build()
-wg.run()
+run(wg)
 wg.generate_provenance_graph()
 
 # %%
@@ -448,7 +449,7 @@ def AddMultiplyDataclass():
 
 
 wg = AddMultiplyDataclass.build()
-wg.run()
+run(wg)
 wg.generate_provenance_graph()
 
 # %%
@@ -551,7 +552,7 @@ wg
 # We can see similar linkage in the provenance graph.
 # Let's run the graph and visualize its provenance.
 
-wg.run()
+run(wg)
 wg.generate_provenance_graph()
 
 # %%
@@ -687,7 +688,7 @@ def MyWorkflow(atoms: Atoms):
 
 
 wg = MyWorkflow.build(atoms=bulk('Cu'))
-wg.run()
+run(wg)
 
 # %%
 # Now, let's inspect the output AiiDA node to confirm that our metadata was correctly attached.

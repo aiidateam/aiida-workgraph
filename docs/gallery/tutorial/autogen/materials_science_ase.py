@@ -23,6 +23,7 @@ We'll explore two key examples that highlight the flexibility of AiiDA-WorkGraph
 # Then, load your AiiDA profile.
 
 from aiida import load_profile
+from aiida.engine import run
 
 load_profile()
 
@@ -100,7 +101,7 @@ wg
 
 # %%
 # Now, execute the workgraph, which runs the tasks in the correct sequence.
-wg.run()
+run(wg)
 print(f'Atomization energy for N2: {wg.outputs.result.value.value:.4f} eV')
 
 # %%
@@ -241,7 +242,7 @@ wg
 # %%
 # Finally, we run the workflow:
 
-wg.run()
+run(wg)
 
 # %%
 # The result is an AiiDA Dict node. We access its content via the `.value` attribute.

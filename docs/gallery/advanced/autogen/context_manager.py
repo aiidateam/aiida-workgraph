@@ -21,6 +21,7 @@ Write workflows using the context manager paradigm
 # =====
 
 from aiida import load_profile
+from aiida.engine import run
 
 load_profile()
 
@@ -159,7 +160,8 @@ with WorkGraph(
 # Let's run our workflow, now with a clear input layout:
 
 
-wg.run(
+run(
+    wg,
     inputs={
         'add': {
             'first': {
@@ -273,7 +275,7 @@ with WorkGraph(
 # %%
 # We define a new workgraph, `AddMultiplyComposed` that reuses an `AddMultiply` workgraph (here wrapped in a reusable generator function) with a random number as input.
 # In our new workflow, we first call the generator function to get an instance of the workgraph.
-# We then call it with its inputs (similar to ``.run(inputs=...)``).
+# We then call it with its inputs (similar to ``run(wg, inputs=...)``).
 # As a task, it returns a socket namespace, in which we defined a ``result`` socket.
 # Finally, we assign this ``result`` socket as the ``result`` socket of our composed workflow.
 #
@@ -373,7 +375,7 @@ with WorkGraph('AddMultiplyIf') as wg:
 
     wg.outputs.result = final_sum
 
-wg.run()
+run(wg)
 
 print(f'Result: {wg.outputs.result.value}')
 assert wg.outputs.result.value == 7
@@ -443,7 +445,7 @@ with WorkGraph('AddMultiplyWhile') as wg:
 
     wg.outputs.result = add(x=n, y=1).result
 
-wg.run()
+run(wg)
 
 print(f'Result: {wg.outputs.result.value}')
 # 2 -> While(3, 6 -> 7, 14) -> 15
@@ -531,7 +533,7 @@ with WorkGraph('AddMap') as wg:
         map_zone.gather({'result': result})
         wg.outputs.result = map_zone.outputs.result
 
-wg.run()
+run(wg)
 
 print('\nResults:')
 for item in wg.outputs.result:
@@ -578,7 +580,7 @@ with WorkGraph('AddAggregate') as wg:
         map_zone.gather({'result': added_numbers})
     wg.outputs.result = aggregate_sum(map_zone.outputs.result).result
 
-wg.run()
+run(wg)
 
 print('\nResult:', wg.outputs.result.value)
 assert wg.outputs.result.value == 12
@@ -623,7 +625,8 @@ with WorkGraph('AddMultiplyToBeContinued', inputs=spec.namespace(x=Any, y=Any)) 
         'product': the_product,
     }
 
-wg1.run(
+run(
+    wg1,
     inputs={
         'x': 1,
         'y': 2,
@@ -643,7 +646,7 @@ with WorkGraph.load(wg1.pk) as wg2:
     wg2.restart()
     wg2.tasks.multiply.inputs.y = 4
 
-wg2.run()
+run(wg2)
 
 print('\nResults:')
 print(f'  Sum: {wg2.outputs.sum.value}')
@@ -681,7 +684,8 @@ print(f'State of new add   : {wg3.tasks.add1.state}')
 # Note the ``PLANNED`` new addition task. Let's run it.
 # Let's run it with the new input:
 
-wg3.run(
+run(
+    wg3,
     inputs={
         'z': 5,
     },

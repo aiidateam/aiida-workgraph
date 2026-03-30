@@ -15,6 +15,7 @@ Run tasks in parallel (Scatter-Gather)
 
 import typing as t
 from aiida import load_profile
+from aiida.engine import run
 from aiida_workgraph import namespace, task, dynamic
 
 load_profile()
@@ -91,7 +92,7 @@ def ParallelSquare(
 data = {f'number_{i}': i for i in range(1, 5)}
 
 wg = ParallelSquare.build(data)
-wg.run()
+run(wg)
 
 print('\nResults:')
 for i, result_node in enumerate(wg.outputs.squares):
@@ -143,7 +144,7 @@ def ScatterGatherSquare(n: int) -> int:
 
 
 wg = ScatterGatherSquare.build(4)
-wg.run()
+run(wg)
 
 print('\nAggregated Result:', wg.outputs.result.value)
 

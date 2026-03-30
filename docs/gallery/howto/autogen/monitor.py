@@ -36,6 +36,7 @@ set_aiida_loglevel('REPORT')
 
 from aiida_workgraph import task
 from aiida import load_profile
+from aiida.engine import run
 
 load_profile()
 
@@ -93,7 +94,7 @@ wg = TimeMonitor.build(
 wg
 
 # %%
-wg.run()
+run(wg)
 
 # %%
 # Note the time difference between the monitor task and the next (~5 seconds)
@@ -162,7 +163,7 @@ wg = FileMonitor.build(x=1, y=2, z=3)
 wg
 
 # %%
-wg.run()
+run(wg)
 
 # %%
 # You can inspect the process reports above to verify the order of events.

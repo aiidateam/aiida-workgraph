@@ -19,6 +19,7 @@ Run calculations remotely
 # For more details on the `aiida-pythonjob` package itself, please refer to the `AiiDA-PythonJob documentation <https://aiida-pythonjob.readthedocs.io/en/latest/autogen/pythonjob.html>`_.
 
 from aiida import load_profile
+from aiida.engine import run
 
 from aiida_workgraph import task
 
@@ -43,7 +44,7 @@ def RemoteAdd(x: int, y: int, computer: str) -> int:
 
 
 wg = RemoteAdd.build(x=1, y=2, computer='localhost')
-wg.run()
+run(wg)
 
 print('\nResult: ', wg.outputs.result.value)
 
@@ -102,7 +103,7 @@ wg = RemoteAddLocalMultiply.build(
     computer='localhost',
     add_metadata=metadata,
 )
-wg.run()
+run(wg)
 
 print('\nResult:', wg.outputs.result.value)
 

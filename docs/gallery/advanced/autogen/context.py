@@ -23,6 +23,7 @@ Use context variables in WorkGraphs
 
 from aiida_workgraph import WorkGraph, task
 from aiida import load_profile
+from aiida.engine import run
 from aiida.orm import Int
 
 load_profile()
@@ -171,7 +172,7 @@ wg.show()
 # is invisible in the visualization.
 
 # %%
-wg.run()
+run(wg)
 print('State of WorkGraph         : {}'.format(wg.state))
 print('Result of add1            : {}'.format(wg.tasks.add1.outputs.result.value))
 

@@ -10,6 +10,7 @@ This guide will walk you through how to define, customize, and organize sockets 
 """
 
 from aiida.manage import load_profile
+from aiida.engine import run
 from aiida_workgraph import task, WorkGraph, spec
 from aiida import orm
 from typing import Any
@@ -148,7 +149,7 @@ with WorkGraph() as wg:
     outputs1 = power(base=3)
     # We can still override the default value by providing an input.
     outputs2 = power(base=3, exponent=3)
-    wg.run()
+    run(wg)
     print(f'3 to the default power of 2 is: {outputs1.result.value}')
     print(f'3 to the power of 3 is: {outputs2.result.value}')
 
@@ -166,7 +167,7 @@ with WorkGraph('simple_namespace_example') as wg:
     # The `add_and_subtract` task from before has two outputs.
     # The `outputs` object becomes a namespace.
     outputs = add_and_subtract(x=10, y=4)
-    wg.run()
+    run(wg)
 
     # You can access the results like attributes of an object:
     print('Accessing outputs from a namespace:')
@@ -196,7 +197,7 @@ def advanced_math(x, y):
 
 with WorkGraph('nested_namespace_example') as wg:
     outputs = advanced_math(x=2, y=3)
-    wg.run()
+    run(wg)
     print('\nAccessing outputs from a nested namespace:')
     print(f'  Normal sum: {outputs.normal.sum.value}')
     print(f'  Squared product: {outputs.squared.product.value}')
@@ -256,7 +257,7 @@ with WorkGraph('dynamic_namespace_example') as wg:
     # The entire "squares" namespace is then linked to the next task.
     total = sum_all(data=dynamic_outputs.squares)
 
-    wg.run()
+    run(wg)
 
     # You can access the individual dynamic outputs
     print('\nIndividual dynamic outputs:')

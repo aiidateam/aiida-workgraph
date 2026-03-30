@@ -20,7 +20,7 @@ Interoperate with ``aiida-core`` components
 
 import typing as t
 from aiida import load_profile, orm
-from aiida.engine import calcfunction
+from aiida.engine import calcfunction, run
 from aiida_workgraph import namespace, task
 
 load_profile()
@@ -144,7 +144,7 @@ wg
 # %%
 # Let's run our ``aiida-core``-powered ``WorkGraph`` and examine the provenance graph:
 
-wg.run()
+run(wg)
 
 # %%
 
