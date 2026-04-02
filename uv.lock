@@ -25,7 +25,7 @@ wheels = [
 [[package]]
 name = "aiida-core"
 version = "2.8.0.post0"
-source = { git = "https://github.com/GeigerJ2/aiida-core.git?rev=feature%2F7231%2Fsubmit_run-wg#8792b10322a099689a731322829797b6aeeab86a" }
+source = { git = "https://github.com/GeigerJ2/aiida-core.git?rev=feature%2F7231%2Fsubmit_run-wg#4e8d53446a4ae6f4ba4b2e3a5730d1d97068441d" }
 dependencies = [
     { name = "alembic" },
     { name = "archive-path" },
