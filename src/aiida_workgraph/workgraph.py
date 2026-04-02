@@ -86,6 +86,63 @@ class WorkGraph(node_graph.Graph):
         }
         return inputs
 
+    def prepare_for_launch(
+        self,
+        inputs: Optional[Dict[str, Any]] = None,
+        **kwargs: Any,
+    ) -> tuple:
+        """Validate the WorkGraph and convert it to a Process class + inputs dict.
+
+        This is the interface used by ``aiida.engine.run`` / ``submit`` to launch
+        a WorkGraph through the standard Process launch path.
+
+        Task inputs and ``metadata`` can be passed together in a single dict.
+        ``metadata`` is separated and forwarded to ``to_engine_inputs``.
+
+        :param inputs: optional dictionary that may contain task inputs and a
+            ``metadata`` key for AiiDA process metadata.
+        :param kwargs: alternative to ``inputs`` (cannot use both).
+        :raises ValueError: if both ``inputs`` and ``kwargs`` are provided, or if
+            required task inputs are missing.
+        :return: ``(WorkGraphEngine, engine_inputs)`` tuple.
+        """
+        from aiida_workgraph.engine.workgraph import WorkGraphEngine
+
+        if inputs is not None and kwargs:
+            msg = 'Cannot specify both `inputs` and `kwargs`.'
+            raise ValueError(msg)
+
+        merged = dict(inputs) if inputs else dict(kwargs)
+        metadata = merged.pop('metadata', None)
+
+        # Check that no reserved key also matches a task name
+        task_names = set(self.get_task_names())
+        if metadata is not None:
+            collisions = {'metadata'} & task_names
+            if collisions:
+                msg = (
+                    "Key 'metadata' is a reserved execution parameter but also matches a task name "
+                    'on this WorkGraph. Rename the task to avoid the collision.'
+                )
+                raise ValueError(msg)
+
+        if merged:
+            self.set_inputs(merged)
+        self.check_before_run()
+        engine_inputs = self.to_engine_inputs(metadata=metadata)
+        return WorkGraphEngine, engine_inputs
+
+    def update_after_launch(self, node) -> None:
+        """Update WorkGraph state after a process has been launched.
+
+        Called by ``aiida.engine.run`` / ``submit`` after the standard launch path
+        completes, so the in-memory WorkGraph reflects the launched process.
+
+        :param node: the ProcessNode created by the launch.
+        """
+        self.process = node
+        self.update()
+
     def gather_task_inputs(self, data: Dict[str, Any] = None) -> Dict[str, Any]:
         """Gather the inputs of all tasks."""
         inputs = {}
