@@ -48,7 +48,8 @@ def test_max_number_jobs(add_code) -> None:
         wg.add_task(ArithmeticAddCalculation, name=f'add{i}', x=Int(1), y=Int(1), code=add_code)
     # Set the maximum number of running jobs inside the WorkGraph
     wg.max_number_jobs = 2
-    submit(wg, wait=True, timeout=40)
+    submit(wg)
+    wg.wait(timeout=40)
     report = get_workchain_report(wg.process, 'REPORT')
     assert 'tasks ready to run: add2' in report
     wg.tasks.add2.outputs.sum.value == 2

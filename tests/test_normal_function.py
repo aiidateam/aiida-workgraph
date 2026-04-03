@@ -21,5 +21,6 @@ def test_normal_function_submit(decorated_normal_add: Callable, decorated_add: C
     add1 = wg.add_task(decorated_normal_add, 'add1', x=2, y=3)
     add2 = wg.add_task(decorated_add, 'add2', x=6)
     wg.add_link(add1.outputs.result, add2.inputs['y'])
-    submit(wg, wait=True)
+    submit(wg)
+    wg.wait(timeout=120)
     assert wg.tasks.add2.outputs.result.value == 11

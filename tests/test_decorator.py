@@ -195,7 +195,8 @@ def test_decorator_calcfunction(decorated_add: Callable) -> None:
 
     wg = WorkGraph(name='test_decorator_calcfunction')
     wg.add_task(decorated_add, 'add1', x=2, y=3)
-    submit(wg, wait=True, timeout=100)
+    submit(wg)
+    wg.wait(timeout=100)
     assert wg.tasks.add1.outputs.result.value == 5
 
 

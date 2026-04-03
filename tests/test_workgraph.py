@@ -269,7 +269,8 @@ def test_inputs_run_submit_api():
     assert wg.outputs.sum.value == 3
 
     wg = generate_workgraph()
-    submit(wg, inputs={'x': 3, 'y': 4}, wait=True)
+    submit(wg, inputs={'x': 3, 'y': 4})
+    wg.wait(timeout=120)
 
     assert wg.outputs.sum.value == 7
 

@@ -113,18 +113,25 @@ class WorkGraph(node_graph.Graph):
             raise ValueError(msg)
 
         merged = dict(inputs) if inputs else dict(kwargs)
-        metadata = merged.pop('metadata', None)
+
+        # Strip reserved execution parameters before they reach set_inputs.
+        _RESERVED_KEYS = {'metadata', 'timeout', 'interval'}
+        reserved: Dict[str, Any] = {}
+        for key in _RESERVED_KEYS:
+            if key in merged:
+                reserved[key] = merged.pop(key)
+
+        metadata = reserved.get('metadata')
 
         # Check that no reserved key also matches a task name
         task_names = set(self.get_task_names())
-        if metadata is not None:
-            collisions = {'metadata'} & task_names
-            if collisions:
-                msg = (
-                    "Key 'metadata' is a reserved execution parameter but also matches a task name "
-                    'on this WorkGraph. Rename the task to avoid the collision.'
-                )
-                raise ValueError(msg)
+        collisions = set(reserved) & task_names
+        if collisions:
+            msg = (
+                f'Keys {collisions} are reserved execution parameters but also match task names '
+                f'on this WorkGraph. Rename the tasks to avoid colliding with reserved keys: {_RESERVED_KEYS}.'
+            )
+            raise ValueError(msg)
 
         if merged:
             self.set_inputs(merged)
