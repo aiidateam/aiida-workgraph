@@ -114,22 +114,22 @@ class WorkGraph(node_graph.Graph):
 
         merged = dict(inputs) if inputs else dict(kwargs)
 
-        # Strip reserved execution parameters before they reach set_inputs.
-        _RESERVED_KEYS = {'metadata', 'timeout', 'interval'}
-        reserved: Dict[str, Any] = {}
-        for key in _RESERVED_KEYS:
-            if key in merged:
-                reserved[key] = merged.pop(key)
-
-        metadata = reserved.get('metadata')
-
-        # Check that no reserved key also matches a task name
-        task_names = set(self.get_task_names())
-        collisions = set(reserved) & task_names
-        if collisions:
+        # `interval` was a parameter of the old WorkGraph.submit() and is not accepted here.
+        # `timeout` is consumed directly by engine.submit() so it won't reach this method.
+        if 'interval' in merged:
             msg = (
-                f'Keys {collisions} are reserved execution parameters but also match task names '
-                f'on this WorkGraph. Rename the tasks to avoid colliding with reserved keys: {_RESERVED_KEYS}.'
+                "'interval' is no longer accepted by WorkGraph. "
+                'Use `engine.submit(wg, wait=True, wait_interval=...)` instead.'
+            )
+            raise ValueError(msg)
+
+        metadata = merged.pop('metadata', None)
+
+        # A task named 'metadata' would collide with the reserved metadata key.
+        if metadata is not None and 'metadata' in self.get_task_names():
+            msg = (
+                "'metadata' is a reserved key for AiiDA process metadata but also matches a task name "
+                'on this WorkGraph. Rename the task to avoid ambiguity.'
             )
             raise ValueError(msg)
 
