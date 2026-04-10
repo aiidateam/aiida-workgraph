@@ -189,8 +189,8 @@ tests = [
 
 [package.metadata]
 requires-dist = [
-    { name = "aiida-core", specifier = "~=2.7.1" },
-    { name = "aiida-core", marker = "extra == 'docs'", specifier = "~=2.7.1" },
+    { name = "aiida-core", specifier = ">=2.7.1" },
+    { name = "aiida-core", marker = "extra == 'docs'", specifier = ">=2.7.1" },
     { name = "aiida-pseudo", marker = "extra == 'docs'" },
     { name = "aiida-pythonjob", specifier = "~=0.5.2" },
     { name = "aiida-quantumespresso", marker = "extra == 'docs'" },
