@@ -1,5 +1,6 @@
 import pytest
 from aiida_workgraph import WorkGraph
+from aiida.engine import run
 
 
 @pytest.mark.parametrize(
@@ -15,7 +16,7 @@ def test_data_task(identifier, data) -> None:
 
     wg = WorkGraph('test_normal_task')
     task1 = wg.add_task(identifier, name='task1', value=data)
-    wg.run()
+    run(wg)
     assert task1.outputs.result.value == data
 
 
@@ -24,7 +25,7 @@ def test_data_dict_task():
 
     wg = WorkGraph('test_data_dict_task')
     task1 = wg.add_task('workgraph.aiida_dict', name='task1', value={'a': 1})
-    wg.run()
+    run(wg)
     assert task1.outputs.result.value == {'a': 1}
 
 
@@ -33,7 +34,7 @@ def test_data_list_task():
 
     wg = WorkGraph('test_data_list_task')
     task1 = wg.add_task('workgraph.aiida_list', name='task1', value=[1, 2, 3])
-    wg.run()
+    run(wg)
     assert task1.outputs.result.value == [1, 2, 3]
 
 
@@ -42,5 +43,5 @@ def test_load_code_task(add_code) -> None:
 
     wg = WorkGraph('test_load_code_task')
     task1 = wg.add_task('workgraph.load_code', name='task1', label=add_code.full_label)
-    wg.run()
+    run(wg)
     assert task1.outputs.code.value.label == add_code.label

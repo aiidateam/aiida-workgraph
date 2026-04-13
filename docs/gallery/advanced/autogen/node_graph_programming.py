@@ -17,6 +17,7 @@ Write workflows using the node-graph programming paradigm
 
 from aiida_workgraph import WorkGraph, task, spec
 from aiida import load_profile
+from aiida.engine import run
 
 load_profile()
 
@@ -66,7 +67,8 @@ wg.add_link(add_task.outputs.result, multiply_task.inputs.x)
 wg.outputs.result = multiply_task.outputs.result
 
 # Run the workflow with specific input values
-wg.run(
+run(
+    wg,
     inputs={'add1': {'x': 2, 'y': 3}, 'multiply1': {'y': 4}},
 )
 
@@ -118,7 +120,7 @@ add3 = wg.add_task(add, name='add3', x=select1.outputs['result'], y=1)  # 4 + 1 
 wg.outputs.result = add3.outputs.result
 
 # Run the workflow
-wg.run()
+run(wg)
 
 print(f'State of WorkGraph: {wg.state}')
 print(f'Result: {wg.outputs.result.value}')
@@ -162,7 +164,7 @@ final_add_task = wg.add_task(add, x=multiply_task_in_loop.outputs.result, y=1)
 wg.outputs.result = final_add_task.outputs.result
 
 # Run the workflow
-wg.run()
+run(wg)
 
 print(f'State of WorkGraph: {wg.state}')
 print(f'Result: {wg.outputs.result.value}')
@@ -226,7 +228,7 @@ sum_task = wg.add_task(calc_sum, data=map_task.outputs.result)
 # Set the final output of the workgraph
 wg.outputs.result = sum_task.outputs.result
 
-wg.run()
+run(wg)
 
 print(f'State of WorkGraph: {wg.state}')
 print(f'Result: {wg.outputs.result.value}')

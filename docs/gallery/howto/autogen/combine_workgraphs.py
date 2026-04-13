@@ -80,10 +80,11 @@ wg
 # Let's run our composed workgraph and have a look at its result:
 
 from aiida import load_profile
+from aiida.engine import run
 
 load_profile()
 
-wg.run()
+run(wg)
 
 random_number = wg.tasks.generate_random_number.outputs.result.value.value
 

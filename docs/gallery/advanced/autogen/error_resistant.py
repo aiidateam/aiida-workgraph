@@ -21,6 +21,7 @@ Write error-resistant workflows
 from aiida_workgraph import WorkGraph, Task
 
 from aiida import load_profile, orm
+from aiida.engine import run
 from aiida.common.exceptions import NotExistent
 from aiida.cmdline.utils.ascii_vis import format_call_graph
 
@@ -68,7 +69,7 @@ wg = WorkGraph('error_negative_number')
 wg.add_task(ArithmeticAddCalculation, name='add', x=1, y=-6, code=bash_code)
 
 
-wg.run()
+run(wg)
 print('Task finished OK?:', wg.tasks.add.process.is_finished_ok)
 print('Exit code        :', wg.tasks.add.process.exit_code)
 print('Exit Message:    :', wg.tasks.add.process.exit_message)
@@ -111,7 +112,7 @@ task1.add_error_handler(
     }
 )
 
-wg.run()
+run(wg)
 print('Task finished OK?:', wg.tasks.add.process.is_finished_ok)
 print('Exit code        :', wg.tasks.add.process.exit_code)
 print('Exit Message:    :', wg.tasks.add.process.exit_message)
@@ -155,7 +156,7 @@ task1.add_error_handler(
 )
 
 
-wg.run()
+run(wg)
 print('Task finished OK?:', wg.tasks.add.process.is_finished_ok)
 print('Exit code        :', wg.tasks.add.process.exit_code)
 print('Exit Message:    :', wg.tasks.add.process.exit_message)
@@ -179,7 +180,7 @@ print(format_call_graph(orm.load_node(wg.pk)))
 # reset workgraph to start from the beginning
 wg.reset()
 wg.tasks.add.error_handlers['handle_negative_sum'].kwargs['increment'] = 3
-wg.run()
+run(wg)
 
 
 ######################################################################

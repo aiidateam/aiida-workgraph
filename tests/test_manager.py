@@ -7,6 +7,7 @@ from aiida_workgraph.manager import (
 )
 from aiida_workgraph import socket_spec as spec
 from typing import Any, Annotated
+from aiida.engine import run
 
 
 @task()
@@ -27,7 +28,7 @@ def test_while_and_if(decorated_add):
             n = wg.ctx.n + 1
             wg.ctx.n = n
             n << outputs.result
-        wg.run()
+        run(wg)
 
     assert outputs.result.value == 6
 
@@ -51,6 +52,6 @@ def test_map(decorated_add):
             outputs1 = decorated_add(x=map_zone.item.value, y=1)
             map_zone.gather({'result': outputs1.result})
         outputs2 = sum_values(data=map_zone.outputs.result)
-        wg.run()
+        run(wg)
         # wg.to_html("test_map.html")
     assert outputs2.result.value == 20

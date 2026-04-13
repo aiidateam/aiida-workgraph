@@ -25,7 +25,7 @@ flexible error handling mechanism available in `aiida-workgraph`.
 from aiida.engine import BaseRestartWorkChain
 from aiida.plugins import CalculationFactory
 from aiida import orm
-from aiida.engine import while_
+from aiida.engine import run, while_
 from aiida.engine import process_handler, ProcessHandlerReport
 
 ArithmeticAddCalculation = CalculationFactory('core.arithmetic.add')
@@ -150,7 +150,7 @@ wg = restart_graph.build(code=add_code, x=orm.Int(1), y=orm.Int(-2))
 # Submit the WorkGraph and wait for it to complete.
 # The error handler will be executed automatically by the engine.
 print('Submitting WorkGraph that is expected to fail and be corrected...')
-wg.run()
+run(wg)
 
 
 # %%

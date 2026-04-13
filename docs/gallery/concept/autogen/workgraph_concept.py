@@ -14,6 +14,7 @@ WorkGraph is a collection of tasks and links.
 # First, create an empty workgraph:
 #
 
+from aiida.engine import run
 from aiida_workgraph import WorkGraph, task
 
 wg = WorkGraph(name='my_first_workgraph')
@@ -55,7 +56,7 @@ wg
 from aiida import load_profile
 
 load_profile()
-wg.run(inputs={'add1': {'x': 1, 'y': 2}, 'add2': {'y': 3}})
+run(wg, inputs={'add1': {'x': 1, 'y': 2}, 'add2': {'y': 3}})
 
 # %%
 # Graph-level inputs and outputs
@@ -84,7 +85,7 @@ wg.outputs.sum1 = wg.tasks.add1.outputs.result
 wg.outputs.sum2 = wg.tasks.add2.outputs.result
 
 # Run the WorkGraph
-wg.run()
+run(wg)
 
 # Verify the final output
 assert wg.outputs.sum2.value == 2 + (2 + 3)

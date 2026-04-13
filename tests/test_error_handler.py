@@ -1,6 +1,7 @@
 from aiida_workgraph import WorkGraph, Task, task
 from aiida import orm
 from aiida.calculations.arithmetic.add import ArithmeticAddCalculation
+from aiida.engine import run
 
 
 def test_error_handlers(add_code):
@@ -35,7 +36,8 @@ def test_error_handlers(add_code):
         }
     )
     assert len(wg.tasks.add1.error_handlers) == 1
-    wg.run(
+    run(
+        wg,
         inputs={
             'add1': {'code': add_code, 'x': orm.Int(1), 'y': orm.Int(-2)},
         },
@@ -55,5 +57,5 @@ def test_error_handlers_graph_inputs(add_code):
     assert len(g.tasks.ArithmeticAddCalculation.error_handlers) == 1
     g1 = WorkGraph.from_dict(g.to_dict())
     assert len(g1.tasks.ArithmeticAddCalculation.error_handlers) == 1
-    g.run()
+    run(g)
     assert g.tasks.ArithmeticAddCalculation.outputs.sum.value == 3

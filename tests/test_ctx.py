@@ -5,6 +5,7 @@ from aiida_workgraph import socket_spec as spec
 from typing import Any
 import numpy as np
 import pytest
+from aiida.engine import run
 
 
 def test_ctx_update():
@@ -31,7 +32,7 @@ def test_workgraph_ctx(decorated_add: Callable) -> None:
     # test the task can wait for another task
     get_ctx1.waiting_on.add(add1)
     add2 = wg.add_task(decorated_add, 'add2', x=get_ctx1.outputs.result, y=1)
-    wg.run()
+    run(wg)
     assert add2.outputs.result.value == 6
 
 
@@ -48,7 +49,7 @@ def test_task_update_ctx(decorated_add: Callable) -> None:
         wg.update_ctx({'sum': add1.outputs.abc})
     wg.update_ctx({'sum': add1.outputs.result})
     add2 = wg.add_task(decorated_add, 'add2', x=add1.outputs[0], y=wg.ctx.sum)
-    wg.run()
+    run(wg)
     assert add2.outputs.result.value == 10
 
 
@@ -62,6 +63,6 @@ def test_task_update_nested_ctx():
     wg.update_ctx({'data.sum': wg.tasks.add.outputs.results.sum})
     wg.outputs.sum = wg.ctx.data.sum
     wg.outputs.add = {'sum': wg.ctx.data.sum}
-    wg.run()
+    run(wg)
     assert wg.process.outputs.sum.value == 3
     assert wg.process.outputs.add.sum.value == 3

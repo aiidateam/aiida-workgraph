@@ -7,6 +7,7 @@ from aiida_workgraph import (
 )
 from aiida import orm
 from typing import Annotated
+from aiida.engine import run
 
 
 @task()
@@ -40,6 +41,6 @@ def test_map_zone():
             map_zone.gather({'sum1': out1, 'sum2': out2})
         out3 = calc_sum(data=map_zone.outputs.sum1).result
         out4 = calc_sum(data=map_zone.outputs.sum2).result
-        wg.run()
+        run(wg)
         assert out3.value == 6
         assert out4.value == 9

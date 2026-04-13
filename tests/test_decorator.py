@@ -4,6 +4,7 @@ from aiida_workgraph.socket import TaskSocketNamespace
 from typing import Callable, Any, Annotated
 from aiida_workgraph.manager import get_current_graph, set_current_graph
 from aiida_workgraph import socket_spec as spec
+from aiida.engine import run, submit
 
 
 def test_custom_outputs():
@@ -18,7 +19,7 @@ def test_custom_outputs():
         return add_multiply(x, y)
 
     wg = test_graph.build(1, 2)
-    wg.run()
+    run(wg)
     assert wg.outputs.sum.value == 3
     assert wg.outputs.product.value == 2
 
@@ -194,7 +195,8 @@ def test_decorator_calcfunction(decorated_add: Callable) -> None:
 
     wg = WorkGraph(name='test_decorator_calcfunction')
     wg.add_task(decorated_add, 'add1', x=2, y=3)
-    wg.submit(wait=True, timeout=100)
+    submit(wg)
+    wg.wait(timeout=100)
     assert wg.tasks.add1.outputs.result.value == 5
 
 
@@ -203,7 +205,7 @@ def test_decorator_workfunction(decorated_add_multiply: Callable) -> None:
 
     wg = WorkGraph(name='test_decorator_workfunction')
     wg.add_task(decorated_add_multiply, 'add_multiply1', x=2, y=3, z=4)
-    wg.run()
+    run(wg)
     assert wg.tasks['add_multiply1'].outputs.result.value == 20
 
 
@@ -232,7 +234,7 @@ def test_decorator_graph(decorated_add_multiply_group: Callable) -> None:
     wg.add_link(add1.outputs[0], add_multiply1.inputs.x)
     wg.add_link(add_multiply1.outputs.result, sum_diff1.inputs.x)
     # use run to check if graph builder workgraph can be submit inside the engine
-    wg.run()
+    run(wg)
     assert wg.tasks['add_multiply1'].process.outputs.result.value == 32
     assert wg.tasks['add_multiply1'].outputs.result.value == 32
     assert wg.tasks['sum_diff1'].outputs.sum.value == 32

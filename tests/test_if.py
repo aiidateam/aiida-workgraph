@@ -1,4 +1,5 @@
 from aiida_workgraph import WorkGraph, If, TaskPool
+from aiida.engine import run
 
 
 def test_If_zone(decorated_add, decorated_multiply, decorated_smaller_than):
@@ -17,7 +18,7 @@ def test_If_zone(decorated_add, decorated_multiply, decorated_smaller_than):
         assert 'if_zone1' in wg.tasks
         assert len(wg.tasks['if_zone'].children) == 1
         assert len(wg.tasks['if_zone1'].children) == 1
-        wg.run()
+        run(wg)
         assert wg.state == 'FINISHED'
         assert wg.tasks['add2'].outputs.result.value == 1
         assert wg.tasks['multiply1'].outputs.result.value is None
@@ -47,7 +48,7 @@ def test_if_task(decorated_add, decorated_multiply, decorated_smaller_than):
         condition=condition1.outputs.result,
     )
     add3 = wg.add_task(decorated_add, name='add3', x=select1.outputs.result, y=1)
-    wg.run()
+    run(wg)
     assert add3.outputs.result.value == 5
 
 
@@ -57,5 +58,5 @@ def test_empty_if_task(decorated_add):
     wg = WorkGraph('test_empty_if')
     sum = wg.add_task(decorated_add, name='sum', x=1, y=1)
     wg.add_task(TaskPool.workgraph.if_zone, name='if_true', conditions=sum)
-    wg.run()
+    run(wg)
     assert wg.state == 'FINISHED'

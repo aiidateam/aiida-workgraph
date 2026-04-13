@@ -15,7 +15,7 @@ re-implement its logic as a WorkGraph.
 # calculates the sum of all even integers from 1 up to a given number `N`.
 # It uses a `while` loop to iterate and an `if` condition to check for even numbers.
 
-from aiida.engine import WorkChain, calcfunction, if_, while_
+from aiida.engine import WorkChain, calcfunction, if_, run, while_
 from aiida.orm import Int
 
 
@@ -163,7 +163,7 @@ wg
 
 # %%
 # Execute the WorkGraph and print the result.
-wg.run()
+run(wg)
 print(f'The sum of even numbers up to {N} is: {wg.outputs["result"].value}')
 
 

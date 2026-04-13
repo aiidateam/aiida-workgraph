@@ -1,4 +1,5 @@
 from aiida_workgraph import WorkGraph, TaskPool, task
+from aiida.engine import run
 
 
 @task()
@@ -25,7 +26,7 @@ def test_graph_task():
     with WorkGraph('test_graph_task') as wg:
         outputs = sum_to_n(1, 0, 5)
         wg.outputs.result = outputs.result
-        wg.run()
+        run(wg)
         assert wg.outputs.result.value == 10
 
 
@@ -33,7 +34,7 @@ def test_max_depth():
     """Test the max_depth parameter of the graph task decorator."""
 
     wg = dump_graph.build()
-    wg.run()
+    run(wg)
     assert wg.process.exit_status == 302
 
 
@@ -60,7 +61,7 @@ def test_While_zone(decorated_add, decorated_multiply, decorated_smaller_than):
         assert len(wg.tasks) == 9
         assert 'while_zone' in wg.tasks
         assert len(wg.tasks.while_zone.children) == 2
-        wg.run()
+        run(wg)
         assert wg.state == 'FINISHED'
         assert wg.tasks.add3.outputs.result.value == 31
 
@@ -133,8 +134,8 @@ def test_while_task(decorated_add, decorated_smaller_than):
     wg.update_ctx({'m': add12.outputs.result})
     while1.children.add(['add11', 'while2', 'while3', 'add12', 'compare2', 'compare3'])
     add2 = wg.add_task(decorated_add, name='add2', x=add12.outputs.result, y=add31.outputs.result)
-    # wg.submit(wait=True, timeout=100)
-    wg.run()
+    # submit(wg, wait=True, timeout=100)
+    run(wg)
     # print out the node labels and the results for debugging
     # print("link node label, result")
     # for link in wg.process.base.links.get_outgoing().all():

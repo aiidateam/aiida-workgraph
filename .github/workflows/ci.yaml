@@ -9,7 +9,7 @@ jobs:
     strategy:
       matrix:
         python-version: ['3.10', '3.12']
-        aiida-core-version: ['2.7']
+        # aiida-core-version: ['2.7']
 
     services:
       rabbitmq:
@@ -36,8 +36,8 @@ jobs:
       run: |
         uv sync --locked --extra pre-commit --extra tests
 
-    - name: Override aiida-core version
-      run: uv pip install aiida-core==${{ matrix.aiida-core-version }}
+    # - name: Override aiida-core version
+    #   run: uv pip install aiida-core==${{ matrix.aiida-core-version }}
 
     - name: Install playwright browsers
       run: playwright install

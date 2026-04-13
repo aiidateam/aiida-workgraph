@@ -39,6 +39,7 @@ Graph Task
 
 from aiida_workgraph import task, WorkGraph, If
 from aiida import load_profile
+from aiida.engine import run
 
 load_profile()
 
@@ -69,7 +70,7 @@ def my_workflow(x, y):
 
 # A user can now easily create and run the workflow:
 wg = my_workflow.build(x=1, y=2)
-wg.run()
+run(wg)
 print('Workflow outputs:', wg.outputs.result)
 
 
@@ -143,7 +144,7 @@ with WorkGraph('GraphBuilderExample') as wg:
     outputs1 = sum_diff(x=1, y=1)
     # The add_multiply_if task will build and run its inner graph at execution time
     outputs2 = add_multiply_if(data_node=outputs1.result, y=2)
-    wg.run()
+    run(wg)
     print('outputs2:', outputs2.result)
 
 
@@ -195,7 +196,7 @@ with WorkGraph('ContextManagerExample') as wg:
         data_to_use = add(diff_val, 1).result
         wg.ctx.final_result = multiply(x=data_to_use, y=2).result
     wg.outputs.final_result = wg.ctx.final_result
-    wg.run()
+    run(wg)
     print('Final result:', wg.outputs.final_result)
 
 
@@ -307,5 +308,5 @@ with WorkGraph('RobustBuilderExample') as wg:
     result = add(x=-10, y=5).result  # Result will be -5
     # The my_conditional_workflow will be executed with an AiiDA Int node
     result = my_conditional_workflow(control_value=result, y=10).result
-    wg.run()
+    run(wg)
     print('Final result:', result)

@@ -224,14 +224,20 @@ class TaskHandle(BaseHandle):
         return outputs
 
     def run(self, /, *args, **kwargs):
+        from aiida.engine import run
+
         graph = self.build(*args, **kwargs)
-        return graph.run()
+        return run(graph)
 
     def run_get_graph(self, /, *args, **kwargs):
+        from aiida.engine import run
+
         graph = self.build(*args, **kwargs)
-        return graph.run(), graph
+        return run(graph), graph
 
     def submit(self, /, *args, **kwargs):
+        from aiida.engine import submit
+
         graph = self.build(*args, **kwargs)
-        graph.submit()
+        submit(graph)
         return graph

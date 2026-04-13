@@ -1,12 +1,13 @@
 import pytest
 import time
+from aiida.engine import submit
 
 
 @pytest.mark.skip(reason='PAUSED state is wrong for the moment.')
 def test_pause_play_workgraph(wg_engine):
     wg = wg_engine
     wg.name = 'test_pause_play_workgraph'
-    wg.submit()
+    submit(wg)
     time.sleep(5)
     wg.pause()
     wg.update()
@@ -20,7 +21,7 @@ def test_pause_play_task(wg_calcjob):
     wg.name = 'test_pause_play_task'
     # pause add1 before submit
     wg.pause_tasks(['add1'])
-    wg.submit()
+    submit(wg)
     # wait for the workgraph to launch add1
     wg.wait(tasks={'add1': ['CREATED']}, timeout=60, interval=5)
     assert wg.tasks.add1.node.process_state.value.upper() == 'CREATED'

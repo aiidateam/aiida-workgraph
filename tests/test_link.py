@@ -1,5 +1,6 @@
 import pytest
 from aiida_workgraph import task, WorkGraph
+from aiida.engine import run
 
 
 @pytest.mark.usefixtures('started_daemon_client')
@@ -24,8 +25,8 @@ def test_multiply_link() -> None:
     wg.add_link(float1.outputs[0], sum1.inputs.datas)
     wg.add_link(float2.outputs[0], sum1.inputs.datas)
     wg.add_link(float3.outputs[0], sum1.inputs.datas)
-    # wg.submit(wait=True)
-    wg.run()
+    # submit(wg, wait=True)
+    run(wg)
     assert sum1.outputs.result.value == 6
 
 

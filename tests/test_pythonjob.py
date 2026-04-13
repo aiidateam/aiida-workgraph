@@ -3,6 +3,7 @@ from aiida_workgraph import WorkGraph, task, Task
 from typing import Any
 import numpy as np
 from aiida_workgraph.socket_spec import namespace
+from aiida.engine import run
 
 
 def test_to_dict():
@@ -47,7 +48,7 @@ def test_imported_pythonjob(fixture_localhost, python_executable_path):
         computer='localhost',
         command_info={'label': python_executable_path},
     )
-    wg.run()
+    run(wg)
     assert isinstance(wg.tasks.add1.outputs.result.value, orm.Data)
     assert wg.tasks.add1.outputs.result.value == 3
 
@@ -84,8 +85,8 @@ def test_decorator(fixture_localhost, python_executable_path):
         computer='localhost',
         command_info={'label': python_executable_path},
     )
-    # wg.submit(wait=True)
-    wg.run()
+    # submit(wg, wait=True)
+    run(wg)
     assert wg.tasks.add1.outputs.sum.value.value == 3
     assert wg.tasks.add1.outputs['diff'].value.value == -1
     assert wg.tasks.multiply1.outputs.result.value.value == 9
@@ -105,7 +106,8 @@ def test_PythonJob_kwargs(fixture_localhost, python_executable_path):
 
     wg = WorkGraph('test_PythonJob')
     wg.add_task(add, name='add1')
-    wg.run(
+    run(
+        wg,
         inputs={
             'add1': {
                 'x': 1,
@@ -141,7 +143,7 @@ def test_dynamic_inputs(fixture_localhost, python_executable_path) -> None:
         y=np.array([3, 4]),
         command_info={'label': python_executable_path},
     )
-    wg.run()
+    run(wg)
     assert (wg.tasks.add1.outputs.result.value.get_array() == np.array([4, 6])).all()
 
 
@@ -205,7 +207,7 @@ def test_PythonJob_namespace_output_input(fixture_localhost, python_executable_p
             'command_info': {'label': python_executable_path},
         },
     }
-    wg.run(inputs=inputs)
+    run(wg, inputs=inputs)
     assert wg.tasks.myfunc.outputs.add_multiply.add.sum.value == 3
     assert wg.tasks.myfunc.outputs.add_multiply.multiply.value == 2
     assert wg.tasks.myfunc2.outputs.result.value == 8
@@ -247,7 +249,8 @@ def test_PythonJob_copy_files(fixture_localhost, python_executable_path):
         wg.tasks.add2.outputs.remote_folder,
         wg.tasks['multiply'].inputs['copy_files'],
     )
-    wg.run(
+    run(
+        wg,
         inputs={
             'add1': {
                 'x': 2,
@@ -282,7 +285,8 @@ def test_load_pythonjob(fixture_localhost, python_executable_path):
     wg = WorkGraph('test_PythonJob')
     wg.add_task(add, name='add')
 
-    wg.run(
+    run(
+        wg,
         inputs={
             'add': {
                 'x': 'Hello, ',
@@ -291,7 +295,6 @@ def test_load_pythonjob(fixture_localhost, python_executable_path):
                 'command_info': {'label': python_executable_path},
             },
         },
-        # wait=True,
     )
     assert wg.tasks.add.outputs.result.value.value == 'Hello, World!'
     wg = WorkGraph.load(wg.pk)
@@ -344,7 +347,7 @@ def test_exit_code(fixture_localhost, python_executable_path):
         computer='localhost',
         command_info={'label': python_executable_path},
     )
-    wg.run()
+    run(wg)
     # the first task should have exit status 410
     assert wg.process.base.links.get_outgoing().all()[0].node.exit_status == 410
     assert wg.process.base.links.get_outgoing().all()[0].node.exit_message == 'Some elements are negative'

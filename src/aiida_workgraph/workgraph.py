@@ -19,10 +19,12 @@ LOGGER = logging.getLogger(__name__)
 class WorkGraph(node_graph.Graph):
     """Build flexible workflows with AiiDA.
 
-    The class extends from NodeGraph and provides methods to run,
-    submit tasks, wait for tasks to finish, and update the process status.
+    The class extends from NodeGraph and provides methods to wait for tasks
+    to finish and update the process status.
     It is used to handle various states of a workgraph process and provides
     convenient operations to interact with it.
+
+    Use ``aiida.engine.run(wg)`` / ``aiida.engine.submit(wg)`` to launch a WorkGraph.
 
     Attributes:
         process (aiida.orm.ProcessNode): The process node that represents the process status and other details.
@@ -84,6 +86,70 @@ class WorkGraph(node_graph.Graph):
         }
         return inputs
 
+    def prepare_for_launch(
+        self,
+        inputs: Optional[Dict[str, Any]] = None,
+        **kwargs: Any,
+    ) -> tuple:
+        """Validate the WorkGraph and convert it to a Process class + inputs dict.
+
+        This is the interface used by ``aiida.engine.run`` / ``submit`` to launch
+        a WorkGraph through the standard Process launch path.
+
+        Task inputs and ``metadata`` can be passed together in a single dict.
+        ``metadata`` is separated and forwarded to ``to_engine_inputs``.
+
+        :param inputs: optional dictionary that may contain task inputs and a
+            ``metadata`` key for AiiDA process metadata.
+        :param kwargs: alternative to ``inputs`` (cannot use both).
+        :raises ValueError: if both ``inputs`` and ``kwargs`` are provided, or if
+            required task inputs are missing.
+        :return: ``(WorkGraphEngine, engine_inputs)`` tuple.
+        """
+        from aiida_workgraph.engine.workgraph import WorkGraphEngine
+
+        if inputs is not None and kwargs:
+            msg = 'Cannot specify both `inputs` and `kwargs`.'
+            raise ValueError(msg)
+
+        merged = dict(inputs) if inputs else dict(kwargs)
+
+        # `interval` was a parameter of the old WorkGraph.submit() and is not accepted here.
+        # `timeout` is consumed directly by engine.submit() so it won't reach this method.
+        if 'interval' in merged:
+            msg = (
+                "'interval' is no longer accepted by WorkGraph. "
+                'Use `engine.submit(wg, wait=True, wait_interval=...)` instead.'
+            )
+            raise ValueError(msg)
+
+        metadata = merged.pop('metadata', None)
+
+        # A task named 'metadata' would collide with the reserved metadata key.
+        if metadata is not None and 'metadata' in self.get_task_names():
+            msg = (
+                "'metadata' is a reserved key for AiiDA process metadata but also matches a task name "
+                'on this WorkGraph. Rename the task to avoid ambiguity.'
+            )
+            raise ValueError(msg)
+
+        if merged:
+            self.set_inputs(merged)
+        self.check_before_run()
+        engine_inputs = self.to_engine_inputs(metadata=metadata)
+        return WorkGraphEngine, engine_inputs
+
+    def update_after_launch(self, node) -> None:
+        """Update WorkGraph state after a process has been launched.
+
+        Called by ``aiida.engine.run`` / ``submit`` after the standard launch path
+        completes, so the in-memory WorkGraph reflects the launched process.
+
+        :param node: the ProcessNode created by the launch.
+        """
+        self.process = node
+        self.update()
+
     def gather_task_inputs(self, data: Dict[str, Any] = None) -> Dict[str, Any]:
         """Gather the inputs of all tasks."""
         inputs = {}
@@ -133,63 +199,6 @@ class WorkGraph(node_graph.Graph):
         if existing_process:
             diffs = self.analyzer.compare_graphs(existing_process, self)
             self.reset_tasks(diffs['modified_tasks'])
-
-    def run(
-        self,
-        inputs: Optional[Dict[str, Any]] = None,
-        metadata: Optional[Dict[str, Any]] = None,
-    ) -> Any:
-        """
-        Run the AiiDA workgraph process and update the process status. The method uses AiiDA's engine to run
-        the process, when the process is finished, update the status of the tasks
-        """
-        from aiida_workgraph.engine.workgraph import WorkGraphEngine
-
-        # set task inputs
-        if inputs is not None:
-            self.set_inputs(inputs)
-
-        # One can not run again if the process is alreay created. otherwise, a new process node will
-        # be created again.
-        if self.process is not None:
-            raise ValueError(f'Process {self.process.pk} has already been created. Please use the submit() method.')
-        self.check_before_run()
-        inputs = self.to_engine_inputs(metadata=metadata)
-        _, node = aiida.engine.run_get_node(WorkGraphEngine, inputs=inputs)
-        self.process = node
-        self.update()
-        return self.outputs._value
-
-    def submit(
-        self,
-        inputs: Optional[Dict[str, Any]] = None,
-        wait: bool = False,
-        timeout: int = 600,
-        interval: int = 5,
-        metadata: Optional[Dict[str, Any]] = None,
-    ) -> aiida.orm.ProcessNode:
-        """Submit the AiiDA workgraph process and optionally wait for it to finish.
-        Args:
-            wait (bool): Wait for the process to finish.
-            timeout (int): The maximum time in seconds to wait for the process to finish. Defaults to 600.
-            restart (bool): Restart the process, and reset the modified tasks, then only re-run the modified tasks.
-            new (bool): Submit a new process.
-        """
-
-        # set task inputs
-        if inputs is not None:
-            self.set_inputs(inputs)
-
-        # save the workgraph to the process node
-        self.save(metadata=metadata)
-        if self.process.process_state.value.upper() not in ['CREATED']:
-            raise ValueError(f'Process {self.process.pk} has already been submitted.')
-        self.continue_process()
-        # as long as we submit the process, it is a new submission, we should set restart_process to None
-        self.restart_process = None
-        if wait:
-            self.wait(timeout=timeout, interval=interval)
-        return self.process
 
     def save(self, metadata: Optional[Dict[str, Any]] = None) -> None:
         """Save the udpated workgraph to the process

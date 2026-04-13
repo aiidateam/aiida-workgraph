@@ -23,6 +23,7 @@ We also show how to query the provenance by these fields.
 # Here's an example:
 
 from aiida import load_profile
+from aiida.engine import run
 from aiida_workgraph import task
 
 load_profile()
@@ -72,7 +73,7 @@ wg
 #
 # Run the workflow:
 
-wg.run()
+run(wg)
 
 
 # %%

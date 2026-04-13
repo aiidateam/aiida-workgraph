@@ -36,6 +36,7 @@ Quick Start
 # To load your profile, run the following code:
 
 from aiida import load_profile
+from aiida.engine import run
 
 load_profile()
 
@@ -112,7 +113,7 @@ wg
 #
 # Let's run the workflow and inspect the result:
 
-wg.run()
+run(wg)
 
 print('Result:', wg.outputs.result.value)
 

@@ -1,6 +1,7 @@
 from aiida_workgraph import WorkGraph, namespace
 from typing import Callable
 from aiida import orm
+from aiida.engine import run
 
 
 def test_inputs_outptus() -> None:
@@ -77,6 +78,6 @@ def test_link_subgraph_task(decorated_add: Callable) -> None:
     wg.outputs.sub_wg_result = wg_task.outputs.result
     assert len(wg_task.inputs) == 3
     assert len(wg_task.outputs) == 3
-    wg.run()
+    run(wg)
     assert wg.tasks.add2.outputs.result.value.value == 11
     assert wg.outputs.sub_wg_result.value.value == 8

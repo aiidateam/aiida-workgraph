@@ -26,6 +26,7 @@ set_aiida_loglevel('REPORT')
 # sphinx_gallery_end_ignore
 
 from aiida import load_profile
+from aiida.engine import run
 from aiida_workgraph import group, task
 
 load_profile()
@@ -96,7 +97,7 @@ def wait_graph(x, y):
 
 
 wg = wait_graph.build(x=1, y=2)
-wg.run()
+run(wg)
 
 # %%
 # By checking the ``REPORT`` logs from AiiDA, you will see that both ``multiply``

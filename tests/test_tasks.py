@@ -4,6 +4,7 @@ from typing import Callable
 from aiida import orm
 from aiida_workgraph import socket_spec as spec
 from typing import Any, Annotated
+from aiida.engine import run
 
 
 def test_task_collection(decorated_add: Callable) -> None:
@@ -128,7 +129,7 @@ def test_set_dynamic_port_output(add_code) -> None:
             },
         }
     )
-    wg.run()
+    run(wg)
     assert wg.tasks.task1.outputs.dynamic_port.result1.value == 5
 
 
@@ -170,7 +171,7 @@ def test_namespace_outputs():
     wg = WorkGraph('test_namespace_outputs')
     wg.add_task(myfunc, name='myfunc', x=1.0, y=2.0)
     print(wg.tasks.myfunc.outputs)
-    wg.run()
+    run(wg)
     assert wg.tasks.myfunc.outputs.minus.value == -1
     assert wg.tasks.myfunc.outputs.add_multiply.add.value == 3
     assert wg.tasks.myfunc.outputs.add_multiply.multiply.value == 2
@@ -244,7 +245,7 @@ def test_task_from_builder_multiply_add(add_code, decorated_add) -> None:
         }
     ]
 
-    wg.run()
+    run(wg)
 
     # Top-level test for the expected result
     assert wg.tasks.decorated_add.outputs.result.value.value == 21
@@ -271,7 +272,7 @@ def test_call_task_inside_task():
 
     with WorkGraph() as wg:
         result = multiply(3, 4).result
-        wg.run()
+        run(wg)
         assert result._task.process.exit_status == 323
         assert 'Invalid nested task call.' in result._task.process.exit_message
 
@@ -333,5 +334,5 @@ def test_attach_extras_to_aiida_data_node():
         return calc_energy().result
 
     wg = MyWorkflow.build()
-    wg.run()
+    run(wg)
     assert wg.outputs.result.value.base.extras.get('unit') == 'eV'

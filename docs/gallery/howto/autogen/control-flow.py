@@ -22,6 +22,7 @@ Control flow in WorkGraph
 
 from aiida_workgraph import task
 from aiida import load_profile
+from aiida.engine import run
 
 
 load_profile()
@@ -128,7 +129,7 @@ wg
 #
 # Run the graph:
 
-wg.run()
+run(wg)
 print(wg.outputs.result.value)
 
 # sphinx_gallery_start_ignore

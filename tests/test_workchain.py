@@ -19,6 +19,7 @@ def test_build_workchain(add_code):
     """Submit simple calcjob."""
     from aiida.orm import Int
     from aiida_workgraph import WorkGraph
+    from aiida.engine import run
 
     wg = WorkGraph(name='test_debug_math')
     wg.add_task(
@@ -29,7 +30,7 @@ def test_build_workchain(add_code):
         z=Int(3),
         code=add_code,
     )
-    wg.run()
+    run(wg)
     assert wg.tasks.multiply_add1.outputs.result.value == 11
     # reload wg
     wg1 = WorkGraph.load(wg.pk)

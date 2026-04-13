@@ -17,6 +17,7 @@ Run shell commands as a task
 import typing as t
 
 from aiida import load_profile, orm
+from aiida.engine import run
 
 from aiida_workgraph import dynamic, shelljob, task
 from aiida_workgraph.utils import get_or_create_code
@@ -37,7 +38,7 @@ def ShellDate() -> t.Annotated[dict, dynamic(t.Any)]:
 
 
 wg = ShellDate.build()
-wg.run()
+run(wg)
 
 print('\nResult: ', wg.outputs.stdout.value.get_content())
 
@@ -109,7 +110,7 @@ def ShellDateWithArguments() -> t.Annotated[dict, dynamic(t.Any)]:
 
 
 wg = ShellDateWithArguments.build()
-wg.run()
+run(wg)
 
 print('\nResult: ', wg.outputs.stdout.value.get_content())
 
@@ -135,7 +136,7 @@ def ShellCatWithFileArguments() -> t.Annotated[dict, dynamic(t.Any)]:
 
 
 wg = ShellCatWithFileArguments.build()
-wg.run()
+run(wg)
 
 print('\nResult: ', wg.outputs.stdout.value.get_content())
 
@@ -177,7 +178,7 @@ wg
 
 # %%
 
-wg.run()
+run(wg)
 
 print('State` of WorkGraph    : {}'.format(wg.state))
 print('Result                : {}'.format(wg.outputs.result.value))
