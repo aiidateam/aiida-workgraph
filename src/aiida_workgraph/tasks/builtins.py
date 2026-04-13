@@ -128,7 +128,13 @@ class Map(Zone):
         gather_item = self.gather_item_task
         for name in sockets:
             gather_item.add_input_spec('workgraph.any', name=name)
-            self.add_output_spec('workgraph.namespace', name=name)
+            # The gathered output namespace must be dynamic so the client
+            # can populate it with per-prefix keys after the run completes.
+            self.add_output_spec(
+                'workgraph.namespace',
+                name=name,
+                meta=SocketMeta(dynamic=True),
+            )
         gather_item.set_inputs(sockets)
         return gather_item.outputs
 

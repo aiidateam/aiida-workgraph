@@ -329,6 +329,22 @@ class TaskStateManager:
                     default=None,
                 )
             self.ctx._task_results[name][link.to_socket._name] = results
+        # Persist the gathered-result PKs on the process node so the client
+        # can reconstruct zone outputs after wg.update().  Zone tasks have no
+        # process node of their own, so without this the client cannot recover
+        # the per-prefix result nodes.
+        result_pks: dict = {}
+        for socket_name, val in self.ctx._task_results[name].items():
+            if socket_name.startswith('_'):
+                continue
+            if isinstance(val, dict):
+                result_pks[socket_name] = {
+                    prefix: node.pk for prefix, node in val.items() if hasattr(node, 'pk') and node.pk is not None
+                }
+        if result_pks:
+            map_info = self.process.node.get_task_map_info(name) or {}
+            map_info['result_pks'] = result_pks
+            self.set_task_runtime_info(name, 'map_info', map_info)
         self.set_task_runtime_info(name, 'state', 'FINISHED')
         self.process.report(f'Task: {name} finished.')
         self.update_meta_tasks(name)
