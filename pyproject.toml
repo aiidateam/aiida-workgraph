@@ -117,7 +117,6 @@ docs = [
   "myst-nb~=1.0.0",
   "nbsphinx",
   "furo",
-  "aiida-core>=2.7.3,<3.0",
   "aiida-quantumespresso",
   "aiida-pseudo",
   "anywidget",

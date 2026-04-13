@@ -157,7 +157,6 @@ dependencies = [
 
 [package.optional-dependencies]
 docs = [
-    { name = "aiida-core" },
     { name = "aiida-pseudo" },
     { name = "aiida-quantumespresso" },
     { name = "anywidget" },
@@ -191,7 +190,6 @@ tests = [
 [package.metadata]
 requires-dist = [
     { name = "aiida-core", specifier = ">=2.7.3,<3.0" },
-    { name = "aiida-core", marker = "extra == 'docs'", specifier = ">=2.7.3,<3.0" },
     { name = "aiida-pseudo", marker = "extra == 'docs'" },
     { name = "aiida-pythonjob", specifier = "~=0.5.2" },
     { name = "aiida-quantumespresso", marker = "extra == 'docs'" },
