@@ -69,6 +69,7 @@ class WorkGraph(node_graph.Graph):
         self.max_number_jobs = 1000000
         self.max_iteration = 1000000
         self._error_handlers = error_handlers or {}
+        self.extras = {}  # Initialize extras dict for custom metadata
         self.analyzer = GraphAnalysis(self)
 
     def to_engine_inputs(self, metadata: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
@@ -246,6 +247,7 @@ class WorkGraph(node_graph.Graph):
                 'restart_process': self.restart_process.pk if self.restart_process else None,
                 'max_iteration': self.max_iteration,
                 'max_number_jobs': self.max_number_jobs,
+                'extras': getattr(self, 'extras', {}),  # Serialize extras dict
             }
         )
         # save error handlers
@@ -340,6 +342,7 @@ class WorkGraph(node_graph.Graph):
             'max_iteration',
             'max_number_jobs',
             'connectivity',
+            'extras',  # Restore extras dict (for window_config)
         ]:
             if key in wgdata:
                 setattr(wg, key, wgdata[key])
