@@ -294,24 +294,61 @@ class TaskStateManager:
         2) gather the results of all the mapped tasks.
         3) update the parent task state.
         """
+        from aiida_workgraph.utils import get_nested_dict
+
         finished, _ = self.are_childen_finished(name)
-        if finished:
-            map_zone = self.process.wg.tasks[name]
-            # gather the results of all the mapped tasks
-            gather_task = map_zone.gather_item_task
-            for input in gather_task.inputs:
-                if input._name.startswith('_'):
-                    continue
-                results = {}
-                link = input._links[0]
-                for prefix, mapped_task in self.process.wg.tasks[gather_task.name].mapped_tasks.items():
-                    results[prefix] = self.ctx._task_results[mapped_task.name][link.to_socket._name]
-                self.ctx._task_results[name][link.to_socket._name] = results
-            self.set_task_runtime_info(name, 'state', 'FINISHED')
-            # self.update_meta_tasks(name)
-            self.process.report(f'Task: {name} finished.')
-            self.update_meta_tasks(name)
-            self.update_parent_task_state(name)
+        if not finished:
+            return
+        map_zone = self.process.wg.tasks[name]
+        # Gather the results of all the mapped tasks.
+        #
+        # We aggregate directly from each mapped SOURCE task (the task whose
+        # output is linked into the template gather_item), not via the
+        # gather_item itself. The gather_item template is a pure pass-through
+        # aggregator (executor=return_input) and is intentionally not cloned
+        # per item in `generate_mapped_tasks`, so there are no gather_item
+        # clones to read from. Reading directly from the source's
+        # `_task_results` is also race-free: the source's results are
+        # populated by `update_task_state` before any cascade can reach here,
+        # which matters when the source is an async process-type task
+        # (CalcJob, WorkChain, or a @task.graph sub-workflow).
+        gather_task = map_zone.gather_item_task
+        for input in gather_task.inputs:
+            if input._name.startswith('_'):
+                continue
+            if not input._links:
+                continue
+            link = input._links[0]
+            source_task = self.process.wg.tasks[link.from_task.name]
+            source_clones = source_task.mapped_tasks or {}
+            results = {}
+            for prefix, clone in source_clones.items():
+                results[prefix] = get_nested_dict(
+                    self.ctx._task_results[clone.name],
+                    link.from_socket._scoped_name,
+                    default=None,
+                )
+            self.ctx._task_results[name][link.to_socket._name] = results
+        # Persist the gathered-result PKs on the process node so the client
+        # can reconstruct zone outputs after wg.update().  Zone tasks have no
+        # process node of their own, so without this the client cannot recover
+        # the per-prefix result nodes.
+        result_pks: dict = {}
+        for socket_name, val in self.ctx._task_results[name].items():
+            if socket_name.startswith('_'):
+                continue
+            if isinstance(val, dict):
+                result_pks[socket_name] = {
+                    prefix: node.pk for prefix, node in val.items() if hasattr(node, 'pk') and node.pk is not None
+                }
+        if result_pks:
+            map_info = self.process.node.get_task_map_info(name) or {}
+            map_info['result_pks'] = result_pks
+            self.set_task_runtime_info(name, 'map_info', map_info)
+        self.set_task_runtime_info(name, 'state', 'FINISHED')
+        self.process.report(f'Task: {name} finished.')
+        self.update_meta_tasks(name)
+        self.update_parent_task_state(name)
 
     def update_template_task_state(self, name: str) -> None:
         """Update the template task state.
