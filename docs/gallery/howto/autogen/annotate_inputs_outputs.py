@@ -281,6 +281,7 @@ wg.generate_provenance_graph()
 #    inputs explicit in the function signature (same socket expansion).
 #    Optional keys can be expressed with ``total=False`` or ``NotRequired``.
 #    ``NotRequired`` requires Python 3.11+ (or ``typing_extensions``).
+
 # %%
 # Using Pydantic models
 # ---------------------
