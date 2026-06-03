@@ -469,6 +469,15 @@ class TaskManager:
         all_links = []
         child_tasks = self.get_all_children(zone_task.name)
         for child_task in child_tasks:
+            # The gather_item task is a pure pass-through aggregator
+            # (executor=return_input); the map zone reads directly from the
+            # mapped source tasks in `update_map_task_state`, so cloning
+            # gather_item would just create unused clones. Skipping the
+            # clone also avoids a race where, for async process-type source
+            # tasks (CalcJob, WorkChain, @task.graph), the gather_item
+            # clones stay PLANNED and hang the engine's finalize path.
+            if self.process.wg.tasks[child_task].identifier == 'workgraph.gather_item':
+                continue
             # since the child task is mapped, it should be skipped
             self.state_manager.set_task_runtime_info(child_task, 'state', 'MAPPED')
             task = self.copy_task(child_task, prefix)
