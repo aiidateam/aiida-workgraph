@@ -313,16 +313,23 @@ class TaskStateManager:
         # which matters when the source is an async process-type task
         # (CalcJob, WorkChain, or a @task.graph sub-workflow).
         gather_task = map_zone.gather_item_task
-        for input in gather_task.inputs:
-            if input._name.startswith('_'):
+        for input_socket in gather_task.inputs:
+            if input_socket._name.startswith('_'):
                 continue
-            if not input._links:
+            if not input_socket._links:
                 continue
-            link = input._links[0]
+            link = input_socket._links[0]
             source_task = self.process.wg.tasks[link.from_task.name]
             source_clones = source_task.mapped_tasks or {}
             results = {}
             for prefix, clone in source_clones.items():
+                # default=None: a mapped source clone can be "finished" yet
+                # carry no result for this socket, because are_childen_finished
+                # treats FAILED/SKIPPED as finished. In that case we keep None
+                # for the item rather than crashing the whole gather; the
+                # failure is still surfaced via the WorkGraph exit code. On the
+                # happy path the source result is always present, so this
+                # default never fires there.
                 results[prefix] = get_nested_dict(
                     self.ctx._task_results[clone.name],
                     link.from_socket._scoped_name,
