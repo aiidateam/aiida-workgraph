@@ -1,4 +1,6 @@
 from __future__ import annotations
+import contextlib
+import typing
 from typing import Callable, List, Optional, Type, Dict, TYPE_CHECKING
 from aiida_workgraph.socket_spec import (
     from_aiida_process,
@@ -11,6 +13,26 @@ from node_graph.error_handler import ErrorHandlerSpec, normalize_error_handlers
 
 if TYPE_CHECKING:
     from node_graph import Node
+
+
+def _resolve_string_annotations(obj: Callable) -> None:
+    """Resolve PEP 563 stringized annotations on ``obj`` in place.
+
+    cloudpickle drops names that appear only inside stringized annotations, so a
+    pickled task callable can no longer resolve its hints when the engine re-infers
+    its signature (issue #783). Resolving eagerly here, while the defining module is
+    still importable, keeps the callable self-describing across the pickle round-trip.
+
+    A ``NameError`` means a name is not resolvable yet (e.g. a forward reference);
+    that is valid under PEP 563, so leave the annotation as a string and let the
+    usual lazy resolution handle it. Other errors are genuine annotation bugs and
+    are allowed to surface.
+    """
+    annotations = getattr(obj, '__annotations__', None)
+    if not annotations or not any(isinstance(value, str) for value in annotations.values()):
+        return
+    with contextlib.suppress(NameError):
+        obj.__annotations__ = typing.get_type_hints(obj, include_extras=True)
 
 
 def build_callable_TaskSpec(
@@ -40,6 +62,9 @@ def build_callable_TaskSpec(
 
     in_spec = validate_socket_data(in_spec)
     out_spec = validate_socket_data(out_spec)
+
+    # Keep the pickled callable self-describing under PEP 563 (issue #783).
+    _resolve_string_annotations(obj)
 
     # 1) infer from the callable (keep a snapshot before augmentation)
     func_in, func_out = infer_specs_from_callable(obj, in_spec, out_spec)
