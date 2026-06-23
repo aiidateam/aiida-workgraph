@@ -1,11 +1,12 @@
 from __future__ import annotations
 
 import logging
-from typing import Any, Dict, Optional, Union, Callable, List
+from typing import Any, Dict, Literal, Optional, TypeAlias, Union, Callable, List
 from aiida.engine.processes import Process
 from aiida import orm
 from aiida.common.exceptions import NotExistent
 from aiida.engine.runners import Runner
+from aiida.common.links import validate_link_label
 from aiida_workgraph.config import task_types
 from aiida.engine import CalcJob, WorkChain
 from aiida_pythonjob import PythonJob
@@ -20,6 +21,63 @@ from aiida_workgraph.orm.utils import deserialize_safe
 from copy import deepcopy
 
 LOGGER = logging.getLogger(__name__)
+
+
+# A task name is set through three mechanisms; each gets the fix hint for *that* mechanism,
+# looked up by ``source`` rather than branched on (see ``_validate_task_name``):
+#
+# * ``'explicit_name'``: an explicit ``name=`` passed to :meth:`WorkGraph.add_task`. Only the
+#   low-level API can set it, so the hint may safely point at ``WorkGraph.add_task``.
+# * ``'derived_name'``: a name derived from the callable when no explicit name is given. This
+#   is the usual high-level case (a task called inside ``@task.graph``, which never touches
+#   ``add_task`` itself) and also low-level ``add_task(callable)`` without a ``name=``. The
+#   only fix common to both is to rename the callable, so the hint must not mention ``name=``
+#   (wrong for the high-level user) nor ``call_link_label`` (wrong for the low-level one).
+# * ``'call_link_label'``: the ``metadata={'call_link_label': ...}`` override applied in
+#   :meth:`TaskHandle.__call__`, which renames the task *after* ``add_task`` ran (high-level).
+TaskNameSource: TypeAlias = Literal['explicit_name', 'derived_name', 'call_link_label']
+
+_TASK_NAME_FIX_HINTS: dict[TaskNameSource, str] = {
+    'explicit_name': (
+        'How to fix: pass a valid `name=...` to `WorkGraph.add_task`, or omit it and rename '
+        'the function/callable the task is built from.'
+    ),
+    'derived_name': (
+        'How to fix: rename the function/callable the task is built from so its name is a valid link label.'
+    ),
+    'call_link_label': (
+        "How to fix: choose a valid `call_link_label` (e.g. `metadata={'call_link_label': '<name>'}`), or "
+        'omit it and rename the function/callable the task is built from.'
+    ),
+}
+
+
+def _validate_task_name(name: str, *, source: TaskNameSource) -> None:
+    """Validate that a task name can be used as an AiiDA provenance link label.
+
+    A task's name becomes the ``call_link_label`` of the process it launches, so it has to
+    satisfy AiiDA's link-label rules: a valid Python identifier, containing only letters,
+    digits and underscores, that does not start or end with an underscore. This is stricter
+    than ``node_graph``'s own name check, and it is enforced at build time so that an invalid
+    name fails fast instead of silently producing no output when the task runs.
+
+    :param name: the task name to validate.
+    :param source: which mechanism set the name; selects the API-appropriate fix hint in the
+        error message (see :data:`_TASK_NAME_FIX_HINTS`).
+    :raises ValueError: if ``name`` cannot be used as a link label, with guidance on how to
+        fix it.
+    """
+    try:
+        validate_link_label(name)
+    except ValueError as exc:
+        msg = (
+            f"Invalid task name '{name}': {exc}.\n"
+            'A task name is used as the AiiDA provenance link label of the process it '
+            'launches, so it must be a valid Python identifier containing only letters, '
+            f'digits and underscores, and may not start or end with an underscore.\n'
+            f'{_TASK_NAME_FIX_HINTS[source]}'
+        )
+        raise ValueError(msg) from exc
 
 
 def inspect_aiida_component_type(executor: Callable) -> str:

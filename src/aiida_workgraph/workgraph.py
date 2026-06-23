@@ -583,6 +583,21 @@ class WorkGraph(node_graph.Graph):
         elif callable(identifier) and not isinstance(identifier, (TaskSpec, TaskHandle, Task)):
             identifier = build_task_from_callable(identifier)
         node = self.tasks._new(identifier, name, **kwargs)
+        # A task name becomes the AiiDA `call_link_label` of the process it launches, so it
+        # must be a valid link label. Validate the resolved name (which may have been derived
+        # from the function name) here at build time; otherwise an invalid name only fails
+        # inside the engine at run time, where the error is swallowed (see issue #784). The
+        # fix hint differs depending on whether the user passed `name=` or it was derived.
+        from aiida_workgraph.utils import _validate_task_name
+
+        try:
+            _validate_task_name(node.name, source='explicit_name' if name is not None else 'derived_name')
+        except ValueError:
+            # Roll back the partially-added task so the workgraph is not left in an
+            # inconsistent state, then re-raise the actionable error.
+            if node.name in self.tasks:
+                del self.tasks[node.name]
+            raise
         self._version += 1
         return node
 

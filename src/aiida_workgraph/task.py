@@ -215,8 +215,15 @@ class TaskHandle(BaseHandle):
         outputs = super().__call__(*args, **kwargs)
         # if "metadata.call_link_label" is set, use it as the name of the task
         if outputs._task.inputs.metadata.call_link_label.value is not None:
+            from aiida_workgraph.utils import _validate_task_name
+
             graph = outputs._graph
-            outputs._task.name = outputs._task.inputs.metadata.call_link_label.value
+            new_name = outputs._task.inputs.metadata.call_link_label.value
+            # `call_link_label` overrides the (already validated) function-derived name, so it
+            # must be validated too; otherwise an invalid override slips past `add_task` and
+            # only fails silently inside the engine at run time (see issue #784).
+            _validate_task_name(new_name, source='call_link_label')
+            outputs._task.name = new_name
             # update the names of tasks and links collections in the graph
             graph.tasks._items = {task.name: task for task in graph.tasks._items.values()}
             graph.links._items = {link.name: link for link in graph.links._items.values()}
