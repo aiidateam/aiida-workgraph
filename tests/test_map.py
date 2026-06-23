@@ -23,8 +23,8 @@ def add(x, y):
 
 
 @task.graph
-def add_graph(x, y) -> int:
-    """Async process-type source task (a sub-workgraph) for use inside a Map zone."""
+def add_workflow(x, y) -> int:
+    """Async process-type source task (runs as its own sub-process) for use inside a Map zone."""
     return add(x=x, y=y).result
 
 
@@ -70,10 +70,10 @@ def test_map_zone_async_source():
     """
     x = 1
     n = 3
-    with WorkGraph('add_graph_async') as wg:
+    with WorkGraph('map_async_source') as wg:
         data = generate_data(n=n).data
         with Map(data) as map_zone:
-            out1 = add_graph(x=map_zone.item.value, y=x).result
+            out1 = add_workflow(x=map_zone.item.value, y=x).result
             map_zone.gather({'sum1': out1})
         out3 = calc_sum(data=map_zone.outputs.sum1).result
         wg.run()
