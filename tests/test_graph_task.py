@@ -47,3 +47,68 @@ def test_single_namespace_outputs():
     # graph outputs
     assert wg.outputs.sum.value == 3
     assert wg.outputs.product.value == 2
+
+
+@task
+def make_label() -> str:
+    return '777'
+
+
+def test_scalar_input_behaves_as_plain_value():
+    """A scalar input arrives in a ``@task.graph`` body as its plain Python value.
+
+    Regression test for #786: at runtime the engine resolves the graph task's
+    input to an ``orm.Str`` node. The body must be able to use it directly
+    (``int(label)``) without reaching through ``.value``, mirroring how a plain
+    Python scalar would behave.
+    """
+
+    @task.graph
+    def inner(label) -> spec.namespace(sum=int, product=int):
+        # `label` is delivered as orm.Str at runtime; int(label) must work
+        # directly. Before the fix this raised TypeError.
+        return add_multiply(int(label), 1)
+
+    @task.graph
+    def top() -> spec.namespace(sum=int, product=int):
+        return inner(label=make_label().result)
+
+    results, _ = top.run_get_graph()
+    assert results['sum'] == 778
+    assert results['product'] == 777
+
+
+def test_scalar_input_forwarded_preserves_provenance():
+    """Forwarding a scalar graph input unchanged links the original node.
+
+    The body sees the raw value, but the input socket still holds the orm node,
+    so forwarding the input to a sub-task must reuse the upstream node rather than
+    serialise a fresh one. The unique value makes the node count unambiguous under
+    the session-shared profile: exactly one such ``Str`` node proves the upstream
+    node is reused, not duplicated. Regression guard for #786.
+    """
+    from aiida import orm
+
+    unique = 'wg786-forward-provenance'
+
+    @task
+    def make_unique() -> str:
+        return 'wg786-forward-provenance'
+
+    @task
+    def consume(x) -> int:
+        return 1
+
+    @task.graph
+    def inner(label) -> int:
+        # forward the scalar input unchanged (no .value); the link must carry the
+        # upstream node, not a re-serialised copy of the raw value.
+        return consume(x=label)
+
+    @task.graph
+    def top() -> int:
+        return inner(label=make_unique().result)
+
+    top.run_get_graph()
+    query = orm.QueryBuilder().append(orm.Str, filters={'attributes.value': unique})
+    assert query.count() == 1
