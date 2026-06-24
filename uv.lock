@@ -202,7 +202,7 @@ requires-dist = [
     { name = "jsonschema" },
     { name = "myst-nb", marker = "extra == 'docs'", specifier = "~=1.0.0" },
     { name = "nbsphinx", marker = "extra == 'docs'" },
-    { name = "node-graph", specifier = "~=0.6.5" },
+    { name = "node-graph", git = "https://github.com/GeigerJ2/node-graph.git?branch=feature%2Fgraph-body-value-adapter" },
     { name = "node-graph-widget", specifier = ">=0.0.5" },
     { name = "numpy" },
     { name = "pgtest", marker = "extra == 'tests'", specifier = "~=1.3" },
@@ -2188,7 +2188,7 @@ wheels = [
 [[package]]
 name = "node-graph"
 version = "0.6.5"
-source = { registry = "https://pypi.org/simple" }
+source = { git = "https://github.com/GeigerJ2/node-graph.git?branch=feature%2Fgraph-body-value-adapter#87c9ba7dd93cbdb75e949fc0d0254cc2cedffda9" }
 dependencies = [
     { name = "click" },
     { name = "cloudpickle" },
@@ -2202,10 +2202,6 @@ dependencies = [
     { name = "scipy", version = "1.16.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
     { name = "typing-extensions" },
     { name = "wrapt" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/12/fa/f64cb06871fc56c43f34f799b68f84321451e0f821ccc5b9a76a8207d92a/node_graph-0.6.5.tar.gz", hash = "sha256:25114f96e3154aeccac8faf75cde16e8acaf772e0cc34857d446c1145ae30cde", size = 100369, upload-time = "2026-01-26T15:18:44.682Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/d7/5a/fee76af3ad82de6ce8708846bc1c6217792cde04f8acc23991c8dc496731/node_graph-0.6.5-py3-none-any.whl", hash = "sha256:4efe5acd8900f9cf872b90f3bc0afccd63651c3bf7705bd6edfbd55e1dd2c471", size = 117763, upload-time = "2026-01-26T15:18:43.618Z" },
 ]
 
 [[package]]

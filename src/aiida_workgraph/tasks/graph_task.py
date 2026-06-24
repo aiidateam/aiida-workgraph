@@ -1,10 +1,26 @@
 from aiida_workgraph.task import Task
-from typing import Callable, Optional
+from typing import Any, Callable, Optional
 from node_graph.socket_spec import SocketSpec
 from node_graph.task_spec import TaskSpec
 from .function_task import build_callable_TaskSpec
 from node_graph.executor import RuntimeExecutor
 from aiida.engine import Process
+
+
+def unwrap_node_for_graph_body(value: Any) -> Any:
+    """Present an AiiDA data node as its raw Python value inside a graph body.
+
+    Reuses the ``.value`` policy of the property validation adapter
+    (:func:`~aiida_workgraph.property.unwrap_aiida_node`): scalars, ``Dict`` and
+    ``List`` become plain Python values so a ``@task.graph`` body can use them
+    directly (e.g. ``int(label)``), while nodes without a ``.value`` are left
+    untouched. The input socket keeps the original node, so provenance is
+    preserved when an input is forwarded unchanged (issue #786).
+    """
+    from aiida_workgraph.property import TaskProperty, unwrap_aiida_node
+
+    adapted = unwrap_aiida_node(value)
+    return value if adapted is TaskProperty.NOT_ADAPTED else adapted
 
 
 class GraphTask(Task):
@@ -65,6 +81,7 @@ class GraphTask(Task):
             args=args,
             kwargs=kwargs,
             var_kwargs=var_kwargs,
+            value_adapter=unwrap_node_for_graph_body,
         )
         # Set the maximum number of concurrent jobs
         max_number_jobs = self.spec.metadata.get('max_number_jobs')

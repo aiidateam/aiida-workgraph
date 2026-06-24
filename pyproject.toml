@@ -153,3 +153,10 @@ quote-style = "single"
 [tool.ruff.lint.per-file-ignores]
 "docs/gallery/*/autogen/*.py" = ["E402", "F811"]
 "docs/gallery/autogen/*.py" = ["E402", "F811"]
+
+[tool.uv.sources]
+# TEMPORARY (issue #786): the graph-task fix needs the `value_adapter` hook from
+# node-graph PR scinode/node-graph#157. Until that ships as 0.6.6, pull node-graph
+# from the PR branch. Before merging/releasing, drop this override and bump the
+# `node-graph` pin in [project.dependencies] to `>=0.6.6,<0.7`.
+node-graph = {git = "https://github.com/GeigerJ2/node-graph.git", branch = "feature/graph-body-value-adapter"}
