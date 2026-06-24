@@ -61,6 +61,5 @@ repos:
       (?x)^(
         .github/.*|
         docs/.*|
-        tests/.*|
-        src/.*
+        tests/.*
       )$

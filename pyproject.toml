@@ -123,7 +123,10 @@ docs = [
   "sphinx-autobuild",
   "click~=8.1.0"
 ]
-pre-commit = ["pre-commit~=4.3"]
+pre-commit = [
+  "mypy~=2.1.0",
+  "pre-commit~=4.3"
+]
 tests = [
   'pgtest~=1.3',
   "pytest~=7.0",
@@ -142,6 +145,79 @@ Source = "https://github.com/aiidateam/aiida-workgraph"
 
 [tool.flit.sdist]
 exclude = ["docs/", "tests/"]
+
+[tool.mypy]
+enable_error_code = [
+  'ignore-without-code',
+  'redundant-expr',
+  'truthy-bool'
+]
+python_version = "3.10"
+show_error_codes = true
+strict = true
+warn_unreachable = true
+
+# Third-party dependencies that ship no type information (no py.typed / stubs).
+# TODO: 'yaml' and 'tabulate' have stub packages (types-PyYAML, types-tabulate);
+# switch those to real stubs once added to the pre-commit extra.
+[[tool.mypy.overrides]]
+ignore_missing_imports = true
+module = [
+  'aiida_pythonjob',
+  'aiida_pythonjob.*',
+  'kiwipy',
+  'kiwipy.*',
+  'node_graph',
+  'node_graph.*',
+  'tabulate',
+  'tabulate.*',
+  'yaml',
+  'yaml.*'
+]
+
+# Modules not yet annotated for strict type checking. Type checking runs
+# strictly everywhere; these are temporarily exempt from error reporting and
+# get cleaned up and removed from this list one by one. Do NOT relax the global
+# strictness above to silence errors; the goal is to empty this list.
+[[tool.mypy.overrides]]
+ignore_errors = true
+module = [
+  'aiida_workgraph.cli.cmd_task',
+  'aiida_workgraph.cli.cmd_workgraph',
+  'aiida_workgraph.config',
+  'aiida_workgraph.decorator',
+  'aiida_workgraph.engine.awaitable_manager',
+  'aiida_workgraph.engine.context_manager',
+  'aiida_workgraph.engine.error_handler_manager',
+  'aiida_workgraph.engine.task_actions',
+  'aiida_workgraph.engine.task_manager',
+  'aiida_workgraph.engine.task_state',
+  'aiida_workgraph.engine.workgraph',
+  'aiida_workgraph.executors.builtins',
+  'aiida_workgraph.executors.test',
+  'aiida_workgraph.manager',
+  'aiida_workgraph.orm.utils',
+  'aiida_workgraph.orm.workgraph',
+  'aiida_workgraph.properties.builtins',
+  'aiida_workgraph.property',
+  'aiida_workgraph.serialization',
+  'aiida_workgraph.socket',
+  'aiida_workgraph.socket_spec',
+  'aiida_workgraph.task',
+  'aiida_workgraph.tasks.aiida',
+  'aiida_workgraph.tasks.builtins',
+  'aiida_workgraph.tasks.function_task',
+  'aiida_workgraph.tasks.graph_task',
+  'aiida_workgraph.tasks.monitors',
+  'aiida_workgraph.tasks.pythonjob_tasks',
+  'aiida_workgraph.tasks.shelljob_task',
+  'aiida_workgraph.tasks.subgraph_task',
+  'aiida_workgraph.tasks.tests',
+  'aiida_workgraph.utils',
+  'aiida_workgraph.utils.control',
+  'aiida_workgraph.utils.logging',
+  'aiida_workgraph.workgraph'
+]
 
 [tool.ruff]
 line-length = 120
