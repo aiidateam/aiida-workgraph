@@ -1,6 +1,7 @@
 from __future__ import annotations
 from node_graph.task_spec import TaskSpec
 from aiida_workgraph.task import Task
+from aiida_workgraph.enums import TaskAction, TaskState
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -54,7 +55,7 @@ class SubGraphTask(Task):
 
         inputs = self.prepare_for_subgraph_task(kwargs)
 
-        if self.action == 'PAUSE':
+        if self.action == TaskAction.PAUSE:
             engine_process.report(f'Task {self.name} is created and paused.')
             process = create_and_pause_process(
                 engine_process.runner,
@@ -62,11 +63,11 @@ class SubGraphTask(Task):
                 inputs,
                 state_msg='Paused through WorkGraph',
             )
-            state = 'CREATED'
+            state = TaskState.CREATED
             process = process.node
         else:
             process = engine_process.submit(WorkGraphEngine, **inputs)
-            state = 'RUNNING'
+            state = TaskState.RUNNING
 
         return process, state
 

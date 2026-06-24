@@ -3,6 +3,7 @@ import typing as t
 import logging
 
 from aiida_workgraph import task
+from aiida_workgraph.enums import TERMINAL_TASK_STATES
 
 LOGGER = logging.getLogger(__name__)
 
@@ -56,4 +57,4 @@ def monitor_task(task_name: str, workgraph_pk: int = None, workgraph_name: str =
     node = builder.first()[0]
     state = node.task_states.get(task_name, '')
     LOGGER.debug('Task state: %s', state)
-    return state in ['FINISHED', 'FAILED', 'SKIPPED']
+    return state in TERMINAL_TASK_STATES

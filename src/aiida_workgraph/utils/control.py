@@ -6,32 +6,38 @@ from aiida.manage import get_manager
 from aiida import orm
 from aiida.engine.processes import control
 
+from aiida_workgraph.enums import RuntimeInfoKey, TaskAction, TaskState
+
 LOGGER = logging.getLogger(__name__)
 
 
 def create_task_action(
     pk: int,
     tasks: list,
-    action: str = 'pause',
+    action: TaskAction = TaskAction.PAUSE,
 ):
     """Send task action to Process."""
 
     controller = get_manager().get_process_controller()
-    message = {'intent': 'custom', 'catalog': 'task', 'action': action, 'tasks': tasks}
+    # Send the canonical action value as a plain string; the engine re-validates it
+    # into a TaskAction on receipt.
+    message = {'intent': 'custom', 'catalog': 'task', 'action': str(action), 'tasks': tasks}
     controller._communicator.rpc_send(pk, message)
 
 
-def get_task_runtime_info(node, name: str, key: str) -> str:
+def get_task_runtime_info(node, name: str, key: RuntimeInfoKey) -> str:
     """Get task state info from attributes."""
     from aiida_workgraph.orm.utils import deserialize_safe
 
-    if key == 'process':
-        value = deserialize_safe(node.task_processes.get(name, ''))
-    elif key == 'state':
-        value = node.task_states.get(name, '')
-    elif key == 'action':
-        value = node.task_actions.get(name, '')
-    return value
+    match key:
+        case 'process':
+            return deserialize_safe(node.task_processes.get(name, ''))
+        case 'state':
+            return node.task_states.get(name, '')
+        case 'action':
+            return node.task_actions.get(name, '')
+        case _:
+            raise ValueError(f'Invalid key: {key}')
 
 
 def pause_tasks(pk: int, tasks: list[str], timeout: int = 5):
@@ -48,9 +54,9 @@ def pause_tasks(pk: int, tasks: list[str], timeout: int = 5):
         'PAUSED',
     ]:
         for name in tasks:
-            if get_task_runtime_info(node, name, 'state') == 'PLANNED':
-                create_task_action(pk, tasks, action='pause')
-            elif get_task_runtime_info(node, name, 'state') == 'RUNNING':
+            if get_task_runtime_info(node, name, 'state') == TaskState.PLANNED:
+                create_task_action(pk, tasks, action=TaskAction.PAUSE)
+            elif get_task_runtime_info(node, name, 'state') == TaskState.RUNNING:
                 try:
                     control.pause_processes(
                         [get_task_runtime_info(node, name, 'process')],
@@ -76,8 +82,8 @@ def play_tasks(pk: int, tasks: list, timeout: int = 5):
     ]:
         for name in tasks:
             state = get_task_runtime_info(node, name, 'state')
-            if state == 'PLANNED':
-                create_task_action(pk, tasks, action='play')
+            if state == TaskState.PLANNED:
+                create_task_action(pk, tasks, action=TaskAction.PLAY)
                 break
             process = get_task_runtime_info(node, name, 'process')
             if process.is_finished:
@@ -109,17 +115,15 @@ def kill_tasks(pk: int, tasks: list, timeout: int = 5):
         for name in tasks:
             state = get_task_runtime_info(node, name, 'state')
             process = get_task_runtime_info(node, name, 'process')
-            if state == 'PLANNED':
-                create_task_action(pk, tasks, action='skip')
-            elif state in [
-                'CREATED',
-                'RUNNING',
-                'WAITING',
-                'PAUSED',
-            ]:
+            if state == TaskState.PLANNED:
+                create_task_action(pk, tasks, action=TaskAction.SKIP)
+            # A live task to kill is either CREATED or RUNNING; WAITING/PAUSED are
+            # AiiDA process states a *task* state never takes, so they were dead
+            # entries in this list.
+            elif state in {TaskState.CREATED, TaskState.RUNNING}:
                 if process is None:
                     LOGGER.warning('Task %s is not an AiiDA process.', name)
-                    create_task_action(pk, tasks, action='kill')
+                    create_task_action(pk, tasks, action=TaskAction.KILL)
                 else:
                     try:
                         control.kill_processes(
@@ -149,6 +153,6 @@ def reset_tasks(pk: int, tasks: list) -> None:
         'PAUSED',
     ]:
         for name in tasks:
-            create_task_action(pk, tasks, action='reset')
+            create_task_action(pk, tasks, action=TaskAction.RESET)
 
     return True, ''

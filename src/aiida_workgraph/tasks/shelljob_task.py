@@ -10,6 +10,7 @@ from node_graph.executor import RuntimeExecutor
 from node_graph.socket_spec import SocketSpec, merge_specs, SocketMeta
 from aiida_workgraph.socket_spec import from_aiida_process, namespace
 from aiida_workgraph.task import Task, TaskHandle
+from aiida_workgraph.enums import TaskAction, TaskState
 from aiida import orm
 
 
@@ -89,7 +90,7 @@ class ShellJobTask(Task):
         md = kwargs.setdefault('metadata', {})
         md.setdefault('call_link_label', self.name)
 
-        if getattr(self, 'action', None) == 'PAUSE':
+        if getattr(self, 'action', None) == TaskAction.PAUSE:
             engine_process.report(f'Task {self.name} is created and paused.')
             process = create_and_pause_process(
                 engine_process.runner,
@@ -97,11 +98,11 @@ class ShellJobTask(Task):
                 kwargs,
                 state_msg='Paused through WorkGraph',
             )
-            state = 'CREATED'
+            state = TaskState.CREATED
             process = process.node
         else:
             process = engine_process.submit(ShellJob, **kwargs)
-            state = 'RUNNING'
+            state = TaskState.RUNNING
         return process, state
 
 
