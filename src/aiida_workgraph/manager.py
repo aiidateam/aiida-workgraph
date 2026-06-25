@@ -11,8 +11,6 @@ from contextlib import contextmanager
 from aiida_workgraph.socket import TaskSocket
 from aiida_workgraph.tasks.task_pool import TaskPool
 
-DEFAULT_MAP_PLACEHOLDER = 'map_input'
-
 
 class CurrentGraphManager:
     _instance = None
@@ -167,12 +165,15 @@ def While(condition_socket: TaskSocket, max_iterations: int = 10000):
 
 
 @contextmanager
-def Map(source_socket: TaskSocket, placeholder: str = DEFAULT_MAP_PLACEHOLDER):
-    """
-    Context manager to create a "map zone" in the current graph.
+def Map(source_socket: TaskSocket):
+    """Iterate a set of tasks over a dynamic namespace (a dict).
 
-    :param source_socket: A TaskSocket or boolean-like object (e.g. sum_ > 0)
-    :param placeholder: The placeholder string to use as the input for the mapped tasks
+    The ``with`` block is a template body that runs once per entry of the
+    source. Inside it, the yielded zone exposes ``.value`` and ``.key`` as
+    placeholders for the current entry's value and key, and ``.gather(...)``
+    to collect per-entry results into the zone's outputs.
+
+    :param source_socket: A dynamic-namespace (dict) output socket to map over.
     """
 
     wg = get_current_graph()

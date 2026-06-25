@@ -91,7 +91,12 @@ class If(Zone):
 
 
 class Map(Zone):
-    """Map"""
+    """Run a set of tasks once per entry of a dynamic-namespace (dict) source.
+
+    A Map iterates keyed entries, not a bare sequence. While building the body,
+    ``value`` and ``key`` are placeholders for the current entry; the engine
+    clones the body once per entry and binds them.
+    """
 
     _default_spec = TaskSpec(
         identifier='workgraph.map_zone',
@@ -107,14 +112,22 @@ class Map(Zone):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-    @property
-    def item(self):
+    def _map_item_task(self) -> Task:
+        """Return the single ``map_item`` child, creating it on first access."""
         for child in self.children:
             if child.identifier == 'workgraph.map_item':
-                return child.outputs
-        # create a child map_item_task if it does not exist
-        map_item_task = self.add_task('workgraph.map_item')
-        return map_item_task.outputs
+                return child
+        return self.add_task('workgraph.map_item')
+
+    @property
+    def value(self) -> BaseSocket:
+        """Placeholder for the current entry's value while iterating the source."""
+        return self._map_item_task().outputs.value
+
+    @property
+    def key(self) -> BaseSocket:
+        """Placeholder for the current entry's key while iterating the source."""
+        return self._map_item_task().outputs.key
 
     @property
     def gather_item_task(self) -> Task | None:
@@ -124,7 +137,8 @@ class Map(Zone):
         gather_item = self.add_task('workgraph.gather_item')
         return gather_item
 
-    def gather(self, sockets: Dict[str, BaseSocket]) -> None:
+    def gather(self, sockets: Dict[str, BaseSocket]) -> BaseSocket:
+        """Collect per-entry results into the zone outputs, one namespace per name."""
         gather_item = self.gather_item_task
         for name in sockets:
             gather_item.add_input_spec('workgraph.any', name=name)
