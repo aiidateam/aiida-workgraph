@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from node_graph.task import Task as GraphTask
 from .registry import RegistryHub, registry_hub
+from aiida_workgraph.enums import TaskState
 import aiida
 from typing import Any, Dict, Optional, Union, Callable, List, TYPE_CHECKING
 from node_graph.task_spec import BaseHandle
@@ -47,7 +48,7 @@ class Task(GraphTask):
         self.waiting_on = WaitingTaskSet(parent=self)
         self.process = process
         self.pk = pk
-        self.state = 'PLANNED'
+        self.state = TaskState.PLANNED
         self.action = ''
         self.show_socket_depth = 0
         self.parent = None
@@ -116,7 +117,7 @@ class Task(GraphTask):
 
     def reset(self) -> None:
         self.process = None
-        self.state = 'PLANNED'
+        self.state = TaskState.PLANNED
 
     def update_state(self, data: Dict[str, Any]) -> None:
         """Set the outputs of the task from a dictionary."""
@@ -158,7 +159,7 @@ class Task(GraphTask):
             result = executor(*args, **kwargs)
         else:
             result = executor(*args, **kwargs, **var_kwargs)
-        return result, 'FINISHED'
+        return result, TaskState.FINISHED
 
     def to_widget_value(self):
         from aiida_workgraph.utils import workgraph_to_short_json
@@ -215,8 +216,15 @@ class TaskHandle(BaseHandle):
         outputs = super().__call__(*args, **kwargs)
         # if "metadata.call_link_label" is set, use it as the name of the task
         if outputs._task.inputs.metadata.call_link_label.value is not None:
+            from aiida_workgraph.utils import _validate_task_name
+
             graph = outputs._graph
-            outputs._task.name = outputs._task.inputs.metadata.call_link_label.value
+            new_name = outputs._task.inputs.metadata.call_link_label.value
+            # `call_link_label` overrides the (already validated) function-derived name, so it
+            # must be validated too; otherwise an invalid override slips past `add_task` and
+            # only fails silently inside the engine at run time (see issue #784).
+            _validate_task_name(new_name, source='call_link_label')
+            outputs._task.name = new_name
             # update the names of tasks and links collections in the graph
             graph.tasks._items = {task.name: task for task in graph.tasks._items.values()}
             graph.links._items = {link.name: link for link in graph.links._items.values()}

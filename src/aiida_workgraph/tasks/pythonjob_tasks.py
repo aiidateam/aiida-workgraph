@@ -6,6 +6,7 @@ from aiida_workgraph.utils import create_and_pause_process
 from aiida.engine import run_get_node
 from aiida_pythonjob import pyfunction, PythonJob, PyFunction, MonitorPyFunction
 from aiida_workgraph.task import Task
+from aiida_workgraph.enums import TaskAction, TaskState
 from node_graph.socket_spec import SocketSpec, SocketSpecSelect, SocketMeta
 from node_graph.task_spec import TaskSpec
 from aiida_workgraph.socket_spec import namespace
@@ -123,7 +124,7 @@ class PythonJobTask(BaseSerializablePythonTask):
         )
 
         # If we want to pause
-        if self.action == 'PAUSE':
+        if self.action == TaskAction.PAUSE:
             engine_process.report(f'Task {self.name} is created and paused.')
             process = create_and_pause_process(
                 engine_process.runner,
@@ -131,11 +132,11 @@ class PythonJobTask(BaseSerializablePythonTask):
                 inputs,
                 state_msg='Paused through WorkGraph',
             )
-            state = 'CREATED'
+            state = TaskState.CREATED
             process = process.node
         else:
             process = engine_process.submit(PythonJob, **inputs)
-            state = 'RUNNING'
+            state = TaskState.RUNNING
 
         return process, state
 
@@ -168,7 +169,7 @@ class PyFunctionTask(BaseSerializablePythonTask):
                 serializers=kwargs.pop('serializers', None),
                 register_pickle_by_value=kwargs.pop('register_pickle_by_value', False),
             )
-            if self.action == 'PAUSE':
+            if self.action == TaskAction.PAUSE:
                 engine_process.report(f'Task {self.name} is created and paused.')
                 process = create_and_pause_process(
                     engine_process.runner,
@@ -176,11 +177,11 @@ class PyFunctionTask(BaseSerializablePythonTask):
                     inputs,
                     state_msg='Paused through WorkGraph',
                 )
-                state = 'CREATED'
+                state = TaskState.CREATED
                 process = process.node
             else:
                 process = engine_process.submit(PyFunction, **inputs)
-                state = 'RUNNING'
+                state = TaskState.RUNNING
 
             return process, state
         else:
@@ -200,7 +201,7 @@ class PyFunctionTask(BaseSerializablePythonTask):
             else:
                 _, process = run_get_node(func, **kwargs, **var_kwargs)
 
-            return process, 'FINISHED'
+            return process, TaskState.FINISHED
 
 
 class MonitorFunctionTask(BaseSerializablePythonTask):
@@ -230,7 +231,7 @@ class MonitorFunctionTask(BaseSerializablePythonTask):
             register_pickle_by_value=kwargs.pop('register_pickle_by_value', False),
             **kwargs,
         )
-        if self.action == 'PAUSE':
+        if self.action == TaskAction.PAUSE:
             engine_process.report(f'Task {self.name} is created and paused.')
             process = create_and_pause_process(
                 engine_process.runner,
@@ -238,11 +239,11 @@ class MonitorFunctionTask(BaseSerializablePythonTask):
                 inputs,
                 state_msg='Paused through WorkGraph',
             )
-            state = 'CREATED'
+            state = TaskState.CREATED
             process = process.node
         else:
             process = engine_process.submit(MonitorPyFunction, **inputs)
-            state = 'RUNNING'
+            state = TaskState.RUNNING
         return process, state
 
 

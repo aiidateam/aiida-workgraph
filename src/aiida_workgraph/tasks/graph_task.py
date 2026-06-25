@@ -1,4 +1,5 @@
 from aiida_workgraph.task import Task
+from aiida_workgraph.enums import TaskAction, TaskState
 from typing import Callable, Optional
 from node_graph.socket_spec import SocketSpec
 from node_graph.task_spec import TaskSpec
@@ -18,7 +19,7 @@ class GraphTask(Task):
     def execute(self, engine_process, args=None, kwargs=None, var_kwargs=None):
         from aiida_workgraph.utils import create_and_pause_process, call_depth_from_node
         from aiida_workgraph.engine.workgraph import WorkGraphEngine
-        from aiida_workgraph import task, WorkGraph
+        from aiida_workgraph import WorkGraph
         from node_graph.utils.graph import materialize_graph
         from aiida_workgraph.task import TaskHandle
 
@@ -27,14 +28,18 @@ class GraphTask(Task):
         metadata = kwargs.pop('metadata', {}) if kwargs else {}
         metadata.setdefault('call_link_label', self.name)
         # Cloudpickle doesn’t restore the function’s own name in its globals after unpickling,
-        # so any recursive calls would raise NameError. As a temporary workaround, we re-insert
-        # the decorated function into its globals under its original name.
+        # so any recursive calls would raise NameError. We re-insert a task handle into its
+        # globals under its original name. We reuse the spec built at decoration time rather
+        # than re-decorating the function: re-decoration would re-infer the signature, which
+        # fails under PEP 563 once cloudpickle has dropped the names used only in stringized
+        # annotations (issue #783).
         # Downside: this mutates the module globals at runtime, if another symbol with the same name exists,
         # we may introduce hard-to-trace bugs or collisions.
         if isinstance(executor, TaskHandle) and hasattr(executor, '_callable'):
             executor = executor._callable
-        # We override the executor's globals to include the decorated function for recursion
-        executor.__globals__[executor.__name__] = task.graph(max_depth=max_depth)(executor)
+        recursion_handle = TaskHandle(self.spec)
+        recursion_handle._callable = executor
+        executor.__globals__[executor.__name__] = recursion_handle
         depth = call_depth_from_node(engine_process.node)
         if depth >= max_depth:
             if depth >= max_depth:
@@ -68,7 +73,7 @@ class GraphTask(Task):
             wg.max_number_jobs = max_number_jobs
         wg.parent_uuid = engine_process.node.uuid
         inputs = wg.to_engine_inputs(metadata=metadata)
-        if self.action == 'PAUSE':
+        if self.action == TaskAction.PAUSE:
             engine_process.report(f'Task {self.name} is created and paused.')
             process = create_and_pause_process(
                 engine_process.runner,
@@ -76,11 +81,11 @@ class GraphTask(Task):
                 inputs,
                 state_msg='Paused through WorkGraph',
             )
-            state = 'CREATED'
+            state = TaskState.CREATED
             process = process.node
         else:
             process = engine_process.submit(WorkGraphEngine, **inputs)
-            state = 'RUNNING'
+            state = TaskState.RUNNING
 
         return process, state
 
