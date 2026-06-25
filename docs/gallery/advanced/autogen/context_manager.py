@@ -489,9 +489,8 @@ wg.generate_provenance_graph()
 #   We welcome your feedback on its functionality.
 #   **ctx** does not work inside a ``Map`` zone yet.
 #
-# The ``Map`` context manager works similarly to Python's built-in ``map`` function.
-# By accessing the ``item`` member of the ``Map`` context, we can pass each individual element (e.g. a dictionary entry) to tasks.
-# This creates a new task behind the scenes for each element.
+# A ``Map`` zone runs the tasks inside it once for each entry of a dynamic namespace (a dict), not for each element of a sequence.
+# Use ``map_zone.value`` for the entry's value and ``map_zone.key`` for its key; a separate set of tasks is created behind the scenes for each entry.
 
 # %%
 # Running tasks in parallel
@@ -525,8 +524,8 @@ from aiida_workgraph import Map
 with WorkGraph('AddMap') as wg:
     with Map(data) as map_zone:
         result = add(
-            x=get_value(map_zone.item.value, 'x').result,
-            y=get_value(map_zone.item.value, 'y').result,
+            x=get_value(map_zone.value, 'x').result,
+            y=get_value(map_zone.value, 'y').result,
         ).result
         map_zone.gather({'result': result})
         wg.outputs.result = map_zone.outputs.result
@@ -572,8 +571,8 @@ def aggregate_sum(data: spec.dynamic(Any)) -> int:
 with WorkGraph('AddAggregate') as wg:
     with Map(data) as map_zone:
         added_numbers = add(
-            x=get_value(map_zone.item.value, 'x').result,
-            y=get_value(map_zone.item.value, 'y').result,
+            x=get_value(map_zone.value, 'x').result,
+            y=get_value(map_zone.value, 'y').result,
         ).result
         map_zone.gather({'result': added_numbers})
     wg.outputs.result = aggregate_sum(map_zone.outputs.result).result

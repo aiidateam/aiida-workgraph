@@ -48,7 +48,7 @@ def test_map(decorated_add):
     with WorkGraph() as wg:
         outputs = generate_list(N)
         with Map(source_socket=outputs.result) as map_zone:
-            outputs1 = decorated_add(x=map_zone.item.value, y=1)
+            outputs1 = decorated_add(x=map_zone.value, y=1)
             map_zone.gather({'result': outputs1.result})
         outputs2 = sum_values(data=map_zone.outputs.result)
         wg.run()
