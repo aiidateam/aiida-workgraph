@@ -1,4 +1,5 @@
 from aiida_workgraph.task import Task
+from aiida_workgraph.enums import TaskAction, TaskState
 from typing import Callable, Optional
 from node_graph.socket_spec import SocketSpec
 from node_graph.task_spec import TaskSpec
@@ -72,7 +73,7 @@ class GraphTask(Task):
             wg.max_number_jobs = max_number_jobs
         wg.parent_uuid = engine_process.node.uuid
         inputs = wg.to_engine_inputs(metadata=metadata)
-        if self.action == 'PAUSE':
+        if self.action == TaskAction.PAUSE:
             engine_process.report(f'Task {self.name} is created and paused.')
             process = create_and_pause_process(
                 engine_process.runner,
@@ -80,11 +81,11 @@ class GraphTask(Task):
                 inputs,
                 state_msg='Paused through WorkGraph',
             )
-            state = 'CREATED'
+            state = TaskState.CREATED
             process = process.node
         else:
             process = engine_process.submit(WorkGraphEngine, **inputs)
-            state = 'RUNNING'
+            state = TaskState.RUNNING
 
         return process, state
 

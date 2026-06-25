@@ -1,8 +1,10 @@
 from __future__ import annotations
 from typing import Optional, Tuple, List, Any
+from typing_extensions import assert_never
 from aiida.orm.utils.serialize import serialize
 from aiida_workgraph.orm.utils import deserialize_safe
 from aiida.orm import ProcessNode, Data
+from aiida_workgraph.enums import TERMINAL_TASK_STATES, RuntimeInfoKey, TaskState
 from node_graph.socket import BaseSocket, TaskSocketNamespace
 
 
@@ -25,39 +27,40 @@ class TaskStateManager:
         self.process = process
         self.awaitable_manager = awaitable_manager
 
-    def get_task_runtime_info(self, name: str, key: str) -> Any:
+    def get_task_runtime_info(self, name: str, key: RuntimeInfoKey) -> Any:
         """Fetch a task runtime property (e.g. process, state, action)."""
-        if key == 'process':
-            value = self.process.node.get_task_process(name)
-            return deserialize_safe(value) if value else None
-        elif key == 'state':
-            return self.process.node.get_task_state(name)
-        elif key == 'action':
-            return self.process.node.get_task_action(name)
-        elif key == 'execution_count':
-            return self.process.node.get_task_execution_count(name)
-        else:
-            raise ValueError(f'Invalid key: {key}')
-        return None
+        match key:
+            case 'process':
+                value = self.process.node.get_task_process(name)
+                return deserialize_safe(value) if value else None
+            case 'state':
+                return self.process.node.get_task_state(name)
+            case 'action':
+                return self.process.node.get_task_action(name)
+            case 'execution_count':
+                return self.process.node.get_task_execution_count(name)
+            case _:
+                raise ValueError(f'Invalid key: {key}')
 
-    def set_task_runtime_info(self, name: str, key: str, value: Any) -> None:
+    def set_task_runtime_info(self, name: str, key: RuntimeInfoKey, value: Any) -> None:
         """Set a task runtime property (e.g. process, state, action).
         All the runtime info are store into the process node, which allow us
         access this info outside the engine
         """
-        if key == 'process':
-            serialized = serialize(value)
-            self.process.node.set_task_process(name, serialized)
-        elif key == 'state':
-            self.process.node.set_task_state(name, value)
-        elif key == 'action':
-            self.process.node.set_task_action(name, value)
-        elif key == 'execution_count':
-            self.process.node.set_task_execution_count(name, value)
-        elif key == 'map_info':
-            self.process.node.set_task_map_info(name, value)
-        else:
-            raise ValueError(f'Invalid key: {key}')
+        match key:
+            case 'process':
+                serialized = serialize(value)
+                self.process.node.set_task_process(name, serialized)
+            case 'state':
+                self.process.node.set_task_state(name, value)
+            case 'action':
+                self.process.node.set_task_action(name, value)
+            case 'execution_count':
+                self.process.node.set_task_execution_count(name, value)
+            case 'map_info':
+                self.process.node.set_task_map_info(name, value)
+            case _:
+                assert_never(key)
 
     def set_tasks_state(self, tasks: List[str], value: str) -> None:
         """
@@ -84,7 +87,7 @@ class TaskStateManager:
                     self.set_task_runtime_info(task.name, 'state', state)
 
                     self.ctx._task_results[name] = resolve_node_link_managers(node.outputs)
-                    self.set_task_runtime_info(task.name, 'state', 'FINISHED')
+                    self.set_task_runtime_info(task.name, 'state', TaskState.FINISHED)
                     self.update_meta_tasks(name)
                     self.process.report(f'Task: {name}, type: {task.task_type}, finished.')
                     self.apply_socket_spec_extras_to_aiida_node(name, node)
@@ -98,7 +101,7 @@ class TaskStateManager:
                     output_name for output_name in task.outputs._get_keys() if output_name not in ['_wait', '_outputs']
                 ][0]
                 self.ctx._task_results[name] = {output_name: node}
-                self.set_task_runtime_info(task.name, 'state', 'FINISHED')
+                self.set_task_runtime_info(task.name, 'state', TaskState.FINISHED)
                 self.update_meta_tasks(name)
                 self.process.report(f'Task: {name} finished.')
         else:
@@ -138,7 +141,7 @@ class TaskStateManager:
                 elif len(output_names) > 1:
                     self.process.exit_codes.OUTPUS_NOT_MATCH_RESULTS
             self.update_meta_tasks(name)
-            self.set_task_runtime_info(name, 'state', 'FINISHED')
+            self.set_task_runtime_info(name, 'state', TaskState.FINISHED)
             self.process.report(f'Task: {name} finished.')
         else:
             self.on_task_failed(name)
@@ -176,7 +179,7 @@ class TaskStateManager:
         and recursing to children. If the task is a WHILE, reset its execution_count.
         """
         self.logger.debug(f'Resetting task {name}.')
-        self.set_task_runtime_info(name, 'state', 'PLANNED')
+        self.set_task_runtime_info(name, 'state', TaskState.PLANNED)
         if reset_process:
             self.set_task_runtime_info(name, 'process', None)
         self.remove_executed_task(name)
@@ -217,13 +220,13 @@ class TaskStateManager:
         # If the task has a parent zone
         if parent_task:
             state = self.get_task_runtime_info(parent_task.name, 'state')
-            if state not in ['RUNNING']:
+            if state != TaskState.RUNNING:
                 parent_states[1] = False
 
         # Check input tasks from the zone connectivity
         for child_task_name in self.process.wg.connectivity['zone'][name]['input_tasks']:
             child_state = self.get_task_runtime_info(child_task_name, 'state')
-            if child_state not in ['FINISHED', 'SKIPPED', 'FAILED']:
+            if child_state not in TERMINAL_TASK_STATES:
                 parent_states[0] = False
                 break
         return all(parent_states), parent_states
@@ -233,8 +236,8 @@ class TaskStateManager:
         Mark a task as FAILED, skip its children, and run any error handlers.
         """
         task_type = self.process.wg.tasks[name].task_type
-        self.set_task_runtime_info(name, 'state', 'FAILED')
-        self.set_tasks_state(self.process.wg.connectivity['child_node'][name], 'SKIPPED')
+        self.set_task_runtime_info(name, 'state', TaskState.FAILED)
+        self.set_tasks_state(self.process.wg.connectivity['child_node'][name], TaskState.SKIPPED)
         msg = f'Task, {name}, type: {task_type}, failed.'
         process = self.get_task_runtime_info(name, 'process')
         if isinstance(process, ProcessNode):
@@ -284,7 +287,7 @@ class TaskStateManager:
         """
         finished, _ = self.are_childen_finished(name)
         if finished:
-            self.set_task_runtime_info(name, 'state', 'FINISHED')
+            self.set_task_runtime_info(name, 'state', TaskState.FINISHED)
             self.process.report(f'Task: {name} finished.')
             self.update_parent_task_state(name)
 
@@ -307,7 +310,7 @@ class TaskStateManager:
                 for prefix, mapped_task in self.process.wg.tasks[gather_task.name].mapped_tasks.items():
                     results[prefix] = self.ctx._task_results[mapped_task.name][link.to_socket._name]
                 self.ctx._task_results[name][link.to_socket._name] = results
-            self.set_task_runtime_info(name, 'state', 'FINISHED')
+            self.set_task_runtime_info(name, 'state', TaskState.FINISHED)
             # self.update_meta_tasks(name)
             self.process.report(f'Task: {name} finished.')
             self.update_meta_tasks(name)
@@ -329,7 +332,7 @@ class TaskStateManager:
             #             results.setdefault(output._name, {})
             #             results[output._name][prefix] = self.ctx._task_results[mapped_task.name][output._name]
             # self.ctx._task_results[name] = results
-            self.set_task_runtime_info(name, 'state', 'FINISHED')
+            self.set_task_runtime_info(name, 'state', TaskState.FINISHED)
             # self.update_meta_tasks(name)
             self.process.report(f'Task: {name} finished.')
             self.update_parent_task_state(name)
@@ -340,21 +343,13 @@ class TaskStateManager:
         finished = True
         if hasattr(task, 'children'):
             for child in task.children:
-                if self.get_task_runtime_info(child.name, 'state') not in [
-                    'FINISHED',
-                    'SKIPPED',
-                    'FAILED',
-                ]:
+                if self.get_task_runtime_info(child.name, 'state') not in TERMINAL_TASK_STATES:
                     finished = False
                     break
         # check the mapped tasks
         mapped_tasks = task.mapped_tasks or {}
         for mapped_task in mapped_tasks.values():
-            if self.get_task_runtime_info(mapped_task.name, 'state') not in [
-                'FINISHED',
-                'SKIPPED',
-                'FAILED',
-            ]:
+            if self.get_task_runtime_info(mapped_task.name, 'state') not in TERMINAL_TASK_STATES:
                 finished = False
                 break
         return finished, None

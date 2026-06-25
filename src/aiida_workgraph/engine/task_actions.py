@@ -1,5 +1,9 @@
 from __future__ import annotations
-from typing import Dict
+from typing import Callable
+
+from typing_extensions import assert_never
+
+from aiida_workgraph.enums import TaskAction, TaskActionMessage, TaskState
 
 
 class TaskActionManager:
@@ -17,34 +21,37 @@ class TaskActionManager:
         self.logger = logger
         self.process = process
 
-    def apply_task_actions(self, msg: Dict) -> None:
+    def apply_task_actions(self, msg: TaskActionMessage) -> None:
         """
         Apply task actions to the workgraph based on user or external messages.
-        :param msg: { "action": <str>, "tasks": <List[str]> }
+
+        :raises ValueError: if the message carries an unknown task action.
         """
-        action = msg['action'].upper()
+        action = TaskAction(msg['action'].upper())
         tasks = msg['tasks']
         self.process.report(f'Action: {action}. Tasks: {tasks}')
 
-        if action == 'RESET':
-            for name in tasks:
-                self.state_manager.reset_task(name)
-        elif action == 'PAUSE':
-            for name in tasks:
-                self.pause_task(name)
-        elif action == 'PLAY':
-            for name in tasks:
-                self.play_task(name)
-        elif action == 'SKIP':
-            for name in tasks:
-                self.skip_task(name)
-        elif action == 'KILL':
-            for name in tasks:
-                self.kill_task(name)
+        # Each action maps to a callable that takes a single task name.
+        handler: Callable[[str], None]
+        match action:
+            case TaskAction.RESET:
+                handler = self.state_manager.reset_task
+            case TaskAction.PAUSE:
+                handler = self.pause_task
+            case TaskAction.PLAY:
+                handler = self.play_task
+            case TaskAction.SKIP:
+                handler = self.skip_task
+            case TaskAction.KILL:
+                handler = self.kill_task
+            case _:
+                assert_never(action)
+        for name in tasks:
+            handler(name)
 
     def pause_task(self, name: str) -> None:
         """Mark the task to be paused."""
-        self.state_manager.set_task_runtime_info(name, 'action', 'PAUSE')
+        self.state_manager.set_task_runtime_info(name, 'action', TaskAction.PAUSE)
         self.process.report(f'Task {name} action: PAUSE.')
 
     def play_task(self, name: str) -> None:
@@ -54,7 +61,7 @@ class TaskActionManager:
 
     def skip_task(self, name: str) -> None:
         """Force a task to be SKIPPED."""
-        self.state_manager.set_task_runtime_info(name, 'state', 'SKIPPED')
+        self.state_manager.set_task_runtime_info(name, 'state', TaskState.SKIPPED)
         self.process.report(f'Task {name} action: SKIP.')
 
     def kill_task(self, name: str) -> None:

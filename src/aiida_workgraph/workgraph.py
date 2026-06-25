@@ -4,6 +4,7 @@ import logging
 import node_graph
 import aiida
 from aiida_workgraph.task import Task
+from aiida_workgraph.enums import TaskAction, TaskState
 import time
 from typing import Any, Dict, List, Optional, Union
 from .registry import RegistryHub, registry_hub
@@ -440,7 +441,7 @@ class WorkGraph(node_graph.Graph):
 
         if self.process is None:
             for name in tasks:
-                self.tasks[name].action = 'PAUSE'
+                self.tasks[name].action = TaskAction.PAUSE
         else:
             _, msg = pause_tasks(self.process.pk, tasks)
 
@@ -465,7 +466,7 @@ class WorkGraph(node_graph.Graph):
 
         if self.process is None:
             for name in tasks:
-                self.tasks[name].action = 'KILL'
+                self.tasks[name].action = TaskAction.KILL
         else:
             _, msg = kill_tasks(self.process.pk, tasks)
         return 'Send message to kill tasks.'
@@ -477,11 +478,11 @@ class WorkGraph(node_graph.Graph):
 
         if self.process is None:
             for name in tasks:
-                self.tasks[name].state = 'PLANNED'
+                self.tasks[name].state = TaskState.PLANNED
                 self.tasks[name].process = None
                 child_tasks = self.analyzer.get_all_descendants(self.tasks[name])
                 for name in child_tasks:
-                    self.tasks[name].state = 'PLANNED'
+                    self.tasks[name].state = TaskState.PLANNED
                     self.tasks[name].process = None
         else:
             _, msg = reset_tasks(self.process.pk, tasks)

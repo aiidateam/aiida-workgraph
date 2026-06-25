@@ -1,5 +1,67 @@
+import logging
 import pytest
 import time
+
+from aiida_workgraph.engine.task_actions import TaskActionManager
+from aiida_workgraph.enums import TaskAction, TaskState
+
+
+class _RecordingStateManager:
+    """Minimal stand-in for ``TaskStateManager`` that records dispatched calls.
+
+    A real one needs a live engine/process node, so the collaborator is faked to
+    keep the dispatch test fast and focused on ``apply_task_actions``.
+    """
+
+    def __init__(self):
+        self.calls = []
+
+    def reset_task(self, name):
+        self.calls.append(('reset', name))
+
+    def set_task_runtime_info(self, name, key, value):
+        self.calls.append(('set', name, key, value))
+
+
+class _RecordingProcess:
+    def __init__(self):
+        self.reports = []
+
+    def report(self, message):
+        self.reports.append(message)
+
+
+def _make_action_manager():
+    state_manager = _RecordingStateManager()
+    process = _RecordingProcess()
+    manager = TaskActionManager(state_manager, logging.getLogger(__name__), process)
+    return manager, state_manager, process
+
+
+@pytest.mark.parametrize(
+    'raw_action, expected_call',
+    [
+        pytest.param('pause', ('set', 'add1', 'action', TaskAction.PAUSE), id='pause-lowercase'),
+        pytest.param('PAUSE', ('set', 'add1', 'action', TaskAction.PAUSE), id='pause-uppercase'),
+        pytest.param('PaUsE', ('set', 'add1', 'action', TaskAction.PAUSE), id='pause-mixedcase'),
+        pytest.param('reset', ('reset', 'add1'), id='reset-lowercase'),
+        pytest.param('ReSeT', ('reset', 'add1'), id='reset-mixedcase'),
+        pytest.param('skip', ('set', 'add1', 'state', TaskState.SKIPPED), id='skip-lowercase'),
+    ],
+)
+def test_apply_task_actions_is_case_insensitive(raw_action, expected_call):
+    """Whatever the case of the incoming action, it dispatches the same way."""
+    manager, state_manager, _ = _make_action_manager()
+    manager.apply_task_actions({'action': raw_action, 'tasks': ['add1']})
+    assert expected_call in state_manager.calls
+
+
+def test_apply_task_actions_raises_on_unknown_action():
+    """A typo'd action fails loudly rather than being silently swallowed."""
+    manager, state_manager, _ = _make_action_manager()
+    with pytest.raises(ValueError):
+        manager.apply_task_actions({'action': 'frobnicate', 'tasks': ['add1']})
+    assert state_manager.calls == []
 
 
 @pytest.mark.skip(reason='PAUSED state is wrong for the moment.')

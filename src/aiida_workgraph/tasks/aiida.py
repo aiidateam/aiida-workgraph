@@ -1,4 +1,5 @@
 from aiida_workgraph.task import Task
+from aiida_workgraph.enums import TaskAction, TaskState
 from aiida.engine import Process
 from typing import Callable, Optional, Dict
 from node_graph.socket_spec import SocketSpec
@@ -34,7 +35,7 @@ class AiiDAFunctionTask(Task):
         else:
             _, process = run_get_node(executor, **kwargs, **var_kwargs)
 
-        return process, 'FINISHED'
+        return process, TaskState.FINISHED
 
 
 class AiiDAProcessTask(Task):
@@ -72,7 +73,7 @@ class AiiDAProcessTask(Task):
 
         kwargs.setdefault('metadata', {})
         kwargs['metadata'].update({'call_link_label': self.name})
-        if self.action == 'PAUSE':
+        if self.action == TaskAction.PAUSE:
             engine_process.report(f'Task {self.name} is created and paused.')
             process = create_and_pause_process(
                 engine_process.runner,
@@ -80,11 +81,11 @@ class AiiDAProcessTask(Task):
                 kwargs,
                 state_msg='Paused through WorkGraph',
             )
-            state = 'CREATED'
+            state = TaskState.CREATED
             process = process.node
         else:
             process = engine_process.submit(executor, **kwargs)
-            state = 'RUNNING'
+            state = TaskState.RUNNING
 
         return process, state
 

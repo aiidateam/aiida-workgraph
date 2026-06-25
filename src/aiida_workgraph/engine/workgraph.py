@@ -15,6 +15,7 @@ import kiwipy
 from aiida.common.extendeddicts import AttributeDict
 from aiida.common.lang import override
 from aiida.orm import Node
+from aiida_workgraph.enums import TaskState
 from aiida_workgraph.orm.workgraph import WorkGraphNode
 
 from aiida.engine.processes.exit_code import ExitCode
@@ -279,7 +280,7 @@ class WorkGraphEngine(Process, metaclass=Protect):
         self.task_manager.state_manager.update_meta_tasks('graph_inputs')
         # set meta-tasks state
         for task_name in BUILTIN_TASKS:
-            self.task_manager.state_manager.set_task_runtime_info(task_name, 'state', 'FINISHED')
+            self.task_manager.state_manager.set_task_runtime_info(task_name, 'state', TaskState.FINISHED)
 
     def apply_action(self, msg: dict) -> None:
         if msg['catalog'] == 'task':
@@ -335,5 +336,5 @@ class WorkGraphEngine(Process, metaclass=Protect):
             self.out('new_data', self.ctx._new_data)
         self.report('Finalize workgraph.')
         for task in self.wg.tasks:
-            if self.task_manager.state_manager.get_task_runtime_info(task.name, 'state') == 'FAILED':
+            if self.task_manager.state_manager.get_task_runtime_info(task.name, 'state') == TaskState.FAILED:
                 return self.exit_codes.TASK_FAILED
