@@ -1,26 +1,35 @@
 version: 2
 
 build:
-  os: ubuntu-22.04
+  os: ubuntu-24.04
+  apt_packages:
+  - graphviz
   tools:
-    python: miniconda3-3.12-24.1   # note that libmamba-solver is available since 22.1
-    nodejs: '20' # maybe need to be also miniconda
+    python: '3.12'
+    nodejs: '20'
   jobs:
-    post_create_environment:
-    - python -m pip install --no-cache-dir .[docs]
-    - pip list
-    - rabbitmq-server -detached
-    - sleep 10
-    - rabbitmq-diagnostics status
-    - verdi presto
-    - verdi daemon start
-    - verdi status
+    post_install:
+    # TEMPORARY (issue #786): the executed docs examples use aiida-core's ZMQ
+    # broker, so the build needs no RabbitMQ/PostgreSQL. That requires aiida-core
+    # 2.9 (unreleased -> main) and aiida-shell with #116 (unreleased -> master);
+    # both are scoped to the docs build only, so CI and local dev keep the
+    # released pins. node-graph comes from [tool.uv.sources] via `uv sync`.
+    # Drop these (and the uv source) and bump the version pins once aiida-core
+    # 2.9, aiida-shell, and node-graph 0.6.6 are released.
+    - uv pip install "aiida-core @ git+https://github.com/aiidateam/aiida-core.git@main" "aiida-shell @ git+https://github.com/aiidateam/aiida-shell.git@master" importlib-metadata
+    # `presto --use-zmq` creates an SQLite profile with the ZMQ broker, configures
+    # localhost as a computer, and starts the daemon (needed by submit examples).
+    - verdi presto --use-zmq
     - verdi config set logging.aiida_loglevel ERROR
-    - cat /proc/cpuinfo | grep processor | wc -l
     - verdi code create core.code.installed --label add --computer=localhost --default-calc-job-plugin core.arithmetic.add --filepath-executable=/bin/bash -n
 
-conda:
-  environment: docs/environment.yml
+python:
+  install:
+  - method: uv
+    command: sync
+    path: .
+    extras:
+    - docs
 
 # Build from the docs/ directory with Sphinx
 sphinx:
