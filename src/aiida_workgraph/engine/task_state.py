@@ -1,5 +1,6 @@
 from __future__ import annotations
 from typing import Optional, Tuple, List, Any
+from typing_extensions import assert_never
 from aiida.orm.utils.serialize import serialize
 from aiida_workgraph.orm.utils import deserialize_safe
 from aiida.orm import ProcessNode, Data
@@ -59,7 +60,7 @@ class TaskStateManager:
             case 'map_info':
                 self.process.node.set_task_map_info(name, value)
             case _:
-                raise ValueError(f'Invalid key: {key}')
+                assert_never(key)
 
     def set_tasks_state(self, tasks: List[str], value: str) -> None:
         """

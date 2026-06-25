@@ -50,8 +50,6 @@ class TaskManager:
         """Get task from the context."""
         task = self.process.wg.tasks[name]
         task.set_input_resolver(self.get_socket_value)
-        # The action stored on the node is always a canonical TaskAction value (or
-        # '' for none), so no case normalisation is needed on read.
         task.action = self.state_manager.get_task_runtime_info(name, 'action')
         # update task results
         # namespace socket does not have a value, but _value

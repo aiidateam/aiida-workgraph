@@ -17,7 +17,6 @@ def test_str_and_format_drop_class_prefix(enum_cls):
     member = next(iter(enum_cls))
     assert str(member) == member.value
     assert f'{member}' == member.value
-    assert '{}'.format(member) == member.value
 
 
 @pytest.mark.parametrize('enum_cls', [TaskState, TaskAction])

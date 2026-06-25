@@ -6,7 +6,7 @@ from aiida.manage import get_manager
 from aiida import orm
 from aiida.engine.processes import control
 
-from aiida_workgraph.enums import RuntimeInfoKey, TaskAction, TaskState
+from aiida_workgraph.enums import RuntimeInfoKey, TaskAction, TaskActionMessage, TaskState
 
 LOGGER = logging.getLogger(__name__)
 
@@ -21,7 +21,7 @@ def create_task_action(
     controller = get_manager().get_process_controller()
     # Send the canonical action value as a plain string; the engine re-validates it
     # into a TaskAction on receipt.
-    message = {'intent': 'custom', 'catalog': 'task', 'action': str(action), 'tasks': tasks}
+    message: TaskActionMessage = {'intent': 'custom', 'catalog': 'task', 'action': str(action), 'tasks': tasks}
     controller._communicator.rpc_send(pk, message)
 
 

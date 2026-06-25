@@ -3,13 +3,14 @@
 from __future__ import annotations
 
 from enum import Enum, unique
-from typing import Final, Literal
+from typing import Final, Literal, TypedDict
 
 __all__ = (
     'TaskState',
     'TaskAction',
     'TERMINAL_TASK_STATES',
     'RuntimeInfoKey',
+    'TaskActionMessage',
 )
 
 
@@ -59,3 +60,15 @@ class TaskAction(str, Enum):
 #: Keys addressing a task's runtime info on the process node, used as the dispatch
 #: key in ``get_task_runtime_info`` / ``set_task_runtime_info``.
 RuntimeInfoKey = Literal['process', 'state', 'action', 'execution_count', 'map_info']
+
+
+class TaskActionMessage(TypedDict):
+    """RPC payload sent to a running WorkGraph to act on its tasks.
+
+    Built by ``create_task_action`` and consumed by ``apply_task_actions``.
+    """
+
+    intent: str
+    catalog: str
+    action: str
+    tasks: list[str]

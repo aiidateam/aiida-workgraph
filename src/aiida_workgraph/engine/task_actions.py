@@ -1,9 +1,9 @@
 from __future__ import annotations
-from typing import Callable, Dict
+from typing import Callable
 
 from typing_extensions import assert_never
 
-from aiida_workgraph.enums import TaskAction, TaskState
+from aiida_workgraph.enums import TaskAction, TaskActionMessage, TaskState
 
 
 class TaskActionManager:
@@ -21,15 +21,14 @@ class TaskActionManager:
         self.logger = logger
         self.process = process
 
-    def apply_task_actions(self, msg: Dict) -> None:
+    def apply_task_actions(self, msg: TaskActionMessage) -> None:
         """
         Apply task actions to the workgraph based on user or external messages.
 
-        :param msg: { "action": <str>, "tasks": <List[str]> }
         :raises ValueError: if the message carries an unknown task action.
         """
         action = TaskAction(msg['action'].upper())
-        tasks: list[str] = msg['tasks']
+        tasks = msg['tasks']
         self.process.report(f'Action: {action}. Tasks: {tasks}')
 
         # Each action maps to a callable that takes a single task name.
