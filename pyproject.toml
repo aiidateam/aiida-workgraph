@@ -125,7 +125,10 @@ docs = [
 ]
 pre-commit = [
   "mypy~=2.1.0",
-  "pre-commit~=4.3"
+  "pre-commit~=4.3",
+  # stub versions track the runtime package version (typeshed convention)
+  "types-PyYAML~=6.0",
+  "types-tabulate~=0.9.0"
 ]
 tests = [
   'pgtest~=1.3',
@@ -148,18 +151,25 @@ exclude = ["docs/", "tests/"]
 
 [tool.mypy]
 enable_error_code = [
-  'ignore-without-code',
-  'redundant-expr',
-  'truthy-bool'
+  'deprecated',  # use of an @deprecated-marked function, method or class
+  'exhaustive-match',  # 'match' statement that does not cover all cases
+  'ignore-without-code',  # bare '# type: ignore' without an [error-code]
+  'mutable-override',  # unsound covariant override of a mutable attribute
+  'possibly-undefined',  # variable possibly used before it is assigned
+  'redundant-expr',  # expression whose value is statically known
+  'redundant-self',  # redundant explicit 'Self' annotation on first argument
+  'truthy-bool',  # non-bool object always truthy in a boolean context
+  'truthy-iterable',  # Iterable always truthy in a boolean context (e.g. generator)
+  'unimported-reveal',  # 'reveal_type' used without importing it
+  'unused-awaitable'  # awaitable value that is never awaited
 ]
+files = ['src/aiida_workgraph']
 python_version = "3.10"
 show_error_codes = true
 strict = true
 warn_unreachable = true
 
 # Third-party dependencies that ship no type information (no py.typed / stubs).
-# TODO: 'yaml' and 'tabulate' have stub packages (types-PyYAML, types-tabulate);
-# switch those to real stubs once added to the pre-commit extra.
 [[tool.mypy.overrides]]
 ignore_missing_imports = true
 module = [
@@ -168,17 +178,11 @@ module = [
   'kiwipy',
   'kiwipy.*',
   'node_graph',
-  'node_graph.*',
-  'tabulate',
-  'tabulate.*',
-  'yaml',
-  'yaml.*'
+  'node_graph.*'
 ]
 
-# Modules not yet annotated for strict type checking. Type checking runs
-# strictly everywhere; these are temporarily exempt from error reporting and
-# get cleaned up and removed from this list one by one. Do NOT relax the global
-# strictness above to silence errors; the goal is to empty this list.
+# Modules not yet annotated for strict type checking
+# Update this list as typing enforced throughout the code base
 [[tool.mypy.overrides]]
 ignore_errors = true
 module = [
