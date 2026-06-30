@@ -202,8 +202,8 @@ def calc_sum(data: spec.dynamic(Any)) -> int:
 
 # %%
 # To use the ``Map`` task, you define a ``source`` which is a dictionary.
-# The tasks inside the `map_zone` will be executed for each `item` in the source,
-# where `item` represents the value of each key-value pair.
+# The tasks inside the `map_zone` are executed once per key-value pair in the source.
+# Use ``map_task.value`` for the value of each pair, and ``map_task.key`` for its key.
 #
 
 wg = WorkGraph('map_task_example')
@@ -214,8 +214,8 @@ data_task = wg.add_task(generate_data, N=4)
 # Create a Map Zone, with the source being the dictionary from generate_data
 map_task = wg.add_task('workgraph.map_zone', source=data_task.outputs.result)
 
-# Inside the Map Zone, add 1 to each item
-add_task_in_map = map_task.add_task(add, x=map_task.item.value, y=1)
+# Inside the Map Zone, add 1 to each value
+add_task_in_map = map_task.add_task(add, x=map_task.value, y=1)
 
 map_task.gather({'result': add_task_in_map.outputs.result})
 
