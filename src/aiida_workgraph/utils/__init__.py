@@ -18,6 +18,7 @@ from node_graph.socket import TaggedValue
 from node_graph.socket_spec import SocketSpec
 from aiida.orm.utils.serialize import serialize
 from aiida_workgraph.orm.utils import deserialize_safe
+import enum
 import json
 from copy import deepcopy
 
@@ -269,28 +270,45 @@ def clean_pickled_task_executor(tdata: Dict[str, Any]) -> None:
             tdata['error_handlers'][name] = RuntimeExecutor.from_callable(UnavailableExecutor).to_dict()
 
 
-def _ensure_json_safe(value: Any) -> Any:
-    """Recursively ensure all values in a nested structure are JSON-serializable.
+def _ensure_json_safe_key(key: Any) -> Union[str, int, float, bool, None]:
+    """Coerce a dict key into a valid JSON object key.
 
-    Node attributes must be JSON-serializable.  Workgraph data may contain
-    non-serializable Python objects (e.g. enum defaults from task function
-    signatures).  This function converts them to safe representations.
+    ``json.dumps`` only accepts ``str``/``int``/``float``/``bool``/``None`` as
+    object keys.  Enum keys are unwrapped to their ``.value``; anything else
+    that is not already a valid key type is stringified.
+    """
+    if key is None or isinstance(key, (bool, int, float, str)):
+        return key
+    if isinstance(key, enum.Enum):
+        return _ensure_json_safe_key(key.value)
+    return str(key)
+
+
+def _ensure_json_safe(value: Any) -> Any:
+    """Recursively coerce a nested structure into JSON-serializable values.
+
+    Node attributes must be JSON-serializable, but workgraph data can carry
+    non-serializable Python objects (e.g. ``enum.Enum`` defaults picked up from
+    task function signatures).  Enums are unwrapped to their ``.value``; dict
+    keys that are not valid JSON object keys are coerced the same way (see
+    :func:`_ensure_json_safe_key`); and any remaining non-serializable value is
+    replaced by its ``str()`` representation.  The ``str()`` fallback is lossy
+    (e.g. ``set``/``frozenset`` become their ``repr`` string rather than a list)
+    but avoids a hard failure on store.
     """
     if value is None or isinstance(value, (bool, int, float, str)):
         return value
+    if isinstance(value, enum.Enum):
+        return _ensure_json_safe(value.value)
     if isinstance(value, dict):
-        return {k: _ensure_json_safe(v) for k, v in value.items()}
+        return {_ensure_json_safe_key(k): _ensure_json_safe(v) for k, v in value.items()}
     if isinstance(value, (list, tuple)):
         return [_ensure_json_safe(v) for v in value]
     try:
         json.dumps(value)
         return value
     except (TypeError, ValueError):
-        pass
-    # Unwrap value-like objects (enums, etc.)
-    if hasattr(value, 'value') and not callable(value.value):
-        return _ensure_json_safe(value.value)
-    return str(value)
+        return str(value)
 
 
 def save_workgraph_data(node: Union[int, orm.Node], inputs: Dict[str, Any]) -> None:
