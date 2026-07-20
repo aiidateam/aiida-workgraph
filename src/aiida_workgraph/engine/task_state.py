@@ -297,43 +297,72 @@ class TaskStateManager:
         2) gather the results of all the mapped tasks.
         3) update the parent task state.
         """
+        from aiida_workgraph.utils import get_nested_dict
+
         finished, _ = self.are_childen_finished(name)
-        if finished:
-            map_zone = self.process.wg.tasks[name]
-            # gather the results of all the mapped tasks
-            gather_task = map_zone.gather_item_task
-            for input in gather_task.inputs:
-                if input._name.startswith('_'):
-                    continue
-                results = {}
-                link = input._links[0]
-                for prefix, mapped_task in self.process.wg.tasks[gather_task.name].mapped_tasks.items():
-                    results[prefix] = self.ctx._task_results[mapped_task.name][link.to_socket._name]
-                self.ctx._task_results[name][link.to_socket._name] = results
-            self.set_task_runtime_info(name, 'state', TaskState.FINISHED)
-            # self.update_meta_tasks(name)
-            self.process.report(f'Task: {name} finished.')
-            self.update_meta_tasks(name)
+        if not finished:
+            return
+        map_zone = self.process.wg.tasks[name]
+        # Gather the results of all the mapped tasks.
+        #
+        # We aggregate directly from each mapped SOURCE task (the task whose
+        # output is linked into the template gather_item), not via the
+        # gather_item itself. The gather_item template is a pure pass-through
+        # aggregator (executor=return_input) and is intentionally not cloned
+        # per item in `generate_mapped_tasks`, so there are no gather_item
+        # clones to read from. Reading directly from the source's
+        # `_task_results` is also race-free: the source's results are
+        # populated by `update_task_state` before any cascade can reach here,
+        # which matters when the source is an async process-type task
+        # (CalcJob, WorkChain, or a @task.graph sub-workflow).
+        gather_task = map_zone.gather_item_task
+        gather_links = [
+            input_socket._links[0]
+            for input_socket in gather_task.inputs
+            if not input_socket._name.startswith('_') and input_socket._links
+        ]
+        # An iteration that raised is FAILED, and `on_task_failed` SKIPs its
+        # downstream children, so a broken item surfaces as either state on the
+        # source clone. Both mean it produced nothing to gather, so fail the
+        # whole zone instead of emitting a namespace that is silently missing
+        # that item: a FINISHED zone whose gathered dict is short reads as a
+        # complete result and quietly corrupts whatever aggregates it.
+        failed_prefixes = sorted(
+            prefix
+            for link in gather_links
+            for prefix, clone in (self.process.wg.tasks[link.from_task.name].mapped_tasks or {}).items()
+            if self.get_task_runtime_info(clone.name, 'state') in (TaskState.FAILED, TaskState.SKIPPED)
+        )
+        if failed_prefixes:
+            self.set_task_runtime_info(name, 'state', TaskState.FAILED)
+            self.process.report(f'Task: {name} failed, no result from mapped item(s): {", ".join(failed_prefixes)}.')
             self.update_parent_task_state(name)
+            return
+        for link in gather_links:
+            source_clones = self.process.wg.tasks[link.from_task.name].mapped_tasks or {}
+            results = {}
+            for prefix, clone in source_clones.items():
+                # Defensive only: every surviving clone is FINISHED with its
+                # result recorded, since the failure paths returned above.
+                results[prefix] = get_nested_dict(
+                    self.ctx._task_results[clone.name],
+                    link.from_socket._scoped_name,
+                    default=None,
+                )
+            self.ctx._task_results[name][link.to_socket._name] = results
+        self.set_task_runtime_info(name, 'state', TaskState.FINISHED)
+        self.process.report(f'Task: {name} finished.')
+        self.update_meta_tasks(name)
+        self.update_parent_task_state(name)
 
     def update_template_task_state(self, name: str) -> None:
         """Update the template task state.
         1) check if all child tasks are finished.
-        2) gather the results of all the mapped tasks.
-        3) update the parent task state.
+        2) update the parent task state.
         """
         finished, _ = self.are_childen_finished(name)
         if finished:
-            # # gather the results of all the mapped tasks
-            # results = {}
-            # for prefix, mapped_task in self.process.wg.tasks[name].mapped_tasks.items():
-            #     for output in mapped_task.outputs:
-            #         if output._name in self.ctx._task_results[mapped_task.name]:
-            #             results.setdefault(output._name, {})
-            #             results[output._name][prefix] = self.ctx._task_results[mapped_task.name][output._name]
-            # self.ctx._task_results[name] = results
             self.set_task_runtime_info(name, 'state', TaskState.FINISHED)
-            # self.update_meta_tasks(name)
             self.process.report(f'Task: {name} finished.')
             self.update_parent_task_state(name)
 
