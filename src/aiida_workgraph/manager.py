@@ -7,25 +7,36 @@ Note pitfalls:
     - etc.
 """
 
+from __future__ import annotations
+
+from collections.abc import Iterator
 from contextlib import contextmanager
-from aiida_workgraph.socket import TaskSocket
+from typing import TYPE_CHECKING, Any
+
+from aiida_workgraph.socket import TaskSocket, TaskSocketNamespace
 from aiida_workgraph.tasks.task_pool import TaskPool
+
+if TYPE_CHECKING:
+    from aiida_workgraph import WorkGraph
+    from aiida_workgraph.tasks.builtins import Map as MapZoneTask
 
 
 class CurrentGraphManager:
-    _instance = None
+    _instance: CurrentGraphManager | None = None
+    _graph: WorkGraph | None
 
-    def __new__(cls, *args, **kwargs):
+    def __new__(cls, *args: Any, **kwargs: Any) -> CurrentGraphManager:
         """
         Enforce the singleton pattern. Only one instance of
         CurrentGraphManager is created for the entire process.
         """
         if cls._instance is None:
-            cls._instance = super().__new__(cls)
-            cls._instance._graph = None  # Storage for the active graph
+            instance = super().__new__(cls)
+            instance._graph = None  # Storage for the active graph
+            cls._instance = instance
         return cls._instance
 
-    def get_current_graph(self):
+    def get_current_graph(self) -> WorkGraph:
         """
         Retrieve the current graph, or create a new one if none is set.
         """
@@ -35,14 +46,14 @@ class CurrentGraphManager:
             self._graph = WorkGraph()
         return self._graph
 
-    def set_current_graph(self, graph):
+    def set_current_graph(self, graph: WorkGraph) -> None:
         """
         Set the active graph to the given instance.
         """
         self._graph = graph
 
     @contextmanager
-    def active_graph(self, graph):
+    def active_graph(self, graph: WorkGraph) -> Iterator[WorkGraph]:
         """
         Context manager that temporarily overrides the current graph
         with `graph`, restoring the old graph when exiting the context.
@@ -59,7 +70,7 @@ class CurrentGraphManager:
 _manager = CurrentGraphManager()
 
 
-def get_current_graph():
+def get_current_graph() -> WorkGraph:
     """
     Helper function to retrieve the graph
     through the global manager instance.
@@ -67,7 +78,7 @@ def get_current_graph():
     return _manager.get_current_graph()
 
 
-def set_current_graph(graph):
+def set_current_graph(graph: WorkGraph) -> None:
     """
     Helper function to set the graph through the
     global manager instance.
@@ -76,7 +87,7 @@ def set_current_graph(graph):
 
 
 @contextmanager
-def active_graph(graph):
+def active_graph(graph: WorkGraph) -> Iterator[WorkGraph]:
     """
     Top-level context manager that defers to
     the manager's `active_graph` method.
@@ -86,7 +97,7 @@ def active_graph(graph):
 
 
 @contextmanager
-def Zone():
+def Zone() -> Iterator[Any]:
     """
     Context manager to create a "zone" in the current graph.
     """
@@ -109,7 +120,7 @@ def Zone():
 
 
 @contextmanager
-def If(condition_socket: TaskSocket, invert_condition: bool = False):
+def If(condition_socket: TaskSocket, invert_condition: bool = False) -> Iterator[Any]:
     """
     Context manager to create a "conditional zone" in the current graph.
 
@@ -137,7 +148,7 @@ def If(condition_socket: TaskSocket, invert_condition: bool = False):
 
 
 @contextmanager
-def While(condition_socket: TaskSocket, max_iterations: int = 10000):
+def While(condition_socket: TaskSocket, max_iterations: int = 10000) -> Iterator[Any]:
     """
     Context manager to create a "while zone" in the current graph.
 
@@ -165,7 +176,7 @@ def While(condition_socket: TaskSocket, max_iterations: int = 10000):
 
 
 @contextmanager
-def Map(source_socket: TaskSocket):
+def Map(source_socket: TaskSocketNamespace) -> Iterator[MapZoneTask]:
     """Iterate a set of tasks over a dynamic namespace (a dict).
 
     The ``with`` block is a template body that runs once per entry of the

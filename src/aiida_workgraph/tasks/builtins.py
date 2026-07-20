@@ -1,5 +1,5 @@
 from __future__ import annotations
-from typing import Any, Dict
+from typing import Any, Dict, cast
 from aiida_workgraph.task import Task
 from aiida_workgraph import task, namespace, meta, dynamic
 from node_graph.tasks.builtins import _GraphIOSharedMixin
@@ -15,7 +15,7 @@ from node_graph.task import BuiltinPolicy
 from aiida_workgraph.executors.builtins import load_node, load_code
 
 
-class GraphLevelTask(_GraphIOSharedMixin, Task):
+class GraphLevelTask(_GraphIOSharedMixin, Task):  # type: ignore[misc]  # node_graph ships no type information
     """Graph level task variant with shared IO."""
 
     _default_spec = TaskSpec(
@@ -24,7 +24,7 @@ class GraphLevelTask(_GraphIOSharedMixin, Task):
         base_class_path='aiida_workgraph.tasks.builtins.GraphLevelTask',
     )
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
         self._unify_io()
 
@@ -43,19 +43,19 @@ class Zone(Task):
         base_class_path='aiida_workgraph.tasks.builtins.Zone',
     )
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
         self.children = ChildTaskSet(parent=self)
 
-    def add_task(self, *args, **kwargs) -> Task:
+    def add_task(self, *args: Any, **kwargs: Any) -> Task:
         """Syntactic sugar to add a task to the zone."""
         task = self.graph.add_task(*args, **kwargs)
         self.children.add(task)
         task.parent = self
-        return task
+        return cast(Task, task)
 
-    def to_dict(self, **kwargs) -> Dict[str, Any]:
-        tdata = super().to_dict(**kwargs)
+    def to_dict(self, include_sockets: bool = False, should_serialize: bool = False) -> Dict[str, Any]:
+        tdata = super().to_dict(include_sockets=include_sockets, should_serialize=should_serialize)
         tdata['children'] = [task.name for task in self.children]
         return tdata
 
@@ -109,14 +109,11 @@ class Map(Zone):
         base_class_path='aiida_workgraph.tasks.builtins.Map',
     )
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
     def _map_item_task(self) -> Task:
         """Return the single ``map_item`` child, creating it on first access."""
         for child in self.children:
             if child.identifier == 'workgraph.map_item':
-                return child
+                return cast(Task, child)
         return self.add_task('workgraph.map_item')
 
     @property
@@ -130,12 +127,11 @@ class Map(Zone):
         return self._map_item_task().outputs.key
 
     @property
-    def gather_item_task(self) -> Task | None:
+    def gather_item_task(self) -> Task:
         for child in self.children:
             if child.identifier == 'workgraph.gather_item':
-                return child
-        gather_item = self.add_task('workgraph.gather_item')
-        return gather_item
+                return cast(Task, child)
+        return self.add_task('workgraph.gather_item')
 
     def gather(self, sockets: Dict[str, BaseSocket]) -> BaseSocket:
         """Collect per-entry results into the zone outputs, one namespace per name."""
@@ -235,29 +231,32 @@ class Select(Task):
     )
 
 
-@task(identifier='workgraph.aiida_int')
+# The ``@task`` decorator and aiida-core's ``orm`` constructors carry no type
+# information yet, so these thin wrappers need explicit ignores. Drop them once
+# ``aiida_workgraph.decorator`` and aiida-core are annotated.
+@task(identifier='workgraph.aiida_int')  # type: ignore[untyped-decorator]
 def aiida_int(value: int) -> orm.Int:
-    return orm.Int(value)
+    return orm.Int(value)  # type: ignore[no-untyped-call]
 
 
-@task(identifier='workgraph.aiida_float')
+@task(identifier='workgraph.aiida_float')  # type: ignore[untyped-decorator]
 def aiida_float(value: float) -> orm.Float:
-    return orm.Float(value)
+    return orm.Float(value)  # type: ignore[no-untyped-call]
 
 
-@task(identifier='workgraph.aiida_string')
+@task(identifier='workgraph.aiida_string')  # type: ignore[untyped-decorator]
 def aiida_string(value: str) -> orm.Str:
-    return orm.Str(value)
+    return orm.Str(value)  # type: ignore[no-untyped-call]
 
 
-@task(identifier='workgraph.aiida_list')
-def aiida_list(value: list) -> orm.List:
-    return orm.List(value)
+@task(identifier='workgraph.aiida_list')  # type: ignore[untyped-decorator]
+def aiida_list(value: list[Any]) -> orm.List:
+    return orm.List(value)  # type: ignore[no-untyped-call]
 
 
-@task(identifier='workgraph.aiida_dict')
-def aiida_dict(value: dict) -> orm.Dict:
-    return orm.Dict(value)
+@task(identifier='workgraph.aiida_dict')  # type: ignore[untyped-decorator]
+def aiida_dict(value: dict[str, Any]) -> orm.Dict:
+    return orm.Dict(value)  # type: ignore[no-untyped-call]
 
 
 class AiiDANode(Task):
