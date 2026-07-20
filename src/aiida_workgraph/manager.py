@@ -9,7 +9,7 @@ Note pitfalls:
 
 from __future__ import annotations
 
-from collections.abc import Iterator
+from collections.abc import Generator
 from contextlib import contextmanager
 from typing import TYPE_CHECKING, Any
 
@@ -53,7 +53,7 @@ class CurrentGraphManager:
         self._graph = graph
 
     @contextmanager
-    def active_graph(self, graph: WorkGraph) -> Iterator[WorkGraph]:
+    def active_graph(self, graph: WorkGraph) -> Generator[WorkGraph]:
         """
         Context manager that temporarily overrides the current graph
         with `graph`, restoring the old graph when exiting the context.
@@ -87,7 +87,7 @@ def set_current_graph(graph: WorkGraph) -> None:
 
 
 @contextmanager
-def active_graph(graph: WorkGraph) -> Iterator[WorkGraph]:
+def active_graph(graph: WorkGraph) -> Generator[WorkGraph]:
     """
     Top-level context manager that defers to
     the manager's `active_graph` method.
@@ -97,7 +97,7 @@ def active_graph(graph: WorkGraph) -> Iterator[WorkGraph]:
 
 
 @contextmanager
-def Zone() -> Iterator[Any]:
+def Zone() -> Generator[Any]:
     """
     Context manager to create a "zone" in the current graph.
     """
@@ -120,7 +120,7 @@ def Zone() -> Iterator[Any]:
 
 
 @contextmanager
-def If(condition_socket: TaskSocket, invert_condition: bool = False) -> Iterator[Any]:
+def If(condition_socket: TaskSocket, invert_condition: bool = False) -> Generator[Any]:
     """
     Context manager to create a "conditional zone" in the current graph.
 
@@ -148,7 +148,7 @@ def If(condition_socket: TaskSocket, invert_condition: bool = False) -> Iterator
 
 
 @contextmanager
-def While(condition_socket: TaskSocket, max_iterations: int = 10000) -> Iterator[Any]:
+def While(condition_socket: TaskSocket, max_iterations: int = 10000) -> Generator[Any]:
     """
     Context manager to create a "while zone" in the current graph.
 
@@ -176,7 +176,7 @@ def While(condition_socket: TaskSocket, max_iterations: int = 10000) -> Iterator
 
 
 @contextmanager
-def Map(source_socket: TaskSocketNamespace) -> Iterator[MapZoneTask]:
+def Map(source_socket: TaskSocketNamespace) -> Generator[MapZoneTask]:
     """Iterate a set of tasks over a dynamic namespace (a dict).
 
     The ``with`` block is a template body that runs once per entry of the
