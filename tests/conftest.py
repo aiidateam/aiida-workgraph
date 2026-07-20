@@ -33,7 +33,7 @@ def add_code(fixture_localhost):
     from aiida.common import NotExistent
 
     try:
-        code = load_code('add@localhost')
+        code = load_code(f'add@{fixture_localhost.label}')
     except NotExistent:
         code = InstalledCode(
             label='add',

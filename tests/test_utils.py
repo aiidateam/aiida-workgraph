@@ -229,7 +229,7 @@ def test_get_or_create_code(fixture_localhost):
 
     # create a new code
     code1 = get_or_create_code(
-        computer='localhost',
+        computer=fixture_localhost.label,
         code_label='test_code',
         code_path='/bin/bash',
         prepend_text='echo "Hello, World!"',
@@ -237,7 +237,7 @@ def test_get_or_create_code(fixture_localhost):
     assert isinstance(code1, Code)
     # use already created code
     code2 = get_or_create_code(
-        computer='localhost',
+        computer=fixture_localhost.label,
         code_label='test_code',
         code_path='/bin/bash',
         prepend_text='echo "Hello, World!"',

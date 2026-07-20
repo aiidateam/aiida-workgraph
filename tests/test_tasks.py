@@ -201,14 +201,14 @@ def test_task_from_builder_add(add_code) -> None:
     assert add_wg.tasks[add_task_name].inputs['code'].value == add_code
 
 
-def test_task_from_builder_multiply_add(add_code, decorated_add) -> None:
+def test_task_from_builder_multiply_add(add_code, decorated_add, fixture_localhost) -> None:
     """Test adding a task from a ``ProcessBuilder`` for ``MultiplyAdd``."""
     from aiida_workgraph.sockets.builtins import SocketAnnotated
     from aiida.workflows.arithmetic.multiply_add import MultiplyAddWorkChain
 
     multiply_add_builder = MultiplyAddWorkChain.get_builder()
 
-    multiply_add_builder.code = orm.load_code('add@localhost')
+    multiply_add_builder.code = orm.load_code(f'add@{fixture_localhost.label}')
     multiply_add_builder.x = orm.Int(2)
     multiply_add_builder.y = orm.Int(3)
     multiply_add_builder.z = orm.Int(4)
