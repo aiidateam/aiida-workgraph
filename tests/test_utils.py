@@ -73,11 +73,54 @@ def test_ensure_json_safe_non_enum_key_stringified():
     assert _ensure_json_safe({_Key(): 1}) == {'k': 1}
 
 
-def test_ensure_json_safe_set_frozenset_are_stringified():
-    """set/frozenset are lossy-by-design: stringified, not turned into lists."""
-    assert _ensure_json_safe({1, 2, 3}) == str({1, 2, 3})
-    assert _ensure_json_safe(frozenset({1, 2})) == str(frozenset({1, 2}))
-    assert isinstance(_ensure_json_safe({1, 2, 3}), str)
+def test_ensure_json_safe_preserves_clean_value_coercible():
+    """Values that ``clean_value`` coerces itself pass through untouched.
+
+    The helper must not pre-empt storage's own coercion: a set becomes a list
+    at store time, a numpy scalar a Python scalar, a ``BaseType`` its value —
+    none of them may be stringified by the helper.
+    """
+    import numpy as np
+
+    assert _ensure_json_safe({1, 2, 3}) == {1, 2, 3}
+    assert _ensure_json_safe(frozenset({1, 2})) == frozenset({1, 2})
+    numpy_int = np.int64(7)
+    assert _ensure_json_safe(numpy_int) is numpy_int
+    aiida_int = orm.Int(3)
+    assert _ensure_json_safe(aiida_int) is aiida_int
+
+    node = orm.WorkflowNode()
+    node.base.attributes.set('data', _ensure_json_safe({'tags': {1, 2, 3}, 'n': np.int64(7)}))
+    node.store()
+    stored = orm.load_node(node.pk).base.attributes.get('data')
+    assert sorted(stored['tags']) == [1, 2, 3]
+    assert stored['n'] == 7
+
+
+def test_ensure_json_safe_non_dict_mapping_is_coerced():
+    """A non-``dict`` ``Mapping`` takes the mapping branch, keys included.
+
+    ``clean_value`` does not inspect mapping keys, so a bad key inside e.g. a
+    ``MappingProxyType`` would otherwise pass the helper and only fail in the
+    database driver at store time.
+    """
+    from types import MappingProxyType
+
+    result = _ensure_json_safe(MappingProxyType({(1, 2): 'v', _Color.RED: 'w'}))
+    assert result == {'(1, 2)': 'v', 1: 'w'}
+
+    node = orm.WorkflowNode()
+    node.base.attributes.set('data', result)
+    node.store()
+    assert orm.load_node(node.pk).base.attributes.get('data') == {'(1, 2)': 'v', '1': 'w'}
+
+
+def test_ensure_json_safe_iterator_is_materialized():
+    """A one-shot iterator is materialized to a list, not passed to
+    ``clean_value`` (which would exhaust it as a side effect of validation and
+    leave an empty value to be stored)."""
+    assert _ensure_json_safe(iter([1, 2])) == [1, 2]
+    assert _ensure_json_safe(v for v in (_Color.RED, 3)) == [1, 3]
 
 
 def test_ensure_json_safe_fallback_does_not_unwrap_arbitrary_value_attr():
@@ -93,8 +136,10 @@ def test_ensure_json_safe_fallback_does_not_unwrap_arbitrary_value_attr():
     json.dumps(result)  # must not raise
 
 
-def test_ensure_json_safe_output_is_json_serializable():
-    """Whatever the helper returns must always be JSON-serializable."""
+def test_ensure_json_safe_output_is_storable():
+    """Whatever the helper returns must always survive ``clean_value``."""
+    from aiida.orm.implementation.utils import clean_value
+
     payload = {
         'a_plain_enum': _Color.RED,
         'a_str_enum': _SpinChannel.DOWN,
@@ -102,7 +147,7 @@ def test_ensure_json_safe_output_is_json_serializable():
         'a_set': {1, 2},
         _Color.RED: 'enum-key',
     }
-    json.dumps(_ensure_json_safe(payload))  # must not raise
+    clean_value(_ensure_json_safe(payload))  # must not raise
 
 
 def test_enum_attribute_store_negative_control():
@@ -125,6 +170,64 @@ def test_enum_attribute_store_negative_control():
     safe_node.store()
     stored = orm.load_node(safe_node.pk).base.attributes.get('workgraph_data')
     assert stored == {'tasks': {'t': {'inputs': {'color': {'value': 1}}}}}
+
+
+def test_save_coerces_graph_level_error_handler_kwargs():
+    """`WorkGraph.save()` must coerce graph-level error-handler ``kwargs``.
+
+    Error-handler ``kwargs`` are copied verbatim into the
+    ``workgraph_error_handlers`` attribute, so a plain-Enum value there reaches
+    the storage gate.  This exercises the wiring of ``_ensure_json_safe`` inside
+    ``save_workgraph_data``, not just the helper in isolation.
+    """
+    from node_graph.error_handler import normalize_error_handlers
+
+    from aiida_workgraph import WorkGraph, task
+
+    @task()
+    def add(x: int = 1, y: int = 2):
+        return x + y
+
+    def handle(task, **kwargs):  # never runs, only stored
+        return 'retrying'
+
+    wg = WorkGraph(
+        'graph_level_handler',
+        error_handlers=normalize_error_handlers(
+            {'h': {'executor': handle, 'exit_codes': [1], 'kwargs': {'color': _Color.RED}}}
+        ),
+    )
+    wg.add_task(add, name='add1')
+    wg.save()
+
+    stored = orm.load_node(wg.process.pk).base.attributes.get('workgraph_error_handlers')
+    assert stored['h']['kwargs']['color'] == 1
+
+
+def test_save_coerces_task_level_error_handler_kwargs():
+    """`WorkGraph.save()` must coerce task-level error-handler ``kwargs``.
+
+    A task-level handler is stored inside the ``workgraph_data`` attribute under
+    that task's spec; a plain-Enum value in its ``kwargs`` must be unwrapped
+    there too.
+    """
+    from aiida_workgraph import WorkGraph, task
+
+    @task()
+    def add(x: int = 1, y: int = 2):
+        return x + y
+
+    def handle(task, **kwargs):  # never runs, only stored
+        return 'retrying'
+
+    wg = WorkGraph('task_level_handler')
+    add1 = wg.add_task(add, name='add1')
+    add1.add_error_handler({'h': {'executor': handle, 'exit_codes': [1], 'kwargs': {'color': _Color.RED}}})
+    wg.save()
+
+    stored = orm.load_node(wg.process.pk).base.attributes.get('workgraph_data')
+    handlers = stored['tasks']['add1']['spec']['attached_error_handlers']
+    assert handlers['h']['kwargs']['color'] == 1
 
 
 def test_get_or_create_code(fixture_localhost):
