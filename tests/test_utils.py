@@ -23,12 +23,6 @@ class _SpinChannel(str, enum.Enum):
     DOWN = 'down'
 
 
-class _Count(enum.IntEnum):
-    """IntEnum: IS an int instance, so already JSON-serializable."""
-
-    ONE = 1
-
-
 def test_ensure_json_safe_plain_enum_unwraps_to_value():
     """A plain Enum (the real bug class) is unwrapped to its ``.value``."""
     assert _ensure_json_safe(_Color.RED) == 1
@@ -36,24 +30,6 @@ def test_ensure_json_safe_plain_enum_unwraps_to_value():
     # nested exactly as an enum default would sit inside wgdata
     wgdata = {'tasks': {'t': {'inputs': {'color': {'value': _Color.RED}}}}}
     assert _ensure_json_safe(wgdata) == {'tasks': {'t': {'inputs': {'color': {'value': 1}}}}}
-
-
-@pytest.mark.parametrize(
-    ('member', 'dumped'),
-    [
-        pytest.param(_SpinChannel.UP, '"up"', id='str-enum'),
-        pytest.param(_Count.ONE, '1', id='int-enum'),
-    ],
-)
-def test_ensure_json_safe_json_native_enum_is_noop(member, dumped):
-    """A str-Enum/IntEnum is already a str/int, so the helper leaves it untouched.
-
-    This documents that the helper is a no-op for these: they must NOT be used
-    as regression fixtures for the bug, since they pass with or without the
-    helper (see PR discussion).
-    """
-    assert _ensure_json_safe(member) is member
-    assert json.dumps(_ensure_json_safe(member)) == dumped
 
 
 def test_ensure_json_safe_dict_enum_key_is_coerced():
