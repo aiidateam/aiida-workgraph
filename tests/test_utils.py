@@ -1,6 +1,7 @@
 import enum
 import json
 
+import numpy as np
 import pytest
 from aiida import orm
 from aiida.common.exceptions import ValidationError
@@ -37,21 +38,22 @@ def test_ensure_json_safe_plain_enum_unwraps_to_value():
     assert _ensure_json_safe(wgdata) == {'tasks': {'t': {'inputs': {'color': {'value': 1}}}}}
 
 
-def test_ensure_json_safe_str_enum_is_noop():
-    """A str-Enum is already a str, so the helper leaves it untouched.
+@pytest.mark.parametrize(
+    ('member', 'dumped'),
+    [
+        pytest.param(_SpinChannel.UP, '"up"', id='str-enum'),
+        pytest.param(_Count.ONE, '1', id='int-enum'),
+    ],
+)
+def test_ensure_json_safe_json_native_enum_is_noop(member, dumped):
+    """A str-Enum/IntEnum is already a str/int, so the helper leaves it untouched.
 
-    This documents that the helper is a no-op for str-Enum: it must NOT be used
-    as a regression fixture for the bug, since it passes with or without the
+    This documents that the helper is a no-op for these: they must NOT be used
+    as regression fixtures for the bug, since they pass with or without the
     helper (see PR discussion).
     """
-    assert _ensure_json_safe(_SpinChannel.UP) is _SpinChannel.UP
-    assert json.dumps(_ensure_json_safe(_SpinChannel.UP)) == '"up"'
-
-
-def test_ensure_json_safe_int_enum_serializes():
-    """An IntEnum is already an int; unchanged and JSON-serializable."""
-    assert _ensure_json_safe(_Count.ONE) is _Count.ONE
-    assert json.dumps(_ensure_json_safe(_Count.ONE)) == '1'
+    assert _ensure_json_safe(member) is member
+    assert json.dumps(_ensure_json_safe(member)) == dumped
 
 
 def test_ensure_json_safe_dict_enum_key_is_coerced():
@@ -73,22 +75,30 @@ def test_ensure_json_safe_non_enum_key_stringified():
     assert _ensure_json_safe({_Key(): 1}) == {'k': 1}
 
 
-def test_ensure_json_safe_preserves_clean_value_coercible():
+@pytest.mark.parametrize(
+    'factory',
+    [
+        pytest.param(lambda: {1, 2, 3}, id='set'),
+        pytest.param(lambda: frozenset({1, 2}), id='frozenset'),
+        pytest.param(lambda: np.int64(7), id='numpy-int'),
+        pytest.param(lambda: orm.Int(3), id='orm-int'),
+    ],
+)
+def test_ensure_json_safe_preserves_clean_value_coercible(factory):
     """Values that ``clean_value`` coerces itself pass through untouched.
 
     The helper must not pre-empt storage's own coercion: a set becomes a list
     at store time, a numpy scalar a Python scalar, a ``BaseType`` its value —
-    none of them may be stringified by the helper.
+    none of them may be stringified by the helper.  (Factories, not values:
+    ``orm.Int`` needs a loaded profile, which is not available at collection
+    time when parametrize arguments are evaluated.)
     """
-    import numpy as np
+    value = factory()
+    assert _ensure_json_safe(value) is value
 
-    assert _ensure_json_safe({1, 2, 3}) == {1, 2, 3}
-    assert _ensure_json_safe(frozenset({1, 2})) == frozenset({1, 2})
-    numpy_int = np.int64(7)
-    assert _ensure_json_safe(numpy_int) is numpy_int
-    aiida_int = orm.Int(3)
-    assert _ensure_json_safe(aiida_int) is aiida_int
 
+def test_ensure_json_safe_coercible_values_store_end_to_end():
+    """Pass-through values are coerced by storage itself and round-trip."""
     node = orm.WorkflowNode()
     node.base.attributes.set('data', _ensure_json_safe({'tags': {1, 2, 3}, 'n': np.int64(7)}))
     node.store()
@@ -115,12 +125,19 @@ def test_ensure_json_safe_non_dict_mapping_is_coerced():
     assert orm.load_node(node.pk).base.attributes.get('data') == {'(1, 2)': 'v', '1': 'w'}
 
 
-def test_ensure_json_safe_iterator_is_materialized():
+@pytest.mark.parametrize(
+    ('factory', 'expected'),
+    [
+        pytest.param(lambda: iter([1, 2]), [1, 2], id='iterator'),
+        pytest.param(lambda: (v for v in (_Color.RED, 3)), [1, 3], id='generator'),
+    ],
+)
+def test_ensure_json_safe_iterator_is_materialized(factory, expected):
     """A one-shot iterator is materialized to a list, not passed to
     ``clean_value`` (which would exhaust it as a side effect of validation and
-    leave an empty value to be stored)."""
-    assert _ensure_json_safe(iter([1, 2])) == [1, 2]
-    assert _ensure_json_safe(v for v in (_Color.RED, 3)) == [1, 3]
+    leave an empty value to be stored).  Factories, so each run gets a fresh,
+    unconsumed iterator."""
+    assert _ensure_json_safe(factory()) == expected
 
 
 def test_ensure_json_safe_fallback_does_not_unwrap_arbitrary_value_attr():
