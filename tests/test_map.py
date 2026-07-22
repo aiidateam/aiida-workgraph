@@ -1,7 +1,9 @@
+import pytest
 from aiida_workgraph import (
     WorkGraph,
     task,
     Map,
+    If,
     namespace,
     dynamic,
 )
@@ -20,6 +22,18 @@ def generate_data(n: int) -> Annotated[dict, namespace(data=dynamic(int))]:
 def add(x, y):
     """Add two numbers."""
     return x + y
+
+
+@task()
+def is_small(x) -> bool:
+    """True for x < 2, to drive an If branch per map item."""
+    return x < 2
+
+
+@task()
+def double(x):
+    """Double a number."""
+    return x * 2
 
 
 @task.graph
@@ -127,3 +141,76 @@ def test_map_zone_failed_iteration_fails_the_zone():
     assert map_zone.state == 'FAILED'
     assert wg.process.exit_status == 302
     assert 'key_1_maybe_fail' in wg.process.exit_message
+
+
+def test_map_zone_failed_iteration_skips_downstream():
+    """A failed zone must SKIP its downstream tasks, like any ordinary failure.
+
+    Otherwise the consumer runs on the missing gather output, fails on its own,
+    and pollutes the report with a failure that is only a consequence of the
+    zone's.
+    """
+    n = 3
+    with WorkGraph('map_fail_downstream') as wg:
+        data = generate_data(n=n).data
+        with Map(data) as map_zone:
+            out1 = maybe_fail(x=map_zone.value, y=10).result
+            map_zone.gather({'sum1': out1})
+        calc_sum(data=map_zone.outputs.sum1)
+        wg.run()
+    assert map_zone.state == 'FAILED'
+    assert wg.process.get_task_state('calc_sum') == 'SKIPPED'
+    assert 'calc_sum' not in wg.process.exit_message
+
+
+def test_map_gather_rejects_outside_zone_source():
+    """A gather source produced outside the zone fails loudly at build time.
+
+    It has no per-item clones, so it would gather to an empty namespace; reject
+    it with a clear message instead of silently under-reporting.
+    """
+    with pytest.raises(ValueError, match='outside the Map zone'):
+        with WorkGraph('map_reject_outside'):
+            data = generate_data(n=2).data
+            outside = add(x=1, y=2).result  # produced OUTSIDE the Map zone
+            with Map(data) as map_zone:
+                inner = add(x=map_zone.value, y=0).result
+                map_zone.gather({'inner': inner, 'outside': outside})
+
+
+def test_map_if_branch_does_not_fail_zone():
+    """A deliberately-untaken If branch inside a Map is a skip, not a failure.
+
+    For items where the condition is false the branch (and gather source) is
+    SKIPPED; that item gathers None and the zone still finishes, rather than the
+    zone failing as it would for a genuine error.
+    """
+    with WorkGraph('map_if') as wg:
+        data = generate_data(n=3).data  # values 0, 1, 2
+        with Map(data) as map_zone:
+            with If(is_small(x=map_zone.value).result):  # False for value 2
+                out = double(x=map_zone.value).result
+            map_zone.gather({'doubled': out})
+        wg.run()
+    assert map_zone.state == 'FINISHED'
+    assert wg.process.exit_status == 0
+    assert wg.process.get_task_state('key_2_double') == 'SKIPPED'
+
+
+def test_map_upstream_failure_fails_zone():
+    """An upstream error that only SKIPs the gather source still fails the zone.
+
+    Distinguishes a real failure from a deliberate skip: the gather source here
+    is SKIPPED (its input errored), but a FAILED clone exists in that iteration,
+    so the zone fails rather than gathering None and finishing.
+    """
+    with WorkGraph('map_upstream_fail') as wg:
+        data = generate_data(n=3).data
+        with Map(data) as map_zone:
+            failed = maybe_fail(x=map_zone.value, y=0).result  # FAILS for key_1
+            out = add(x=failed, y=100).result  # gather source; SKIPPED for key_1
+            map_zone.gather({'out': out})
+        wg.run()
+    assert map_zone.state == 'FAILED'
+    assert wg.process.get_task_state('key_1_add') == 'SKIPPED'
+    assert 'key_1' in wg.process.exit_message

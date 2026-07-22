@@ -1,5 +1,5 @@
 from __future__ import annotations
-from typing import Optional, Tuple, List, Any
+from typing import Optional, Tuple, List, Any, Iterator
 from typing_extensions import assert_never
 from aiida.orm.utils.serialize import serialize
 from aiida_workgraph.orm.utils import deserialize_safe
@@ -291,6 +291,20 @@ class TaskStateManager:
             self.process.report(f'Task: {name} finished.')
             self.update_parent_task_state(name)
 
+    def _iter_zone_clones(self, zone: Any) -> Iterator[Any]:
+        """Yield every mapped clone within a Map zone, recursing nested zones.
+
+        Clones live under each body template's ``mapped_tasks`` (the zone's child
+        list holds templates, one clone added per prefix), so walking the template
+        tree and reading ``mapped_tasks`` reaches all of them, including those in a
+        nested `If`.
+        """
+        stack = list(getattr(zone, 'children', []))
+        while stack:
+            template = stack.pop()
+            yield from (template.mapped_tasks or {}).values()
+            stack.extend(getattr(template, 'children', []))
+
     def update_map_task_state(self, name: str) -> None:
         """Update the map task state.
         1) check if all child tasks are finished.
@@ -321,29 +335,35 @@ class TaskStateManager:
             for input_socket in gather_task.inputs
             if not input_socket._name.startswith('_') and input_socket._links
         ]
-        # An iteration that raised is FAILED, and `on_task_failed` SKIPs its
-        # downstream children, so a broken item surfaces as either state on the
-        # source clone. Both mean it produced nothing to gather, so fail the
-        # whole zone instead of emitting a namespace that is silently missing
-        # that item: a FINISHED zone whose gathered dict is short reads as a
-        # complete result and quietly corrupts whatever aggregates it.
-        failed_prefixes = sorted(
-            prefix
-            for link in gather_links
-            for prefix, clone in (self.process.wg.tasks[link.from_task.name].mapped_tasks or {}).items()
-            if self.get_task_runtime_info(clone.name, 'state') in (TaskState.FAILED, TaskState.SKIPPED)
+        # Fail the zone (fail-fast) only for iterations that actually errored: a
+        # FAILED clone anywhere in that iteration's body. A merely SKIPPED clone
+        # is a deliberately-untaken branch (a false `If` inside the Map) and
+        # gathers None below, not a failure. An upstream error that SKIPs the
+        # gather source still leaves a FAILED clone in that iteration, so it is
+        # caught here too.
+        errored_prefixes = sorted(
+            {
+                clone.map_data['prefix']
+                for clone in self._iter_zone_clones(map_zone)
+                if self.get_task_runtime_info(clone.name, 'state') == TaskState.FAILED
+            }
         )
-        if failed_prefixes:
+        if errored_prefixes:
             self.set_task_runtime_info(name, 'state', TaskState.FAILED)
-            self.process.report(f'Task: {name} failed, no result from mapped item(s): {", ".join(failed_prefixes)}.')
+            # Skip the zone's downstream tasks, as `on_task_failed` does for an
+            # ordinary failure; otherwise they run on the missing gather output
+            # and pollute the report with their own consequent failures.
+            self.set_tasks_state(self.process.wg.connectivity['child_node'][name], TaskState.SKIPPED)
+            self.process.report(f'Task: {name} failed, no result from mapped item(s): {", ".join(errored_prefixes)}.')
             self.update_parent_task_state(name)
             return
         for link in gather_links:
             source_clones = self.process.wg.tasks[link.from_task.name].mapped_tasks or {}
             results = {}
             for prefix, clone in source_clones.items():
-                # Defensive only: every surviving clone is FINISHED with its
-                # result recorded, since the failure paths returned above.
+                # A SKIPPED source (a false `If` branch) has no recorded result,
+                # so `default=None` gathers None for that item; a FINISHED source
+                # gathers its value.
                 results[prefix] = get_nested_dict(
                     self.ctx._task_results[clone.name],
                     link.from_socket._scoped_name,
