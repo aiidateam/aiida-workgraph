@@ -1,3 +1,4 @@
+import logging
 import time
 import pytest
 from aiida_workgraph import WorkGraph
@@ -51,3 +52,44 @@ def test_max_number_jobs(add_code) -> None:
     report = get_workchain_report(wg.process, 'REPORT')
     assert 'tasks ready to run: add2' in report
     wg.tasks.add2.outputs.sum.value == 2
+
+
+class _RecordingEngine:
+    """Stand-in for a running engine that records the pause/kill calls it receives.
+
+    ``_schedule_rpc`` calls the callback straight away, so a wrong keyword name
+    raises ``TypeError`` here just as it would on the process event loop.
+    """
+
+    logger = logging.getLogger(__name__)
+    pid = 0
+
+    def __init__(self) -> None:
+        self.killed: tuple | None = None
+        self.paused: str | None = None
+
+    def _schedule_rpc(self, callback, *args, **kwargs):
+        return callback(*args, **kwargs)
+
+    def kill(self, msg_text: str | None = None, force_kill: bool = False) -> None:
+        self.killed = (msg_text, force_kill)
+
+    def pause(self, msg_text: str | None = None) -> None:
+        self.paused = msg_text
+
+
+def test_message_receive_reads_plumpy_message_text() -> None:
+    """The pause and kill RPCs carry the text plumpy's ``MessageBuilder`` writes."""
+    from plumpy.process_comms import MessageBuilder
+    from aiida_workgraph.engine.workgraph import WorkGraphEngine
+
+    engine = _RecordingEngine()
+
+    WorkGraphEngine.message_receive(engine, None, MessageBuilder.kill(text='killed by test'))
+    assert engine.killed == ('killed by test', False)
+
+    WorkGraphEngine.message_receive(engine, None, MessageBuilder.kill(text='forced', force_kill=True))
+    assert engine.killed == ('forced', True)
+
+    WorkGraphEngine.message_receive(engine, None, MessageBuilder.pause(text='paused by test'))
+    assert engine.paused == 'paused by test'

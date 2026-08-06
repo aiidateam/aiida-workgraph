@@ -308,9 +308,12 @@ class WorkGraphEngine(Process, metaclass=Protect):
         if intent == process_comms.Intent.PLAY:
             return self._schedule_rpc(self.play)
         if intent == process_comms.Intent.PAUSE:
-            return self._schedule_rpc(self.pause, msg=msg.get(process_comms.MESSAGE_KEY, None))
+            return self._schedule_rpc(self.pause, msg_text=msg.get(process_comms.MESSAGE_TEXT_KEY, None))
         if intent == process_comms.Intent.KILL:
-            return self._schedule_rpc(self.kill, msg=msg.get(process_comms.MESSAGE_KEY, None))
+            default_message = process_comms.MessageBuilder.kill()
+            text = msg.get(process_comms.MESSAGE_TEXT_KEY, default_message[process_comms.MESSAGE_TEXT_KEY])
+            force_kill = msg.get(process_comms.FORCE_KILL_KEY, default_message[process_comms.FORCE_KILL_KEY])
+            return self._schedule_rpc(self.kill, msg_text=text, force_kill=force_kill)
         if intent == process_comms.Intent.STATUS:
             status_info: t.Dict[str, t.Any] = {}
             self.get_status_info(status_info)
