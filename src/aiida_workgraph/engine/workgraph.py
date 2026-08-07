@@ -46,6 +46,8 @@ class WorkGraphEngine(Process, metaclass=Protect):
     _node_class = WorkGraphNode
     _spec_class = WorkGraphSpec
     _CONTEXT = 'CONTEXT'
+    #: Intent of a message that carries a WorkGraph task action rather than a plumpy process action.
+    CUSTOM_INTENT = 'custom'
 
     def __init__(
         self,
@@ -288,41 +290,17 @@ class WorkGraphEngine(Process, metaclass=Protect):
         else:
             self.report(f'Unknow message type {msg}')
 
-    def message_receive(self, _comm: kiwipy.Communicator, msg: t.Dict[str, t.Any]) -> t.Any:
-        """
-        Coroutine called when the process receives a message from the communicator
+    @override
+    def message_receive(self, _comm: kiwipy.Communicator, msg: process_comms.MessageType) -> t.Any:
+        """Dispatch WorkGraph task actions; defer every plumpy intent to the base implementation.
 
         :param _comm: the communicator that sent the message
         :param msg: the message
-        :return: the outcome of processing the message, the return value will be sent back as a response to the sender
+        :return: the outcome of processing the message, sent back as the response to the sender
         """
-        self.logger.debug(
-            "Process<%s>: received RPC message with communicator '%s': %r",
-            self.pid,
-            _comm,
-            msg,
-        )
-
-        intent = msg[process_comms.INTENT_KEY]
-
-        if intent == process_comms.Intent.PLAY:
-            return self._schedule_rpc(self.play)
-        if intent == process_comms.Intent.PAUSE:
-            return self._schedule_rpc(self.pause, msg_text=msg.get(process_comms.MESSAGE_TEXT_KEY, None))
-        if intent == process_comms.Intent.KILL:
-            default_message = process_comms.MessageBuilder.kill()
-            text = msg.get(process_comms.MESSAGE_TEXT_KEY, default_message[process_comms.MESSAGE_TEXT_KEY])
-            force_kill = msg.get(process_comms.FORCE_KILL_KEY, default_message[process_comms.FORCE_KILL_KEY])
-            return self._schedule_rpc(self.kill, msg_text=text, force_kill=force_kill)
-        if intent == process_comms.Intent.STATUS:
-            status_info: t.Dict[str, t.Any] = {}
-            self.get_status_info(status_info)
-            return status_info
-        if intent == 'custom':
+        if msg[process_comms.INTENT_KEY] == self.CUSTOM_INTENT:
             return self._schedule_rpc(self.apply_action, msg=msg)
-
-        # Didn't match any known intents
-        raise RuntimeError('Unknown intent')
+        return super().message_receive(_comm, msg)
 
     def finalize(self) -> t.Optional[ExitCode]:
         """Finalize the workgraph.
