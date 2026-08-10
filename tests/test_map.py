@@ -214,3 +214,45 @@ def test_map_upstream_failure_fails_zone():
     assert map_zone.state == 'FAILED'
     assert wg.process.get_task_state('key_1_add') == 'SKIPPED'
     assert 'key_1' in wg.process.exit_message
+
+
+def test_map_unrelated_body_failure_does_not_fail_zone():
+    """An un-gathered body task failing must not fail the zone or discard the gather.
+
+    Only the gather sources decide completeness; an unrelated failure surfaces via the
+    ordinary exit-302 path, and the (complete) gathered output and its consumer are
+    unaffected.
+    """
+    with WorkGraph('map_unrelated_fail') as wg:
+        data = generate_data(n=3).data
+        with Map(data) as map_zone:
+            good = add(x=map_zone.value, y=1).result
+            maybe_fail(x=map_zone.value, y=0)  # FAILS for key_1; its output is not gathered
+            map_zone.gather({'a': good})
+        total = calc_sum(data=map_zone.outputs.a).result
+        wg.run()
+    assert map_zone.state == 'FINISHED'
+    assert wg.process.get_task_state('calc_sum') == 'FINISHED'
+    assert wg.process.exit_status == 302  # only the un-gathered maybe_fail failed
+    assert 'map_zone' not in wg.process.exit_message
+    assert total.value == 6  # gather complete: (0+1)+(1+1)+(2+1)
+
+
+def test_map_info_keeps_gather_edges():
+    """`gather_item` is not cloned, but its source edges stay in `map_info` for the GUI.
+
+    They use template names (like every other map_info link) and resolve to the listed
+    children, so the web UI can still draw the per-item gather.
+    """
+    with WorkGraph('map_info') as wg:
+        data = generate_data(n=2).data
+        with Map(data) as map_zone:
+            out = add(x=map_zone.value, y=1).result
+            map_zone.gather({'a': out})
+        wg.run()
+    mi = wg.process.get_task_map_info('map_zone')
+    assert 'gather_item' in mi['children']
+    gather_edges = [link for link in mi['links'] if link['to_task'] == 'gather_item']
+    assert [e['from_task'] for e in gather_edges] == ['add']
+    # no dangling references: every link's endpoints are listed children
+    assert all(link['from_task'] in mi['children'] and link['to_task'] in mi['children'] for link in mi['links'])

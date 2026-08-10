@@ -1,11 +1,14 @@
 from __future__ import annotations
-from typing import Optional, Tuple, List, Any, Iterator
+from typing import Optional, Tuple, List, Any, Iterator, TYPE_CHECKING
 from typing_extensions import assert_never
 from aiida.orm.utils.serialize import serialize
 from aiida_workgraph.orm.utils import deserialize_safe
 from aiida.orm import ProcessNode, Data
 from aiida_workgraph.enums import TERMINAL_TASK_STATES, RuntimeInfoKey, TaskState
 from node_graph.socket import BaseSocket, TaskSocketNamespace
+
+if TYPE_CHECKING:
+    from aiida_workgraph.task import Task
 
 
 class TaskStateManager:
@@ -291,18 +294,17 @@ class TaskStateManager:
             self.process.report(f'Task: {name} finished.')
             self.update_parent_task_state(name)
 
-    def _iter_zone_clones(self, zone: Any) -> Iterator[Any]:
-        """Yield every mapped clone within a Map zone, recursing nested zones.
+    def _iter_zone_clones(self, zone: 'Task') -> Iterator[Tuple[str, 'Task']]:
+        """Yield ``(prefix, clone)`` for every mapped clone within a Map zone.
 
-        Clones live under each body template's ``mapped_tasks`` (the zone's child
-        list holds templates, one clone added per prefix), so walking the template
-        tree and reading ``mapped_tasks`` reaches all of them, including those in a
-        nested `If`.
+        Clones live under each body template's ``mapped_tasks``, keyed by prefix
+        (the zone's child list holds templates, one clone per prefix), so walking
+        the template tree reaches all of them, including those in a nested `If`.
         """
         stack = list(getattr(zone, 'children', []))
         while stack:
             template = stack.pop()
-            yield from (template.mapped_tasks or {}).values()
+            yield from (template.mapped_tasks or {}).items()
             stack.extend(getattr(template, 'children', []))
 
     def update_map_task_state(self, name: str) -> None:
@@ -335,35 +337,42 @@ class TaskStateManager:
             for input_socket in gather_task.inputs
             if not input_socket._name.startswith('_') and input_socket._links
         ]
-        # Fail the zone (fail-fast) only for iterations that actually errored: a
-        # FAILED clone anywhere in that iteration's body. A merely SKIPPED clone
-        # is a deliberately-untaken branch (a false `If` inside the Map) and
-        # gathers None below, not a failure. An upstream error that SKIPs the
-        # gather source still leaves a FAILED clone in that iteration, so it is
-        # caught here too.
-        errored_prefixes = sorted(
-            {
-                clone.map_data['prefix']
-                for clone in self._iter_zone_clones(map_zone)
-                if self.get_task_runtime_info(clone.name, 'state') == TaskState.FAILED
-            }
-        )
-        if errored_prefixes:
+        # Fail the zone (fail-fast) only when a GATHER SOURCE produced no result:
+        # its clone FAILED, or was SKIPPED in an iteration that errored (something
+        # it depended on FAILED). This is keyed on the gather sources, not every
+        # clone, so a false `If` branch gathers None (SKIPPED with no FAILED clone
+        # in its iteration), and an unrelated body-task failure is left to the
+        # ordinary 302 path rather than discarding an otherwise-complete gather.
+        failed_prefixes = {
+            prefix
+            for prefix, clone in self._iter_zone_clones(map_zone)
+            if self.get_task_runtime_info(clone.name, 'state') == TaskState.FAILED
+        }
+        missing_prefixes = set()
+        for link in gather_links:
+            for prefix, clone in (self.process.wg.tasks[link.from_task.name].mapped_tasks or {}).items():
+                clone_state = self.get_task_runtime_info(clone.name, 'state')
+                if clone_state == TaskState.FAILED or (clone_state == TaskState.SKIPPED and prefix in failed_prefixes):
+                    missing_prefixes.add(prefix)
+        if missing_prefixes:
             self.set_task_runtime_info(name, 'state', TaskState.FAILED)
             # Skip the zone's downstream tasks, as `on_task_failed` does for an
             # ordinary failure; otherwise they run on the missing gather output
             # and pollute the report with their own consequent failures.
             self.set_tasks_state(self.process.wg.connectivity['child_node'][name], TaskState.SKIPPED)
-            self.process.report(f'Task: {name} failed, no result from mapped item(s): {", ".join(errored_prefixes)}.')
+            self.process.report(
+                f'Task: {name} failed, no result from mapped item(s): {", ".join(sorted(missing_prefixes))}.'
+            )
             self.update_parent_task_state(name)
             return
         for link in gather_links:
             source_clones = self.process.wg.tasks[link.from_task.name].mapped_tasks or {}
             results = {}
             for prefix, clone in source_clones.items():
-                # A SKIPPED source (a false `If` branch) has no recorded result,
-                # so `default=None` gathers None for that item; a FINISHED source
-                # gathers its value.
+                # A source with no recorded value for this socket gathers None: a
+                # false `If` branch (SKIPPED), or a FINISHED source that returned
+                # no value for it. They read the same here; telling them apart is
+                # the resilient-Map follow-up.
                 results[prefix] = get_nested_dict(
                     self.ctx._task_results[clone.name],
                     link.from_socket._scoped_name,

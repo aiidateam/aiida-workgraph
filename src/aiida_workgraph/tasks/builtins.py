@@ -150,9 +150,8 @@ class Map(Zone):
             source = socket._task
             if not self._contains_task(source):
                 msg = (
-                    f"Map.gather(): output '{name}' comes from task '{source.name}', which is "
-                    f'outside the Map zone. A gather source must be produced inside the zone '
-                    f"(one value per iteration); move '{source.name}' into the `with Map(...):` block."
+                    f"Map.gather() source '{name}' ('{source.name}') is outside the Map zone (one value, not "
+                    f'per-iteration). Move a per-iteration task inside the zone, or use a shared value (graph input) directly.'
                 )
                 raise ValueError(msg)
             gather_item.add_input_spec('workgraph.any', name=name)
