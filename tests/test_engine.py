@@ -1,4 +1,5 @@
 import time
+from unittest import mock
 import pytest
 from aiida_workgraph import WorkGraph
 from aiida.cmdline.utils.common import get_workchain_report
@@ -51,3 +52,16 @@ def test_max_number_jobs(add_code) -> None:
     report = get_workchain_report(wg.process, 'REPORT')
     assert 'tasks ready to run: add2' in report
     wg.tasks.add2.outputs.sum.value == 2
+
+
+def test_message_receive_kills_with_the_real_process_signature() -> None:
+    """The kill RPC reaches ``Process.kill`` with the keywords it actually declares."""
+    from plumpy.process_comms import MessageBuilder
+    from aiida_workgraph.engine.workgraph import WorkGraphEngine
+
+    engine = mock.create_autospec(WorkGraphEngine, instance=True)
+    engine._schedule_rpc.side_effect = lambda callback, *args, **kwargs: callback(*args, **kwargs)
+
+    WorkGraphEngine.message_receive(engine, None, MessageBuilder.kill(text='forced', force_kill=True))
+
+    engine.kill.assert_called_once_with(msg_text='forced', force_kill=True)
