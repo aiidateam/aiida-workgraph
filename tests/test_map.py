@@ -256,3 +256,23 @@ def test_map_info_keeps_gather_edges():
     assert [e['from_task'] for e in gather_edges] == ['add']
     # no dangling references: every link's endpoints are listed children
     assert all(link['from_task'] in mi['children'] and link['to_task'] in mi['children'] for link in mi['links'])
+
+
+def test_map_gather_rejects_atomically():
+    """A rejected gather() adds no specs, so the zone stays rebuildable.
+
+    Otherwise a caught error would leave a half-built zone whose sockets already
+    exist on the retry.
+    """
+    with WorkGraph('map_reject_atomic') as wg:
+        data = generate_data(n=2).data
+        outside = add(x=1, y=2).result  # outside the zone
+        with Map(data) as map_zone:
+            good = add(x=map_zone.value, y=0).result
+            with pytest.raises(ValueError, match='outside the Map zone'):
+                map_zone.gather({'a': good, 'ext': outside})
+            # the rejected call left nothing behind, so a valid gather still works
+            map_zone.gather({'a': good})
+        out = calc_sum(data=map_zone.outputs.a).result
+        wg.run()
+    assert out.value == 1  # (0+0) + (1+0)
