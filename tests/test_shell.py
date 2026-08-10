@@ -28,7 +28,7 @@ def test_shell_command(fixture_localhost):
         },
     )
     # also check if we can set the computer explicitly
-    job1.set_inputs({'metadata.computer': load_computer('localhost')})
+    job1.set_inputs({'metadata.computer': load_computer(fixture_localhost.label)})
     wg.run()
     assert job1.outputs.stdout.value.get_content() == 'string astring b'
 

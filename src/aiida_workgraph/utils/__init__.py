@@ -18,6 +18,7 @@ from node_graph.socket import TaggedValue
 from node_graph.socket_spec import SocketSpec
 from aiida.orm.utils.serialize import serialize
 from aiida_workgraph.orm.utils import deserialize_safe
+import enum
 from copy import deepcopy
 
 LOGGER = logging.getLogger(__name__)
@@ -268,6 +269,58 @@ def clean_pickled_task_executor(tdata: Dict[str, Any]) -> None:
             tdata['error_handlers'][name] = RuntimeExecutor.from_callable(UnavailableExecutor).to_dict()
 
 
+def _ensure_json_safe_key(key: Any) -> Union[str, int, float, bool, None]:
+    """Coerce a dict key into a valid JSON object key.
+
+    JSON object keys must be ``str``/``int``/``float``/``bool``/``None``, and
+    aiida-core's ``clean_value`` does not inspect dict keys, so an invalid key
+    would only fail once it reaches the database.  Enum keys are unwrapped to
+    their ``.value``; anything else that is not already a valid key type is
+    stringified.
+    """
+    if key is None or isinstance(key, (bool, int, float, str)):
+        return key
+    if isinstance(key, enum.Enum):
+        return _ensure_json_safe_key(key.value)
+    return str(key)
+
+
+def _ensure_json_safe(value: Any) -> Any:
+    """Recursively coerce a nested structure into values that can be stored as
+    node attributes.
+
+    Node attributes must survive aiida-core's ``clean_value``, but workgraph
+    data can carry Python objects it rejects (e.g. ``enum.Enum`` members in
+    error-handler kwargs).  Enums are unwrapped to their ``.value``; mapping
+    keys that are not valid JSON object keys are coerced the same way (see
+    :func:`_ensure_json_safe_key`); one-shot iterators are materialized to
+    lists (``clean_value`` would otherwise exhaust them as a side effect of
+    validation); and any remaining value that ``clean_value`` rejects is
+    replaced by its ``str()`` representation.  Values that storage coerces
+    itself (sets to lists, numpy scalars to Python scalars, ``BaseType`` to its
+    value) pass through untouched, so the ``str()`` fallback — lossy by design
+    — only catches what would otherwise fail on store.
+    """
+    from collections.abc import Iterator, Mapping
+
+    from aiida.common.exceptions import ValidationError
+    from aiida.orm.implementation.utils import clean_value
+
+    if value is None or isinstance(value, (bool, int, float, str)):
+        return value
+    if isinstance(value, enum.Enum):
+        return _ensure_json_safe(value.value)
+    if isinstance(value, Mapping):
+        return {_ensure_json_safe_key(k): _ensure_json_safe(v) for k, v in value.items()}
+    if isinstance(value, (list, tuple, Iterator)):
+        return [_ensure_json_safe(v) for v in value]
+    try:
+        clean_value(value)
+        return value
+    except ValidationError:
+        return str(value)
+
+
 def save_workgraph_data(node: Union[int, orm.Node], inputs: Dict[str, Any]) -> None:
     from aiida_workgraph.engine.workgraph import WorkGraphSpec
 
@@ -286,9 +339,9 @@ def save_workgraph_data(node: Union[int, orm.Node], inputs: Dict[str, Any]) -> N
     node.task_states = task_states
     node.task_processes = task_processes
     node.task_actions = task_actions
-    node.workgraph_data = wgdata
-    node.workgraph_data_short = short_wgdata
-    node.workgraph_error_handlers = wgdata.pop('error_handlers', {})
+    node.workgraph_data = _ensure_json_safe(wgdata)
+    node.workgraph_data_short = _ensure_json_safe(short_wgdata)
+    node.workgraph_error_handlers = _ensure_json_safe(wgdata.pop('error_handlers', {}))
     graph_inputs = dict(inputs.pop('graph_inputs', {}))
     tasks = dict(inputs.pop('tasks', {}))
     tasks['graph_inputs'] = graph_inputs

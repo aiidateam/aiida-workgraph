@@ -44,7 +44,7 @@ def test_imported_pythonjob(fixture_localhost, python_executable_path):
         name='add1',
         x=1,
         y=2,
-        computer='localhost',
+        computer=fixture_localhost.label,
         command_info={'label': python_executable_path},
     )
     wg.run()
@@ -73,15 +73,16 @@ def test_decorator(fixture_localhost, python_executable_path):
         name='add1',
         x=1,
         y=2,
-        computer='localhost',
+        computer=fixture_localhost.label,
         command_info={'label': python_executable_path},
     )
+
     wg.add_task(
         decorted_multiply,
         name='multiply1',
         x=wg.tasks.add1.outputs.sum,
         y=3,
-        computer='localhost',
+        computer=fixture_localhost.label,
         command_info={'label': python_executable_path},
     )
     # wg.submit(wait=True)
@@ -111,7 +112,7 @@ def test_PythonJob_kwargs(fixture_localhost, python_executable_path):
                 'x': 1,
                 'y': 2,
                 'kwargs': {'m': 2, 'n': 3},
-                'computer': 'localhost',
+                'computer': fixture_localhost.label,
                 'command_info': {'label': python_executable_path},
             },
         },
@@ -140,6 +141,7 @@ def test_dynamic_inputs(fixture_localhost, python_executable_path) -> None:
         x=np.array([1, 2]),
         y=np.array([3, 4]),
         command_info={'label': python_executable_path},
+        computer=fixture_localhost.label,
     )
     wg.run()
     assert (wg.tasks.add1.outputs.result.value.get_array() == np.array([4, 6])).all()
@@ -191,17 +193,17 @@ def test_PythonJob_namespace_output_input(fixture_localhost, python_executable_p
         'myfunc': {
             'x': 1.0,
             'y': 2.0,
-            'computer': 'localhost',
+            'computer': fixture_localhost.label,
             'command_info': {'label': python_executable_path},
         },
         'myfunc2': {
             'y': 3.0,
-            'computer': 'localhost',
+            'computer': fixture_localhost.label,
             'command_info': {'label': python_executable_path},
         },
         'myfunc3': {
             'y': 4.0,
-            'computer': 'localhost',
+            'computer': fixture_localhost.label,
             'command_info': {'label': python_executable_path},
         },
     }
@@ -252,19 +254,19 @@ def test_PythonJob_copy_files(fixture_localhost, python_executable_path):
             'add1': {
                 'x': 2,
                 'y': 3,
-                'computer': 'localhost',
+                'computer': fixture_localhost.label,
                 'command_info': {'label': python_executable_path},
             },
             'add2': {
                 'x': 2,
                 'y': 3,
-                'computer': 'localhost',
+                'computer': fixture_localhost.label,
                 'command_info': {'label': python_executable_path},
             },
             'multiply': {
                 'x_folder_name': 'add1_remote_folder',
                 'y_folder_name': 'add2_remote_folder',
-                'computer': 'localhost',
+                'computer': fixture_localhost.label,
                 'command_info': {'label': python_executable_path},
             },
         },
@@ -287,7 +289,7 @@ def test_load_pythonjob(fixture_localhost, python_executable_path):
             'add': {
                 'x': 'Hello, ',
                 'y': 'World!',
-                'computer': 'localhost',
+                'computer': fixture_localhost.label,
                 'command_info': {'label': python_executable_path},
             },
         },
@@ -341,7 +343,7 @@ def test_exit_code(fixture_localhost, python_executable_path):
         name='add1',
         x=np.array([1, 1]),
         y=np.array([1, -2]),
-        computer='localhost',
+        computer=fixture_localhost.label,
         command_info={'label': python_executable_path},
     )
     wg.run()
