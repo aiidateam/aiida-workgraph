@@ -141,6 +141,8 @@ def test_map_zone_failed_iteration_fails_the_zone():
     assert map_zone.state == 'FAILED'
     assert wg.process.exit_status == 302
     assert 'key_1_maybe_fail' in wg.process.exit_message
+    # A failed zone must expose nothing rather than a short namespace.
+    assert map_zone.outputs.sum1._value == {}
 
 
 def test_map_zone_failed_iteration_skips_downstream():
@@ -276,3 +278,98 @@ def test_map_gather_rejects_atomically():
         out = calc_sum(data=map_zone.outputs.a).result
         wg.run()
     assert out.value == 1  # (0+0) + (1+0)
+
+
+def test_map_zone_outputs_visible_to_client():
+    """Gathered zone outputs are readable from the client after the run.
+
+    A Map zone has no process node of its own, so ``Task.update_state`` cannot
+    populate its outputs and ``map_zone.outputs.<name>`` used to come back empty
+    even though the engine had gathered the results. The engine now persists the
+    gathered node UUIDs in ``task_map_info``, which the client reads back. The
+    in-session check confirms the outputs are readable straight after ``run()``;
+    the ``WorkGraph.load`` check confirms they survive a fresh reload from the
+    database. Both go through the same ``result_uuids`` reconstruction, so the
+    reload is the stronger of the two.
+    """
+    n = 3
+    with WorkGraph('map_zone_outputs') as wg:
+        data = generate_data(n=n).data
+        with Map(data) as map_zone:
+            out1 = add(x=map_zone.value, y=1).result
+            map_zone.gather({'sum1': out1})
+        wg.run()
+
+    expected = {'key_0': 1, 'key_1': 2, 'key_2': 3}
+    gathered = map_zone.outputs.sum1._value
+    assert {prefix: node.value for prefix, node in gathered.items()} == expected
+
+    reloaded = WorkGraph.load(wg.process.pk).tasks[map_zone.name].outputs.sum1._value
+    assert {prefix: node.value for prefix, node in reloaded.items()} == expected
+
+    # References are persisted as UUIDs, not PKs, so they survive archive
+    # export/import (PKs are reassigned on import, UUIDs are not).
+    persisted = wg.process.get_task_map_info(map_zone.name)['result_uuids']['sum1']
+    assert persisted == {prefix: node.uuid for prefix, node in gathered.items()}
+
+
+def test_map_zone_outputs_omit_none_gathered_prefixes():
+    """Prefixes that gathered no result node are absent from the client namespace.
+
+    An untaken ``If`` branch gathers None for that item (see
+    ``test_map_if_branch_does_not_fail_zone``). Only prefixes with a stored
+    result node are persisted in ``result_uuids``, so the reconstructed namespace
+    holds only the taken-branch items, both in-session and after reload. This
+    pins the current leaf-node scope; reconstructing None/structured gathers is
+    the resilient-Map follow-up.
+    """
+    with WorkGraph('map_if_outputs') as wg:
+        data = generate_data(n=3).data  # values 0, 1, 2; condition false for 2
+        with Map(data) as map_zone:
+            with If(is_small(x=map_zone.value).result):
+                out = double(x=map_zone.value).result
+            map_zone.gather({'doubled': out})
+        wg.run()
+    assert map_zone.state == 'FINISHED'
+
+    expected = {'key_0': 0, 'key_1': 2}  # doubled; key_2 branch untaken, absent
+    gathered = map_zone.outputs.doubled._value
+    assert {prefix: node.value for prefix, node in gathered.items()} == expected
+
+    reloaded = WorkGraph.load(wg.process.pk).tasks[map_zone.name].outputs.doubled._value
+    assert {prefix: node.value for prefix, node in reloaded.items()} == expected
+
+
+def test_map_zone_outputs_tolerate_missing_result_node(monkeypatch):
+    """A missing gathered node degrades to a partial namespace, not a crash.
+
+    UUIDs survive archive export/import, but a *partial* import (or a deleted
+    node) leaves some referenced nodes unresolvable. Reconstruction must skip
+    those so the WorkGraph still opens, rather than letting ``NotExistent``
+    propagate out of ``load``/``update`` and make the run unopenable. The missing
+    node is simulated by making ``load_node`` raise for one gathered UUID, since
+    deleting a real result node cascades to the whole provenance graph.
+    """
+    import aiida.orm
+    from aiida.common.exceptions import NotExistent
+
+    with WorkGraph('map_missing_node') as wg:
+        data = generate_data(n=3).data
+        with Map(data) as map_zone:
+            out1 = add(x=map_zone.value, y=1).result
+            map_zone.gather({'sum1': out1})
+        wg.run()
+    pk = wg.process.pk
+    missing_uuid = map_zone.outputs.sum1._value['key_1'].uuid
+
+    real_load_node = aiida.orm.load_node
+
+    def load_node_missing_one(*args, **kwargs):
+        if kwargs.get('uuid') == missing_uuid:
+            raise NotExistent(f'simulated missing node {missing_uuid}')
+        return real_load_node(*args, **kwargs)
+
+    monkeypatch.setattr(aiida.orm, 'load_node', load_node_missing_one)
+
+    reloaded = WorkGraph.load(pk).tasks[map_zone.name].outputs.sum1._value
+    assert {prefix: node.value for prefix, node in reloaded.items()} == {'key_0': 1, 'key_2': 3}

@@ -323,12 +323,54 @@ class WorkGraph(node_graph.Graph):
                 continue
             self.tasks[name].update_state(data)
 
+        # Zone/Map tasks have no process node (pk=None), so update_state
+        # cannot populate their outputs.  The engine persists the gathered
+        # result UUIDs in task_map_info; reconstruct outputs from those.
+        self._populate_zone_outputs(processes_data)
+
         if self.widget is not None:
             states = {name: data['state'] for name, data in processes_data.items()}
             self.widget.states = states
 
         if self.process.is_finished_ok:
             self.outputs._set_socket_value(resolve_node_link_managers(self.process.outputs))
+
+    def _populate_zone_outputs(self, processes_data: Dict[str, Any]) -> None:
+        """Populate outputs for zone/Map tasks from persisted result UUIDs.
+
+        Zone tasks have no AiiDA process node, so ``Task.update_state`` cannot
+        load their outputs.  The engine persists the gathered result node UUIDs
+        in ``task_map_info[name]['result_uuids']``; this method loads those nodes
+        and sets them on the corresponding output sockets.
+        """
+        import aiida.orm
+        from aiida.common.exceptions import NotExistent
+
+        for name, data in processes_data.items():
+            if name not in self.tasks:
+                continue
+            # Only handle tasks with no process node that are finished.
+            if data['pk'] is not None or data['state'] != TaskState.FINISHED:
+                continue
+            map_info = self.process.get_task_map_info(name)
+            if not map_info:
+                continue
+            result_uuids = map_info.get('result_uuids', {})
+            task = self.tasks[name]
+            for socket_name, uuid_map in result_uuids.items():
+                if socket_name not in task.outputs._sockets:
+                    continue
+                values = {}
+                for prefix, uuid in uuid_map.items():
+                    try:
+                        values[prefix] = aiida.orm.load_node(uuid=uuid)
+                    except NotExistent:
+                        # A gathered result node is unresolvable (e.g. a partial
+                        # archive import, or the node was deleted). Skip it so the
+                        # zone output degrades to a partial namespace rather than
+                        # making the whole WorkGraph unopenable.
+                        continue
+                task.outputs[socket_name]._value = values
 
     @property
     def pk(self) -> Optional[int]:

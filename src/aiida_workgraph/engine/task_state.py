@@ -3,7 +3,7 @@ from typing import Optional, Tuple, List, Any, Iterator, TYPE_CHECKING
 from typing_extensions import assert_never
 from aiida.orm.utils.serialize import serialize
 from aiida_workgraph.orm.utils import deserialize_safe
-from aiida.orm import ProcessNode, Data
+from aiida.orm import Data, Node, ProcessNode
 from aiida_workgraph.enums import TERMINAL_TASK_STATES, RuntimeInfoKey, TaskState
 from node_graph.socket import BaseSocket, TaskSocketNamespace
 
@@ -379,6 +379,33 @@ class TaskStateManager:
                     default=None,
                 )
             self.ctx._task_results[name][link.to_socket._name] = results
+        # Persist the gathered-result node UUIDs on the process node so the
+        # client can reconstruct zone outputs after wg.update().  Zone tasks have
+        # no process node of their own, so without this the client cannot recover
+        # the per-prefix result nodes. UUIDs (not PKs) are stored so the
+        # reference survives archive export/import, matching how AiiDA's own
+        # `serialize` records node references.
+        #
+        # Only prefixes whose gathered value is a single stored node are
+        # persisted. A prefix that gathered None (an untaken `If` branch, or a
+        # source that produced no value for this socket) has no node to
+        # reference; one whose source output is itself a namespace gathers a
+        # nested dict rather than a leaf node. Both are absent from the client
+        # namespace, so a structured-output gather still reads back empty. How
+        # to reconstruct those is the same resilient-Map follow-up flagged in
+        # the gather loop above.
+        result_uuids: dict[str, dict[str, str]] = {}
+        for socket_name, val in self.ctx._task_results[name].items():
+            if socket_name.startswith('_'):
+                continue
+            if isinstance(val, dict):
+                result_uuids[socket_name] = {
+                    prefix: node.uuid for prefix, node in val.items() if isinstance(node, Node) and node.pk is not None
+                }
+        if result_uuids:
+            map_info = self.process.node.get_task_map_info(name) or {}
+            map_info['result_uuids'] = result_uuids
+            self.set_task_runtime_info(name, 'map_info', map_info)
         self.set_task_runtime_info(name, 'state', TaskState.FINISHED)
         self.process.report(f'Task: {name} finished.')
         self.update_meta_tasks(name)
