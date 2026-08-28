@@ -25,6 +25,8 @@ __all__ = [
     'validate_socket_data',
     'infer_specs_from_callable',
     'from_aiida_process',
+    'spec_from_model',
+    'node_typed_paths',
     'SocketSpecSelect',
     'select',
     'meta',
@@ -148,3 +150,36 @@ dynamic = SocketSpecAPI.dynamic
 validate_socket_data = SocketSpecAPI.validate_socket_data
 infer_specs_from_callable = SocketSpecAPI.infer_specs_from_callable
 from_aiida_process = SocketSpecAPI.from_aiida_process
+
+
+def spec_from_model(model: Any) -> SocketSpec:
+    """Return the socket namespace ``model`` describes, in this package's vocabulary.
+
+    ``node_graph.input_model.spec_from_model`` builds the same namespace out of
+    node-graph's socket identifiers; this binds it to aiida-workgraph's.
+    """
+    from node_graph.input_model import spec_from_model as _spec_from_model
+
+    return _spec_from_model(model, SocketSpecAPI)
+
+
+def node_typed_paths(spec: SocketSpec, prefix: Tuple[str, ...] = ()) -> list[str]:
+    """Return the path of every leaf of ``spec`` a model says arrives as a node.
+
+    The walk crosses namespaces and the item shape of a dynamic namespace, so
+    a field declared deep inside a nested model, or inside the items of a
+    ``dict[str, T]``, is found where it sits.
+    """
+    from node_graph.input_model import BODY_RECEIVES
+
+    if spec is None:
+        return []
+    if not spec.is_namespace():
+        extras = getattr(spec.meta, 'extras', None) or {}
+        return ['.'.join(prefix)] if extras.get(BODY_RECEIVES) == 'node' else []
+    found: list[str] = []
+    for name, child in (spec.fields or {}).items():
+        found.extend(node_typed_paths(child, prefix + (name,)))
+    if spec.item is not None:
+        found.extend(node_typed_paths(spec.item, prefix + ('<key>',)))
+    return found

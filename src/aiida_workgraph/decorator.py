@@ -1,5 +1,7 @@
 from __future__ import annotations
-from typing import Callable, Dict, Optional, Union
+from dataclasses import replace
+from typing import Callable, Dict, Optional, Type, Union
+from pydantic import BaseModel
 from aiida.engine import calcfunction, workfunction, CalcJob, WorkChain
 from aiida_workgraph.task import Task
 from .workgraph import WorkGraph
@@ -7,10 +9,13 @@ import inspect
 from .task import TaskHandle
 from node_graph.task_spec import TaskSpec
 from node_graph.socket_spec import SocketSpec
+from aiida_workgraph.socket_spec import SocketSpecAPI, node_typed_paths
 from aiida_workgraph.tasks.aiida import _build_aiida_function_taskspec
 from node_graph.error_handler import ErrorHandlerSpec, normalize_error_handlers
 from aiida_workgraph.tasks.pythonjob_tasks import build_pyfunction_taskspec
 from aiida_workgraph.tasks.aiida import AiiDAProcessTask
+from node_graph.executor import RuntimeExecutor
+from node_graph.input_model import ModelContractError, apply_models, rebind_executor_callable
 
 
 def _spec_for(
@@ -120,6 +125,52 @@ def nonfunctional_usage(callable: Callable):
     return decorator_task_wrapper
 
 
+def _refuse_node_typed_inputs(model: Optional[Type[BaseModel]], spec: Optional[SocketSpec]) -> None:
+    """Raise when a model asks a PyFunction body for a value it cannot be handed.
+
+    A PyFunction's inputs are read out of their nodes before its body runs, so
+    a field declaring an AiiDA type would be handed what the node carries and
+    the model would refuse the very thing it asked for. A calcfunction's body
+    is handed the nodes themselves, and is where such a field belongs.
+    """
+    if model is None or spec is None:
+        return
+    paths = node_typed_paths(spec)
+    if not paths:
+        return
+    listed = ', '.join(repr(path) for path in paths)
+    raise ModelContractError(
+        f'{model.__name__} declares {listed} as an AiiDA type, and a task declared with '
+        '@task runs its body as a PyFunction, which is handed the value a node carries, '
+        'never the node.\n'
+        'How to fix: declare the task with @task.calcfunction, whose body is handed the '
+        'node; or declare the field as the Python type the body reads.'
+    )
+
+
+def _refuse_namespace_inputs(model: Optional[Type[BaseModel]], spec: Optional[SocketSpec]) -> None:
+    """Raise when a model gives a calcfunction a parameter AiiDA cannot express.
+
+    A process function's parameter is one port carrying one node. A field
+    declaring a nested model, or a ``dict[str, T]``, asks for a namespace, and
+    AiiDA turns the mapping it is handed into a single ``orm.Dict``: the
+    members lose the nodes they were, and the model refuses the ``Dict`` it
+    never declared.
+    """
+    if model is None or spec is None:
+        return
+    namespaces = [name for name, field in (spec.fields or {}).items() if field.is_namespace()]
+    if not namespaces:
+        return
+    listed = ', '.join(repr(name) for name in namespaces)
+    raise ModelContractError(
+        f'{model.__name__} declares {listed} as a namespace -- a nested model or a '
+        'dict[str, T] -- and a calcfunction parameter is one port carrying one node.\n'
+        'How to fix: declare the task with @task, whose body is handed a namespace as a '
+        'mapping; or give the model one field per value the body reads.'
+    )
+
+
 class TaskDecoratorCollection:
     """Collection of task decorators."""
 
@@ -131,6 +182,8 @@ class TaskDecoratorCollection:
         outputs: Optional[SocketSpec | list] = None,
         error_handlers: Optional[Dict[str, ErrorHandlerSpec]] = None,
         catalog: str = 'Others',
+        input_model: Optional[Type[BaseModel]] = None,
+        output_model: Optional[Type[BaseModel]] = None,
     ) -> Callable:
         """Generate a decorator that register a function as a task.
 
@@ -139,21 +192,34 @@ class TaskDecoratorCollection:
             catalog (str): task catalog
             inputs (list): task inputs
             outputs (list): task outputs
+            input_model (BaseModel): model declaring the input sockets, checked at every
+                call and again before the body runs
+            output_model (BaseModel): model declaring the output sockets and validating
+                the return value
         """
 
         def decorator(obj: Union[WorkGraph, type, callable]) -> TaskHandle:
             normalized_handlers = normalize_error_handlers(error_handlers)
+            in_spec, out_spec, executor = apply_models(
+                obj, inputs, outputs, input_model, output_model, api=SocketSpecAPI
+            )
+            _refuse_node_typed_inputs(input_model, in_spec)
             spec = _spec_for(
                 obj,
                 identifier=identifier,
                 catalog=catalog,
-                inputs=inputs,
-                outputs=outputs,
+                inputs=in_spec,
+                outputs=out_spec,
                 error_handlers=normalized_handlers,
             )
+            if executor is not obj:
+                # The spec is inferred from the undecorated function, so its
+                # signature, source and return annotation stay visible; only
+                # what runs changes.
+                spec = replace(spec, executor=RuntimeExecutor.from_callable(executor))
 
             handle = TaskHandle(spec)
-            handle._callable = obj
+            handle._callable = executor
             return handle
 
         return decorator
@@ -167,6 +233,8 @@ class TaskDecoratorCollection:
         outputs: Optional[SocketSpec | list] = None,
         max_depth: int = 100,
         max_number_jobs: Optional[int] = None,
+        input_model: Optional[Type[BaseModel]] = None,
+        output_model: Optional[Type[BaseModel]] = None,
     ) -> Callable:
         """Generate a decorator that register a function as a graph task.
         Attributes:
@@ -174,23 +242,30 @@ class TaskDecoratorCollection:
             catalog (str): task catalog
             inputs (list): task inputs
             outputs (list): task outputs
+            input_model (BaseModel): model declaring the input sockets, checked at every
+                call and again when the graph is expanded
+            output_model (BaseModel): refused; a graph returns socket references, which
+                stand for values that do not exist yet
         """
 
         def decorator(func) -> TaskHandle:
             from aiida_workgraph.tasks.graph_task import _build_graph_task_taskspec
 
+            in_spec, _, executor = apply_models(
+                func, inputs, None, input_model, output_model, is_graph=True, api=SocketSpecAPI
+            )
             handle = TaskHandle(
                 _build_graph_task_taskspec(
                     func,
                     identifier=identifier,
                     catalog=catalog,
-                    in_spec=inputs,
+                    in_spec=in_spec,
                     out_spec=outputs,
                     max_depth=max_depth,
                     max_number_jobs=max_number_jobs,
                 )
             )
-            handle._callable = func
+            handle._callable = executor
             return handle
 
         return decorator
@@ -202,14 +277,37 @@ class TaskDecoratorCollection:
         outputs: Optional[SocketSpec | list] = None,
         catalog: Optional[str] = None,
         error_handlers: Optional[Dict[str, ErrorHandlerSpec]] = None,
+        input_model: Optional[Type[BaseModel]] = None,
+        output_model: Optional[Type[BaseModel]] = None,
     ) -> Callable:
+        """Generate a decorator registering a function as a calcfunction task.
+
+        Attributes:
+            inputs (list): task inputs
+            outputs (list): task outputs
+            input_model (BaseModel): model declaring the input sockets, checked at every
+                call and again before the body runs; a field declaring an AiiDA type is
+                handed the node, which is what a calcfunction's body receives
+            output_model (BaseModel): model declaring the output sockets and validating
+                the return value
+        """
+
         def decorator(func) -> TaskHandle:
-            func_decorated = calcfunction(func)
+            in_spec, out_spec, executor = apply_models(
+                func, inputs, outputs, input_model, output_model, api=SocketSpecAPI
+            )
+            _refuse_namespace_inputs(input_model, in_spec)
+            # The models are enforced inside the process, so what AiiDA runs is
+            # the wrapper and the nodes it is called with reach the body. The
+            # calcfunction is what the executor has to resolve to, so it takes
+            # over the name the wrapper was bound under.
+            func_decorated = calcfunction(executor)
+            rebind_executor_callable(func_decorated, executor)
             handle = TaskHandle(
                 _build_aiida_function_taskspec(
                     func_decorated,
-                    in_spec=inputs,
-                    out_spec=outputs,
+                    in_spec=in_spec,
+                    out_spec=out_spec,
                     catalog=catalog,
                     error_handlers=error_handlers,
                 )
