@@ -373,3 +373,30 @@ def test_map_zone_outputs_tolerate_missing_result_node(monkeypatch):
 
     reloaded = WorkGraph.load(pk).tasks[map_zone.name].outputs.sum1._value
     assert {prefix: node.value for prefix, node in reloaded.items()} == {'key_0': 1, 'key_2': 3}
+
+
+def test_map_item_deprecated_alias_still_works():
+    """`map_zone.item.value`/`.item.key` (0.8.1 API) still work, with a warning.
+
+    #792 removed `.item` in favour of `.value`/`.key`, but v0.8.1 shipped `.item`,
+    so it is kept as a deprecated alias to avoid breaking downstream on upgrade.
+    """
+    with WorkGraph('map_item_compat'):
+        data = generate_data(n=2).data
+        with Map(data) as map_zone:
+            with pytest.warns(DeprecationWarning, match=r'`Map\.item` is deprecated'):
+                item_value = map_zone.item.value
+            with pytest.warns(DeprecationWarning, match=r'`Map\.item` is deprecated'):
+                item_key = map_zone.item.key
+            # the alias resolves to the same sockets as the new `.value`/`.key`
+            assert item_value is map_zone.value
+            assert item_key is map_zone.key
+
+
+def test_map_placeholder_kwarg_deprecated_but_accepted():
+    """`Map(..., placeholder=...)` (0.8.1 signature) is ignored, not a TypeError."""
+    with WorkGraph('map_placeholder_compat'):
+        data = generate_data(n=2).data
+        with pytest.warns(DeprecationWarning, match=r'placeholder.*deprecated'):
+            with Map(data, placeholder='item') as map_zone:
+                add(x=map_zone.value, y=1)

@@ -1,10 +1,11 @@
 from __future__ import annotations
+import warnings
 from typing import Any, Dict, cast
 from aiida_workgraph.task import Task
 from aiida_workgraph import task, namespace, meta, dynamic
 from node_graph.tasks.builtins import _GraphIOSharedMixin
 from node_graph.task import ChildTaskSet
-from node_graph.socket import BaseSocket
+from node_graph.socket import BaseSocket, TaskSocketNamespace
 from node_graph import RuntimeExecutor
 from aiida import orm
 from node_graph.task_spec import TaskSpec
@@ -125,6 +126,22 @@ class Map(Zone):
     def key(self) -> BaseSocket:
         """Placeholder for the current entry's key while iterating the source."""
         return self._map_item_task().outputs.key
+
+    @property
+    def item(self) -> TaskSocketNamespace:
+        """Deprecated alias for the map-item outputs namespace.
+
+        ``map_zone.item.value`` / ``map_zone.item.key`` become
+        ``map_zone.value`` / ``map_zone.key``. Kept so code written against the
+        0.8.1 API keeps working; will be removed in a future release.
+        """
+        warnings.warn(
+            '`Map.item` is deprecated; use `Map.value` / `Map.key` instead '
+            '(`map_zone.item.value` -> `map_zone.value`).',
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self._map_item_task().outputs
 
     @property
     def gather_item_task(self) -> Task:

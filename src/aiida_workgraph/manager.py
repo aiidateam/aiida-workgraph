@@ -9,9 +9,10 @@ Note pitfalls:
 
 from __future__ import annotations
 
+import warnings
 from collections.abc import Generator
 from contextlib import contextmanager
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Optional
 
 from aiida_workgraph.socket import TaskSocket, TaskSocketNamespace
 from aiida_workgraph.tasks.task_pool import TaskPool
@@ -176,7 +177,7 @@ def While(condition_socket: TaskSocket, max_iterations: int = 10000) -> Generato
 
 
 @contextmanager
-def Map(source_socket: TaskSocketNamespace) -> Generator[MapZoneTask]:
+def Map(source_socket: TaskSocketNamespace, placeholder: Optional[str] = None) -> Generator[MapZoneTask]:
     """Iterate a set of tasks over a dynamic namespace (a dict).
 
     The ``with`` block is a template body that runs once per entry of the
@@ -185,7 +186,15 @@ def Map(source_socket: TaskSocketNamespace) -> Generator[MapZoneTask]:
     to collect per-entry results into the zone's outputs.
 
     :param source_socket: A dynamic-namespace (dict) output socket to map over.
+    :param placeholder: Deprecated and ignored (unused since #510); accepted
+        only so calls written against the 0.8.1 API do not raise.
     """
+    if placeholder is not None:
+        warnings.warn(
+            '`Map(..., placeholder=...)` is deprecated and ignored; drop the argument.',
+            DeprecationWarning,
+            stacklevel=2,
+        )
 
     wg = get_current_graph()
 
