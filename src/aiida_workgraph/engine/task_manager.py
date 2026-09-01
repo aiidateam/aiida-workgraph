@@ -557,16 +557,23 @@ class TaskManager:
         for link in all_links:
             if link.to_task.name in new_tasks:
                 to_node = new_tasks[link.to_task.name]
-                to_socket = to_node.inputs[link.to_socket._scoped_name]
+                # Resolve (or materialise) the dotted target socket path —
+                # cloned dynamic namespaces (e.g. ``pseudos.<kind>``) are
+                # empty until ``links_from_dict``-style helpers append
+                # their children. The ``Graph._resolve_or_create_input_socket``
+                # helper handles both cases.
+                if link.from_task.name in new_tasks:
+                    from_node = new_tasks[link.from_task.name]
+                    from_socket = from_node.outputs[link.from_socket._scoped_name]
+                else:
+                    from_socket = link.from_socket
+                to_socket = self.process.wg._resolve_or_create_input_socket(
+                    to_node, link.to_socket._scoped_name, from_socket
+                )
             else:
                 # if the to_node is not in the new_tasks, skip
                 continue
             new_links.append(link.to_dict())
-            if link.from_task.name in new_tasks:
-                from_node = new_tasks[link.from_task.name]
-                from_socket = from_node.outputs[link.from_socket._scoped_name]
-            else:
-                from_socket = link.from_socket
             self.process.wg.add_link(
                 from_socket,
                 to_socket,

@@ -156,6 +156,17 @@ class PyFunctionTask(BaseSerializablePythonTask):
         if isinstance(func, BaseHandle) and hasattr(func, '_callable'):
             func = func._callable
 
+        # Per-call ``deserializers`` / ``serializers`` win; fall back to the
+        # values stored on the spec by
+        # ``@task(deserializers=..., serializers=...)``. Applied to both
+        # branches below so that a decorator-level default is honoured
+        # whether the body runs sync (``run_get_node``) or async
+        # (``prepare_pyfunction_inputs``).
+        if 'deserializers' not in kwargs and self.spec.metadata.get('deserializers') is not None:
+            kwargs['deserializers'] = self.spec.metadata['deserializers']
+        if 'serializers' not in kwargs and self.spec.metadata.get('serializers') is not None:
+            kwargs['serializers'] = self.spec.metadata['serializers']
+
         if self.spec.metadata.get('is_coroutine', False):
             function_inputs = self.get_function_inputs(kwargs, var_kwargs)
             inputs = prepare_pyfunction_inputs(
@@ -218,6 +229,13 @@ class MonitorFunctionTask(BaseSerializablePythonTask):
         # If it's a wrapped function, unwrap
         if isinstance(func, BaseHandle) and hasattr(func, '_callable'):
             func = func._callable
+        # Per-call ``deserializers`` / ``serializers`` win; fall back to the
+        # values stored on the spec by
+        # ``@task(deserializers=..., serializers=...)``.
+        if 'deserializers' not in kwargs and self.spec.metadata.get('deserializers') is not None:
+            kwargs['deserializers'] = self.spec.metadata['deserializers']
+        if 'serializers' not in kwargs and self.spec.metadata.get('serializers') is not None:
+            kwargs['serializers'] = self.spec.metadata['serializers']
         function_inputs = self.get_function_inputs(kwargs, var_kwargs)
         inputs = prepare_monitor_function_inputs(
             function=func,
@@ -289,6 +307,8 @@ def build_pyfunction_taskspec(
     in_spec: Optional[SocketSpec] = None,
     out_spec: Optional[SocketSpec] = None,
     error_handlers: Optional[Dict[str, ErrorHandlerSpec]] = None,
+    deserializers: Optional[Dict[str, str]] = None,
+    serializers: Optional[Dict[str, str]] = None,
 ) -> TaskSpec:
     import asyncio
 
@@ -296,6 +316,10 @@ def build_pyfunction_taskspec(
         metadata = {'is_coroutine': True}
     else:
         metadata = {}
+    if deserializers is not None:
+        metadata['deserializers'] = deserializers
+    if serializers is not None:
+        metadata['serializers'] = serializers
     return build_callable_TaskSpec(
         obj=obj,
         task_type='PYFUNCTION',

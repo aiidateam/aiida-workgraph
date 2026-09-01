@@ -21,6 +21,8 @@ def _spec_for(
     outputs: Optional[SocketSpec] = None,
     catalog: str = None,
     error_handlers: Optional[Dict[str, ErrorHandlerSpec]] = None,
+    deserializers: Optional[Dict[str, str]] = None,
+    serializers: Optional[Dict[str, str]] = None,
 ) -> TaskSpec:
     # AiiDA process classes
     if inspect.isclass(obj) and issubclass(obj, (CalcJob, WorkChain)):
@@ -46,6 +48,8 @@ def _spec_for(
             out_spec=outputs,
             error_handlers=error_handlers,
             catalog=catalog or 'Others',
+            deserializers=deserializers,
+            serializers=serializers,
         )
         return spec
 
@@ -131,6 +135,8 @@ class TaskDecoratorCollection:
         outputs: Optional[SocketSpec | list] = None,
         error_handlers: Optional[Dict[str, ErrorHandlerSpec]] = None,
         catalog: str = 'Others',
+        deserializers: Optional[Dict[str, str]] = None,
+        serializers: Optional[Dict[str, str]] = None,
     ) -> Callable:
         """Generate a decorator that register a function as a task.
 
@@ -139,6 +145,15 @@ class TaskDecoratorCollection:
             catalog (str): task catalog
             inputs (list): task inputs
             outputs (list): task outputs
+            deserializers (dict): per-task deserializer overrides
+                ``{ "module.Path.To.DataType": "module.path.to.deserializer" }``.
+                Stored on the spec and used by ``PyFunctionTask.execute`` as
+                the default when no ``deserializers`` kwarg is passed at call
+                time. Only meaningful for plain-Python tasks (PyFunction);
+                ignored for ``CalcJob`` / ``WorkChain`` / ``calcfunction``
+                tasks where deserialization is owned by AiiDA.
+            serializers (dict): per-task serializer overrides, same shape and
+                applicability as ``deserializers``.
         """
 
         def decorator(obj: Union[WorkGraph, type, callable]) -> TaskHandle:
@@ -150,6 +165,8 @@ class TaskDecoratorCollection:
                 inputs=inputs,
                 outputs=outputs,
                 error_handlers=normalized_handlers,
+                deserializers=deserializers,
+                serializers=serializers,
             )
 
             handle = TaskHandle(spec)
