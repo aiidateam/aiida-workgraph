@@ -120,11 +120,24 @@ class WorkGraph(node_graph.Graph):
         missing_inputs = []
         for sub_socket in socket:
             if isinstance(sub_socket, TaskSocketNamespace):
+                # The children of an optional namespace are required only *within* it:
+                # they say what a caller must provide if they provide the namespace at
+                # all. A namespace left entirely empty is therefore not missing anything.
+                if not sub_socket._metadata.required and not self.is_socket_provided(sub_socket):
+                    continue
                 missing_inputs.extend(self.find_missing_inputs(sub_socket))
             else:
                 if sub_socket._metadata.required and sub_socket.value is None and len(sub_socket._links) == 0:
                     missing_inputs.append(f'{sub_socket._task.name}.{sub_socket._scoped_name}')
         return missing_inputs
+
+    def is_socket_provided(self, socket: BaseSocket) -> bool:
+        """Check whether a socket carries a value or a link, anywhere in its subtree."""
+        if len(socket._links) > 0:
+            return True
+        if not isinstance(socket, TaskSocketNamespace):
+            return socket.value is not None
+        return any(self.is_socket_provided(sub_socket) for sub_socket in socket)
 
     def check_modified_tasks(self) -> None:
         """Check if there are modified tasks compared to the existing process.
