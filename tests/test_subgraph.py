@@ -1,4 +1,4 @@
-from aiida_workgraph import WorkGraph, namespace
+from aiida_workgraph import WorkGraph, namespace, task
 from typing import Callable
 from aiida import orm
 
@@ -80,3 +80,31 @@ def test_link_subgraph_task(decorated_add: Callable) -> None:
     wg.run()
     assert wg.tasks.add2.outputs.result.value.value == 11
     assert wg.outputs.sub_wg_result.value.value == 8
+
+
+def test_subgraph_own_metadata_label_reaches_child():
+    """A subgraph task's own ``metadata['label']`` reaches the child process node.
+
+    ``SubGraphTask.prepare_for_subgraph_task`` passes launch metadata as
+    ``{'call_link_label': name}``; ``to_engine_inputs`` starts from the subgraph's
+    own ``metadata`` and merges that in, key by key, so a ``label`` the subgraph
+    already carries survives untouched. Intended, not incidental: it lets a
+    subgraph built once and reused in several parents carry its own display label.
+    """
+
+    @task()
+    def add(x, y):
+        return x + y
+
+    sub_wg = WorkGraph(name='sub_wg', metadata={'label': 'SUBGRAPH-OWN-LABEL'})
+    sub_wg.add_task(add, name='add1', x=1, y=2)
+
+    parent = WorkGraph(name='probe_parent')
+    parent.add_task(sub_wg, name='sub_wg')
+    parent.run()
+
+    assert parent.process.is_finished_ok, parent.process.exit_message
+    called = parent.process.called
+    child = [c for c in called if 'sub_wg' in c.process_label or 'WorkGraph' in c.process_label]
+    assert child, f'no subgraph child found among {[c.process_label for c in called]}'
+    assert child[0].label == 'SUBGRAPH-OWN-LABEL'

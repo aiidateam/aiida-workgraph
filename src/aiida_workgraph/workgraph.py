@@ -7,6 +7,9 @@ from aiida_workgraph.task import Task
 from aiida_workgraph.enums import TaskAction, TaskState
 import time
 from typing import Any, Dict, List, Optional, Union
+from pydantic import ConfigDict
+from typing_extensions import TypedDict
+from node_graph.graph import GraphMetadata
 from .registry import RegistryHub, registry_hub
 from node_graph.analysis import GraphAnalysis
 from node_graph.config import BUILTIN_TASKS
@@ -15,6 +18,59 @@ from aiida_workgraph.socket_spec import SocketSpecAPI
 from node_graph.error_handler import ErrorHandlerSpec
 
 LOGGER = logging.getLogger(__name__)
+
+
+def _engine_launch_metadata() -> type:
+    """Build the TypedDict mirroring `WorkGraphEngine`'s own process-launch metadata ports.
+
+    Field types come from each port's `valid_type`; a port that declares none
+    takes `Any`.
+    """
+    from aiida_workgraph.engine.workgraph import WorkGraphEngine
+
+    ports = WorkGraphEngine.spec().inputs['metadata']
+    fields: Dict[str, Any] = {}
+    for name in ports.keys():
+        valid_type = getattr(ports[name], 'valid_type', None)
+        if valid_type is None:
+            fields[name] = Any
+        else:
+            fields[name] = Union[valid_type if isinstance(valid_type, tuple) else (valid_type,)]
+    return TypedDict('EngineLaunchMetadata', fields, total=False)  # type: ignore[operator]
+
+
+EngineLaunchMetadata = _engine_launch_metadata()
+
+#: The keys `to_engine_inputs()` hands to AiiDA's process launch.
+ENGINE_LAUNCH_KEYS = frozenset(EngineLaunchMetadata.__annotations__)
+
+#: The keys `WorkGraph` and node-graph keep for their own serialization.
+BOOKKEEPING_KEYS = frozenset(GraphMetadata.__annotations__) | {'pk'}
+
+# A name in both families would make `to_engine_inputs()` unable to tell which
+# one a key belongs to — the shape of aiidateam/aiida-workgraph#812. TypedDict
+# inheritance silently lets the later base win instead of raising, so check here.
+if BOOKKEEPING_KEYS & ENGINE_LAUNCH_KEYS:
+    raise RuntimeError(
+        f'Metadata key(s) {sorted(BOOKKEEPING_KEYS & ENGINE_LAUNCH_KEYS)} are declared as both '
+        'serialization bookkeeping and AiiDA launch metadata. Rename one of the two.'
+    )
+
+
+class WorkGraphMetadata(GraphMetadata, EngineLaunchMetadata, total=False):  # type: ignore[misc]
+    """Everything `WorkGraph.metadata` may carry.
+
+    node-graph's serialization bookkeeping (`GraphMetadata`) and AiiDA's own
+    process-launch metadata ports (`EngineLaunchMetadata`), side by side, plus
+    the process `pk` this class records. `extra='forbid'`: a key outside this
+    schema is refused at construction, load and serialization. `strict=True`:
+    a declared key holding a value of the wrong type is refused rather than
+    coerced (e.g. `store_provenance='yes'` or `pk='12'`).
+    """
+
+    __pydantic_config__ = ConfigDict(extra='forbid', strict=True)
+
+    pk: Optional[int]
 
 
 class WorkGraph(node_graph.Graph):
@@ -36,6 +92,8 @@ class WorkGraph(node_graph.Graph):
 
     platform: str = 'aiida_workgraph'
 
+    _metadata_schema: type = WorkGraphMetadata
+
     def __init__(
         self,
         name: str = 'WorkGraph',
@@ -52,6 +110,8 @@ class WorkGraph(node_graph.Graph):
         Args:
             name (str, optional): The name of the WorkGraph. Defaults to 'WorkGraph'.
             **kwargs: Additional keyword arguments to be passed to the WorkGraph class.
+                A `metadata` kwarg here is validated against `WorkGraphMetadata`,
+                which names everything it may hold.
         """
         from aiida_workgraph.serialization import AiidaSerializationAdapter
 
@@ -73,8 +133,17 @@ class WorkGraph(node_graph.Graph):
         self.analyzer = GraphAnalysis(self)
 
     def to_engine_inputs(self, metadata: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+        """Assemble the inputs AiiDA's process launch takes.
+
+        `metadata` here is launch-time metadata; it overrides `self.metadata`
+        key by key.
+        """
         wgdata = self.to_dict(should_serialize=True)
-        metadata = metadata or {}
+        validated = self.validate_metadata(self.metadata, name=self.name)
+        launch_metadata = {key: value for key, value in validated.items() if key in ENGINE_LAUNCH_KEYS}
+        launch_metadata.update(metadata or {})
+        launch_metadata = self.validate_metadata(launch_metadata, name=self.name)
+        metadata = {key: value for key, value in launch_metadata.items() if key in ENGINE_LAUNCH_KEYS}
         task_inputs = self.gather_task_inputs(wgdata['tasks'])
         graph_inputs = task_inputs.pop('graph_inputs', {})
         inputs = {
@@ -254,6 +323,7 @@ class WorkGraph(node_graph.Graph):
         wgdata['connectivity'] = self.build_connectivity()
         wgdata['process'] = serialize(self.process) if self.process else serialize(None)
         wgdata['metadata']['pk'] = self.process.pk if self.process else None
+        wgdata['metadata'] = self.validate_metadata(wgdata['metadata'], name=self.name)
 
         return wgdata
 
