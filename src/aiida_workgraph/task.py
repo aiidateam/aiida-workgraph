@@ -11,7 +11,7 @@ from aiida_workgraph.socket_spec import SocketSpecAPI
 from node_graph.task_spec import TaskSpec
 
 if TYPE_CHECKING:
-    pass
+    from aiida_workgraph.workgraph import WorkGraph
 
 
 class Task(GraphTask):
@@ -231,15 +231,36 @@ class TaskHandle(BaseHandle):
 
         return outputs
 
-    def run(self, /, *args, **kwargs):
+
+class GraphTaskHandle(TaskHandle):
+    """Handle for ``@task.graph`` callables.
+
+    node-graph #150 made ``build`` graph-only by handle type (it moved from
+    ``BaseHandle`` to node-graph's ``GraphTaskHandle``). Mirror that here:
+    ``build``/``run``/``run_get_graph``/``submit`` all materialize a WorkGraph,
+    which only makes sense for graph specs — on plain task handles they only
+    ever raised.
+
+    ``build`` delegates to node-graph's implementation unbound rather than
+    inheriting it, because node-graph's ``GraphTaskHandle.__init__`` takes
+    ``spec`` only, while ours must also wire ``get_current_graph`` and
+    ``graph_class=WorkGraph``.
+    """
+
+    def build(self, /, *args: Any, **kwargs: Any) -> WorkGraph:
+        from node_graph.task_spec import GraphTaskHandle as _NGGraphTaskHandle
+
+        return _NGGraphTaskHandle.build(self, *args, **kwargs)
+
+    def run(self, /, *args: Any, **kwargs: Any) -> Any:
         graph = self.build(*args, **kwargs)
         return graph.run()
 
-    def run_get_graph(self, /, *args, **kwargs):
+    def run_get_graph(self, /, *args: Any, **kwargs: Any) -> tuple[Any, WorkGraph]:
         graph = self.build(*args, **kwargs)
         return graph.run(), graph
 
-    def submit(self, /, *args, **kwargs):
+    def submit(self, /, *args: Any, **kwargs: Any) -> WorkGraph:
         graph = self.build(*args, **kwargs)
         graph.submit()
         return graph

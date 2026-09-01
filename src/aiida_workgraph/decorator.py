@@ -178,8 +178,9 @@ class TaskDecoratorCollection:
 
         def decorator(func) -> TaskHandle:
             from aiida_workgraph.tasks.graph_task import _build_graph_task_taskspec
+            from aiida_workgraph.task import GraphTaskHandle
 
-            handle = TaskHandle(
+            handle = GraphTaskHandle(
                 _build_graph_task_taskspec(
                     func,
                     identifier=identifier,
