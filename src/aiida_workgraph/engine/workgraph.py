@@ -253,7 +253,12 @@ class WorkGraphEngine(Process, metaclass=Protect):
 
         super().on_create()
         raw_inputs = dict(self.inputs)
-        self.node.label = raw_inputs[WorkGraphSpec.WORKGRAPH_DATA_KEY]['name']
+        # ``super().on_create()`` already applied an explicit ``metadata.label`` to the node,
+        # following aiida-core's own key-presence semantics (``Process._setup_metadata``:
+        # any ``label`` key, including an empty string, is applied). Only fall back to the
+        # workgraph name when the caller gave no ``metadata.label`` key at all.
+        if 'label' not in raw_inputs.get('metadata', {}):
+            self.node.label = raw_inputs[WorkGraphSpec.WORKGRAPH_DATA_KEY]['name']
         save_workgraph_data(self.node, raw_inputs)
 
     def setup(self) -> None:

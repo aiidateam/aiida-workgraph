@@ -118,6 +118,69 @@ def test_save_load(wg_task, decorated_add):
     assert wg3.tasks.add2.inputs.metadata.options.resources.value['num_mpiprocs_per_machine'] == 2
 
 
+def test_explicit_label_survives_save(wg_task):
+    """An explicit ``metadata.label`` must not be overwritten by the workgraph name."""
+    wg = wg_task
+    wg.name = 'test_explicit_label_survives_save'
+    wg.save(metadata={'label': 'my-explicit-label'})
+    assert wg.process.process_label == 'WorkGraph<test_explicit_label_survives_save>'
+    assert wg.process.label == 'my-explicit-label'
+
+
+def test_empty_label_survives_save(wg_task):
+    """An explicit empty-string ``metadata.label`` is a given label, not an absent one.
+
+    aiida-core's ``Process._setup_metadata`` applies ``label`` on key presence, not
+    truthiness, so ``metadata={'label': ''}`` must not fall back to the workgraph name.
+    """
+    wg = wg_task
+    wg.name = 'test_empty_label_survives_save'
+    wg.save(metadata={'label': ''})
+    assert wg.process.label == ''
+
+
+def test_explicit_label_survives_run(wg_task):
+    """An explicit ``metadata.label`` passed to ``run()`` must survive on the process node."""
+    wg = wg_task
+    wg.name = 'test_explicit_label_survives_run'
+    wg.run(metadata={'label': 'my-explicit-label'})
+    assert wg.process.process_label == 'WorkGraph<test_explicit_label_survives_run>'
+    assert wg.process.label == 'my-explicit-label'
+
+
+@pytest.mark.usefixtures('started_daemon_client')
+def test_explicit_label_survives_submit(wg_task):
+    """An explicit ``metadata.label`` passed to ``submit()`` must survive on the process node."""
+    wg = wg_task
+    wg.name = 'test_explicit_label_survives_submit'
+    wg.submit(metadata={'label': 'my-explicit-label'}, wait=True, timeout=30)
+    assert wg.process.process_label == 'WorkGraph<test_explicit_label_survives_submit>'
+    assert wg.process.label == 'my-explicit-label'
+
+
+def test_explicit_label_survives_nested_graph():
+    """An explicit ``metadata.label`` on a nested ``@task.graph`` call survives to the child node."""
+
+    @task()
+    def add(x, y):
+        return x + y
+
+    @task.graph()
+    def inner_graph(x, y):
+        return add(x, y).result
+
+    with WorkGraph('test_explicit_label_survives_nested_graph') as wg:
+        inner_graph(1, 2, metadata={'label': 'nested-explicit-label'})
+        wg.run()
+
+    called = wg.process.called
+    assert len(called) == 1
+    # the child's process_label is derived from the call-site task name (here the
+    # function's default name), not from the explicit label just asserted below.
+    assert called[0].process_label == 'WorkGraph<inner_graph>'
+    assert called[0].label == 'nested-explicit-label'
+
+
 def test_load_failure(create_process_node):
     node = create_process_node()
     with pytest.raises(ValueError, match=f'Process {node.pk} is not a WorkGraph'):
