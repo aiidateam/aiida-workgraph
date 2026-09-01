@@ -3,6 +3,7 @@ from __future__ import annotations
 import logging
 import node_graph
 import aiida
+from aiida_workgraph.errors import MissingInput, MissingRequiredInputsError
 from aiida_workgraph.task import Task
 from aiida_workgraph.enums import TaskAction, TaskState
 import time
@@ -104,16 +105,18 @@ class WorkGraph(node_graph.Graph):
                 continue
             missing_inputs.extend(self.find_missing_inputs(task.inputs))
         if missing_inputs:
-            bullets = '\n'.join(f'  • {p}' for p in sorted(missing_inputs))
-            raise ValueError(
-                'Missing required inputs:\n'
-                f'{bullets}\n\n'
-                'How to fix:\n'
-                '  1) Provide these values (at build time or by linking from upstream task outputs).\n'
-                '  2) If some are intentionally unused, exclude them from the namespace at the call site, e.g.:\n'
-                '     Annotated[dict, some_task.inputs, SocketSpecSelect(exclude=["pw.structure", ...])]\n\n'
-                "Note: exclude paths are relative to the task's input namespace (e.g. 'pw.structure')."
-            )
+            entries = []
+            for socket_path in missing_inputs:
+                task_name, scoped_name = socket_path.split('.', 1)
+                socket = self.tasks[task_name].inputs[scoped_name]
+                entries.append(
+                    MissingInput(
+                        socket_path=socket_path,
+                        identifier=socket._identifier,
+                        help=socket._metadata.help,
+                    )
+                )
+            raise MissingRequiredInputsError(entries)
 
     def find_missing_inputs(self, socket: BaseSocket) -> List[str]:
         """Check if all required inputs are provided."""

@@ -1,4 +1,6 @@
-from aiida_workgraph import task, namespace, WorkGraph
+from aiida_workgraph import task, namespace, meta, WorkGraph
+from aiida_workgraph.errors import MissingRequiredInputsError
+from aiida import orm
 from typing import Annotated
 import pytest
 import re
@@ -82,3 +84,90 @@ def test_invalid_call_link_label_raises_at_build_time():
         with WorkGraph():
             add(1, 2, metadata={'call_link_label': '_sum'})
     assert 'call_link_label' in str(excinfo.value)
+
+
+class TestMissingRequiredInputsPayload:
+    """The missing-inputs failure carries structured entries next to the message."""
+
+    def test_missing_leaf_input(self):
+        @task.graph()
+        def my_graph(a):
+            add(a)
+
+        with pytest.raises(MissingRequiredInputsError) as excinfo:
+            my_graph.run(a=1)
+        error = excinfo.value
+        assert str(error).startswith('Missing required inputs:')
+        assert 'add.y' in str(error)
+        entries = {entry.socket_path: entry for entry in error.missing}
+        assert set(entries) == {'add.y'}
+        assert entries['add.y'].identifier == 'workgraph.any'
+        assert entries['add.y'].help is None
+
+    def test_missing_namespace_member(self):
+        """A dotted namespace-member path resolves to its socket for identifier and help."""
+
+        @task.graph()
+        def my_graph(a, b: Annotated[dict, namespace(x=int, y=Annotated[int, meta(help='the second member')])]):
+            add(a, b['x'])
+
+        with pytest.raises(MissingRequiredInputsError) as excinfo:
+            my_graph.run(a=1, b={'x': 1})
+        entries = {entry.socket_path: entry for entry in excinfo.value.missing}
+        assert set(entries) == {'graph_inputs.b.y'}
+        assert entries['graph_inputs.b.y'].identifier == 'workgraph.int'
+        assert entries['graph_inputs.b.y'].help == 'the second member'
+
+    def test_help_text_is_carried(self):
+        @task
+        def add_documented(x, y: Annotated[int, meta(help='the right-hand addend')]):
+            return x + y
+
+        @task.graph()
+        def my_graph(a):
+            add_documented(x=a)
+
+        with pytest.raises(MissingRequiredInputsError) as excinfo:
+            my_graph.run(a=1)
+        entries = {entry.socket_path: entry for entry in excinfo.value.missing}
+        assert entries['add_documented.y'].help == 'the right-hand addend'
+
+    def test_multiple_missing_inputs(self):
+        @task.graph()
+        def my_graph(a):
+            add(a)
+            add()
+
+        with pytest.raises(MissingRequiredInputsError) as excinfo:
+            my_graph.run(a=1)
+        paths = [entry.socket_path for entry in excinfo.value.missing]
+        assert paths == sorted(paths)
+        assert set(paths) == {'add.y', 'add1.x', 'add1.y'}
+
+    def test_error_is_a_value_error(self):
+        assert issubclass(MissingRequiredInputsError, ValueError)
+
+    def test_error_survives_pickle_and_deepcopy(self):
+        import copy
+        import pickle
+
+        from aiida_workgraph.errors import MissingInput
+
+        error = MissingRequiredInputsError([MissingInput('add.y', 'workgraph.int', 'The right operand.')])
+        for clone in (pickle.loads(pickle.dumps(error)), copy.deepcopy(error)):
+            assert clone.missing == error.missing
+            assert str(clone) == str(error)
+
+    def test_missing_code_input_identifier(self):
+        @task
+        def run_code(code: orm.InstalledCode, x):
+            return x
+
+        @task.graph()
+        def my_graph(a):
+            run_code(x=a)
+
+        with pytest.raises(MissingRequiredInputsError) as excinfo:
+            my_graph.run(a=1)
+        entries = {entry.socket_path: entry for entry in excinfo.value.missing}
+        assert entries['run_code.code'].identifier == 'workgraph.code'

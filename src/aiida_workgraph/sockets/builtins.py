@@ -76,3 +76,10 @@ class SocketStructureData(TaskSocket):
 
     _identifier: str = 'workgraph.aiida_structuredata'
     _socket_property_identifier: str = 'workgraph.aiida_structuredata'
+
+
+class SocketCode(TaskSocket):
+    """Socket for AiiDA code nodes."""
+
+    _identifier: str = 'workgraph.code'
+    _socket_property_identifier: str = 'workgraph.any'

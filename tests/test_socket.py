@@ -179,3 +179,13 @@ def test_set_NoneData():
 
     s = SocketInt('test')
     s.value = NoneData()
+
+
+def test_code_socket_identifier() -> None:
+    """AiiDA code annotations get their own socket identifier."""
+
+    @task()
+    def run_code(code: orm.InstalledCode):
+        pass
+
+    assert run_code()._task.inputs.code._identifier == 'workgraph.code'

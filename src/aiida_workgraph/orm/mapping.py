@@ -18,6 +18,10 @@ builtins_type_mapping = {
     orm.List: 'workgraph.list',
     orm.Dict: 'workgraph.dict',
     orm.StructureData: 'workgraph.aiida_structuredata',
+    orm.AbstractCode: 'workgraph.code',
+    orm.Code: 'workgraph.code',
+    orm.InstalledCode: 'workgraph.code',
+    orm.PortableCode: 'workgraph.code',
     Any: 'workgraph.any',
 }
 

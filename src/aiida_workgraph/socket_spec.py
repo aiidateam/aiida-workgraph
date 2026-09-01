@@ -72,6 +72,7 @@ class SocketSpecAPI(_SocketSpecAPI):
                 identifier=cls.NAMESPACE,
                 fields=fields,
                 meta=SocketMeta(
+                    help=getattr(port, 'help', None),
                     required=required_here,
                     is_metadata=getattr(port, 'is_metadata', False),
                     call_role=('kwargs' if role == 'input' else None),
@@ -96,6 +97,7 @@ class SocketSpecAPI(_SocketSpecAPI):
         return SocketSpec(
             identifier=ident,
             meta=SocketMeta(
+                help=getattr(port, 'help', None),
                 required=required_here,
                 is_metadata=getattr(port, 'is_metadata', False),
                 call_role=('kwargs' if role == 'input' else None),
