@@ -19,7 +19,7 @@ class AiiDAFunctionTask(Task):
     task_type = 'function'
     catalog = 'AIIDA'
 
-    def execute(self, args=None, kwargs=None, var_kwargs=None):
+    def execute(self, engine_process=None, args=None, kwargs=None, var_kwargs=None):
         from aiida.engine import run_get_node
         from node_graph.task_spec import BaseHandle
 
@@ -30,10 +30,33 @@ class AiiDAFunctionTask(Task):
         kwargs.setdefault('metadata', {})
         kwargs['metadata'].update({'call_link_label': self.name})
         # since aiida 2.5.0, we need to use args_dict to pass the args to the run_get_node
-        if var_kwargs is None:
-            _, process = run_get_node(executor, **kwargs)
-        else:
-            _, process = run_get_node(executor, **kwargs, **var_kwargs)
+        try:
+            if var_kwargs is None:
+                _, process = run_get_node(executor, **kwargs)
+            else:
+                _, process = run_get_node(executor, **kwargs, **var_kwargs)
+        except Exception:
+            # `run_get_node` stores and CALL-links the process node before running it,
+            # then re-raises the wrapped function's exception straight through instead
+            # of returning the node, so the caller loses the reference on failure.
+            # Recover it from provenance via the call link label set above. A task
+            # inside a While zone reuses the same label on every iteration, so several
+            # CALL links can share it; take the most recently stored node. Recovery is
+            # best-effort: it must never replace the exception being handled, so any
+            # failure here (including no matching link at all, e.g. under
+            # metadata={'store_provenance': False}) falls through to the bare `raise`
+            # and the original exception propagates untouched.
+            process = None
+            if engine_process is not None:
+                try:
+                    linked = engine_process.node.base.links.get_outgoing(link_label_filter=self.name).all()
+                    if linked:
+                        process = max((link.node for link in linked), key=lambda node: node.pk)
+                except Exception:
+                    process = None
+            if process is None:
+                raise
+            return process, TaskState.FAILED
 
         return process, TaskState.FINISHED
 
